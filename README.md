@@ -95,3 +95,5 @@ practice to also cite these packages:
 
 > Stadler T (2019). TreeSim: Simulating Phylogenetic Trees. R package
 > version 2.4, <https://CRAN.R-project.org/package=TreeSim>
+
+<!-- Acknowledge TAFT and the TAFT paper? -->
