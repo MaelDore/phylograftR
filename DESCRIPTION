@@ -1,11 +1,14 @@
 Package: phylograftR
-Title: What the Package Does (One Line, Title Case)
+Title: Graft Missing Taxa On Time-Calibrated Phylogenies
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+    person("Maël", "Doré", , "mael.dore@gmail.com", role = c("aut", "cre", "cph"),
+           comment = c(ORCID = "0000-0003-3242-9242"))
+Description: Graft missing taxa on time-calibrated phylogenies combining
+    taxonomic assigments and species attributes to define
+    inclusive/exclusive clades for grafting with diversification modeling
+    for inferring divergence times of imputed branches.
+License: MIT + file LICENSE
 Config/roxygen2/version: 8.1.0
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
