@@ -67,6 +67,7 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
                                    include_stem = TRUE, # Include the stem of the inclusive clades when grafting?
                                    use_exclusive_subclades = TRUE, # Avoid grafting within Exclusive_subclades?
                                    method = "BD_clades", # "uniform" or "BD_clades"
+                                   min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model for "BD_clades" (the enclosing clade is used if the focal clade is smaller)
                                    verbose = TRUE, # To print progress every 100 taxa or every 10 inclusive clades
                                    save_temp = FALSE, # Save a temporary phylogeny after each inclusive clade (BD_clades)
                                    save_temp_every = 10,
@@ -85,11 +86,17 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
     ## The backbone must be ultrametric (error otherwise). It is never modified: making it ultrametric is left to the user
     check_backbone_ultrametric(phy = phy, tol = ultrametric_tol)
 
-    ## The backbone tree must have at least 3 tips, so a BD model can be fit
-    if (method == "BD_clades" & length(phy$tip.label) < 3)
+    ## Check 'min_tips'
+    if (!is.numeric(min_tips) || length(min_tips) != 1 || min_tips < 3)
     {
-      stop("Backbone phylogeny too small to fit a birth-death model (< 3 tips).
-           Choose method = 'uniform' or provide a larger backbone phylogeny.")
+      stop("'min_tips' must be a single number >= 3")
+    }
+
+    ## The backbone tree must have at least 'min_tips' tips, so a BD model can be fit
+    if (method == "BD_clades" && length(phy$tip.label) < min_tips)
+    {
+      stop("Backbone phylogeny too small to fit a birth-death model (< ", min_tips, " tips).\n",
+           "Choose method = 'uniform', lower 'min_tips', or provide a larger backbone phylogeny.")
     }
 
     ## Check length of items in missing_taxa_list
@@ -124,8 +131,23 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
     }
   }
 
-  ## Set seed if provided
-  if (!is.null(seed)) { set.seed(seed = seed) }
+  ## Check upfront that every taxon has at least one branch available for grafting
+  # Better to stop before grafting than in the middle of a long run
+  no_branch_taxa <- find_taxa_without_allowed_branch(phy = phy, missing_taxa_list = missing_taxa_list,
+                                                     include_stem = include_stem,
+                                                     use_exclusive_subclades = use_exclusive_subclades,
+                                                     method = method)
+  if (nrow(no_branch_taxa) > 0)
+  {
+    n_show <- min(nrow(no_branch_taxa), 10)
+    stop(nrow(no_branch_taxa), " taxa have no branch available for grafting: all branches of their inclusive clade are excluded.\n",
+         paste0("  - ", no_branch_taxa$Taxa_name[seq_len(n_show)], " (MRCA tips: ", no_branch_taxa$MRCA_tips[seq_len(n_show)], ")", collapse = "\n"),
+         if (nrow(no_branch_taxa) > n_show) paste0("\n  ... and ", nrow(no_branch_taxa) - n_show, " more") else "",
+         "\nAdjust 'include_stem' or 'missing_taxa_list$Exclusive_subclades' for these taxa.")
+  }
+
+  ## Set seed if provided, for the duration of this function only (the global RNG state is restored on exit)
+  set_local_seed(seed)
 
   ## Randomize the order of taxa so it has no influence on the pattern of grafting
   random_order <- sample.int(n_missing)
@@ -292,9 +314,9 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
         upper_age_i <- if (include_stem) stem_age_i else crown_age_i
       }
 
-      ## Fit Birth-Death on the clade, or on the smallest enclosing clade with >= 3 tips
+      ## Fit Birth-Death on the clade, or on the smallest enclosing clade with >= min_tips tips
       # Stop at the root if reached
-      BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, n_missing = ntips_missing, min_tips = 3)
+      BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, n_missing = ntips_missing, min_tips = min_tips)
 
       ## Simulate missing divergence times with TreeSim::corsim
       new_divergence_times_i <- TreeSim::corsim(x = divergence_times_i, lambda = BD_i$b, mu = BD_i$d,
@@ -371,7 +393,7 @@ drawing_random_branch_weighted_per_length <- function (
     which_node = "tipward", # Return the "tipward" or "rootward" node of the selected branch
     include_stem = TRUE, # Whether to include the stem branch among the available branch for sampling
     exclusive_subclades_MRCA_nodes = NULL, # Subclades within the inclusive clade to exclude from the drawing
-    seed = 1234)
+    seed = NULL) # Seed is set by the main function. Default NULL to not alter the global RNG state
 {
   if (!is.null(seed)) { set.seed(seed = seed) }
 
@@ -428,7 +450,7 @@ grafting_from_divergence_age <- function (phy, # Backbone phylogeny
                                           MRCA_tips, # 1 tip or a pair of tips defining the clade
                                           exclusive_subclades_tips_list, # list of tip pairs defining subclades to exclude
                                           root_age = NULL, # Pass it to avoid recomputing node heights every time
-                                          seed = 1234)
+                                          seed = NULL) # Seed is set by the main function. Default NULL to not alter the global RNG state
 {
   # Set the seed if provided
   if (!is.null(seed)) { set.seed(seed = seed) }

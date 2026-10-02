@@ -54,19 +54,21 @@ enforce_ultrametry_new_tips <- function (phy, # Phylogeny including the new tips
 
 ##### 3/ Check before enforcing overall ultrametry #####
 
+# (nnls method is very costly: dense ntips x nedges matrix)
+# Favor using extend by default
+
 ensure_ultrametry <- function (phy, # Phylogeny
-                                tol = .Machine$double.eps^0.5) # Tolerance used by ape::is.ultrametric()
+                               method = "extend",
+                               tol = .Machine$double.eps^0.5) # Tolerance used by ape::is.ultrametric()
 {
   is_ultrametric <- ape::is.ultrametric(phy, tol = tol)
   if (!is_ultrametric)
   {
     # Force ultrametry to avoid issue with bad rounding
-    phy <- phytools::force.ultrametric(tree = phy, method = "nnls")
+    phy <- phytools::force.ultrametric(tree = phy, method = method, message = FALSE)
   }
 
   return(phy)
 }
 
 
-
-}

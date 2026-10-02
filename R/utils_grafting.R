@@ -58,20 +58,11 @@ sample_one <- function (x, prob = NULL)
 }
 
 
-## Force ultrametry only when needed
-# (nnls method is very costly: dense ntips x nedges matrix)
-ensure_ultrametric <- function (phy, method = "extend", tol = 1e-8)
-{
-  if (ape::is.ultrametric(phy, tol = tol)) return(phy)
-  phytools::force.ultrametric(tree = phy, method = method, message = FALSE)
-}
-
-
 ## Fit a birth-death model on the clade at `node`.
 # If it has less tips than min_tips, climb towards the root until it has enough (stops at the root in any case).
 # Rationale = have enough divergence times to be able to fit a relevant BD model
 # Returns list(b, d, n_tips, node).
-fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 3)
+fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5)
 {
   clade_node <- node
 
@@ -155,3 +146,127 @@ group_and_order_clades <- function (phy, MRCA_tips)
   return(groups_per_taxa)
 }
 
+
+## Extract the NEW divergence times returned by TreeSim::corsim()
+# corsim() returns the input times 'x' plus 'missing' new times, sorted in decreasing order.
+# The new times are recovered by removing ONE instance of each input time from the output
+# Contrary to setdiff(), this is robust to a new time being numerically identical to an existing one, and to duplicated input times.
+extract_new_divergence_times <- function (all_times, # Output of TreeSim::corsim()
+                                          old_times, # Input times 'x' given to TreeSim::corsim()
+                                          tol = 1e-8) # Tolerance for the bound checks
+{
+  all_times <- unname(all_times)
+  old_times <- unname(old_times)
+  remaining <- all_times
+
+  # Remove one instance of each old time
+  for (t in old_times)
+  {
+    idx <- match(t, remaining)
+    remaining <- remaining[-idx]
+  }
+
+  new_times <- sort(remaining, decreasing = TRUE)
+
+  return(new_times)
+}
+
+
+## Seed the RNG for the duration of the calling function only
+# The global RNG state (.Random.seed) is saved and restored when the calling function exits (also on error),
+# so setting a seed inside the grafting functions does not alter the random stream of the user's session.
+# Does nothing if seed is NULL.
+set_local_seed <- function (seed, envir = parent.frame())
+{
+  if (is.null(seed)) return(invisible(NULL))
+
+  global_env <- globalenv()
+  had_seed <- exists(".Random.seed", envir = global_env, inherits = FALSE)
+  old_seed <- if (had_seed) get(".Random.seed", envir = global_env, inherits = FALSE) else NULL
+
+  restore_seed <- function ()
+  {
+    if (is.null(old_seed))
+    {
+      if (exists(".Random.seed", envir = global_env, inherits = FALSE)) rm(".Random.seed", envir = global_env)
+    } else {
+      assign(".Random.seed", old_seed, envir = global_env)
+    }
+  }
+  # Register the restoration on exit of the calling function
+  do.call(base::on.exit, list(as.call(list(restore_seed)), TRUE), envir = envir)
+
+  set.seed(seed = seed)
+  invisible(NULL)
+}
+
+
+## Identify the taxa with no branch available for grafting, given their inclusive clade and exclusive subclades
+# Static check done on the backbone, before any grafting.
+# A taxon is flagged if all the branches of its inclusive clade are excluded.
+# It mirrors the rules of the grafting functions:
+#   - the stem of the inclusive clade is available if include_stem = TRUE (never for the root, which has no stem)
+#   - the stem of a single-tip clade is always available (it is its only branch), whatever include_stem
+#   - branches inside exclusive subclades are unavailable, but their own stem stays available
+# For method = "BD_clades", passing this check does not guarantee success: a branch must also cross the age drawn for the taxon.
+# Returns a data.frame with the flagged taxa (0 rows if none).
+find_taxa_without_allowed_branch <- function (phy,
+                                              missing_taxa_list,
+                                              include_stem = TRUE,
+                                              use_exclusive_subclades = TRUE)
+{
+  n_missing <- length(missing_taxa_list$Taxa_name)
+  root_node <- setdiff(phy$edge[, 1], phy$edge[, 2])
+
+  # Cache descendants and MRCA nodes, as many taxa share the same clades
+  cache <- new.env()
+  cached <- function (key, expr)
+  {
+    if (is.null(cache[[key]])) { cache[[key]] <- expr }
+    cache[[key]]
+  }
+
+  # Initiate vector of flagged
+  flagged <- logical(n_missing)
+
+  ## Loop per taxa
+  for (i in seq_len(n_missing))
+  {
+    # Extract MRCA tips
+    MRCA_tips_i <- missing_taxa_list$MRCA_tips[[i]]
+    # Retrieve associated MRCA
+    MRCA_node_i <- cached(paste0("mrca_", paste(sort(MRCA_tips_i), collapse = "|")), get_clade_node(phy, MRCA_tips_i))
+
+    # Detect case where the inclusive clade is a unique tip
+    is_single_tip <- length(MRCA_tips_i) == 1
+
+    # Is the stem available for grafting?
+    # Only if requested or the 'clade' is a tip; but the clade cannot be the whole tree.
+    stem_available <- (include_stem || is_single_tip) && (MRCA_node_i != root_node)
+
+    # Identify the tipward nodes associated with the valid branches
+    allowed_nodes <- c(cached(paste0("desc_", MRCA_node_i), get_descendant_nodes(phy, MRCA_node_i)),
+                       if (stem_available) MRCA_node_i)
+
+    # Remove branches from exclusive clades
+    if (use_exclusive_subclades)
+    {
+      # Exclusive subclades with at least 2 tips (single-tip or empty subclades exclude nothing)
+      for (tips in Filter(function (x) length(x) >= 2, missing_taxa_list$Exclusive_subclades[[i]]))
+      {
+        excl_node <- cached(paste0("mrca_", paste(sort(tips), collapse = "|")), ape::getMRCA(phy, tips))
+        allowed_nodes <- setdiff(allowed_nodes, cached(paste0("desc_", excl_node), get_descendant_nodes(phy, excl_node)))
+      }
+    }
+    # The taxa if flagged only if no valid branches remains in the pool
+    flagged[i] <- length(allowed_nodes) == 0
+  }
+
+  # Build data.frame summarizing all taxa that did not pass the check
+  flagged_taxa_df <- data.frame(
+    Taxa_name = missing_taxa_list$Taxa_name[flagged],
+    MRCA_tips = vapply(missing_taxa_list$MRCA_tips[flagged], paste, character(1), collapse = ", "), stringsAsFactors = FALSE)
+
+  # Return df
+  return(flagged_taxa_df)
+}

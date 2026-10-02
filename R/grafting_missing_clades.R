@@ -9,7 +9,7 @@
 # See REVIEW_NOTES.md for suggested revisions
 
 # Each group of missing taxa sharing the same sister clade (same MRCA node) is grafted as ONE clade on the stem branch of that sister clade.
-# Divergence time drawn with TreeSim::corsim using a BD model fitted on the sister clade (or the smallest enclosing clade with >= 3 tips).
+# Divergence time drawn with TreeSim::corsim using a BD model fitted on the sister clade (or the smallest enclosing clade with >= min_tips tips).
 # Grow a tree with the requested number of taxa and fitted diversification process
 # Use the speciation rate of the sister-clade to define the crown age
 # Stretch grown tree so its root age matches the crown age
@@ -27,6 +27,7 @@
 
 grafting_missing_clades <- function (phy, # Backbone phylogeny
                                      missing_taxa_list,
+                                     min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model (the enclosing clade is used if the sister clade is smaller)
                                      ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
                                      verbose = TRUE,
                                      save_temp = FALSE, # Save a temporary phylogeny every 'save_temp_every' clades
@@ -38,6 +39,17 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
   {
     ## The backbone must be ultrametric (error otherwise). It is never modified: making it ultrametric is left to the user
     check_backbone_ultrametric(phy = phy, tol = ultrametric_tol)
+
+    ## Check 'min_tips'
+    if (!is.numeric(min_tips) || length(min_tips) != 1 || min_tips < 3)
+    {
+      stop("'min_tips' must be a single number >= 3")
+    }
+    if (length(phy$tip.label) < min_tips)
+    {
+      stop("Backbone phylogeny too small to fit a birth-death model (< ", min_tips, " tips).\n",
+           "Lower 'min_tips' or provide a larger backbone phylogeny.")
+    }
 
     ## Check length of items in missing_taxa_list
     n_missing <- length(missing_taxa_list$Taxa_name)
@@ -60,8 +72,8 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
     }
   }
 
-  ## Set seed if provided
-  if (!is.null(seed)) { set.seed(seed = seed) }
+  ## Set seed if provided, for the duration of this function only (the global RNG state is restored on exit)
+  set_local_seed(seed)
 
   ## Randomize the order of taxa so it has no influence on the pattern of grafting
   random_order <- sample.int(n_missing)
@@ -76,6 +88,15 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
   # Since nested clades are always smaller than their higher parents, this is equivalent to order by nesting scheme
   groups <- group_and_order_clades(phy, missing_taxa_list$MRCA_tips)
   n_groups <- length(groups$MRCA_tips)
+
+  # Stop before grafting if a targeted sister clade is the whole tree: it has no stem to graft on
+  root_node <- setdiff(phy$edge[, 1], phy$edge[, 2])
+  is_whole_tree <- vapply(groups$MRCA_tips, function (tips) get_clade_node(phy, tips) == root_node, logical(1))
+  if (any(is_whole_tree))
+  {
+    stop("Target sister clade defined by ", paste(groups$MRCA_tips[[which(is_whole_tree)[1]]], collapse = ", "),
+         " is the whole tree: it has no stem to graft on")
+  }
 
   if (verbose) cat(paste0(Sys.time(), " - Start grafting process per missing clades\n"))
 
@@ -135,10 +156,10 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
       lower_age_i <- max(divergence_times_i)
     }
 
-    ## Fit Birth-Death on the sister-clade, or on the smallest enclosing clade with >= 3 tips
+    ## Fit Birth-Death on the sister-clade, or on the smallest enclosing clade with >= min_tips tips
     # Stop at the root if reached
     # Sampling fraction "as if missing only one lineage" (the branch leading to the missing clade)
-    BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, n_missing = 1, min_tips = 3)
+    BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, n_missing = 1, min_tips = min_tips)
 
     ## Simulate missing divergence times with TreeSim::corsim
     new_divergence_times_i <- TreeSim::corsim(
@@ -147,7 +168,7 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
         told = upper_age_i, # The stem age
         tyoung = lower_age_i) # The crown age (or 0 for tips)
     # Extract the divergence times for the missing clade
-    divergence_time_missing_clade_i <- setdiff(new_divergence_times_i, divergence_times_i)
+    divergence_time_missing_clade_i <- extract_new_divergence_times(all_times = new_divergence_times_i, old_times = divergence_times_i)
 
     # Compute crown age of the sister-clade Age of the sister clade's MRCA node and
     MRCA_age_i <- root_age - phytools::nodeheight(tree = phy, node = MRCA_node_i)
