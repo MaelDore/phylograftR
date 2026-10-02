@@ -156,9 +156,16 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
         excl_pairs <- Filter(function (x) length(x) >= 2, missing_taxa_list$Exclusive_subclades[[i]])
         if (length(excl_pairs) > 0)
         {
-          # Extract MRCA for all exlusive subclades
+          # Extract MRCA for all exclusive subclades
           exclusive_subclades_MRCA_nodes <- vapply(excl_pairs, function (tips) ape::getMRCA(phy, tips), numeric(1))
         }
+      }
+
+      # Warn if the inclusive clade is the whole tree: it has no stem branch, so only branches inside the clade can be used
+      if (include_stem && length(missing_taxa_list$MRCA_tips[[i]]) > 1 && is.na(get_parent_node(phy, MRCA_node)))
+      {
+        warning("Inclusive clade of '", focal_taxon_name, "' defined by ", paste(missing_taxa_list$MRCA_tips[[i]], collapse = ", "),
+                " is the whole tree: it has no stem branch, so only branches inside the clade are used")
       }
 
       # Select branch for grafting using uniform distribution weighted by branch length to ensure a flat density over any time point along branches
@@ -166,6 +173,15 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
       selected_node_ID <- drawing_random_branch_weighted_per_length(
          phy = phy, MRCA_node = MRCA_node, include_stem = include_stem,
          exclusive_subclades_MRCA_nodes = exclusive_subclades_MRCA_nodes, seed = NULL)
+
+      # Stop with an informative message if no branch is available (all branches excluded by the user's constraints)
+      if (is.na(selected_node_ID))
+      {
+        stop("No branch available to graft '", focal_taxon_name, "'.\n",
+             "All branches of its inclusive clade (MRCA tips: ", paste(missing_taxa_list$MRCA_tips[[i]], collapse = ", "), ") are excluded.\n",
+             "Adjust 'include_stem' or 'missing_taxa_list$Exclusive_subclades' for this taxon.")
+      }
+
       # Extract branch length
       selected_branch_length <- phy$edge.length[match(selected_node_ID, phy$edge[, 2])]
       # Define position from a uniform distribution
@@ -284,7 +300,7 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
       new_divergence_times_i <- TreeSim::corsim(x = divergence_times_i, lambda = BD_i$b, mu = BD_i$d,
                                                 missing = ntips_missing, told = upper_age_i)
       # Extract the divergence times for the missing taxa
-      divergence_times_missing_taxa_i <- setdiff(new_divergence_times_i, divergence_times_i)
+      divergence_times_missing_taxa_i <- extract_new_divergence_times(all_times = new_divergence_times_i, old_times = divergence_times_i)
 
       # Graft missing taxa from oldest to youngest, so younger taxa can be grafted on branches of older missing taxa
       divergence_times_missing_taxa_i <- sort(divergence_times_missing_taxa_i, decreasing = TRUE)
@@ -346,7 +362,8 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
 ### 2/ Sub-function to draw randomly a branch within a clade weighted by its length ####
 
 # Draw is weighted by branch length to ensure the probability to be grafted at any point along any branch in the clade is uniform
-# If not weighted, a time poitn along shorter branch would have more chances to be used for grafting than a time poitn along a long branch
+# If not weighted, a time point along shorter branch would have more chances to be used for grafting than a time point along a long branch
+# Returns the selected node ID, or NA if no branch is available (all branches excluded)
 
 drawing_random_branch_weighted_per_length <- function (
     phy,
@@ -378,10 +395,11 @@ drawing_random_branch_weighted_per_length <- function (
     descendant_nodes <- setdiff(descendant_nodes, excluded_nodes)
   }
 
-  # Stop the process if no valid branch remains for drawing
+  # Return NA if no valid branch remains for drawing
+  # (the calling function stops with a message naming the taxon and its inclusive clade)
   if (length(descendant_nodes) == 0)
   {
-    stop("No branch available for grafting: check include_stem / Exclusive_subclades for clade with MRCA node = ",MRCA_node,"\n")
+    return(NA)
   }
 
   # Convert node IDs into subtending branch IDs
@@ -442,7 +460,8 @@ grafting_from_divergence_age <- function (phy, # Backbone phylogeny
   if (length(valid_nodes_ID) == 0)
   {
     stop("No branch available at age ", signif(divergence_age, 4), " to graft '", tip_label,"'.\n",
-         "All branches in the inclusive clade crossing that age are excluded.")
+         "All branches of its inclusive clade (MRCA tips: ", paste(MRCA_tips, collapse = ", "), ") crossing that age are excluded.\n",
+         "Adjust 'include_stem' or 'missing_taxa_list$Exclusive_subclades' for this taxon.")
   }
 
   # Sample one branch (based on tipward nodes) among the valid branches
