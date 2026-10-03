@@ -7,15 +7,14 @@
 
 ### 1/ Main function to check that grafted taxa respect their clade assignments ####
 
-# Double-checks, a posteriori, that each grafted taxon sits in the right place in the grafted phylogeny:
+# Checks, a posteriori, that each grafted taxon sits in the right place in the grafted phylogeny:
 #   - Target clade = clade defined by Target_clade (a pair of tips, or a single tip). The taxon must fall within this clade
-#                       (crown), or on its stem branch if include_stem = TRUE (taxon then sister to the clade, with no other
-#                       backbone tip outside the clade in between).
-#                       With a single tip, the clade is the tip branch: the taxon must be sister to this tip
-#                       (the same behaviour as graft_missing_taxa() / graft_from_divergence_age()).
+#                    (crown), or on its stem branch if include_stem = TRUE (taxon then sister to the clade, with no other
+#                    backbone tip outside the clade in between).
+#                    With a single tip, the clade is the tip branch: the taxon must be sister to this tip.
 #   - Excluded subclades = subclades (defined by pairs of tips) nested in the target clade where the taxon must NOT fall.
-#                       As in the grafting functions, the stem branch of an excluded subclade is allowed
-#                       (the taxon is then sister to the subclade, not within it).
+#                          As in the grafting functions, the stem branch of an excluded subclade is allowed
+#                          (the taxon is then sister to the subclade, not within it).
 # Also (optionally) checks that the backbone phylogeny is untouched by the grafting once the grafted taxa are pruned:
 # topology and branch lengths are reported separately (branch lengths: max deviation, absolute and relative to backbone depth).
 #
@@ -33,11 +32,13 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                                         stop_on_failure = FALSE, # Stop with an error if any constraint is violated
                                         verbose = TRUE) # Print a summary
 {
-  ## 0/ Prepare inputs ####
+  ## 1.1/ Prepare inputs ####
 
+  # Extract taxa
   taxa_names <- as.character(missing_taxa_list$Taxa_name)
   n_taxa <- length(taxa_names)
 
+  # Check presence of excluded subclades
   excluded_list <- missing_taxa_list$Excluded_subclades
   if (use_excluded_subclades & is.null(excluded_list))
   {
@@ -74,14 +75,18 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
   n_tips_g <- length(phy_grafted$tip.label)
   parts_bb <- ape::prop.part(phy_backbone, check.labels = FALSE)
   parts_g <- ape::prop.part(phy_grafted, check.labels = FALSE)
+
+  # Functions to extract descending tips for a given node in both the backbone and grafted trees
   tips_of_node_bb <- function (node) { phy_backbone$tip.label[parts_bb[[node - n_tips_bb]]] }
-  tips_of_node_g <- function (node) { parts_g[[node - n_tips_g]] } # Tip indices
+  tips_of_node_g <- function (node) { parts_g[[node - n_tips_g]] }
 
   # Backbone tips found in the grafted tree
   is_backbone_tip_g <- phy_grafted$tip.label %in% phy_backbone$tip.label
 
   # Cache for the tips of the backbone clades
   clade_cache <- new.env()
+  # Function to retrieve tips of a given node in the backbone trees, but using a cache system
+  # to not have to recompute it for each taxa if it was already done for its associated clade
   get_backbone_clade_tips <- function (tips)
   {
     tips <- unique(tips)
@@ -94,18 +99,20 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
     return(clade_cache[[key]])
   }
 
-  ## 1/ Check each taxon ####
+  ## 1.2/ Check each taxon ####
 
+  # Initiate resulting data.frame
   res <- data.frame(Taxon = taxa_names,
                     in_tree = taxa_names %in% phy_grafted$tip.label,
-                    target_position = NA_character_, # "crown", "stem", "outside", or "tip_branch" (single-tip clade)
+                    target_position = NA, # "crown", "stem", "outside", or "tip_branch" (single-tip clade)
                     target_ok = NA,
                     excluded_ok = NA,
-                    n_excluded_violated = NA_integer_,
-                    excluded_violated = NA_character_, # Indices of the violated excluded subclades
+                    n_excluded_violated = NA,
+                    excluded_violated = NA, # Indices of the violated excluded subclades
                     ok = FALSE,
                     stringsAsFactors = FALSE)
 
+  ## Loop per taxa
   for (i in seq_len(n_taxa))
   {
     # i <- 1
@@ -121,17 +128,27 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
     Y_node <- ape::getMRCA(phy = phy_grafted, tip = c(target_clade_tips_i, taxa_names[i]))
     Y_tips_idx <- tips_of_node_g(Y_node)
     Y_backbone_tips <- phy_grafted$tip.label[Y_tips_idx[is_backbone_tip_g[Y_tips_idx]]]
+    # Check that no foreign tip (outside of the backbone target clade) are present in the associated clade in the grafted tree
     no_foreign_backbone_tip <- all(Y_backbone_tips %in% C_tips)
 
+    ## Deal with the different cases
     if (length(target_clade_tips_i) == 1)
     {
+      ## Case with a single tip
+
       # Single-tip clade: taxon must be sister to the tip (no crown possible)
       res$target_position[i] <- ifelse(no_foreign_backbone_tip, "tip_branch", "outside")
       res$target_ok[i] <- no_foreign_backbone_tip
     } else {
-      X_node <- ape::getMRCA(phy = phy_grafted, tip = target_clade_tips_i) # MRCA of the target clade in the grafted tree
+      ## Case with a clade (defined by two tips)
+
+      # Get MRCA of the target clade in the grafted tree
+      X_node <- ape::getMRCA(phy = phy_grafted, tip = target_clade_tips_i)
+      # Check that the taxa is found within the target clade on the grafted phylogeny
       in_crown <- taxon_idx %in% tips_of_node_g(X_node)
+      # If not, use 'no_foreign_backbone_tip' to distinguish between taxa grafted on the stem branch, and taxa outside of the target clade
       res$target_position[i] <- ifelse(in_crown, "crown", ifelse(no_foreign_backbone_tip, "stem", "outside"))
+      # Target is okay if in_crown or on the stem when include_stem = TRUE
       res$target_ok[i] <- in_crown | (include_stem & no_foreign_backbone_tip)
     }
 
@@ -143,40 +160,57 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
       for (j in seq_along(excluded_i))
       {
         E_tips <- unique(unname(excluded_i[[j]]))
+
+        # Case with only a single tip as Excluded subclade
         if (length(E_tips) < 2) { next } # A single tip has no descendants: nothing to violate
+
+        # Case with a clade (pairs of tips) as Excluded subclade(s)
         E_node <- ape::getMRCA(phy = phy_grafted, tip = E_tips)
+        # Check that the clade containing the target taxon on the grafted tree does not include tips from the excluded subclade(s)
         if (taxon_idx %in% tips_of_node_g(E_node)) { violated <- c(violated, j) }
       }
+      # Record the number of excluded subclades violated
       res$n_excluded_violated[i] <- length(violated)
-      res$excluded_violated[i] <- ifelse(length(violated) == 0, NA_character_, paste(violated, collapse = ","))
+      # Record the indices of the excluded subclades violated
+      res$excluded_violated[i] <- ifelse(length(violated) == 0, NA, paste(violated, collapse = ","))
+      # Taxon is ok if no exclusive subclades are violated
       res$excluded_ok[i] <- length(violated) == 0
     } else {
       res$excluded_ok[i] <- TRUE
       res$n_excluded_violated[i] <- 0L
     }
 
+    # Overall, a taxon is okay if both ruils for target clade and exclusive subclades are respected
     res$ok[i] <- res$target_ok[i] & res$excluded_ok[i]
   }
 
-  ## 2/ Check the backbone is preserved ####
+  ## 1.3/ Check the backbone is preserved ####
 
   # Two separate results:
   #   - topology_preserved: same topology (and tip labels) once the grafted taxa are pruned
   #   - max_branch_length_deviation: maximum absolute difference in branch length between matched backbone branches,
   #     also given relative to the depth (root age) of the backbone. NA if the topology is not preserved.
   # Branch lengths are considered preserved if the relative deviation <= tolerance.
+
+  # Initiate variables
   topology_preserved <- NA
-  max_dev_abs <- NA_real_
-  max_dev_rel <- NA_real_
+  max_dev_abs <- NA
+  max_dev_rel <- NA
   lengths_preserved <- NA
+
+  # Check backbone only if requested
   if (check_backbone)
   {
+    # Prune the grafted tree from the grafted tips
     pruned <- ape::keep.tip(phy = phy_grafted, tip = phy_backbone$tip.label)
+    # Compare the topology of the pruned tree to the initial backbone tree
     topology_preserved <- isTRUE(ape::all.equal.phylo(target = phy_backbone, current = pruned,
                                                       use.edge.length = FALSE, use.tip.label = TRUE))
+
+    # if the topology match, check branch lengths
     if (topology_preserved & !is.null(phy_backbone$edge.length) & !is.null(pruned$edge.length))
     {
-      # Identify each branch by the set of backbone tips it subtends, to match branches between the two trees
+      # Function to identify each branch by the set of backbone tips it subtends, to match branches between the two trees
       branch_keys <- function (tree)
       {
         n <- length(tree$tip.label)
@@ -189,18 +223,24 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
         }
         return(node_keys[tree$edge[, 2]])
       }
+      # Extract matching branch lengths
       lengths_bb <- setNames(phy_backbone$edge.length, branch_keys(phy_backbone))
       lengths_pruned <- setNames(pruned$edge.length, branch_keys(pruned))
+      # Compute maximum deviation in length across all matching branches
       max_dev_abs <- max(abs(lengths_pruned[names(lengths_bb)] - lengths_bb))
+      # Adjust deviation to the depth of the tree = relative deviation
       backbone_depth <- max(ape::node.depth.edgelength(phy_backbone))
       max_dev_rel <- max_dev_abs / backbone_depth
+      # Compare maximum relative deviation to tolerance as the check for preserved branch lengths
       lengths_preserved <- max_dev_rel <= tolerance
     }
   }
+  # backbone is fully preserved if both topology and branch lenghts are matching (within tolerance)
   backbone_preserved <- if (check_backbone) isTRUE(topology_preserved) & isTRUE(lengths_preserved) else NA
 
-  ## 3/ Summary ####
+  ## 1.4/ Summary ####
 
+  # Summarize check results as attributes
   all_ok <- all(res$ok) & !isFALSE(backbone_preserved)
   attr(res, "topology_preserved") <- topology_preserved
   attr(res, "max_branch_length_deviation") <- max_dev_abs
@@ -208,6 +248,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
   attr(res, "backbone_preserved") <- backbone_preserved
   attr(res, "all_ok") <- all_ok
 
+  # Display check results if requested
   if (verbose)
   {
     backbone_msg <- if (!check_backbone) { "not checked" } else if (!topology_preserved) {
@@ -223,6 +264,8 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                "  - Backbone: ", backbone_msg, "\n",
                "  => ", ifelse(all_ok, "All constraints respected\n", "Some constraints NOT respected (see returned data.frame and attributes)\n")))
   }
+
+  # Display error message
   if (stop_on_failure & !all_ok)
   {
     stop("Some grafting constraints are not respected: ", sum(!res$ok), " taxa failed; backbone preserved = ", backbone_preserved)
