@@ -47,7 +47,7 @@
 #
 #
 #
-# grafted_phy <- grafting_missing_taxa(phy = test_phy, # Backbone phylogeny
+# grafted_phy <- graft_missing_taxa(phy = test_phy, # Backbone phylogeny
 #                                      missing_taxa_list, # List with taxa to graft. Items: Taxa_name as c(), Target_clade as list(c(), c(), ...), Excluded_subclades as list(list(c(), c()), list(c()), ...)
 #                                      include_stem = T, # Include or not the stem of the total clade when grafting?
 #                                      use_excluded_subclades = T, # Use Excluded_subclades to avoid grafting within specific subclades
@@ -62,7 +62,7 @@
 
 ### 1/ Main function to graft missing taxa ####
 
-grafting_missing_taxa <- function (phy, # Backbone phylogeny
+graft_missing_taxa <- function (phy, # Backbone phylogeny
                                    missing_taxa_list, # List with Taxa_name = c(), Target_clade = list(c(), ...), Excluded_subclades = list(list(c(), c()), NULL, ...)
                                    include_stem = TRUE, # Include the stem of the target clades when grafting?
                                    use_excluded_subclades = TRUE, # Avoid grafting within Excluded_subclades?
@@ -191,7 +191,7 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
 
       # Select branch for grafting using uniform distribution weighted by branch length to ensure a flat density over any time point along branches
       # (no diversification model)
-      selected_node_ID <- drawing_random_branch_weighted_per_length(
+      selected_node_ID <- draw_random_branch_weighted_per_length(
          phy = phy, MRCA_node = MRCA_node, include_stem = include_stem,
          excluded_subclades_MRCA_nodes = excluded_subclades_MRCA_nodes, seed = NULL)
 
@@ -334,7 +334,7 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
           excluded_subclades_tips_list_i <- NULL
         }
 
-        phy <- grafting_from_divergence_age(
+        phy <- graft_from_divergence_age(
             phy = phy,
             divergence_age = divergence_times_missing_taxa_i[j],
             tip_label = missing_taxa_list_i$Taxa_name[j],
@@ -386,7 +386,7 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
 # If not weighted, a time point along shorter branch would have more chances to be used for grafting than a time point along a long branch
 # Returns the selected node ID, or NA if no branch is available (all branches excluded)
 
-drawing_random_branch_weighted_per_length <- function (
+draw_random_branch_weighted_per_length <- function (
     phy,
     MRCA_node, # MRCA node of the target clade where to draw the branch
     which_node = "tipward", # Return the "tipward" or "rootward" node of the selected branch
@@ -447,7 +447,7 @@ drawing_random_branch_weighted_per_length <- function (
 
 ### 3/ Sub-function grafting missing taxa from divergence age #####
 
-grafting_from_divergence_age <- function (phy, # Backbone phylogeny
+graft_from_divergence_age <- function (phy, # Backbone phylogeny
                                           divergence_age, # Age at which the branch must be grafted
                                           tip_label, # Label of the tip
                                           target_clade_tips, # 1 tip or a pair of tips defining the target clade

@@ -23,7 +23,7 @@
 #       Sister_clade = list(c("Tip_AL", "Tip_AR"), c("Tip_BL", "Tip_BR"), ...)
 
 
-grafting_missing_clades <- function (phy, # Backbone phylogeny
+graft_missing_clades <- function (phy, # Backbone phylogeny
                                      missing_taxa_list,
                                      min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model (the enclosing clade is used if the sister clade is smaller)
                                      ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks

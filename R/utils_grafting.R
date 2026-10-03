@@ -1,4 +1,4 @@
-##### Internal helpers shared by grafting_missing_taxa() and grafting_missing_clades() #####
+##### Internal helpers shared by graft_missing_taxa() and graft_missing_clades() #####
 
 ## Identify all descendant nodes from a given node in a tree
 # Fast, non-recursive search for descendants (all internal + terminal nodes below `node`)
