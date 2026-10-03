@@ -63,17 +63,17 @@
 ### 1/ Main function to graft missing taxa ####
 
 graft_missing_taxa <- function (phy, # Backbone phylogeny
-                                   missing_taxa_list, # List with Taxa_name = c(), Target_clade = list(c(), ...), Excluded_subclades = list(list(c(), c()), NULL, ...)
-                                   include_stem = TRUE, # Include the stem of the target clades when grafting?
-                                   use_excluded_subclades = TRUE, # Avoid grafting within Excluded_subclades?
-                                   method = "BD_clades", # "uniform" or "BD_clades"
-                                   min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model for "BD_clades" (the enclosing clade is used if the focal clade is smaller)
-                                   verbose = TRUE, # To print progress every 100 taxa or every 10 target clades
-                                   save_temp = FALSE, # Save a temporary phylogeny after each target clade (BD_clades)
-                                   save_temp_every = 10,
-                                   temp_file_path = NULL, # Default = "./temp_phy_from_grafting.rds"
-                                   ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
-                                   seed = 1234)
+                                missing_taxa_list, # List with Taxa_name = c(), Target_clade = list(c(), ...), Excluded_subclades = list(list(c(), c()), NULL, ...)
+                                include_stem = TRUE, # Include the stem of the target clades when grafting?
+                                use_excluded_subclades = TRUE, # Avoid grafting within Excluded_subclades?
+                                method = "BD_clades", # "uniform" or "BD_clades"
+                                min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model for "BD_clades" (the enclosing clade is used if the focal clade is smaller)
+                                verbose = TRUE, # To print progress every 100 taxa or every 10 target clades
+                                save_temp = FALSE, # Save a temporary phylogeny after each target clade (BD_clades)
+                                save_temp_every = 10,
+                                temp_file_path = NULL, # Default = "./temp_phy_from_grafting.rds"
+                                ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
+                                seed = 1234)
 {
   ### ---- Check input validity ---- ###
   {
@@ -448,12 +448,12 @@ draw_random_branch_weighted_per_length <- function (
 ### 3/ Sub-function grafting missing taxa from divergence age #####
 
 graft_from_divergence_age <- function (phy, # Backbone phylogeny
-                                          divergence_age, # Age at which the branch must be grafted
-                                          tip_label, # Label of the tip
-                                          target_clade_tips, # 1 tip or a pair of tips defining the target clade
-                                          excluded_subclades_tips_list, # list of tip pairs defining subclades to exclude
-                                          root_age = NULL, # Pass it to avoid recomputing node heights every time
-                                          seed = NULL) # Seed is set by the main function. Default NULL to not alter the global RNG state
+                                       divergence_age, # Age at which the branch must be grafted
+                                       tip_label, # Label of the tip
+                                       target_clade_tips, # 1 tip or a pair of tips defining the target clade
+                                       excluded_subclades_tips_list, # list of tip pairs defining subclades to exclude
+                                       root_age = NULL, # Pass it to avoid recomputing node heights every time
+                                       seed = NULL) # Seed is set by the main function. Default NULL to not alter the global RNG state
 {
   # Set the seed if provided
   if (!is.null(seed)) { set.seed(seed = seed) }

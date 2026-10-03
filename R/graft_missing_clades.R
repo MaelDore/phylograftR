@@ -24,14 +24,14 @@
 
 
 graft_missing_clades <- function (phy, # Backbone phylogeny
-                                     missing_taxa_list,
-                                     min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model (the enclosing clade is used if the sister clade is smaller)
-                                     ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
-                                     verbose = TRUE,
-                                     save_temp = FALSE, # Save a temporary phylogeny every 'save_temp_every' clades
-                                     save_temp_every = 10,
-                                     temp_file_path = NULL, # Default = "./temp_phy_from_grafting.rds"
-                                     seed = 1234)
+                                  missing_taxa_list,
+                                  min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model (the enclosing clade is used if the sister clade is smaller)
+                                  ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
+                                  verbose = TRUE,
+                                  save_temp = FALSE, # Save a temporary phylogeny every 'save_temp_every' clades
+                                  save_temp_every = 10,
+                                  temp_file_path = NULL, # Default = "./temp_phy_from_grafting.rds"
+                                  seed = 1234)
 {
   ### ---- Check input validity ---- ###
   {
