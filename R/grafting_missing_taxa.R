@@ -399,8 +399,12 @@ drawing_random_branch_weighted_per_length <- function (
   # Identify all descending nodes within the inclusive clade
   descendant_nodes <- get_descendant_nodes(phy = phy, node = MRCA_node)
 
+  # Deal with the special case of single-tip clades: the tip branch is the only branch available (it is the stem of the clade),
+  # so include_stem is ignored (set to TRUE)
+  if (MRCA_node <= ape::Ntip(phy)) { include_stem <- TRUE }
+
   # Deal with the special case of the root.
-  # The root has no stem, so include_stem is ignored (set to FALSE by default)
+  # The root has no stem, so include_stem is ignored (set to FALSE)
   root_node <- setdiff(phy$edge[, 1], phy$edge[, 2])
   if (MRCA_node == root_node) { include_stem <- FALSE }
 

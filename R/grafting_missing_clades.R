@@ -10,9 +10,7 @@
 
 # Each group of missing taxa sharing the same sister clade (same MRCA node) is grafted as ONE clade on the stem branch of that sister clade.
 # Divergence time drawn with TreeSim::corsim using a BD model fitted on the sister clade (or the smallest enclosing clade with >= min_tips tips).
-# Grow a tree with the requested number of taxa and fitted diversification process
-# Use the speciation rate of the sister-clade to define the crown age
-# Stretch grown tree so its root age matches the crown age
+# Grow a tree with the requested number of taxa and fitted diversification process, conditioned on the stem age drawn for the missing clade (TreeSim::sim.bd.taxa.age)
 # Graft missing subclade on the stem branch at the given stem age
 
 # Changes:
@@ -182,6 +180,8 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
     if (nb_missing_taxa == 1)
     {
       ## Case where the missing 'clade' is a single tip
+
+      # Graft the unique tip
       phy <- phytools::bind.tip(tree = phy, tip.label = missing_taxa_list_i$Taxa_name,
                                 edge.length = divergence_time_missing_clade_i,
                                 where = MRCA_node_i, position = position_i)
@@ -189,18 +189,15 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
 
       ## Case where the missing 'clade' is a true clade (nb_missing_taxa > 1)
 
-      ## Grow a tree with the requested number of missing taxa under the same process as the sister-clade
-      missing_clade_i <- TreeSim::sim.bd.taxa(n = nb_missing_taxa, numbsim = 1,
-                                              lambda = BD_i$b, mu = BD_i$d,
-                                              frac = 1, complete = FALSE)[[1]]
+      ## Grow a tree with the requested number of missing taxa under the same process as the sister-clade,
+      # conditioned on BOTH the number of taxa and the stem age (= the divergence time drawn with TreeSim::corsim)
+      missing_clade_i <- TreeSim::sim.bd.taxa.age(n = nb_missing_taxa, numbsim = 1,
+                                                  lambda = BD_i$b, mu = BD_i$d,
+                                                  frac = 1, age = divergence_time_missing_clade_i,
+                                                  mrca = FALSE)[[1]] # mrca = FALSE: 'age' is the stem age (time since origin)
       missing_clade_i$tip.label <- missing_taxa_list_i$Taxa_name
 
-      ## Stretch it so its stem age matches the divergence time
-      current_stem_age_i <- max(phytools::nodeHeights(missing_clade_i)) + missing_clade_i$root.edge
-      stretch_factor <- divergence_time_missing_clade_i / current_stem_age_i
-      missing_clade_i$edge.length <- missing_clade_i$edge.length * stretch_factor
-      missing_clade_i$root.edge <- missing_clade_i$root.edge * stretch_factor
-
+      # Graft the generated subclade
       phy <- ape::bind.tree(x = phy, y = missing_clade_i, where = MRCA_node_i, position = position_i)
     }
 
