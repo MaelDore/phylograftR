@@ -7,20 +7,89 @@
 
 ### 1/ Main function to check that grafted taxa respect their clade assignments ####
 
-# Checks, a posteriori, that each grafted taxon sits in the right place in the grafted phylogeny:
-#   - Target clade = clade defined by Target_clade (a pair of tips, or a single tip). The taxon must fall within this clade
-#                    (crown), or on its stem branch if include_stem = TRUE (taxon then sister to the clade, with no other
-#                    backbone tip outside the clade in between).
-#                    With a single tip, the clade is the tip branch: the taxon must be sister to this tip.
-#   - Excluded subclades = subclades (defined by pairs of tips) nested in the target clade where the taxon must NOT fall.
-#                          As in the grafting functions, the stem branch of an excluded subclade is allowed
-#                          (the taxon is then sister to the subclade, not within it).
-# Also (optionally) checks that the backbone phylogeny is untouched by the grafting once the grafted taxa are pruned:
-# topology and branch lengths are reported separately (branch lengths: max deviation, absolute and relative to backbone depth).
-#
-# Returns a data.frame with one row per taxon in missing_taxa_list (original order).
-# The data.frame has attributes: "topology_preserved", "max_branch_length_deviation", "max_branch_length_deviation_relative",
-# "backbone_preserved" (TRUE/FALSE/NA) and "all_ok" (TRUE/FALSE)
+#' @title Check that grafted taxa respect their grafting constraints
+#'
+#' @description This function checks, a posteriori, that each taxon grafted with `graft_missing_taxa()` sits at a valid position in the grafted phylogeny:
+#' within its target clade (or on its stem branch if allowed), and outside its excluded subclades.
+#' It can also check that the backbone phylogeny is preserved by the grafting once the grafted taxa are pruned.
+#'
+#' @param phy_grafted An object of class `"phylo"`. The phylogeny after grafting.
+#' @param phy_backbone An object of class `"phylo"`. The backbone phylogeny used for grafting (i.e., before grafting).
+#' @param missing_taxa_list A list with the information on the grafted taxa. Typically the same list as used for grafting.
+#'   Items: `$Taxa_name`, `$Target_clade`, and optionally `$Excluded_subclades`. See [graft_missing_taxa()] for details.
+#' @param include_stem Logical. Same as in [graft_missing_taxa()]: whether grafting on the stem branch of target clades defined by pairs of tips is accepted.
+#'   Default is `TRUE`.
+#' @param use_excluded_subclades Logical. Same as in [graft_missing_taxa()]: whether to check the excluded subclades.
+#'   If no `$Excluded_subclades` item is found in `missing_taxa_list`, a warning is issued and excluded subclades are not checked. Default is `TRUE`.
+#' @param check_backbone Logical. Whether to check that the topology and branch lengths of the backbone are preserved once the grafted taxa are pruned. Default is `TRUE`.
+#' @param tolerance Numeric. Tolerance for the maximum deviation in backbone branch lengths, relative to the depth (root age) of the backbone.
+#'   Default is `1e-6`.
+#' @param stop_on_failure Logical. Whether to stop with an error if any constraint is violated. Default is `FALSE`.
+#' @param verbose Logical. Whether to print a summary of the checks. Default is `TRUE`.
+#'
+#' @return The function returns a data.frame with one row per taxon in `missing_taxa_list` (in the original order), and the following columns:
+#'
+#' * `$Taxon`: Name of the taxon.
+#' * `$in_tree`: Logical. Whether the taxon is found in the grafted phylogeny.
+#' * `$target_position`: Character string. Position of the taxon relative to its target clade: `"crown"` (within the clade), `"stem"` (sister to the clade),
+#'      `"tip_branch"` (sister to the tip, for single-tip target clades), or `"outside"` (neither within the clade or on its stem = an error).
+#' * `$target_ok`: Logical. Whether the position respects the target clade (`"crown"` or, if `include_stem = TRUE`, `"stem"`; `"tip_branch"` for single-tip clades).
+#' * `$excluded_ok`: Logical. Whether the taxon is outside all its excluded subclades.
+#' * `$n_excluded_violated`: Integer. Number of excluded subclades violated.
+#' * `$excluded_violated`: Character string. Indices of the excluded subclades violated, separated by commas (`NA` if none).
+#' * `$ok`: Logical. Whether the taxon respects both its target clade and its excluded subclades.
+#'
+#' The data.frame has the following attributes:
+#'
+#' * `"topology_preserved"`: Logical. Whether the backbone topology is preserved once the grafted taxa are pruned (`NA` if `check_backbone = FALSE`).
+#' * `"max_branch_length_deviation"`: Numeric. Maximum absolute deviation in backbone branch lengths (`NA` if the topology is not preserved).
+#' * `"max_branch_length_deviation_relative"`: Numeric. Same, relative to the depth of the backbone.
+#' * `"backbone_preserved"`: Logical. Whether both topology and branch lengths are preserved, within `tolerance` (`NA` if `check_backbone = FALSE`).
+#' * `"all_ok"`: Logical. Whether all taxa respect their constraints and the backbone is preserved (if checked).
+#'
+#' Attributes are accessed with `attr(x = output, which = "attribute_name")`.
+#'
+#'
+#' @details
+#' A taxon respects its target clade if it is found within the clade, or on its stem branch if `include_stem = TRUE`
+#' (the taxon is then sister to the target clade, with no other backbone tip in between).
+#' For a single-tip target clade, the taxon must be sister to the tip.
+#'
+#' A taxon respects its excluded subclades if it is not nested within any of them.
+#' As in [graft_missing_taxa()], the stem branch of an excluded subclade is allowed: the taxon is then sister to the subclade, not within it.
+#'
+#' Branches of the backbone are matched between the pruned grafted phylogeny and the backbone by the set of tips they subtend.
+#' Branch lengths are considered preserved if the maximum deviation, relative to the depth of the backbone, is lower than `tolerance`.
+#'
+#' @export
+#'
+#' @seealso Grafting functions: [graft_missing_taxa()], [graft_missing_clades()]
+#'
+#' @author Maël Doré
+#'
+#' @examples
+#' # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units
+#' set.seed(1234)
+#' phy <- ape::rcoal(n = 30)
+#' phy$edge.length <- phy$edge.length / max(ape::node.depth.edgelength(phy)) * 50
+#'
+#' # List the missing taxa to graft
+#' missing_taxa_list <- list(
+#'   Taxa_name = c("X1", "X2", "X3", "X4"),
+#'   Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5", c("t26", "t18")),
+#'   Excluded_subclades = list(list(c("t10", "t19")), NULL, NULL, NULL))
+#'
+#' # Graft the missing taxa
+#' grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+#'                                   verbose = FALSE, seed = 1234)
+#'
+#' # Check that the grafted taxa respect their constraints, and that the backbone is preserved
+#' check_results <- check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
+#'                                             missing_taxa_list = missing_taxa_list)
+#' check_results
+#' attr(check_results, "all_ok")
+#'
+
 
 check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                                         phy_backbone, # Backbone phylogeny used for the grafting (before grafting)
@@ -173,14 +242,14 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
       res$n_excluded_violated[i] <- length(violated)
       # Record the indices of the excluded subclades violated
       res$excluded_violated[i] <- ifelse(length(violated) == 0, NA, paste(violated, collapse = ","))
-      # Taxon is ok if no exclusive subclades are violated
+      # Taxon is ok if no excluded subclades are violated
       res$excluded_ok[i] <- length(violated) == 0
     } else {
       res$excluded_ok[i] <- TRUE
       res$n_excluded_violated[i] <- 0L
     }
 
-    # Overall, a taxon is okay if both ruils for target clade and exclusive subclades are respected
+    # Overall, a taxon is okay if both rules for target clade and excluded subclades are respected
     res$ok[i] <- res$target_ok[i] & res$excluded_ok[i]
   }
 
@@ -224,8 +293,8 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
         return(node_keys[tree$edge[, 2]])
       }
       # Extract matching branch lengths
-      lengths_bb <- setNames(phy_backbone$edge.length, branch_keys(phy_backbone))
-      lengths_pruned <- setNames(pruned$edge.length, branch_keys(pruned))
+      lengths_bb <- stats::setNames(phy_backbone$edge.length, branch_keys(phy_backbone))
+      lengths_pruned <- stats::setNames(pruned$edge.length, branch_keys(pruned))
       # Compute maximum deviation in length across all matching branches
       max_dev_abs <- max(abs(lengths_pruned[names(lengths_bb)] - lengths_bb))
       # Adjust deviation to the depth of the tree = relative deviation
@@ -235,7 +304,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
       lengths_preserved <- max_dev_rel <= tolerance
     }
   }
-  # backbone is fully preserved if both topology and branch lenghts are matching (within tolerance)
+  # backbone is fully preserved if both topology and branch lengths are matching (within tolerance)
   backbone_preserved <- if (check_backbone) isTRUE(topology_preserved) & isTRUE(lengths_preserved) else NA
 
   ## 1.4/ Summary ####
