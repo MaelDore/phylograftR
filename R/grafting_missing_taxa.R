@@ -135,8 +135,7 @@ grafting_missing_taxa <- function (phy, # Backbone phylogeny
   # Better to stop before grafting than in the middle of a long run
   no_branch_taxa <- find_taxa_without_allowed_branch(phy = phy, missing_taxa_list = missing_taxa_list,
                                                      include_stem = include_stem,
-                                                     use_exclusive_subclades = use_exclusive_subclades,
-                                                     method = method)
+                                                     use_exclusive_subclades = use_exclusive_subclades)
   if (nrow(no_branch_taxa) > 0)
   {
     n_show <- min(nrow(no_branch_taxa), 10)

@@ -122,7 +122,7 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
     stem_node_i <- get_parent_node(phy, MRCA_node_i)
     is_single_tip <- length(MRCA_tips_i) == 1
 
-    # Stop for special case where the targeted sister-clade is the whoel tree
+    # Stop for special case where the targeted sister-clade is the whole tree
     if (is.na(stem_node_i))
     {
       stop("Target sister clade defined by ", paste(MRCA_tips_i, collapse = ", "), " is the whole tree: it has no stem to graft on")
