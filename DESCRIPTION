@@ -5,7 +5,7 @@ Authors@R:
     person("Maël", "Doré", , "mael.dore@gmail.com", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0003-3242-9242"))
 Description: Graft missing taxa on time-calibrated phylogenies combining
-    taxonomic assigments and species attributes to define
+    taxonomic assignments and species attributes to define
     inclusive/exclusive clades for grafting with diversification modeling
     for inferring divergence times of imputed branches.
 License: MIT + file LICENSE
@@ -14,3 +14,9 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 URL: https://github.com/MaelDore/phylograftR
 BugReports: https://github.com/MaelDore/phylograftR/issues
+Imports: 
+    ape (>= 5.8.0),
+    phytools (>= 2.5.0),
+    TreeSim (>= 2.4)
+Suggests: 
+    testthat (>= 3.3.2)
