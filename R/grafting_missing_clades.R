@@ -20,7 +20,7 @@
 
 # Input format
 # List: Taxa name = c("Taxa_A", "Taxa_B")
-#       MRCA_tips = list(c("Tip_AL", "Tip_AR), c("Tip_BL", "Tip_BR), ...)
+#       Sister_clade = list(c("Tip_AL", "Tip_AR"), c("Tip_BL", "Tip_BR"), ...)
 
 
 grafting_missing_clades <- function (phy, # Backbone phylogeny
@@ -54,19 +54,19 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
 
     if (n_missing == 0) stop("'missing_taxa_list$Taxa_name' is empty")
 
-    if (length(missing_taxa_list$MRCA_tips) != n_missing)
-      stop("MRCA_tips must have the same length as Taxa_name")
+    if (length(missing_taxa_list$Sister_clade) != n_missing)
+      stop("Sister_clade must have the same length as Taxa_name")
 
     ## Check that taxa names are truly missing from the backbone
     if (anyDuplicated(missing_taxa_list$Taxa_name) || any(missing_taxa_list$Taxa_name %in% phy$tip.label))
       stop("Taxa_name must be unique and absent from the backbone phylogeny")
 
-    ## Check that all tips used to identify MRCA_tips are present in the backbone
-    all_MRCA_tips <- unique(unlist(missing_taxa_list$MRCA_tips))
-    if (!all(all_MRCA_tips %in% phy$tip.label))
+    ## Check that all tips used to define sister clades are present in the backbone
+    all_sister_clade_tips <- unique(unlist(missing_taxa_list$Sister_clade))
+    if (!all(all_sister_clade_tips %in% phy$tip.label))
     {
-      stop("Some tip labels provided to locate MRCA nodes of inclusive clades are missing from the backbone phylogeny\n",
-           "Missing tips: ", paste(setdiff(all_MRCA_tips, phy$tip.label), collapse = ", "))
+      stop("Some tip labels provided to locate MRCA nodes of sister clades are missing from the backbone phylogeny\n",
+           "Missing tips: ", paste(setdiff(all_sister_clade_tips, phy$tip.label), collapse = ", "))
     }
   }
 
@@ -84,15 +84,15 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
 
   # Identify sister-clades and order by clade size
   # Since nested clades are always smaller than their higher parents, this is equivalent to order by nesting scheme
-  groups <- group_and_order_clades(phy, missing_taxa_list$MRCA_tips)
-  n_groups <- length(groups$MRCA_tips)
+  groups <- group_and_order_clades(phy, missing_taxa_list$Sister_clade)
+  n_groups <- length(groups$clade_tips)
 
-  # Stop before grafting if a targeted sister clade is the whole tree: it has no stem to graft on
+  # Stop before grafting if a sister clade is the whole tree: it has no stem to graft on
   root_node <- setdiff(phy$edge[, 1], phy$edge[, 2])
-  is_whole_tree <- vapply(groups$MRCA_tips, function (tips) get_clade_node(phy, tips) == root_node, logical(1))
+  is_whole_tree <- vapply(groups$clade_tips, function (tips) get_clade_node(phy, tips) == root_node, logical(1))
   if (any(is_whole_tree))
   {
-    stop("Target sister clade defined by ", paste(groups$MRCA_tips[[which(is_whole_tree)[1]]], collapse = ", "),
+    stop("Sister clade defined by ", paste(groups$clade_tips[[which(is_whole_tree)[1]]], collapse = ", "),
          " is the whole tree: it has no stem to graft on")
   }
 
@@ -109,21 +109,21 @@ grafting_missing_clades <- function (phy, # Backbone phylogeny
     taxa_ID_i <- which(groups$group == i)
     # Extract associated data
     missing_taxa_list_i <- lapply(X = missing_taxa_list, FUN = function (x) { x[taxa_ID_i] })
-    # Extract MRCA tips
-    MRCA_tips_i <- groups$MRCA_tips[[i]]
+    # Extract the tips defining the sister clade
+    sister_clade_tips_i <- groups$clade_tips[[i]]
     # Get number of taxa to include in this missing clade
     nb_missing_taxa <- length(taxa_ID_i)
 
     # Identify MRCA node and stem node in grafted tree
     # Node is recomputed from tips because MRCA node IDs change after each graft
-    MRCA_node_i <- get_clade_node(phy, MRCA_tips_i)
+    MRCA_node_i <- get_clade_node(phy, sister_clade_tips_i)
     stem_node_i <- get_parent_node(phy, MRCA_node_i)
-    is_single_tip <- length(MRCA_tips_i) == 1
+    is_single_tip <- length(sister_clade_tips_i) == 1
 
-    # Stop for special case where the targeted sister-clade is the whole tree
+    # Stop for special case where the sister clade is the whole tree
     if (is.na(stem_node_i))
     {
-      stop("Target sister clade defined by ", paste(MRCA_tips_i, collapse = ", "), " is the whole tree: it has no stem to graft on")
+      stop("Sister clade defined by ", paste(sister_clade_tips_i, collapse = ", "), " is the whole tree: it has no stem to graft on")
     }
 
     # Extract stem age
