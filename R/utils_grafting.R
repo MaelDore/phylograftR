@@ -415,3 +415,48 @@ find_taxa_without_allowed_branch <- function (phy,
   return(flagged_taxa_df)
 }
 
+
+#' @title Check the path used for temporary saves
+#'
+#' @description Check that `temp_file_path` is valid, and stops with an informative error if not.
+#'   Nothing is checked if `temp_file_path` is `NULL`, as the default path is in the working directory.
+#'   The path must be a single character string that:
+#'   * Ends with `.rds`.
+#'   * Is located in an existing directory.
+#'   * Is located in a writable directory.
+#'
+#' @param temp_file_path Character string or `NULL`. Path of the `.rds` file used for temporary saves.
+#'
+#' @noRd
+#'
+#' @return Invisible `TRUE`. Stops if the path is not valid.
+#'
+
+check_temp_file_path <- function (temp_file_path)
+{
+  if (is.null(temp_file_path)) return(invisible(TRUE))
+
+  # Must be a single path
+  if (!is.character(temp_file_path) || length(temp_file_path) != 1 || is.na(temp_file_path))
+  {
+    stop("'temp_file_path' must be a single character string")
+  }
+  # Must end with ".rds"
+  if (!grepl(pattern = "\\.rds$", x = temp_file_path))
+  {
+    stop("'temp_file_path' must end with '.rds'")
+  }
+  # Directory must exist
+  temp_dir <- dirname(temp_file_path)
+  if (!dir.exists(temp_dir))
+  {
+    stop("The directory of 'temp_file_path' does not exist: ", temp_dir)
+  }
+  # Directory must be writable
+  if (file.access(names = temp_dir, mode = 2) != 0)
+  {
+    stop("The directory of 'temp_file_path' is not writable: ", temp_dir)
+  }
+
+  invisible(TRUE)
+}

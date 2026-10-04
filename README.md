@@ -92,10 +92,10 @@ the TACT paper as a foundation work for the development of
 
 > Chang, J., Rabosky, D. L., & Alfaro, M. E. (2019). Estimating
 > diversification rates on incompletely-sampled phylogenies: theoretical
-> concerns and practical solutions. Systematic Biology.
+> concerns and practical solutions. *Systematic Biology*.
 > <https://doi.org/10.1093/sysbio/syz081>
 
-TACT is available as Python-based software at:
+**TACT** is available as Python-based software at:
 <https://tact.jonathanchang.org/>
 
 As **phylograftR** relies strongly on functions designed for the

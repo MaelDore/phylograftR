@@ -6,3 +6,5 @@
 ^LICENSE\.md$
 ^README\.Rmd$
 ^README\.html$
+
+^R_temp/*

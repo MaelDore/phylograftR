@@ -27,7 +27,7 @@
 #' @param verbose Logical. Whether to display progress. Messages print every 10 missing clades. Default is `TRUE`.
 #' @param save_temp Logical. Whether to save a temporary version of the grafted phylogeny during the process, to recover from a crash on long runs. Default is `FALSE`.
 #' @param save_temp_every Integer. Frequency of the temporary saves, in number of missing clades grafted. Only used if `save_temp = TRUE`. Default is `10`.
-#' @param temp_file_path Character string. Path of the `.rds` file used for temporary saves. Default is `NULL`, which saves in `"./temp_phy_from_grafting.rds"`.
+#' @param temp_file_path Character string. Path of the `.rds` file used for temporary saves. It must end with `.rds` and its directory must exist and be writable. Default is `NULL`, which saves in `"./temp_phy_from_grafting.rds"`.
 #' @param seed Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
 #'   is restored on exit. Set to `NULL` to use the random number generator of the session. Default is `1234`.
 #'
@@ -131,6 +131,10 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
       stop("Some tip labels provided to locate MRCA nodes of sister clades are missing from the backbone phylogeny\n",
            "Missing tips: ", paste(setdiff(all_sister_clade_tips, phy$tip.label), collapse = ", "))
     }
+
+    ## temp_file_path
+    # If provided, must be a single path ending with ".rds", in an existing and writable directory
+    check_temp_file_path(temp_file_path = temp_file_path)
   }
 
   ## Set seed if provided, for the duration of this function only (the global RNG state is restored on exit)
@@ -278,7 +282,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
       {
         temp_file_path <- "./temp_phy_from_grafting.rds"
       }
-      saveRDS(object = phy, file = temp_file_path)
+      saveRDS(object = phy, file = file.path(temp_file_path))
     }
 
     if (verbose && (nb_missing_clades_grafted %% 10 == 0))
