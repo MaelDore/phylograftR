@@ -44,8 +44,8 @@ The function returns a data.frame with one row per taxon in \code{missing_taxa_l
 \itemize{
 \item \verb{$Taxon}: Name of the taxon.
 \item \verb{$in_tree}: Logical. Whether the taxon is found in the grafted phylogeny.
-\item \verb{$target_position}: Character string. Position of the taxon relative to its target clade: \code{"crown"} (within the clade), \code{"stem"} (sister to the clade),
-\code{"tip_branch"} (sister to the tip, for single-tip target clades), or \code{"outside"} (neither within the clade nor on its stem = an error).
+\item \verb{$target_position}: Character string. Position of the taxon relative to its target clade: \code{"crown"} (within the clade), \code{"stem"} (sister to the clade, or to other missing taxa grafted on the stem),
+\code{"tip_branch"} (on the branch of the tip, for single-tip target clades), or \code{"outside"} (neither within the clade nor on its stem = an error).
 \item \verb{$target_ok}: Logical. Whether the position respects the target clade (\code{"crown"} or, if \code{include_stem = TRUE}, \code{"stem"}; \code{"tip_branch"} for single-tip clades).
 \item \verb{$excluded_ok}: Logical. Whether the taxon is outside all its excluded subclades.
 \item \verb{$n_excluded_violated}: Integer. Number of excluded subclades violated.
@@ -71,8 +71,12 @@ It can also check that the backbone phylogeny is preserved by the grafting once 
 }
 \details{
 A taxon respects its target clade if it is found within the clade, or on its stem branch if \code{include_stem = TRUE}
-(the taxon is then sister to the target clade, with no other backbone tip in between).
-For a single-tip target clade, the taxon must be sister to the tip.
+(the taxon is then sister to the target clade, or to other missing taxa sister to the target clade, with no other backbone tip in between).
+For a single-tip target clade, the taxon must be on the branch of the tip, with no other backbone tip in between.
+
+The 'stem' position is not restricted to a taxon being directly sister to the target clade: taxa grafted on the stem can receive further grafts,
+so several missing taxa can form together a group sister to the target clade (i.e, a missing-only subtree grafted on the the stem).
+Only backbone tips are considered when checking the position of a taxon (missing taxa are ignored), so such configurations are valid.
 
 A taxon respects its excluded subclades if it is not nested within any of them.
 As in \code{\link[=graft_missing_taxa]{graft_missing_taxa()}}, the stem branch of an excluded subclade is allowed: the taxon is then sister to the subclade, not within it.

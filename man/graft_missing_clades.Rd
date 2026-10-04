@@ -8,6 +8,7 @@ graft_missing_clades(
   phy,
   missing_taxa_list,
   min_tips = 5,
+  total_richness_per_clades = NULL,
   ultrametric_tol = .Machine$double.eps^0.5,
   verbose = TRUE,
   save_temp = FALSE,
@@ -31,6 +32,20 @@ Taxa with the same sister clade are grafted together as one missing clade.
 \item{min_tips}{Integer. Minimum number of tips of the clade used to fit the birth-death model.
 If the sister clade has fewer tips, the smallest enclosing clade with at least \code{min_tips} tips is used instead. Must be at least 3. Default is \code{5}.}
 
+\item{total_richness_per_clades}{(Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
+nor in \code{missing_taxa_list} (i.e., unsampled species) when fitting the birth-death models. Items:
+\itemize{
+\item \verb{$Sister_clade}: List of character vectors of tips, defining clades as in \code{missing_taxa_list$Sister_clade}.
+It must cover all the unique sister clades of \code{missing_taxa_list}. It can include other clades, e.g., enclosing clades.
+\item \verb{$total_richness}: Vector of positive integers, same length as \verb{$Sister_clade}. Total number of species of each clade,
+i.e., backbone species, missing species nested within the clade, and unsampled species. Use \code{NA} if unknown: the unsampled species
+are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
+}
+
+Missing taxa grafted on the stem of a clade are sister to this clade: they are not counted in its richness.
+Default is \code{NULL}: no unsampled species. Missing species to graft and backbone species are assumed to cover all species in the focal group.
+See 'Sampling fraction and unsampled species' in Details section.}
+
 \item{ultrametric_tol}{Numeric. Tolerance used by \code{ape::is.ultrametric()} for the ultrametricity checks of the backbone and of the final phylogeny.
 Default is \code{.Machine$double.eps^0.5}.}
 
@@ -40,7 +55,7 @@ Default is \code{.Machine$double.eps^0.5}.}
 
 \item{save_temp_every}{Integer. Frequency of the temporary saves, in number of missing clades grafted. Only used if \code{save_temp = TRUE}. Default is \code{10}.}
 
-\item{temp_file_path}{Character string. Path of the \code{.rds} file used for temporary saves. Default is \code{NULL}, which saves in \code{"./temp_phy_from_grafting.rds"}.}
+\item{temp_file_path}{Character string. Path of the \code{.rds} file used for temporary saves. It must end with \code{.rds} and its directory must exist and be writable. Default is \code{NULL}, which saves in \code{"./temp_phy_from_grafting.rds"}.}
 
 \item{seed}{Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
 is restored on exit. Set to \code{NULL} to use the random number generator of the session. Default is \code{1234}.}
@@ -48,6 +63,12 @@ is restored on exit. Set to \code{NULL} to use the random number generator of th
 \value{
 The function returns an object of class \code{"phylo"}: the backbone phylogeny with the grafted taxa added as new tips.
 Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
+
+If \code{total_richness_per_clades} is provided, the tree has an attribute \code{"sampling_fraction"}: a data frame with one row per clade of \code{total_richness_per_clades}
+(columns \code{Clade_tips}, \code{total_richness}, \code{total_richness_provided}, \code{nb_backbone_species}, \code{nb_missing_species}, \code{nb_unsampled_species}
+and \code{sampling_fraction}). \code{sampling_fraction} is the fraction of the clade richness present in the grafted phylogeny:
+\code{(nb_backbone_species + nb_missing_species) / total_richness}. \code{total_richness} is derived when \code{NA} was provided.
+Note that functions such as \code{ape::drop.tip()} do not keep this attribute.
 }
 \description{
 This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny as clades sister to clades of the backbone.
@@ -77,6 +98,28 @@ When a sister clade contains fewer tips than \code{min_tips}, an alternative hig
 This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the sister clade, until a clade meets the \code{min_tips} condition.
 This ensures that the diversification dynamics modeled are based on enough tips to be relevant, while being closely associated with the sister clade.
 }
+
+\subsection{Sampling fraction and unsampled species}{
+
+Without \code{total_richness_per_clades}, the sampling fraction of the birth-death model is computed as if only one lineage was missing (the missing-only clade to be grafted on the stem branch).
+With \code{total_richness_per_clades}, it is \code{n_present / (n_present + n_pending + n_unsampled)}, with \code{n_present} the tips of the fitted clade in the current tree
+(backbone tips and taxa already grafted, so missing clades grafted in nested sister clades processed earlier are not missing anymore),
+\code{n_pending} the taxa of \code{missing_taxa_list} still to graft whose sister clade is strictly nested within the fitted clade,
+and \code{n_unsampled} the unsampled species derived from \code{total_richness_per_clades}.
+Taxa that are sister to the fitted clade itself are outside of it, so they are not counted.
+The divergence time of each missing clade is still drawn with \code{TreeSim::corsim(missing = 1)}: unsampled species only influence the fitted rates,
+they do not take a branch.
+
+For a clade with a \code{total_richness} value provided: \code{nb_unsampled = total_richness - nb_backbone - nb_missing}, with \code{nb_missing} the number of taxa to graft
+whose sister clade is strictly nested within the clade. For a clade with no \code{total_richness} value (\code{NA}, or enclosing a sister clade without being listed),
+\code{nb_unsampled} is the sum of \code{nb_unsampled} over the largest clades nested within it with a \code{total_richness} value provided. If there is none, \code{nb_unsampled = 0}.
+The rationale is that even if \code{nb_unsampled} cannot be derived from its \code{total_richness} (as it is not provided for this clade), it has to at least account for the \code{nb_unsampled}
+species that have being identified in its own nested clades.
+
+The function stops, before any grafting, if \code{total_richness_per_clades} does not cover all the sister clades, if a \code{total_richness} value is lower than
+the number of backbone species plus missing species of the clade, or if a clade has fewer unsampled species than the sum of the clades with
+an informed \code{total_richness} nested within it.
+}
 }
 \examples{
 # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units
@@ -94,6 +137,15 @@ missing_clades_list <- list(
 grafted_phy <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
                                     verbose = FALSE, seed = 1234)
 plot(grafted_phy, cex = 0.7)
+
+# Account for unsampled species with the total richness of the sister clades.
+# All the unique sister clades must be listed (NA = unknown richness)
+total_richness_per_clades <- list(
+  Sister_clade = list(c("t8", "t22"), c("t26", "t18"), "t5"),
+  total_richness = c(20, NA, 3))
+grafted_phy_richness <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
+                                             total_richness_per_clades = total_richness_per_clades, verbose = FALSE, seed = 1234)
+attr(grafted_phy_richness, "sampling_fraction")
 
 }
 \seealso{

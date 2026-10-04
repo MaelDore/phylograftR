@@ -11,6 +11,7 @@ graft_missing_taxa(
   use_excluded_subclades = TRUE,
   method = "BD_clades",
   min_tips = 5,
+  total_richness_per_clades = NULL,
   verbose = TRUE,
   save_temp = FALSE,
   save_temp_every = 10,
@@ -35,8 +36,11 @@ Single-tip subclades exclude nothing.
 }}
 
 \item{include_stem}{Logical. Whether the stem branch of target clades is available for grafting.
-If \code{TRUE}, a taxon can be grafted on the stem branch, and becomes sister to the target clade. Ignored for single-tip target clades
-(their terminal branch is their only branch, and is always available) and for target clades being the whole tree (no stem; a warning is issued if \code{include_stem = TRUE}). Default is \code{TRUE}.}
+If \code{TRUE}, a taxon can be grafted on the stem branch, and becomes sister to the target clade.
+Taxa already grafted on the stem can receive further grafts (see 'stem region' in Details section).
+Ignored for single-tip target clades as their terminal branch is their only branch, and is therefore always available for grafting.
+Ignored if the target clade is the whole tree: it has no stem. A warning is issued if \code{include_stem = TRUE}.
+Default is \code{TRUE}.}
 
 \item{use_excluded_subclades}{Logical. Whether to avoid grafting within the excluded subclades provided in \code{missing_taxa_list$Excluded_subclades}. Default is \code{TRUE}.}
 
@@ -46,6 +50,18 @@ Must be one of \code{"uniform"} or \code{"BD_clades"} (default). See Details.}
 \item{min_tips}{Integer. Only used for \code{method = "BD_clades"}. Minimum number of tips of the clade used to fit the birth-death model.
 If the target clade has fewer tips, the smallest enclosing clade with at least \code{min_tips} tips is used instead. Must be at least 3. Default is \code{5}.}
 
+\item{total_richness_per_clades}{(Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
+nor in \code{missing_taxa_list} (unsampled species). Items:
+\itemize{
+\item \verb{$Target_clade}: List of character vectors of tips, defining clades as in \code{missing_taxa_list$Target_clade}.
+It must cover all the unique target clades of \code{missing_taxa_list}. It can include other clades, e.g., enclosing clades.
+\item \verb{$total_richness}: Vector of positive integers, same length as \verb{$Target_clade}. Total number of species of each clade,
+i.e., backbone species, missing species nested within the clade, and unsampled species. Use \code{NA} if unknown: the unsampled species
+are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
+}
+
+Default is \code{NULL}: no unsampled species. See 'Sampling fraction and unsampled species' in Details section.}
+
 \item{verbose}{Logical. Whether to display progress. Messages print every 100 taxa for \code{method = "uniform"}, and every 10 target clades for \code{method = "BD_clades"}.
 Default is \code{TRUE}.}
 
@@ -54,7 +70,7 @@ Default is \code{TRUE}.}
 \item{save_temp_every}{Integer. Frequency of the temporary saves: every \code{save_temp_every} taxa for \code{method = "uniform"},
 and every \code{save_temp_every} target clades for \code{method = "BD_clades"}. Only used if \code{save_temp = TRUE}. Default is \code{10}.}
 
-\item{temp_file_path}{Character string. Path of the \code{.rds} file used for temporary saves. Default is \code{NULL}, which saves in \code{"./temp_phy_from_grafting.rds"}.}
+\item{temp_file_path}{Character string. Path of the \code{.rds} file used for temporary saves. It must end with \code{.rds} and its directory must exist and be writable. Default is \code{NULL}, which saves in \code{"./temp_phy_from_grafting.rds"}.}
 
 \item{ultrametric_tol}{Numeric. Tolerance used by \code{ape::is.ultrametric()} for the ultrametricity checks of the backbone and of the final phylogeny.
 Default is \code{.Machine$double.eps^0.5}.}
@@ -65,6 +81,12 @@ is restored on exit. Set to \code{NULL} to use the random number generator of th
 \value{
 The function returns an object of class \code{"phylo"}: the backbone phylogeny with the grafted taxa added as new tips.
 Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
+
+If \code{total_richness_per_clades} is provided, the tree has an attribute \code{"sampling_fraction"}: a data frame with one row per clade of \code{total_richness_per_clades}
+(columns \code{Clade_tips}, \code{total_richness}, \code{total_richness_provided}, \code{nb_backbone_species}, \code{nb_missing_species}, \code{nb_unsampled_species}
+and \code{sampling_fraction}). \code{sampling_fraction} is the fraction of the clade richness present in the grafted phylogeny:
+\code{(nb_backbone_species + nb_missing_species) / total_richness}. \code{total_richness} is derived when \code{NA} was provided.
+Note that functions such as \code{ape::drop.tip()} do not keep this attribute.
 }
 \description{
 This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny.
@@ -79,13 +101,23 @@ The function stops, before any grafting, if the backbone is not ultrametric, or 
 (i.e., all branches of their target clade are excluded). The taxa concerned are listed in the error message,
 so the constraints (\code{include_stem} or \code{Excluded_subclades}) can be adjusted.
 With \code{method = "BD_clades"}, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon.
-\subsection{Target clades, stem and excluded subclades}{
+\subsection{Target clades, stem regions and excluded subclades}{
 
 Each taxon is grafted within its target clade. The branches available for grafting are all the branches of the target clade
-(descending from its MRCA node), plus its stem branch if \code{include_stem = TRUE}. Grafting on the stem branch places the taxon sister to the target clade.
+(descending from its MRCA node), plus its stem region if \code{include_stem = TRUE}. Grafting on the stem places the taxon sister to the target clade.
+
+The stem region is not restricted to the original stem branch. A taxon grafted on the stem splits it in two pieces, and becomes itself part of the stem region:
+later taxa can be grafted on both pieces of the stem, and on the terminal branch of the earlier taxon (the two taxa are then sister, and together sister to the target clade).
+More generally, the stem region includes all the branches of the 'missing-only subtrees' hanging from the stem, i.e., subtrees containing only taxa of \code{missing_taxa_list$Taxa_name},
+whatever their own target clade. This mirrors what happens within the crown group, where missing taxa can already be grafted on the branches of other missing taxa.
 
 Branches inside excluded subclades are removed from the pool of available branches. However, the stem branch of an excluded subclade stays available:
 the taxon can be sister to the excluded subclade, but never nested within it.
+
+Excluded subclades are expected to be nested within their target clade. The function checks their position before grafting:
+a warning is issued if an excluded subclade is outside the target clade (the exclusion then has no effect).
+The function stops if an excluded subclade contains the whole target clade, or is identical to it: no branch (or only the stem branch) would be left for grafting.
+To graft taxa specifically on the stem branch of a clade or of a single tip, use \code{\link[=graft_missing_clades]{graft_missing_clades()}} instead.
 }
 
 \subsection{Enclosing clades}{
@@ -97,19 +129,46 @@ This ensures that the diversification dynamics modeled are based on enough tips 
 
 \subsection{Methods}{
 \itemize{
-\item \code{"uniform"}: Taxa are grafted one by one, in random order. The branch used for grafting is drawn among the available branches
+\item \code{"uniform"}: Taxa are grafted one by one, per target clade from the smallest to the largest, so nested clades are processed first (see below).
+Within each target clade, taxa are grafted in random order. The branch used for grafting is drawn among the available branches
 with probabilities proportional to branch lengths, and the position on the branch is drawn from a uniform distribution.
-This does not account for diversification dynamics, but it is fast.
-However, note that under a birth-death process, the probability of a side lineage splitting off a branch at age t follows the exponential function e^(-rt),
+This is fast, but does not account for diversification dynamics.
+Note that under a birth-death process, the probability of a side lineage splitting off a branch at age t follows the exponential function e^(-rt),
 with r the net diversification rate (speciation minus extinction).
 A uniform draw implicitly assumes a flat density (r = 0), and gives too much weight to old divergence times compared to the expectation from a birth-death process.
-\item \code{"BD_clades"}: Taxa are grafted per target clade, from the smallest to the largest, so nested clades are processed first.
+\item \code{"BD_clades"}: Taxa are grafted per target clade, from the smallest to the largest, so nested clades are processed first (see below).
 For each target clade, a birth-death model is fitted with \code{phytools::fit.bd()} on the clade, or on the smallest enclosing clade with at least \code{min_tips} tips.
 The sampling fraction accounts for the number of missing taxa provided for grafting in this clade.
 The divergence times of all taxa missing in the target clade are then jointly drawn with \code{TreeSim::corsim()}.
 Taxa are grafted from the oldest to the youngest divergence time. Each taxon is grafted on a branch drawn uniformly among the available branches that cross its divergence age.
 Younger taxa can therefore be grafted on the branches of older missing taxa. This is the recommended method, but it can be time consuming for large phylogenies.
 }
+
+With both methods, nested clades are processed first, so the taxa of a larger clade are grafted on a tree that already
+includes the taxa of the clades nested within it, and can be grafted on their branches.
+For \code{"BD_clades"}, it also ensures that the divergence times of nested clades are accounted for when drawing the divergence times of the larger clade.
+Taxa of the same target clade are grafted in random order, so they are exchangeable.
+Clades that are not nested do not interact, so the order in which they are processed has no influence.
+}
+
+\subsection{Sampling fraction and unsampled species}{
+
+Under \code{method = "BD_clades"}, the birth-death model of a clade is fitted with the sampling fraction
+\code{n_present / (n_present + n_pending + n_unsampled)}, with \code{n_present} the tips of the fitted clade in the current tree (backbone tips and taxa already grafted),
+\code{n_pending} the taxa of \code{missing_taxa_list} still to graft in this clade, and \code{n_unsampled} the unsampled species derived from \code{total_richness_per_clades}.
+Taxa grafted in nested clades processed earlier are already in the tree, so they are not counted as missing anymore.
+Unsampled species are only used to fit the rates: they are not grafted, and do not compete with the grafted taxa for the branches.
+
+For a clade with a \code{total_richness} value provided: \code{nb_unsampled = total_richness - nb_backbone - nb_missing}, with \code{nb_missing} the number of taxa to graft
+whose target clade is this clade or is nested within it. For a clade with no \code{total_richness} value (\code{NA}, or enclosing a target clade without being listed),
+\code{nb_unsampled} is the sum over the largest clades nested within it with a \code{total_richness} value provided.
+As such, the unsampled species of nested clades are summed across disjoint clades but never counted twice within nested clades.
+If \code{total_richness_per_clades = NULL}, \code{nb_unsampled = 0}.
+
+The function stops, before any grafting, if \code{total_richness_per_clades} does not cover all the target clades, if a \code{total_richness} provided is lower than
+the number of backbone species plus species to graft of the clade, or if a clade has fewer unsampled species than the sum of the clades with
+a \code{total_richness} provided nested within it.
+With \code{method = "uniform"}, no diversification model is used: \code{total_richness_per_clades} is only used to derive the \code{"sampling_fraction"} table (a warning is issued).
 }
 }
 \examples{
@@ -139,6 +198,17 @@ grafted_phy_uniform <- graft_missing_taxa(phy = phy, missing_taxa_list = missing
 # Check that the constraints are respected
 check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
                            missing_taxa_list = missing_taxa_list)
+
+# Account for unsampled species with the total richness of the clades.
+# All the unique target clades must be listed (NA = unknown richness, i.e., no unsampled species beyond nested clades)
+total_richness_per_clades <- list(
+  Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5"),
+  total_richness = c(25, NA, 3))
+grafted_phy_richness <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+                                           total_richness_per_clades = total_richness_per_clades,
+                                           method = "BD_clades", verbose = FALSE, seed = 1234)
+# Sampling fraction of the clades in the grafted phylogeny
+attr(grafted_phy_richness, "sampling_fraction")
 
 }
 \seealso{

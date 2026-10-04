@@ -16,6 +16,7 @@ importFrom(ape,
   getMRCA,
   is.ultrametric,
   keep.tip,
+  node.depth,
   node.depth.edgelength,
   prop.part
 )
