@@ -84,18 +84,25 @@
 #'
 #' ### Methods
 #'
-#' * `"uniform"`: Taxa are grafted one by one, in random order. The branch used for grafting is drawn among the available branches
+#' * `"uniform"`: Taxa are grafted one by one, per target clade from the smallest to the largest, so nested clades are processed first (see below).
+#'   Within each target clade, taxa are grafted in random order. The branch used for grafting is drawn among the available branches
 #'   with probabilities proportional to branch lengths, and the position on the branch is drawn from a uniform distribution.
-#'   This does not account for diversification dynamics, but it is fast.
-#'   However, note that under a birth-death process, the probability of a side lineage splitting off a branch at age t follows the exponential function e^(-rt),
+#'   This is fast, but does not account for diversification dynamics.
+#'   Note that under a birth-death process, the probability of a side lineage splitting off a branch at age t follows the exponential function e^(-rt),
 #'   with r the net diversification rate (speciation minus extinction).
 #'   A uniform draw implicitly assumes a flat density (r = 0), and gives too much weight to old divergence times compared to the expectation from a birth-death process.
-#' * `"BD_clades"`: Taxa are grafted per target clade, from the smallest to the largest, so nested clades are processed first.
+#' * `"BD_clades"`: Taxa are grafted per target clade, from the smallest to the largest, so nested clades are processed first (see below).
 #'   For each target clade, a birth-death model is fitted with `phytools::fit.bd()` on the clade, or on the smallest enclosing clade with at least `min_tips` tips.
 #'   The sampling fraction accounts for the number of missing taxa provided for grafting in this clade.
 #'   The divergence times of all taxa missing in the target clade are then jointly drawn with `TreeSim::corsim()`.
 #'   Taxa are grafted from the oldest to the youngest divergence time. Each taxon is grafted on a branch drawn uniformly among the available branches that cross its divergence age.
 #'   Younger taxa can therefore be grafted on the branches of older missing taxa. This is the recommended method, but it can be time consuming for large phylogenies.
+#'
+#' With both methods, nested clades are processed first, so the taxa of a larger clade are grafted on a tree that already
+#' includes the taxa of the clades nested within it, and can be grafted on their branches.
+#' For `"BD_clades"`, it also ensures that the divergence times of nested clades are accounted for when drawing the divergence times of the larger clade.
+#' Taxa of the same target clade are grafted in random order, so they are exchangeable.
+#' Clades that are not nested do not interact, so the order in which they are processed has no influence.
 #'
 #' @importFrom ape Ntip branching.times extract.clade getMRCA is.ultrametric
 #'
@@ -283,15 +290,25 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   set_local_seed(seed)
 
   ## Randomize the order of taxa so it has no influence on the pattern of grafting
+  # Taxa of the same target clade are exchangeable: their order is random.
+    # With method = 'uniform', taxa are then re-ordered by target clade so nested clades are processed first (the random order is kept within each clade).
+    # With method = 'BD_clades', taxa are grouped and ordered by clade within the loop.
   random_order <- sample.int(n_missing)
   missing_taxa_list <- lapply(X = missing_taxa_list, FUN = function (x) { x[random_order] })
 
   # Root age: constant during grafting (all new tips reach the present) => computed once
   root_age <- max(phytools::nodeHeights(tree = phy)[, 2])
 
-  ## ---- For "uniform" strategy: Loop per taxon ---- ##
+  ## ---- For "uniform" strategy: Loop per taxon, nested target clades first ---- ##
   if (method == "uniform")
   {
+    # Order taxa by target clade, nested clades first (random order kept within each clade).
+    # Rationale: taxa of a larger clade are grafted on a tree that already includes the taxa of the clades nested within it,
+    # so they can be grafted on the branches of those taxa. This is the same rule as for the 'BD_clades' method.
+    # The order of taxa within each target clade remains random.
+    groups_uniform <- group_and_order_clades(phy, missing_taxa_list$Target_clade)
+    missing_taxa_list <- lapply(X = missing_taxa_list, FUN = function (x) { x[groups_uniform$taxa_order] })
+
     if (verbose) cat(paste0(Sys.time(), " - Start grafting process\n"))
 
     for (i in seq_len(n_missing))
@@ -378,7 +395,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     # Identify target clades and order by clade size
     # Since nested clades are always smaller than their higher parents, this is equivalent to order by nesting scheme
     groups <- group_and_order_clades(phy, missing_taxa_list$Target_clade)
-    n_groups <- length(groups$clade_tips)
+    n_groups <- length(groups$group_clade_tips)
 
     if (verbose) cat(paste0(Sys.time(), " - Start grafting process per clades\n"))
 
@@ -387,14 +404,14 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     nb_clades_grafted <- 0
 
     # Loop per ordered clades
-    for (i in groups$order)
+    for (i in groups$group_order)
     {
       # Extract ID of taxa in group n°i
-      taxa_ID_i <- which(groups$group == i)
+      taxa_ID_i <- which(groups$group_ID == i)
       # Extract associated data
       missing_taxa_list_i <- lapply(X = missing_taxa_list, FUN = function (x) { x[taxa_ID_i] })
       # Extract the tips defining the target clade
-      target_clade_tips_i <- groups$clade_tips[[i]]
+      target_clade_tips_i <- groups$group_clade_tips[[i]]
       # Get number of taxa to graft in this group
       ntips_missing <- length(taxa_ID_i)
 

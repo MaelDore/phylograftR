@@ -341,10 +341,16 @@ fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5)
 #'
 #' @noRd
 #'
-#' @return A list with 3 elements:
-#'  * `group` Integer vector with one value per taxon. ID of the group (i.e., unique clade) the taxon belongs to.
-#'  * `clade_tips` List with one element per group. Character vector of the tips used to identify the associated clade.
-#'  * `order` Integer vector with one value per group. Group IDs ranked by clade size, so nested clades come first.
+#' @return A list with 4 elements. ,
+#'
+#'  The first two are taxon-level elements (one value per taxon):
+#'  * `group_ID` Integer vector. ID of the group (i.e., unique clade) the taxon belongs to.
+#'  * `taxa_order` Integer vector. Indices of the taxa ordered by group, so the taxa of nested clades come first.
+#'     Used to graft taxa one by one while processing nested clades first.
+#'
+#'  The last two elements are group-level elements (one value per group, i.e., per unique clade):
+#'  * `group_clade_tips` List with one element per group. Character vector of the tips used to identify the associated clade.
+#'  * `group_order` Integer vector with one value per group. Group IDs ranked by clade size, so nested clades come first.
 #'
 
 group_and_order_clades <- function (phy, clade_tips)
@@ -359,9 +365,14 @@ group_and_order_clades <- function (phy, clade_tips)
   # Compute number of descendants in each group
   n_desc <- vapply(unique(nodes), function (n) length(get_descendant_nodes(phy, n)), numeric(1))
   # Record information per taxa
-  groups_per_taxa <- list(group = group, # Group ID
-                          clade_tips = clade_tips[first], # Tips
-                          order = order(n_desc)) # Order of the group to use in the loop
+  # Rank of each group: 1 for the smallest clade
+  rank_of_group <- match(seq_along(unique(nodes)), order(n_desc))
+
+  # Record information: taxon-level elements (one value per taxon), then group-level elements (one value per group)
+  groups_per_taxa <- list(group_ID = group, # Group ID of each taxon
+                          taxa_order = order(rank_of_group[group]), # Order of the taxa by group, nested clades first.
+                          group_clade_tips = clade_tips[first], # Tips defining the clade of each group
+                          group_order = order(n_desc)) # Order of the groups to use in the loop
 
   # Export output
   return(groups_per_taxa)

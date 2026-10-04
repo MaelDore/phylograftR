@@ -152,14 +152,14 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
   # Identify sister-clades and order by clade size
   # Since nested clades are always smaller than their higher parents, this is equivalent to order by nesting scheme
   groups <- group_and_order_clades(phy, missing_taxa_list$Sister_clade)
-  n_groups <- length(groups$clade_tips)
+  n_groups <- length(groups$group_clade_tips)
 
   # Stop before grafting if a sister clade is the whole tree: it has no stem to graft on
   root_node <- setdiff(phy$edge[, 1], phy$edge[, 2])
-  is_whole_tree <- vapply(groups$clade_tips, function (tips) get_clade_node(phy, tips) == root_node, logical(1))
+  is_whole_tree <- vapply(groups$group_clade_tips, function (tips) get_clade_node(phy, tips) == root_node, logical(1))
   if (any(is_whole_tree))
   {
-    stop("Sister clade defined by ", paste(groups$clade_tips[[which(is_whole_tree)[1]]], collapse = ", "),
+    stop("Sister clade defined by ", paste(groups$group_clade_tips[[which(is_whole_tree)[1]]], collapse = ", "),
          " is the whole tree: it has no stem to graft on")
   }
 
@@ -170,14 +170,14 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
   nb_missing_clades_grafted <- 0
 
   # Loop per ordered clades
-  for (i in groups$order)
+  for (i in groups$group_order)
   {
     # Extract ID of taxa in group n°i
-    taxa_ID_i <- which(groups$group == i)
+    taxa_ID_i <- which(groups$group_ID == i)
     # Extract associated data
     missing_taxa_list_i <- lapply(X = missing_taxa_list, FUN = function (x) { x[taxa_ID_i] })
     # Extract the tips defining the sister clade
-    sister_clade_tips_i <- groups$clade_tips[[i]]
+    sister_clade_tips_i <- groups$group_clade_tips[[i]]
     # Get number of taxa to include in this missing clade
     nb_missing_taxa <- length(taxa_ID_i)
 
