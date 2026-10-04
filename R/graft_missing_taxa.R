@@ -28,8 +28,11 @@
 #'     where the taxon is known not to belong. Each subclade is defined by a pair of tips. Use `NULL` for taxa with no excluded subclades.
 #'     Single-tip subclades exclude nothing.
 #' @param include_stem Logical. Whether the stem branch of target clades is available for grafting.
-#'   If `TRUE`, a taxon can be grafted on the stem branch, and becomes sister to the target clade. Ignored for single-tip target clades
-#'   (their terminal branch is their only branch, and is always available) and for target clades being the whole tree (no stem; a warning is issued if `include_stem = TRUE`). Default is `TRUE`.
+#'   If `TRUE`, a taxon can be grafted on the stem branch, and becomes sister to the target clade.
+#'   Taxa already grafted on the stem can receive further grafts (see 'stem region' in Details section).
+#'   Ignored for single-tip target clades as their terminal branch is their only branch, and is therefore always available for grafting.
+#'   Ignored if the target clade is the whole tree: it has no stem. A warning is issued if `include_stem = TRUE`.
+#'   Default is `TRUE`.
 #' @param use_excluded_subclades Logical. Whether to avoid grafting within the excluded subclades provided in `missing_taxa_list$Excluded_subclades`. Default is `TRUE`.
 #' @param method Character string. Method used to draw the divergence times and the branches used for grafting.
 #'   Must be one of `"uniform"` or `"BD_clades"` (default). See Details.
@@ -55,10 +58,15 @@
 #' so the constraints (`include_stem` or `Excluded_subclades`) can be adjusted.
 #' With `method = "BD_clades"`, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon.
 #'
-#' ### Target clades, stem and excluded subclades
+#' ### Target clades, stem regions and excluded subclades
 #'
 #' Each taxon is grafted within its target clade. The branches available for grafting are all the branches of the target clade
-#' (descending from its MRCA node), plus its stem branch if `include_stem = TRUE`. Grafting on the stem branch places the taxon sister to the target clade.
+#' (descending from its MRCA node), plus its stem region if `include_stem = TRUE`. Grafting on the stem places the taxon sister to the target clade.
+#'
+#' The stem region is not restricted to the original stem branch. A taxon grafted on the stem splits it in two pieces, and becomes itself part of the stem region:
+#' later taxa can be grafted on both pieces of the stem, and on the terminal branch of the earlier taxon (the two taxa are then sister, and together sister to the target clade).
+#' More generally, the stem region includes all the branches of the 'missing-only subtrees' hanging from the stem, i.e., subtrees containing only taxa of `missing_taxa_list$Taxa_name`,
+#' whatever their own target clade. This mirrors what happens within the crown group, where missing taxa can already be grafted on the branches of other missing taxa.
 #'
 #' Branches inside excluded subclades are removed from the pool of available branches. However, the stem branch of an excluded subclade stays available:
 #' the taxon can be sister to the excluded subclade, but never nested within it.
@@ -263,7 +271,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       # (no diversification model)
       selected_node_ID <- draw_random_branch_weighted_per_length(
          phy = phy, MRCA_node = MRCA_node, include_stem = include_stem,
-         excluded_subclades_MRCA_nodes = excluded_subclades_MRCA_nodes, seed = NULL)
+         excluded_subclades_MRCA_nodes = excluded_subclades_MRCA_nodes,
+         missing_tip_labels = missing_taxa_list$Taxa_name, seed = NULL)
 
       # Stop with an informative message if no branch is available (all branches excluded by the user's constraints)
       if (is.na(selected_node_ID))
@@ -338,8 +347,11 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       MRCA_node_i <- get_clade_node(phy, target_clade_tips_i)
       is_single_tip <- length(target_clade_tips_i) == 1
 
-      # Identify the stem node of the target clade
-      stem_node_i <- get_parent_node(phy, MRCA_node_i)
+      # Identify the stem node of the target clade, i.e., its parent node in the BACKBONE phylogeny.
+      # Missing taxa previously grafted on the stem created new nodes between the clade and its backbone parent.
+      # Walking rootward past those nodes (they only have 'missing-only' subtrees as side branches) gives the true stem node,
+      # so the stem age is always the one of the backbone, and not the age of a node created by a graft.
+      stem_node_i <- get_stem_region_nodes(phy, MRCA_node_i, missing_tip_labels = missing_taxa_list$Taxa_name)$top_parent
 
       # Warn against problematic cases with no stem available, because the target clade is the whole tree
       if (is.na(stem_node_i))
@@ -410,6 +422,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
             tip_label = missing_taxa_list_i$Taxa_name[j],
             target_clade_tips = missing_taxa_list_i$Target_clade[[j]],
             excluded_subclades_tips_list = excluded_subclades_tips_list_i,
+            include_stem = include_stem,
+            missing_tip_labels = missing_taxa_list$Taxa_name,
             root_age = root_age,
             seed = NULL)
       }
@@ -461,8 +475,10 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 #' @param phy Backbone phylogeny of class `"phylo"`.
 #' @param MRCA_node Node ID of the MRCA of the target clade.
 #' @param which_node Character string. Return the `"tipward"` or `"rootward"` node of the selected branch. Default is `"tipward"`.
-#' @param include_stem Logical. Whether the stem branch of the target clade is available. Ignored for single-tip clades (their tip branch is always available). Default is `TRUE`.
+#' @param include_stem Logical. Whether the stem region of the target clade is available. Ignored for single-tip clades (their tip branch is always available). Default is `TRUE`.
 #' @param excluded_subclades_MRCA_nodes Integer vector. MRCA nodes of subclades removed from the draw. Default is `NULL`.
+#' @param missing_tip_labels Character vector. Labels of all the taxa to graft (grafted or not), used to identify the 'missing-only subtrees' of the stem region
+#'   and include them in the draw if needed. Default is `character(0)`.
 #' @param seed Integer. Optional seed. Default is `NULL`.
 #'
 #' @importFrom ape Ntip
@@ -479,24 +495,19 @@ draw_random_branch_weighted_per_length <- function (
     which_node = "tipward", # Return the "tipward" or "rootward" node of the selected branch
     include_stem = TRUE, # Whether to include the stem branch among the available branch for sampling
     excluded_subclades_MRCA_nodes = NULL, # Subclades within the target clade to exclude from the drawing
+    missing_tip_labels = character(0), # Labels of all taxa to graft: used to identify the missing-only subtrees of the stem region and include them in the draw if needed.
     seed = NULL) # Seed is set by the main function. Default NULL to not alter the global RNG state
 {
   if (!is.null(seed)) { set.seed(seed = seed) }
 
-  # Identify all descending nodes within the target clade
-  descendant_nodes <- get_descendant_nodes(phy = phy, node = MRCA_node)
-
-  # Deal with the special case of single-tip clades: the tip branch is the only branch available (it is the stem of the clade),
-  # so include_stem is ignored (set to TRUE)
-  if (MRCA_node <= ape::Ntip(phy)) { include_stem <- TRUE }
-
-  # Deal with the special case of the root.
-  # The root has no stem, so include_stem is ignored (set to FALSE)
-  root_node <- setdiff(phy$edge[, 1], phy$edge[, 2])
-  if (MRCA_node == root_node) { include_stem <- FALSE }
-
-  # If requested, include the stem branch by including the MRCA node among 'descending nodes'
-  if (include_stem) { descendant_nodes <- c(descendant_nodes, MRCA_node) }
+  # Identify the tipward nodes of all the branches available in the target clade:
+  #  - all branches within the clade
+  #  - its stem region, if include_stem = TRUE (always for single-tip clades, never for the root).
+  #    The stem region includes the pieces of the stem split by previous grafts,
+  #    and the 'missing-only subtrees' hanging from the stem (i.e., previously grafted taxa and their own grafts),
+  #    so taxa grafted on the stem can receive further grafts, like taxa grafted within the crown. See get_stem_region_nodes().
+  descendant_nodes <- get_available_branch_nodes(phy = phy, MRCA_node = MRCA_node, include_stem = include_stem,
+                                                 missing_tip_labels = missing_tip_labels)
 
   # Remove branches inside excluded subclades
   # Do this by removing their descending nodes from the draw
@@ -544,6 +555,9 @@ draw_random_branch_weighted_per_length <- function (
 #' @param tip_label Character string. Label of the new tip.
 #' @param target_clade_tips Character vector. One tip, or a pair of tips, defining the target clade.
 #' @param excluded_subclades_tips_list List of pairs of tips defining the subclades to exclude.
+#' @param include_stem Logical. Whether the stem region of the target clade is available for grafting. Ignored for single-tip clades (always available). Default is `TRUE`.
+#' @param missing_tip_labels Character vector. Labels of all the taxa to graft (grafted or not), used to identify the 'missing-only subtrees' of the stem region.
+#'   Default is `character(0)`.
 #' @param root_age Numeric. Optional root age, to avoid recomputing node heights. Default is `NULL`.
 #' @param seed Integer. Optional seed. Default is `NULL`.
 #'
@@ -562,6 +576,8 @@ graft_from_divergence_age <- function (phy, # Backbone phylogeny
                                        tip_label, # Label of the tip
                                        target_clade_tips, # 1 tip or a pair of tips defining the target clade
                                        excluded_subclades_tips_list, # list of tip pairs defining subclades to exclude
+                                       include_stem = TRUE, # Is the stem region of the target clade available?
+                                       missing_tip_labels = character(0), # Labels of all taxa to graft: used to identify the missing-only subtrees of the stem region
                                        root_age = NULL, # Pass it to avoid recomputing node heights every time
                                        seed = NULL) # Seed is set by the main function. Default NULL to not alter the global RNG state
 {
@@ -578,11 +594,15 @@ graft_from_divergence_age <- function (phy, # Backbone phylogeny
   edge_ages <- root_age - phytools::nodeHeights(tree = phy)
   compatible_tipward_nodes_ID <- phy$edge[(edge_ages[, 1] >= divergence_age) & (edge_ages[, 2] <= divergence_age), 2]
 
-  # Identify tipward nodes of the branches of the grafting clade, stem included
+  # Identify tipward nodes of the branches available in the target clade: branches within the clade + its stem region if include_stem = TRUE.
+  # The stem region contains the pieces of the stem split by previous grafts and the 'missing-only subtrees' hanging from it
+  # (taxa previously grafted on the stem, and their own grafts), so taxa grafted on the stem can receive further grafts.
+  # Only branches crossing the target age are kept below, so older pieces of the stem are naturally discarded when grafting younger taxa.
   MRCA_node <- get_clade_node(phy, target_clade_tips)
-  stem_clade_nodes <- c(get_descendant_nodes(phy, MRCA_node), MRCA_node)
+  stem_clade_nodes <- get_available_branch_nodes(phy = phy, MRCA_node = MRCA_node, include_stem = include_stem,
+                                                 missing_tip_labels = missing_tip_labels)
 
-  # Subset valid branches by keping only the one crossing the target age
+  # Subset valid branches by keeping only the one crossing the target age
   valid_nodes_ID <- intersect(compatible_tipward_nodes_ID, stem_clade_nodes)
 
   # Remove branches inside excluded subclades (single-tip subclades exclude nothing)

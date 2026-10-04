@@ -32,8 +32,8 @@
 #'
 #' * `$Taxon`: Name of the taxon.
 #' * `$in_tree`: Logical. Whether the taxon is found in the grafted phylogeny.
-#' * `$target_position`: Character string. Position of the taxon relative to its target clade: `"crown"` (within the clade), `"stem"` (sister to the clade),
-#'      `"tip_branch"` (sister to the tip, for single-tip target clades), or `"outside"` (neither within the clade nor on its stem = an error).
+#' * `$target_position`: Character string. Position of the taxon relative to its target clade: `"crown"` (within the clade), `"stem"` (sister to the clade, or to other missing taxa grafted on the stem),
+#'      `"tip_branch"` (on the branch of the tip, for single-tip target clades), or `"outside"` (neither within the clade nor on its stem = an error).
 #' * `$target_ok`: Logical. Whether the position respects the target clade (`"crown"` or, if `include_stem = TRUE`, `"stem"`; `"tip_branch"` for single-tip clades).
 #' * `$excluded_ok`: Logical. Whether the taxon is outside all its excluded subclades.
 #' * `$n_excluded_violated`: Integer. Number of excluded subclades violated.
@@ -53,8 +53,12 @@
 #'
 #' @details
 #' A taxon respects its target clade if it is found within the clade, or on its stem branch if `include_stem = TRUE`
-#' (the taxon is then sister to the target clade, with no other backbone tip in between).
-#' For a single-tip target clade, the taxon must be sister to the tip.
+#' (the taxon is then sister to the target clade, or to other missing taxa sister to the target clade, with no other backbone tip in between).
+#' For a single-tip target clade, the taxon must be on the branch of the tip, with no other backbone tip in between.
+#'
+#' The 'stem' position is not restricted to a taxon being directly sister to the target clade: taxa grafted on the stem can receive further grafts,
+#' so several missing taxa can form together a group sister to the target clade (i.e, a missing-only subtree grafted on the the stem).
+#' Only backbone tips are considered when checking the position of a taxon (missing taxa are ignored), so such configurations are valid.
 #'
 #' A taxon respects its excluded subclades if it is not nested within any of them.
 #' As in [graft_missing_taxa()], the stem branch of an excluded subclade is allowed: the taxon is then sister to the subclade, not within it.
@@ -210,7 +214,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
     {
       ## Case with a single tip
 
-      # Single-tip clade: taxon must be sister to the tip (no crown possible)
+      # Single-tip clade: taxon must be on the tip branch, with no other backbone tip in between (no crown possible)
       res$target_position[i] <- ifelse(no_foreign_backbone_tip, "tip_branch", "outside")
       res$target_ok[i] <- no_foreign_backbone_tip
     } else {

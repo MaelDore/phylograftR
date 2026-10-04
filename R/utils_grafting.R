@@ -84,6 +84,136 @@ get_parent_node <- function (phy, node)
 }
 
 
+#' @title Identify the branches of the stem region of a clade
+#'
+#' @description Identify the "stem region" of a clade: the set of branches where a taxon can be grafted
+#'   to become sister to the clade (i.e., grafted on its stem).
+#'   Because grafting splits branches and adds new branches, the stem region is not just the original stem branch.
+#'   It is made of:
+#'   * The stem branch of the clade, in as many pieces as it has been split by previous grafts.
+#'   * The branches of 'missing-only subtrees' attached to the stem, i.e., subtrees hanging from the stem
+#'     that contain only missing taxa (taxa listed for grafting, never backbone tips).
+#'     Those subtrees are made of taxa previously grafted on the stem, and of taxa later grafted on them.
+#'
+#'   The region is explored by walking rootward from the clade node. At each step, the parent node is a "stem-insertion node"
+#'   if all the other children of that parent are missing-only subtrees. The walk stops at the first parent node
+#'   with a side subtree containing at least one backbone tip: this is the parent node of the clade in the backbone phylogeny.
+#'
+#' @param phy Phylogeny of class `"phylo"`, possibly including taxa already grafted.
+#' @param node Integer. Node ID of the clade (tip node for a single-tip clade).
+#' @param missing_tip_labels Character vector. Labels of all the taxa to graft (grafted or not).
+#'   Tips with these labels are considered as missing taxa, all the others as backbone tips.
+#'
+#' @importFrom ape Ntip
+#'
+#' @noRd
+#'
+#' @return A list with 2 elements:
+#'  * `nodes` Integer vector. Tipward node IDs of all the branches of the stem region. Empty for the root, which has no stem.
+#'  * `top_parent` Integer. Node ID of the parent of the stem in the backbone phylogeny, i.e., the rootward end of the stem region
+#'    (`NA` for the root).
+#'
+
+get_stem_region_nodes <- function (phy, node, missing_tip_labels = character(0))
+{
+  # The root has no stem
+  if (is.na(get_parent_node(phy, node)))
+  {
+    return(list(nodes = integer(0), top_parent = NA))
+  }
+
+  n_tips <- ape::Ntip(phy)
+
+  # A subtree is 'missing-only' if all its tips are missing taxa (i.e., it contains no backbone tips).
+  is_missing_only <- function (subtree_node)
+  {
+    subtree_nodes <- c(subtree_node, get_descendant_nodes(phy, subtree_node))
+    subtree_tip_nodes <- subtree_nodes[subtree_nodes <= n_tips]
+    all(phy$tip.label[subtree_tip_nodes] %in% missing_tip_labels)
+  }
+
+  # The branch leading to the clade node is always part of the stem region
+  # (if the stem has been split by a graft, this is its most tipward piece)
+  stem_nodes <- node
+  current_node <- node
+
+  repeat
+  {
+    parent_node <- get_parent_node(phy, current_node)
+
+    # Reaching the root = no backbone tip found on the other side (not expected with a valid backbone)
+    if (is.na(parent_node))
+    {
+      top_parent <- NA
+      break
+    }
+
+    # Subtrees hanging from the stem at this parent node (the children of the parent, but the current node)
+    side_nodes <- setdiff(phy$edge[phy$edge[, 1] == parent_node, 2], current_node)
+    side_is_missing_only <- length(side_nodes) > 0 && all(vapply(side_nodes, is_missing_only, logical(1)))
+
+    # If a backbone tip is found in a side subtree, the parent node is a node of the backbone phylogeny:
+    # the walk is over, and this node is the true parent of the stem
+    if (!side_is_missing_only)
+    {
+      top_parent <- parent_node
+      break
+    }
+
+    # Otherwise, the parent node was created by a graft on the stem.
+    # Its side subtrees (made of missing taxa only) are part of the stem region: add all their branches
+    stem_nodes <- c(stem_nodes, side_nodes, unlist(lapply(side_nodes, function (n) get_descendant_nodes(phy, n))))
+    # The branch above the parent node is the next piece of the split stem (if the parent is not the root)
+    if (!is.na(get_parent_node(phy, parent_node))) { stem_nodes <- c(stem_nodes, parent_node) }
+    # Keep walking rootward
+    current_node <- parent_node
+  }
+
+  return(list(nodes = stem_nodes, top_parent = top_parent))
+}
+
+
+#' @title Identify the branches available for grafting within the target clade
+#'
+#' @description Identify the tipward node IDs of all the branches available for grafting a taxon within a target clade,
+#'   before removing the branches of the excluded subclades:
+#'   * All branches within the clade (descending from its MRCA node).
+#'   * The stem region of the clade (see `get_stem_region_nodes()`), if `include_stem = TRUE`.
+#'     A taxon grafted on the stem region becomes sister to the clade, or sister to other missing taxa already grafted on the stem.
+#'
+#'   Single-tip clades always use their stem region (their tip branch is their only branch), whatever the value of `include_stem`.
+#'   The root has no stem, thus no stem region.
+#'
+#' @param phy Phylogeny of class `"phylo"`, possibly including taxa already grafted.
+#' @param MRCA_node Integer. Node ID of the clade (tip node for a single-tip clade).
+#' @param include_stem Logical. Whether the stem region of the clade is available. Default is `TRUE`.
+#' @param missing_tip_labels Character vector. Labels of all the taxa to graft (grafted or not). Default is `character(0)`.
+#'
+#' @importFrom ape Ntip
+#'
+#' @noRd
+#'
+#' @return Integer vector of tipward node IDs.
+#'
+
+get_available_branch_nodes <- function (phy, MRCA_node, include_stem = TRUE, missing_tip_labels = character(0))
+{
+  # All branches within the clade
+  available_nodes <- get_descendant_nodes(phy = phy, node = MRCA_node)
+
+  # Single-tip clades: the tip branch is the only branch available (it is the stem of the clade), so include_stem is ignored (set to TRUE)
+  if (MRCA_node <= ape::Ntip(phy)) { include_stem <- TRUE }
+
+  # Add the stem region if requested. It is empty for the root, which has no stem
+  if (include_stem)
+  {
+    available_nodes <- c(available_nodes, get_stem_region_nodes(phy = phy, node = MRCA_node, missing_tip_labels = missing_tip_labels)$nodes)
+  }
+
+  return(available_nodes)
+}
+
+
 #' @title Sample randomly one element from a vector
 #'
 #' @description Sample randomly one element from a vector in a safe fashion that
