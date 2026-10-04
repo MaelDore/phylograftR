@@ -347,8 +347,8 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
 
     if (verbose && (nb_missing_clades_grafted %% 10 == 0))
     {
-      cat(paste0(Sys.time(), " - Missing taxa grafted within clades n°", nb_missing_clades_grafted, "/", n_groups,
-                 " - Taxa n°", nb_taxa_grafted, "/", n_missing, "\n"))
+      cat(paste0(Sys.time(), " - Missing taxa grafted within clades n\u00b0", nb_missing_clades_grafted, "/", n_groups,
+                 " - Taxa n\u00b0", nb_taxa_grafted, "/", n_missing, "\n"))
     }
   }
 

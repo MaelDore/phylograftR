@@ -442,7 +442,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       # Print progress if requested
       if (verbose && (i %% 100 == 0))
       {
-        cat(paste0(Sys.time(), " - Missing taxa grafted n°", i, "/", n_missing, "\n"))
+        cat(paste0(Sys.time(), " - Missing taxa grafted n\u00b0", i, "/", n_missing, "\n"))
       }
 
     }
@@ -580,8 +580,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       # Print progress if requested
       if (verbose && (nb_clades_grafted %% 10 == 0))
       {
-        cat(paste0(Sys.time(), " - Missing taxa grafted within clades n°", nb_clades_grafted, "/", n_groups,
-                   " - Taxa n°", nb_taxa_grafted, "/", n_missing, "\n"))
+        cat(paste0(Sys.time(), " - Missing taxa grafted within clades n\u00b0", nb_clades_grafted, "/", n_groups,
+                   " - Taxa n\u00b0", nb_taxa_grafted, "/", n_missing, "\n"))
       }
     }
   }
