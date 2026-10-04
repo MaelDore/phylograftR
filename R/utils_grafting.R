@@ -38,6 +38,8 @@ get_descendant_nodes <- function (phy, node)
 #' @param phy Phylogeny of class `"phylo"`.
 #' @param tips Character vector. One tip (tip node) or two or more tips (MRCA node).
 #'
+#' @importFrom ape getMRCA
+#'
 #' @noRd
 #'
 #' @return Integer. Node ID.
@@ -106,8 +108,8 @@ sample_one <- function (x, prob = NULL)
 #' @title Fit a birth-death model on a clade enforcing a minimum number of tips
 #'
 #' @description Fit a birth-death model on a clade enforcing a minimum number of tips.
-#'   If the clade has less tips than `min_tips`, climb towards the root until it has enough (stops at the root in any case).
-#'   This ensures the enclosing clade chosen have enough divergence times to be able to fit a relevant BD model,
+#'   If the clade has fewer tips than `min_tips`, climb towards the root until it has enough (stops at the root in any case).
+#'   This ensures the enclosing clade chosen has enough divergence times to be able to fit a relevant BD model,
 #'   while retaining close relationship with the initial focal clade.
 #'
 #' @param phy Phylogeny of class `"phylo"`.
@@ -115,9 +117,14 @@ sample_one <- function (x, prob = NULL)
 #' @param n_missing Integer. Number of missing taxa, used for the sampling fraction. Default is `1`.
 #' @param min_tips Integer. Minimum number of tips for the fit. Default is `5`.
 #'
-#' @details The goal is to use the fitted rates to simulate divergence ages of missing taxa using `[TreeSim::corsim()]`.
+#' @details The goal is to use the fitted rates to simulate divergence ages of missing taxa using `TreeSim::corsim()`.
 #'   Because no new divergence times can be drawn from a negative net diversification process,
 #'   the function ensures that the net diversification rate is always positive by capping the death rate to 99% of the birth rate.
+#'   A death rate that is not finite or negative is set to zero.
+#'
+#' @importFrom ape Ntip extract.clade
+#'
+#' @importFrom phytools fit.bd
 #'
 #' @noRd
 #'
@@ -146,7 +153,7 @@ fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5)
     # Extract current target clade
     clade_tree <- ape::extract.clade(phy = phy, node = clade_node)
 
-    # Stop once the current clade have enough tips
+    # Stop once the current clade has enough tips
     if (ape::Ntip(clade_tree) >= min_tips) break
     # If not, move rootward to the next enclosing parent clade
     parent_node <- get_parent_node(phy, clade_node)
@@ -176,8 +183,8 @@ fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5)
   ## Keep rates usable by TreeSim (mu < lambda)
   # If death rate is infinite or negative, fix it to zero
   if (!is.finite(d) || d < 0) d <- 0
-  d <- min(d, 0.99 * b) # Limit death rate to 99% of birth rate to ensure no net diversification is negative
-  # No divergence times can be drawn from a neagtive net diversification process
+  d <- min(d, 0.99 * b) # Limit death rate to 99% of birth rate to ensure the net diversification is never negative
+  # No divergence times can be drawn from a negative net diversification process
 
   # Record rates, nb of tips in selected enclosing clade, and MRCA node of the selected clade
   BD_output <- list(b = b, d = d, n_tips = n_tips, node = clade_node)
@@ -192,7 +199,7 @@ fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5)
 #' @description Group missing taxa by the node of their MRCA, then order groups by size so nested ones come first
 #'   (a clade always has strictly more descendants than any clade nested within it,
 #'   thus sorting on clade size is enough to list nested clades first).
-#'   The rationale is to graft first taxa in nested clade, so they are accounted for when grafting missing taxa in higher clades
+#'   The rationale is to graft taxa in nested clades first, so they are accounted for when grafting missing taxa in higher clades
 #'   comprising those nested clades.
 #'
 #'   Use tips as inputs to define the associated clades:
@@ -204,10 +211,10 @@ fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5)
 #'
 #' @noRd
 #'
-#' @return A list with 3 elements recording information per taxon:
-#'  * `group` Integer. Group ID.
-#'  * `clade_tips` Character vector. Tips used to identify the associated clade.
-#'  * `order`. Integer. Order of the group, ranked by size / nestedness.
+#' @return A list with 3 elements:
+#'  * `group` Integer vector with one value per taxon. ID of the group (i.e., unique clade) the taxon belongs to.
+#'  * `clade_tips` List with one element per group. Character vector of the tips used to identify the associated clade.
+#'  * `order` Integer vector with one value per group. Group IDs ranked by clade size, so nested clades come first.
 #'
 
 group_and_order_clades <- function (phy, clade_tips)
@@ -271,8 +278,8 @@ extract_new_divergence_times <- function (all_times, # Output of TreeSim::corsim
 
 #' @title Set a seed for the duration of the calling function only
 #'
-#' @description Set a seed used internal by the function, without altering the global `.Random.seed` of the R session.
-#'   Restore the global `.Random.seed` when the calling function exits or yield an error.
+#' @description Set a seed used internally by the function, without altering the global `.Random.seed` of the R session.
+#'   Restore the global `.Random.seed` when the calling function exits or yields an error.
 #'   Does nothing if seed is `NULL`.
 #'
 #' @param seed Integer. Seed. Nothing is done if `NULL`.
@@ -329,6 +336,8 @@ set_local_seed <- function (seed, envir = parent.frame())
 #' @param missing_taxa_list List with `Taxa_name`, `Target_clade` and `Excluded_subclades`.
 #' @param include_stem Logical. Default is `TRUE`.
 #' @param use_excluded_subclades Logical. Default is `TRUE`.
+#'
+#' @importFrom ape getMRCA
 #'
 #' @noRd
 #'

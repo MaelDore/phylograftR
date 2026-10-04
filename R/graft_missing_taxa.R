@@ -65,9 +65,9 @@
 #'
 #' ### Enclosing clades
 #'
-#' Under the `"BD_clades"` method, when a target clade contains less tips than `min_tips`, an alternative higher clade is selected to fit the birth-death model.
+#' Under the `"BD_clades"` method, when a target clade contains fewer tips than `min_tips`, an alternative higher clade is selected to fit the birth-death model.
 #' This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the target clade, until a clade meets the `min_tips` condition.
-#' This ensures that the diversification dynamic modeled have enough tips to be relevant, while being closely associated with the target clade.
+#' This ensures that the diversification dynamics modeled are based on enough tips to be relevant, while being closely associated with the target clade.
 #'
 #' ### Methods
 #'
@@ -83,6 +83,14 @@
 #'   The divergence times of all taxa missing in the target clade are then jointly drawn with `TreeSim::corsim()`.
 #'   Taxa are grafted from the oldest to the youngest divergence time. Each taxon is grafted on a branch drawn uniformly among the available branches that cross its divergence age.
 #'   Younger taxa can therefore be grafted on the branches of older missing taxa. This is the recommended method, but it can be time consuming for large phylogenies.
+#'
+#' @importFrom ape Ntip branching.times extract.clade getMRCA is.ultrametric
+#'
+#' @importFrom phytools bind.tip nodeHeights nodeheight
+#'
+#' @importFrom TreeSim corsim
+#'
+#' @importFrom stats runif
 #'
 #' @export
 #'
@@ -442,16 +450,18 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 
 #' @title Draw a branch within a clade, weighted by branch length
 #'
-#' @description Draw is weighted by branch length to ensure the probability to be grafted at any point along any branch in the clade is uniform.
+#' @description The draw is weighted by branch length to ensure the probability to be grafted at any point along any branch in the clade is uniform.
 #'   If not weighted, a time point along shorter branch would have more chances to be used for grafting than a time point along a long branch.
 #'   Returns the selected node ID, or NA if no branch is available (all branches excluded).
 #'
 #' @param phy Backbone phylogeny of class `"phylo"`.
 #' @param MRCA_node Node ID of the MRCA of the target clade.
 #' @param which_node Character string. Return the `"tipward"` or `"rootward"` node of the selected branch. Default is `"tipward"`.
-#' @param include_stem Logical. Whether the stem branch of the target clade is available. Default is `TRUE`.
+#' @param include_stem Logical. Whether the stem branch of the target clade is available. Ignored for single-tip clades (their tip branch is always available). Default is `TRUE`.
 #' @param excluded_subclades_MRCA_nodes Integer vector. MRCA nodes of subclades removed from the draw. Default is `NULL`.
 #' @param seed Integer. Optional seed. Default is `NULL`.
+#'
+#' @importFrom ape Ntip
 #'
 #' @noRd
 #'
@@ -532,6 +542,10 @@ draw_random_branch_weighted_per_length <- function (
 #' @param excluded_subclades_tips_list List of pairs of tips defining the subclades to exclude.
 #' @param root_age Numeric. Optional root age, to avoid recomputing node heights. Default is `NULL`.
 #' @param seed Integer. Optional seed. Default is `NULL`.
+#'
+#' @importFrom ape getMRCA
+#'
+#' @importFrom phytools bind.tip nodeHeights nodeheight
 #'
 #' @noRd
 #'

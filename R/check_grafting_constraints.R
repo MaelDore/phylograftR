@@ -18,7 +18,7 @@
 #' @param phy_backbone An object of class `"phylo"`. The backbone phylogeny used for grafting (i.e., before grafting).
 #' @param missing_taxa_list A list with the information on the grafted taxa. Typically the same list as used for grafting.
 #'   Items: `$Taxa_name`, `$Target_clade`, and optionally `$Excluded_subclades`. See [graft_missing_taxa()] for details.
-#' @param include_stem Logical. Same as in [graft_missing_taxa()]: whether grafting on the stem branch of target clades defined by pairs of tips is accepted.
+#' @param include_stem Logical. Same as in [graft_missing_taxa()]: whether grafting on the stem branch of target clades is accepted.
 #'   Default is `TRUE`.
 #' @param use_excluded_subclades Logical. Same as in [graft_missing_taxa()]: whether to check the excluded subclades.
 #'   If no `$Excluded_subclades` item is found in `missing_taxa_list`, a warning is issued and excluded subclades are not checked. Default is `TRUE`.
@@ -33,7 +33,7 @@
 #' * `$Taxon`: Name of the taxon.
 #' * `$in_tree`: Logical. Whether the taxon is found in the grafted phylogeny.
 #' * `$target_position`: Character string. Position of the taxon relative to its target clade: `"crown"` (within the clade), `"stem"` (sister to the clade),
-#'      `"tip_branch"` (sister to the tip, for single-tip target clades), or `"outside"` (neither within the clade or on its stem = an error).
+#'      `"tip_branch"` (sister to the tip, for single-tip target clades), or `"outside"` (neither within the clade nor on its stem = an error).
 #' * `$target_ok`: Logical. Whether the position respects the target clade (`"crown"` or, if `include_stem = TRUE`, `"stem"`; `"tip_branch"` for single-tip clades).
 #' * `$excluded_ok`: Logical. Whether the taxon is outside all its excluded subclades.
 #' * `$n_excluded_violated`: Integer. Number of excluded subclades violated.
@@ -61,6 +61,10 @@
 #'
 #' Branches of the backbone are matched between the pruned grafted phylogeny and the backbone by the set of tips they subtend.
 #' Branch lengths are considered preserved if the maximum deviation, relative to the depth of the backbone, is lower than `tolerance`.
+#'
+#' @importFrom ape all.equal.phylo getMRCA keep.tip node.depth.edgelength prop.part
+#'
+#' @importFrom stats setNames
 #'
 #' @export
 #'

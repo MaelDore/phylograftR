@@ -1,4 +1,4 @@
-##### Internal helpers for ultrametricity, shared by grafting_missing_taxa() and grafting_missing_clades() #####
+##### Internal helpers for ultrametricity, shared by graft_missing_taxa() and graft_missing_clades() #####
 
 ####################################
 #       Author: Maël Doré          #
@@ -16,6 +16,8 @@
 #'
 #' @param phy Backbone phylogeny of class `"phylo"`.
 #' @param tol Numeric. Tolerance for `ape::is.ultrametric()`.
+#'
+#' @importFrom ape is.ultrametric
 #'
 #' @noRd
 #'
@@ -52,6 +54,8 @@ check_backbone_ultrametric <- function (phy, # Backbone phylogeny
 #' @param tip_labels Character vector. Labels of the new tips.
 #' @param root_age Numeric. Expected distance from the root to all tips.
 #'
+#' @importFrom phytools nodeheight
+#'
 #' @noRd
 #'
 #' @return The phylogeny with adjusted terminal branches of the new tips.
@@ -78,12 +82,16 @@ enforce_ultrametry_new_tips <- function (phy, # Phylogeny including the new tips
 #' @title Make a phylogeny ultrametric if it is not
 #'
 #' @description Check if a phylogeny is ultrametric and enforce ultrametry if not.
-#'   Use the 'extend' method from `ape::is.ultrametric()` by default
+#'   Use the `"extend"` method from `phytools::force.ultrametric()` by default
 #'   as the alternative `"nnls"` method can be time-consuming on large phylogenies.
 #'
 #' @param phy Phylogeny of class `"phylo"`.
 #' @param method Character string. Method used to force ultrametry. Default is `"extend"`.
 #' @param tol Numeric. Tolerance for `ape::is.ultrametric()`.
+#'
+#' @importFrom ape is.ultrametric
+#'
+#' @importFrom phytools force.ultrametric
 #'
 #' @noRd
 #'

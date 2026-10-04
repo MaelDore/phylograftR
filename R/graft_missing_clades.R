@@ -50,9 +50,15 @@
 #'
 #' ### Enclosing clades
 #'
-#' When a sister clade contains less tips than `min_tips`, an alternative higher clade is selected to fit the birth-death model.
+#' When a sister clade contains fewer tips than `min_tips`, an alternative higher clade is selected to fit the birth-death model.
 #' This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the sister clade, until a clade meets the `min_tips` condition.
-#' This ensures that the diversification dynamic modeled have enough tips to be relevant, while being closely associated with the sister clade.
+#' This ensures that the diversification dynamics modeled are based on enough tips to be relevant, while being closely associated with the sister clade.
+#'
+#' @importFrom ape bind.tree branching.times extract.clade is.ultrametric
+#'
+#' @importFrom phytools bind.tip nodeHeights nodeheight
+#'
+#' @importFrom TreeSim corsim sim.bd.taxa.age
 #'
 #' @export
 #'
