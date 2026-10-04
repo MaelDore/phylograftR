@@ -200,7 +200,8 @@ check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
                            missing_taxa_list = missing_taxa_list)
 
 # Account for unsampled species with the total richness of the clades.
-# All the unique target clades must be listed (NA = unknown richness, i.e., no unsampled species beyond nested clades)
+# All the unique target clades must be listed
+# (NA = unknown richness, i.e., no unsampled species beyond nested clades)
 total_richness_per_clades <- list(
   Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5"),
   total_richness = c(25, NA, 3))
