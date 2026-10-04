@@ -128,7 +128,8 @@
 #'   Sister_clade = list(c("t8", "t22"), c("t26", "t18"), "t5"),
 #'   total_richness = c(20, NA, 3))
 #' grafted_phy_richness <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
-#'                                              total_richness_per_clades = total_richness_per_clades, verbose = FALSE, seed = 1234)
+#'                                              total_richness_per_clades = total_richness_per_clades,
+#'                                              verbose = FALSE, seed = 1234)
 #' attr(grafted_phy_richness, "sampling_fraction")
 #'
 
