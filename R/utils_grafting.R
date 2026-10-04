@@ -251,7 +251,7 @@ sample_one <- function (x, prob = NULL)
 #'   `n_present / (n_present + n_pending + n_unsampled)`, with:
 #'   * `n_present`: number of tips of the clade in the current tree, i.e., backbone tips plus taxa already grafted (they are not 'missing' anymore).
 #'   * `n_pending`: number of taxa still to graft that belong to the clade.
-#'   * `n_unsampled`: number of unsampled species of the clade, derived from `total_richness`.
+#'   * `n_unsampled`: number of unsampled species of the clade, derived from `total_richness_per_clades`.
 #'   Default is `NULL`: the sampling fraction is `n_tips / (n_tips + n_missing)`.
 #'
 #' @details The goal is to use the fitted rates to simulate divergence ages of missing taxa using `TreeSim::corsim()`.
@@ -723,16 +723,17 @@ check_temp_file_path <- function (temp_file_path)
 
 #' @title Build the richness information used for the sampling fractions
 #'
-#' @description Validate the `total_richness` input, and derive from it, for every node of the backbone,
+#' @description Validate the `total_richness_per_clades` input, and derive from it, for every node of the backbone,
 #'   the number of unsampled species, i.e., species of the clade that are neither in the backbone nor in the list of taxa to graft.
 #'   The output is used:
 #'    * (1) to compute the sampling fraction `rho` of the birth-death models fitted during the grafting process;
-#'    * (2) to build the `sampling_fraction` table attached to the grafted phylogeny.
+#'    * (2) to build the `sampling_fraction` table attached to the grafted phylogeny that describe the distribution of species among
+#'      `nb_backbone_species`, `nb_missing_species`, and `nb_unsampled_species`, for each clade listed in `total_richness_per_clades`.
 #'
 #' @details
 #' ### Counts
 #' For a clade k with a total richness provided (not `NA`):
-#'   `nb_unsampled = Total_richness - nb_backbone - nb_missing`.
+#'   `nb_unsampled = total_richness - nb_backbone - nb_missing`.
 #'   `nb_backbone` is the number of tips of the clade in the backbone.
 #'   `nb_missing` is the number of taxa to graft that belong to the clade:
 #'   * `mode = "target"` (`graft_missing_taxa()`): taxa whose target clade is the clade itself, or is nested within it.
@@ -741,15 +742,15 @@ check_temp_file_path <- function (temp_file_path)
 #'
 #' For a clade without a total richness (`NA`, or not listed, e.g., an enclosing clade), `nb_unsampled` is the sum of `nb_unsampled`
 #' over the largest clades with a total richness that are nested within it.
-#' The rationale is that even if `nb_unsampled` cannot be derived from its `Total_richness` (as it is not provided for this clade),
+#' The rationale is that even if `nb_unsampled` cannot be derived from its `total_richness` (as it is not provided for this clade),
 #' it has to at least account for the `nb_unsampled` species that have being identified in its own nested clades.
 #' It is `0` if there is none.
 #'
 #' ### Checks
 #' The function stops if:
-#'  * The structure of `total_richness` is not valid.
+#'  * The structure of `total_richness_per_clades` is not valid.
 #'  * Tips defining a clade are missing from the backbone, or a clade is listed twice.
-#'  * A target clade (or sister clade) used in `missing_taxa_list` is not listed in `total_richness`.
+#'  * A target clade (or sister clade) used in `missing_taxa_list` is not listed in `total_richness_per_clades`.
 #'  * A total richness is lower than the number of backbone species plus missing species it contains (`nb_unsampled < 0`).
 #'  * A clade has fewer unsampled species than the sum of those of the clades with a total richness nested within it.
 #'
@@ -758,8 +759,8 @@ check_temp_file_path <- function (temp_file_path)
 #' @param missing_clades List of character vectors, same length as `missing_taxa_names`. Tips defining the target clade
 #'   (or the sister clade) of each taxon.
 #' @param mode Character string. `"target"` or `"sister"`. See details.
-#' @param total_richness `NULL`, or a list with two elements: the clades (`Target_clade` or `Sister_clade`, depending on `mode`),
-#'   a list of character vectors of tips defining each clade, and `Total_richness`, a vector of postive integers of the same length.
+#' @param total_richness_per_clades `NULL`, or a list with two elements: the clades (`Target_clade` or `Sister_clade`, depending on `mode`),
+#'   a list of character vectors of tips defining each clade, and `total_richness`, a vector of postive integers of the same length.
 #'   `NA` is allowed when no information for a given clade is available.
 #'
 #' @importFrom ape node.depth
@@ -774,10 +775,10 @@ check_temp_file_path <- function (temp_file_path)
 #'  * `taxa_names` Vector of character strings. Names of the taxa to graft.
 #'  * `taxon_sets` List (one element per taxon) of the node IDs of the backbone whose clade is considered to contain the taxon.
 #'  * `unsampled_by_node` Numeric vector (one value per node of the backbone, tips included). Number of unsampled species per node.
-#'  * `table` `NULL` if `total_richness` is `NULL`. Otherwise, a data frame with one row per clade listed in `total_richness`.
+#'  * `table` `NULL` if `total_richness_per_clades` is `NULL`. Otherwise, a data frame with one row per clade listed in `total_richness_per_clades`.
 #'
 
-build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode = c("target", "sister"), total_richness = NULL)
+build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode = c("target", "sister"), total_richness_per_clades = NULL)
 {
   mode <- match.arg(mode)
   clade_element <- if (mode == "target") "Target_clade" else "Sister_clade"
@@ -805,36 +806,36 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
   unsampled_by_node <- numeric(n_nodes)
   richness_table <- NULL
 
-  if (!is.null(total_richness))
+  if (!is.null(total_richness_per_clades))
   {
-    ## ---- Check the structure of 'total_richness' ---- ##
-    if (!is.list(total_richness) || is.null(total_richness[[clade_element]]) || is.null(total_richness$Total_richness))
+    ## ---- Check the structure of 'total_richness_per_clades' ---- ##
+    if (!is.list(total_richness_per_clades) || is.null(total_richness_per_clades[[clade_element]]) || is.null(total_richness_per_clades$total_richness))
     {
-      stop("'total_richness' must be a list with two elements: '", clade_element, "' (list of character vectors of tips defining the clades) ",
-           "and 'Total_richness' (vector of the total number of species of each clade)")
+      stop("'total_richness_per_clades' must be a list with two elements: '", clade_element, "' (list of character vectors of tips defining the clades) ",
+           "and 'total_richness' (vector of the total number of species of each clade)")
     }
-    clades <- total_richness[[clade_element]]
-    values <- total_richness$Total_richness
+    clades <- total_richness_per_clades[[clade_element]]
+    values <- total_richness_per_clades$total_richness
     if (!is.list(clades) || length(clades) == 0 || !all(vapply(clades, function (x) is.character(x) && length(x) >= 1, logical(1))))
     {
-      stop("'total_richness$", clade_element, "' must be a non-empty list of character vectors of tips")
+      stop("'total_richness_per_clades$", clade_element, "' must be a non-empty list of character vectors of tips")
     }
     if (length(values) != length(clades))
     {
-      stop("'total_richness$Total_richness' must have the same length as 'total_richness$", clade_element, "'")
+      stop("'total_richness_per_clades$total_richness' must have the same length as 'total_richness_per_clades$", clade_element, "'")
     }
     # A vector with only NA is logical: accept it
     if (is.logical(values) && all(is.na(values))) values <- as.numeric(values)
     if (!is.numeric(values) || any(!is.na(values) & (values < 0 | values != round(values))))
     {
-      stop("'total_richness$Total_richness' must be a numeric vector of non-negative whole numbers (NA allowed)")
+      stop("'total_richness_per_clades$total_richness' must be a numeric vector of non-negative whole numbers (NA allowed)")
     }
 
     ## ---- Locate the clades ---- ##
     all_tips <- unique(unlist(clades))
     if (!all(all_tips %in% phy$tip.label))
     {
-      stop("Some tip labels provided in 'total_richness$", clade_element, "' are missing from the backbone phylogeny\n",
+      stop("Some tip labels provided in 'total_richness_per_clades$", clade_element, "' are missing from the backbone phylogeny\n",
            "Missing tips: ", paste(setdiff(all_tips, phy$tip.label), collapse = ", "))
     }
     clade_nodes <- vapply(clades, function (tips) get_clade_node(phy, tips), numeric(1))
@@ -843,7 +844,7 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
     if (anyDuplicated(clade_nodes))
     {
       dup <- unique(clade_nodes[duplicated(clade_nodes)])
-      stop("Some clades are listed more than once in 'total_richness$", clade_element, "' (clades are matched by their MRCA node):\n",
+      stop("Some clades are listed more than once in 'total_richness_per_clades$", clade_element, "' (clades are matched by their MRCA node):\n",
            paste0("  - ", vapply(dup, function (nd) paste(clade_labels[clade_nodes == nd], collapse = "  =  "), character(1)), collapse = "\n"))
     }
 
@@ -854,8 +855,8 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
     {
       tips_not_covered <- vapply(not_covered, function (nd) paste(missing_clades[[match(nd, missing_nodes)]], collapse = ", "), character(1))
       n_show <- min(length(tips_not_covered), 10)
-      stop(length(not_covered), " ", if (mode == "target") "target" else "sister", " clade(s) of 'missing_taxa_list' are not listed in 'total_richness$", clade_element, "'. ",
-           "When 'total_richness' is provided, it must cover all the unique clades (use NA in 'Total_richness' if the richness is unknown).\n",
+      stop(length(not_covered), " ", if (mode == "target") "target" else "sister", " clade(s) of 'missing_taxa_list' are not listed in 'total_richness_per_clades$", clade_element, "'. ",
+           "When 'total_richness_per_clades' is provided, it must cover all the unique clades (use NA in 'total_richness' if the richness is unknown).\n",
            paste0("  - ", tips_not_covered[seq_len(n_show)], collapse = "\n"),
            if (length(not_covered) > n_show) paste0("\n  ... and ", length(not_covered) - n_show, " more") else "")
     }
@@ -874,8 +875,8 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
     if (length(too_low) > 0)
     {
       n_show <- min(length(too_low), 10)
-      stop(length(too_low), " clade(s) have a 'Total_richness' lower than the number of backbone species plus missing species they contain.\n",
-           paste0("  - ", clade_labels[too_low[seq_len(n_show)]], ": Total_richness = ", values[too_low[seq_len(n_show)]],
+      stop(length(too_low), " clade(s) have a 'total_richness' lower than the number of backbone species plus missing species they contain.\n",
+           paste0("  - ", clade_labels[too_low[seq_len(n_show)]], ": total_richness = ", values[too_low[seq_len(n_show)]],
                   ", backbone species = ", nb_backbone[too_low[seq_len(n_show)]], ", missing species = ", nb_missing[too_low[seq_len(n_show)]], collapse = "\n"),
            if (length(too_low) > n_show) paste0("\n  ... and ", length(too_low) - n_show, " more") else "")
     }
@@ -901,7 +902,7 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
     if (length(inconsistent) > 0)
     {
       n_show <- min(length(inconsistent), 10)
-      stop(length(inconsistent), " clade(s) have a 'Total_richness' too low to contain the clades with a 'Total_richness' nested within them.\n",
+      stop(length(inconsistent), " clade(s) have a 'total_richness' too low to contain the clades with a 'total_richness' nested within them.\n",
            paste0("  - ", clade_labels[prov_idx[inconsistent[seq_len(n_show)]]], ": unsampled species = ", nb_unsampled[prov_idx[inconsistent[seq_len(n_show)]]],
                   ", but nested clades have ", children_sum[inconsistent[seq_len(n_show)]], " unsampled species in total", collapse = "\n"),
            if (length(inconsistent) > n_show) paste0("\n  ... and ", length(inconsistent) - n_show, " more") else "")
@@ -914,8 +915,8 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
 
     richness_table <- data.frame(
       Clade_tips = clade_labels,
-      Total_richness = nb_backbone + nb_missing + nb_unsampled,
-      Total_richness_provided = provided,
+      total_richness = nb_backbone + nb_missing + nb_unsampled,
+      total_richness_provided = provided,
       nb_backbone_species = nb_backbone,
       nb_missing_species = nb_missing,
       nb_unsampled_species = nb_unsampled,

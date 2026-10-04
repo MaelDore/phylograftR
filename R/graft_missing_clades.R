@@ -22,11 +22,11 @@
 #'     Taxa with the same sister clade are grafted together as one missing clade.
 #' @param min_tips Integer. Minimum number of tips of the clade used to fit the birth-death model.
 #'   If the sister clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
-#' @param total_richness (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
+#' @param total_richness_per_clades (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
 #'   nor in `missing_taxa_list` (i.e., unsampled species) when fitting the birth-death models. Items:
 #'   * `$Sister_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Sister_clade`.
 #'     It must cover all the unique sister clades of `missing_taxa_list`. It can include other clades, e.g., enclosing clades.
-#'   * `$Total_richness`: Vector of positive integers, same length as `$Sister_clade`. Total number of species of each clade,
+#'   * `$total_richness`: Vector of positive integers, same length as `$Sister_clade`. Total number of species of each clade,
 #'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species
 #'     are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
 #'
@@ -45,10 +45,10 @@
 #' @return The function returns an object of class `"phylo"`: the backbone phylogeny with the grafted taxa added as new tips.
 #'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
 #'
-#'   If `total_richness` is provided, the tree has an attribute `"sampling_fraction"`: a data frame with one row per clade of `total_richness`
-#'   (columns `Clade_tips`, `Total_richness`, `Total_richness_provided`, `nb_backbone_species`, `nb_missing_species`, `nb_unsampled_species`
+#'   If `total_richness_per_clades` is provided, the tree has an attribute `"sampling_fraction"`: a data frame with one row per clade of `total_richness_per_clades`
+#'   (columns `Clade_tips`, `total_richness`, `total_richness_provided`, `nb_backbone_species`, `nb_missing_species`, `nb_unsampled_species`
 #'   and `sampling_fraction`). `sampling_fraction` is the fraction of the clade richness present in the grafted phylogeny:
-#'   `(nb_backbone_species + nb_missing_species) / Total_richness`. `Total_richness` is derived when `NA` was provided.
+#'   `(nb_backbone_species + nb_missing_species) / total_richness`. `total_richness` is derived when `NA` was provided.
 #'   Note that functions such as `ape::drop.tip()` do not keep this attribute.
 #'
 #' @details
@@ -73,24 +73,24 @@
 #'
 #' ### Sampling fraction and unsampled species
 #'
-#' Without `total_richness`, the sampling fraction of the birth-death model is computed as if only one lineage was missing (the missing-only clade to be grafted on the stem branch).
-#' With `total_richness`, it is `n_present / (n_present + n_pending + n_unsampled)`, with `n_present` the tips of the fitted clade in the current tree
+#' Without `total_richness_per_clades`, the sampling fraction of the birth-death model is computed as if only one lineage was missing (the missing-only clade to be grafted on the stem branch).
+#' With `total_richness_per_clades`, it is `n_present / (n_present + n_pending + n_unsampled)`, with `n_present` the tips of the fitted clade in the current tree
 #' (backbone tips and taxa already grafted, so missing clades grafted in nested sister clades processed earlier are not missing anymore),
 #' `n_pending` the taxa of `missing_taxa_list` still to graft whose sister clade is strictly nested within the fitted clade,
-#' and `n_unsampled` the unsampled species derived from `total_richness`.
+#' and `n_unsampled` the unsampled species derived from `total_richness_per_clades`.
 #' Taxa that are sister to the fitted clade itself are outside of it, so they are not counted.
 #' The divergence time of each missing clade is still drawn with `TreeSim::corsim(missing = 1)`: unsampled species only influence the fitted rates,
 #' they do not take a branch.
 #'
-#' For a clade with a `Total_richness` value provided: `nb_unsampled = Total_richness - nb_backbone - nb_missing`, with `nb_missing` the number of taxa to graft
-#' whose sister clade is strictly nested within the clade. For a clade with no `Total_richness` value (`NA`, or enclosing a sister clade without being listed),
-#' `nb_unsampled` is the sum of `nb_unsampled` over the largest clades nested within it with a `Total_richness` value provided. If there is none, `nb_unsampled = 0`.
-#' The rationale is that even if `nb_unsampled` cannot be derived from its `Total_richness` (as it is not provided for this clade), it has to at least account for the `nb_unsampled`
+#' For a clade with a `total_richness` value provided: `nb_unsampled = total_richness - nb_backbone - nb_missing`, with `nb_missing` the number of taxa to graft
+#' whose sister clade is strictly nested within the clade. For a clade with no `total_richness` value (`NA`, or enclosing a sister clade without being listed),
+#' `nb_unsampled` is the sum of `nb_unsampled` over the largest clades nested within it with a `total_richness` value provided. If there is none, `nb_unsampled = 0`.
+#' The rationale is that even if `nb_unsampled` cannot be derived from its `total_richness` (as it is not provided for this clade), it has to at least account for the `nb_unsampled`
 #' species that have being identified in its own nested clades.
 #'
-#' The function stops, before any grafting, if `total_richness` does not cover all the sister clades, if a `Total_richness` value is lower than
+#' The function stops, before any grafting, if `total_richness_per_clades` does not cover all the sister clades, if a `total_richness` value is lower than
 #' the number of backbone species plus missing species of the clade, or if a clade has fewer unsampled species than the sum of the clades with
-#' a `Total_richness` nested within it.
+#' an informed `total_richness` nested within it.
 #'
 #' @importFrom ape bind.tree branching.times extract.clade is.ultrametric
 #'
@@ -124,11 +124,11 @@
 #'
 #' # Account for unsampled species with the total richness of the sister clades.
 #' # All the unique sister clades must be listed (NA = unknown richness)
-#' total_richness <- list(
+#' total_richness_per_clades <- list(
 #'   Sister_clade = list(c("t8", "t22"), c("t26", "t18"), "t5"),
-#'   Total_richness = c(20, NA, 3))
+#'   total_richness = c(20, NA, 3))
 #' grafted_phy_richness <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
-#'                                              total_richness = total_richness, verbose = FALSE, seed = 1234)
+#'                                              total_richness_per_clades = total_richness_per_clades, verbose = FALSE, seed = 1234)
 #' attr(grafted_phy_richness, "sampling_fraction")
 #'
 
@@ -136,7 +136,7 @@
 graft_missing_clades <- function (phy, # Backbone phylogeny
                                   missing_taxa_list,
                                   min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model (the enclosing clade is used if the sister clade is smaller)
-                                  total_richness = NULL, # NULL, or list with Sister_clade = list(c(), ...) and Total_richness = c(...) (NA allowed). Total number of species of the clades accounting for the unsampled species that are neither present in the backbone, nor grafted.
+                                  total_richness_per_clades = NULL, # NULL, or list with Sister_clade = list(c(), ...) and total_richness = c(...) (NA allowed). Total number of species of the clades accounting for the unsampled species that are neither present in the backbone, nor grafted.
                                   ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
                                   verbose = TRUE,
                                   save_temp = FALSE, # Save a temporary phylogeny every 'save_temp_every' clades
@@ -184,15 +184,15 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     # If provided, must be a single path ending with ".rds", in an existing and writable directory
     check_temp_file_path(temp_file_path = temp_file_path)
 
-    ## Richness of the clades (unsampled species), only if 'total_richness' is provided
-    # Validates 'total_richness', and derives the number of unsampled species of each node of the backbone.
-    # Without 'total_richness', the sampling fraction keeps the default 'as if one lineage was missing'
+    ## Richness of the clades (unsampled species), only if 'total_richness_per_clades' is provided
+    # Validates 'total_richness_per_clades', and derives the number of unsampled species of each node of the backbone.
+    # Without 'total_richness_per_clades', the sampling fraction keeps the default 'as if one lineage was missing'
     richness_info <- NULL
-    if (!is.null(total_richness))
+    if (!is.null(total_richness_per_clades))
     {
       richness_info <- build_richness_info(phy = phy, missing_taxa_names = missing_taxa_list$Taxa_name,
                                            missing_clades = missing_taxa_list$Sister_clade,
-                                           mode = "sister", total_richness = total_richness)
+                                           mode = "sister", total_richness_per_clades = total_richness_per_clades)
     }
   }
 
@@ -283,7 +283,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     ## Fit Birth-Death on the sister-clade, or on the smallest enclosing clade with >= min_tips tips
     # Stop at the root if reached
     # Sampling fraction "as if missing only one lineage" (the branch leading to the missing clade)
-    # With 'total_richness': missing taxa still to graft and unsampled species of the fitted clade are used instead of the single missing lineage
+    # With 'total_richness_per_clades': missing taxa still to graft and unsampled species of the fitted clade are used instead of the single missing lineage
     BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, n_missing = 1, min_tips = min_tips, richness_info = richness_info)
 
     ## Simulate missing divergence times with TreeSim::corsim
@@ -361,7 +361,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxa_name, root_age = root_age)
   }
 
-  # Attach the sampling fraction table of the clades if 'total_richness' was provided
+  # Attach the sampling fraction table of the clades if 'total_richness_per_clades' was provided
   if (!is.null(richness_info$table)) attr(phy, "sampling_fraction") <- richness_info$table
 
   return(phy)
