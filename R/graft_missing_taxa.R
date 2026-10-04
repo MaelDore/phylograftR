@@ -38,6 +38,15 @@
 #'   Must be one of `"uniform"` or `"BD_clades"` (default). See Details.
 #' @param min_tips Integer. Only used for `method = "BD_clades"`. Minimum number of tips of the clade used to fit the birth-death model.
 #'   If the target clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
+#' @param total_richness (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
+#'   nor in `missing_taxa_list` (unsampled species). Items:
+#'   * `$Target_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Target_clade`.
+#'     It must cover all the unique target clades of `missing_taxa_list`. It can include other clades, e.g., enclosing clades.
+#'   * `$Total_richness`: Vector of positive integers, same length as `$Target_clade`. Total number of species of each clade,
+#'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species
+#'     are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
+#'
+#'   Default is `NULL`: no unsampled species. See 'Sampling fraction and unsampled species' in Details section.
 #' @param verbose Logical. Whether to display progress. Messages print every 100 taxa for `method = "uniform"`, and every 10 target clades for `method = "BD_clades"`.
 #'   Default is `TRUE`.
 #' @param save_temp Logical. Whether to save a temporary version of the grafted phylogeny during the process, to recover from a crash on long runs. Default is `FALSE`.
@@ -51,6 +60,12 @@
 #'
 #' @return The function returns an object of class `"phylo"`: the backbone phylogeny with the grafted taxa added as new tips.
 #'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
+#'
+#'   If `total_richness` is provided, the tree has an attribute `"sampling_fraction"`: a data frame with one row per clade of `total_richness`
+#'   (columns `Clade_tips`, `Total_richness`, `Total_richness_provided`, `nb_backbone_species`, `nb_missing_species`, `nb_unsampled_species`
+#'   and `sampling_fraction`). `sampling_fraction` is the fraction of the clade richness present in the grafted phylogeny:
+#'   `(nb_backbone_species + nb_missing_species) / Total_richness`. `Total_richness` is derived when `NA` was provided.
+#'   Note that functions such as `ape::drop.tip()` do not keep this attribute.
 #'
 #' @details
 #' The function stops, before any grafting, if the backbone is not ultrametric, or if some taxa have no branch available for grafting
@@ -104,6 +119,26 @@
 #' Taxa of the same target clade are grafted in random order, so they are exchangeable.
 #' Clades that are not nested do not interact, so the order in which they are processed has no influence.
 #'
+#' ### Sampling fraction and unsampled species
+#'
+#' Under `method = "BD_clades"`, the birth-death model of a clade is fitted with the sampling fraction
+#' `n_present / (n_present + n_pending + n_unsampled)`, with `n_present` the tips of the fitted clade in the current tree (backbone tips and taxa already grafted),
+#' `n_pending` the taxa of `missing_taxa_list` still to graft in this clade, and `n_unsampled` the unsampled species derived from `total_richness`.
+#' Taxa grafted in nested clades processed earlier are already in the tree, so they are not counted as missing anymore.
+#' Unsampled species are only used to fit the rates: they are not grafted, and do not compete with the grafted taxa for the branches.
+#'
+#' For a clade with a `Total_richness` value provided: `nb_unsampled = Total_richness - nb_backbone - nb_missing`, with `nb_missing` the number of taxa to graft
+#' whose target clade is this clade or is nested within it. For a clade with no `Total_richness` value (`NA`, or enclosing a target clade without being listed),
+#' `nb_unsampled` is the sum over the largest clades nested within it with a `Total_richness` value provided.
+#' As such, the unsampled species of nested clades are summed across disjoint clades but never counted twice within nested clades.
+#' If `total_richness = NULL`, `nb_unsampled = 0`.
+#'
+#' The function stops, before any grafting, if `total_richness` does not cover all the target clades, if a `Total_richness` is lower than
+#' the number of backbone species plus species to graft of the clade, or if a clade has fewer unsampled species than the sum of the clades with
+#' a `Total_richness` provided nested within it.
+#' With `method = "uniform"`, no diversification model is used: `total_richness` is only used to derive the `"sampling_fraction"` table (a warning is issued).
+#'
+#'
 #' @importFrom ape Ntip branching.times extract.clade getMRCA is.ultrametric
 #'
 #' @importFrom phytools bind.tip nodeHeights nodeheight
@@ -147,6 +182,17 @@
 #' check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
 #'                            missing_taxa_list = missing_taxa_list)
 #'
+#' # Account for unsampled species with the total richness of the clades.
+#' # All the unique target clades must be listed (NA = unknown richness, i.e., no unsampled species beyond nested clades)
+#' total_richness <- list(
+#'   Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5"),
+#'   Total_richness = c(25, NA, 3))
+#' grafted_phy_richness <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+#'                                            total_richness = total_richness,
+#'                                            method = "BD_clades", verbose = FALSE, seed = 1234)
+#' # Sampling fraction of the clades in the grafted phylogeny
+#' attr(grafted_phy_richness, "sampling_fraction")
+#'
 
 graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 missing_taxa_list, # List with Taxa_name = c(), Target_clade = list(c(), ...), Excluded_subclades = list(list(c(), c()), NULL, ...)
@@ -154,6 +200,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 use_excluded_subclades = TRUE, # Avoid grafting within Excluded_subclades?
                                 method = "BD_clades", # "uniform" or "BD_clades"
                                 min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model for "BD_clades" (the enclosing clade is used if the focal clade is smaller)
+                                total_richness = NULL, # NULL, or list with Target_clade = list(c(), ...) and Total_richness = c(...) (NA allowed). Total number of species of the clades
                                 verbose = TRUE, # To print progress every 100 taxa or every 10 target clades
                                 save_temp = FALSE, # Save a temporary phylogeny after each target clade (BD_clades)
                                 save_temp_every = 10,
@@ -270,6 +317,20 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     ## temp_file_path
     # If provided, must be a single path ending with ".rds", in an existing and writable directory
     check_temp_file_path(temp_file_path = temp_file_path)
+
+    ## Richness of the clades (unsampled species)
+    # Validates 'total_richness' if provided, and derives the number of unsampled species of each node of the backbone.
+    # Always computed: it also provides the number of missing taxa to include in the sampling fraction of the BD models
+    richness_info <- build_richness_info(phy = phy, missing_taxa_names = missing_taxa_list$Taxa_name,
+                                         missing_clades = missing_taxa_list$Target_clade,
+                                         mode = "target", total_richness = total_richness)
+
+    if (!is.null(total_richness) && method == "uniform")
+    {
+      warning("'total_richness' is only used to derive the 'sampling_fraction' table when method = 'uniform': ",
+              "it is not used during the grafting process, which does not account for the diversification process.",
+              call. = FALSE)
+    }
   }
 
   ## Check upfront that every taxon has at least one branch available for grafting
@@ -470,7 +531,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 
       ## Fit Birth-Death on the clade, or on the smallest enclosing clade with >= min_tips tips
       # Stop at the root if reached
-      BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, n_missing = ntips_missing, min_tips = min_tips)
+      BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, n_missing = ntips_missing, min_tips = min_tips,
+                             richness_info = richness_info) # Sampling fraction accounts for taxa still to graft and unsampled species
 
       ## Simulate missing divergence times with TreeSim::corsim
       new_divergence_times_i <- TreeSim::corsim(x = divergence_times_i, lambda = BD_i$b, mu = BD_i$d,
@@ -532,6 +594,9 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     # Force ultrametry to avoid issue with bad rounding, but only of the grafted tips, to keep the backbone intact
     phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxa_name, root_age = root_age)
   }
+
+  # Attach the sampling fraction table of the clades if 'total_richness' was provided
+  if (!is.null(richness_info$table)) attr(phy, "sampling_fraction") <- richness_info$table
 
   return(phy)
 }
