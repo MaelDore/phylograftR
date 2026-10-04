@@ -479,7 +479,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 #' @param excluded_subclades_MRCA_nodes Integer vector. MRCA nodes of subclades removed from the draw. Default is `NULL`.
 #' @param missing_tip_labels Character vector. Labels of all the taxa to graft (grafted or not), used to identify the 'missing-only subtrees' of the stem region
 #'   and include them in the draw if needed. Default is `character(0)`.
-#' @param seed Integer. Optional seed. Default is `NULL`.
+#' @param seed Integer. Optional seed. Default is `NULL` as the internal seed is set by the main grafting function.
 #'
 #' @importFrom ape Ntip
 #'
@@ -559,7 +559,7 @@ draw_random_branch_weighted_per_length <- function (
 #' @param missing_tip_labels Character vector. Labels of all the taxa to graft (grafted or not), used to identify the 'missing-only subtrees' of the stem region.
 #'   Default is `character(0)`.
 #' @param root_age Numeric. Optional root age, to avoid recomputing node heights. Default is `NULL`.
-#' @param seed Integer. Optional seed. Default is `NULL`.
+#' @param seed Integer. Optional seed. Default is `NULL` as the internal seed is set by the main grafting function.
 #'
 #' @importFrom ape getMRCA
 #'
