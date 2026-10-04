@@ -5,62 +5,120 @@
 #  Contact: mael.dore@gmail.com    #
 ####################################
 
-# See REVIEW_NOTES.md for suggested future implementations
-# See my Notes on the Word documents
-
-
-## Methods:
-#  "uniform"  : Graft per taxon. Branch used for grafting is drawn with weights proportional to branch length (Branches from excluded subclades are removed from the draw).
-#               Position on the branch is drawn from a uniform position (which bias divergence times towards the past compare to expectation from a BD model)
-#  "BD_clades": Graft per nested clade. Divergence times of all missing taxa for a given clade are drawn with TreeSim::corsim.
-#               Branches used for grafting are drawn uniformly across all branches crossing those ages (Branches from taxon-specific excluded subclades are removed from the draw for each associated taxon).
-#               This is the default approach recommended, but it can be time consuming for large phylogenies.
-
-
-## Notes to include in Roxygen header
-#  Why "uniform" is the biased option and "BD_clades" is not:
-#  Under a birth-death process, the probability of a side lineage splitting off a branch at age t follows
-#  the exponential function e^(-rt) with r the net diversification rate as lambda - mu.
-#  A uniform position/branch draw implicitly assumes a flat density (r = 0): it ignores the diversification
-#  dynamics and puts too much weight on old positions compared to expectation from a birth-death process.
-
-
-### Example on a toyset ####
-#
-# phy <- sim.bdtree(b = 1, d = 0, n = 10)
-# plot(phy)
-#
-# test_phy <- phy
-#
-# plot(test_phy)
-# nodelabels()
-# edgelabels()
-#
-# MRCA_node <- 18
-# MRCA_node <- 5
-# MRCA_node <- 12
-# excluded_subclades_MRCA_nodes <- c(13, 16)
-#
-# missing_taxa_list <- list(Taxa_name = c("A", "B", "C"),
-#                           Target_clade = list(c("s3", "s10"), c("s3"), c("s3", "s8")),
-#                           Excluded_subclades = list(list(c("s3", "s8"), c("s9", "s10")), NULL, list(c("s7", "s3"))))
-#
-#
-#
-# grafted_phy <- graft_missing_taxa(phy = test_phy, # Backbone phylogeny
-#                                      missing_taxa_list, # List with taxa to graft. Items: Taxa_name as c(), Target_clade as list(c(), c(), ...), Excluded_subclades as list(list(c(), c()), list(c()), ...)
-#                                      include_stem = T, # Include or not the stem of the total clade when grafting?
-#                                      use_excluded_subclades = T, # Use Excluded_subclades to avoid grafting within specific subclades
-#                                      method = "uniform", # Either "uniform" or "BD_clades"
-#                                      verbose = T,
-#                                      seed = 1234) # Set the seed
-#
-# plot(grafted_phy)
-#
-####
-
 
 ### 1/ Main function to graft missing taxa ####
+
+#' @title Graft missing taxa on a time-calibrated phylogeny
+#'
+#' @description This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny.
+#'   The position of each taxon is constrained by its taxonomic assignment (the target clade, defined in `Target_clade`),
+#'   and optionally by exclusions based on species attributes (the excluded subclades, defined in `Excluded_subclades`).
+#'   The divergence times of the grafted branches are either drawn uniformly along the branches (`method = "uniform"`),
+#'   or drawn from a birth-death model fitted on the target clade (`method = "BD_clades"`, default).
+#'   The backbone is never modified: only new tips are added.
+#'
+#' @param phy An object of class `"phylo"`. The backbone phylogeny on which taxa are grafted.
+#'   It must be rooted and ultrametric (i.e., be time-calibrated).
+#' @param missing_taxa_list A list with the information on the taxa to graft. Items:
+#'   * `$Taxa_name`: Character vector of the names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
+#'   * `$Target_clade`: List (same length as `$Taxa_name`) of character vectors. For each taxon, the tip labels defining its target clade,
+#'     i.e., the clade where the taxon is known to belong (e.g., its genus). A pair of tips defines the clade as their MRCA node.
+#'     A single tip defines the "clade" as the terminal branch of this tip.
+#'   * `$Excluded_subclades`: (Optional) List (same length as `$Taxa_name`) of lists of character vectors. For each taxon, the subclades of its target clade
+#'     where the taxon is known not to belong. Each subclade is defined by a pair of tips. Use `NULL` for taxa with no excluded subclades.
+#'     Single-tip subclades exclude nothing.
+#' @param include_stem Logical. Whether the stem branch of target clades is available for grafting.
+#'   If `TRUE`, a taxon can be grafted on the stem branch, and becomes sister to the target clade. Ignored for single-tip target clades
+#'   (their terminal branch is their only branch, and is always available) and for target clades being the whole tree (no stem; a warning is issued if `include_stem = TRUE`). Default is `TRUE`.
+#' @param use_excluded_subclades Logical. Whether to avoid grafting within the excluded subclades provided in `missing_taxa_list$Excluded_subclades`. Default is `TRUE`.
+#' @param method Character string. Method used to draw the divergence times and the branches used for grafting.
+#'   Must be one of `"uniform"` or `"BD_clades"` (default). See Details.
+#' @param min_tips Integer. Only used for `method = "BD_clades"`. Minimum number of tips of the clade used to fit the birth-death model.
+#'   If the target clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
+#' @param verbose Logical. Whether to display progress. Messages print every 100 taxa for `method = "uniform"`, and every 10 target clades for `method = "BD_clades"`.
+#'   Default is `TRUE`.
+#' @param save_temp Logical. Whether to save a temporary version of the grafted phylogeny during the process, to recover from a crash on long runs. Default is `FALSE`.
+#' @param save_temp_every Integer. Frequency of the temporary saves: every `save_temp_every` taxa for `method = "uniform"`,
+#'   and every `save_temp_every` target clades for `method = "BD_clades"`. Only used if `save_temp = TRUE`. Default is `10`.
+#' @param temp_file_path Character string. Path of the `.rds` file used for temporary saves. Default is `NULL`, which saves in `"./temp_phy_from_grafting.rds"`.
+#' @param ultrametric_tol Numeric. Tolerance used by `ape::is.ultrametric()` for the ultrametricity checks of the backbone and of the final phylogeny.
+#'   Default is `.Machine$double.eps^0.5`.
+#' @param seed Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
+#'   is restored on exit. Set to `NULL` to use the random number generator of the session. Default is `1234`.
+#'
+#' @return The function returns an object of class `"phylo"`: the backbone phylogeny with the grafted taxa added as new tips.
+#'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
+#'
+#' @details
+#' The function stops, before any grafting, if the backbone is not ultrametric, or if some taxa have no branch available for grafting
+#' (i.e., all branches of their target clade are excluded). The taxa concerned are listed in the error message,
+#' so the constraints (`include_stem` or `Excluded_subclades`) can be adjusted.
+#' With `method = "BD_clades"`, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon.
+#'
+#' ### Target clades, stem and excluded subclades
+#'
+#' Each taxon is grafted within its target clade. The branches available for grafting are all the branches of the target clade
+#' (descending from its MRCA node), plus its stem branch if `include_stem = TRUE`. Grafting on the stem branch places the taxon sister to the target clade.
+#'
+#' Branches inside excluded subclades are removed from the pool of available branches. However, the stem branch of an excluded subclade stays available:
+#' the taxon can be sister to the excluded subclade, but never nested within it.
+#'
+#' ### Enclosing clades
+#'
+#' Under the `"BD_clades"` method, when a target clade contains less tips than `min_tips`, an alternative higher clade is selected to fit the birth-death model.
+#' This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the target clade, until a clade meets the `min_tips` condition.
+#' This ensures that the diversification dynamic modeled have enough tips to be relevant, while being closely associated with the target clade.
+#'
+#' ### Methods
+#'
+#' * `"uniform"`: Taxa are grafted one by one, in random order. The branch used for grafting is drawn among the available branches
+#'   with probabilities proportional to branch lengths, and the position on the branch is drawn from a uniform distribution.
+#'   This does not account for diversification dynamics, but it is fast.
+#'   However, note that under a birth-death process, the probability of a side lineage splitting off a branch at age t follows the exponential function e^(-rt),
+#'   with r the net diversification rate (speciation minus extinction).
+#'   A uniform draw implicitly assumes a flat density (r = 0), and gives too much weight to old divergence times compared to the expectation from a birth-death process.
+#' * `"BD_clades"`: Taxa are grafted per target clade, from the smallest to the largest, so nested clades are processed first.
+#'   For each target clade, a birth-death model is fitted with `phytools::fit.bd()` on the clade, or on the smallest enclosing clade with at least `min_tips` tips.
+#'   The sampling fraction accounts for the number of missing taxa provided for grafting in this clade.
+#'   The divergence times of all taxa missing in the target clade are then jointly drawn with `TreeSim::corsim()`.
+#'   Taxa are grafted from the oldest to the youngest divergence time. Each taxon is grafted on a branch drawn uniformly among the available branches that cross its divergence age.
+#'   Younger taxa can therefore be grafted on the branches of older missing taxa. This is the recommended method, but it can be time consuming for large phylogenies.
+#'
+#' @export
+#'
+#' @seealso [graft_missing_clades()] to graft groups of missing taxa as clades sister to a clade of the backbone,
+#'   and [check_grafting_constraints()] to check a posteriori that grafted taxa respect their target clades and excluded subclades.
+#'
+#' @author Maël Doré
+#'
+#' @examples
+#' # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units
+#' set.seed(1234)
+#' phy <- ape::rcoal(n = 30)
+#' phy$edge.length <- phy$edge.length / max(ape::node.depth.edgelength(phy)) * 50
+#'
+#' # List the missing taxa to graft
+#' missing_taxa_list <- list(
+#'   Taxa_name = c("X1", "X2", "X3", "X4"),
+#'   # Target clades defined by pairs of tips (MRCA), or by a single tip
+#'   Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5", c("t26", "t18")),
+#'   # Excluded subclades defined by pairs of tips. Only X1 has an excluded subclade
+#'   Excluded_subclades = list(list(c("t10", "t19")), NULL, NULL, NULL))
+#'
+#' # Graft with the default method ("BD_clades")
+#' grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+#'                                   method = "BD_clades", verbose = FALSE, seed = 1234)
+#' plot(grafted_phy, cex = 0.7)
+#'
+#' # Graft with the "uniform" method, without using the excluded subclades
+#' grafted_phy_uniform <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+#'                                           use_excluded_subclades = FALSE,
+#'                                           method = "uniform", verbose = FALSE, seed = 1234)
+#'
+#' # Check that the constraints are respected
+#' check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
+#'                            missing_taxa_list = missing_taxa_list)
+#'
 
 graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 missing_taxa_list, # List with Taxa_name = c(), Target_clade = list(c(), ...), Excluded_subclades = list(list(c(), c()), NULL, ...)
@@ -382,9 +440,24 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 
 ### 2/ Sub-function to draw randomly a branch within a clade weighted by its length ####
 
-# Draw is weighted by branch length to ensure the probability to be grafted at any point along any branch in the clade is uniform
-# If not weighted, a time point along shorter branch would have more chances to be used for grafting than a time point along a long branch
-# Returns the selected node ID, or NA if no branch is available (all branches excluded)
+#' @title Draw a branch within a clade, weighted by branch length
+#'
+#' @description Draw is weighted by branch length to ensure the probability to be grafted at any point along any branch in the clade is uniform.
+#'   If not weighted, a time point along shorter branch would have more chances to be used for grafting than a time point along a long branch.
+#'   Returns the selected node ID, or NA if no branch is available (all branches excluded).
+#'
+#' @param phy Backbone phylogeny of class `"phylo"`.
+#' @param MRCA_node Node ID of the MRCA of the target clade.
+#' @param which_node Character string. Return the `"tipward"` or `"rootward"` node of the selected branch. Default is `"tipward"`.
+#' @param include_stem Logical. Whether the stem branch of the target clade is available. Default is `TRUE`.
+#' @param excluded_subclades_MRCA_nodes Integer vector. MRCA nodes of subclades removed from the draw. Default is `NULL`.
+#' @param seed Integer. Optional seed. Default is `NULL`.
+#'
+#' @noRd
+#'
+#' @return The ID of the selected node, or `NA` if no branch is available.
+#'
+
 
 draw_random_branch_weighted_per_length <- function (
     phy,
@@ -446,6 +519,25 @@ draw_random_branch_weighted_per_length <- function (
 
 
 ### 3/ Sub-function grafting missing taxa from divergence age #####
+
+
+#' @title Graft one taxon at a given divergence age
+#'
+#' @description Grafts one tip on a random allowed branch of the target clade that crosses `divergence_age`.
+#'
+#' @param phy Backbone phylogeny of class `"phylo"`.
+#' @param divergence_age Numeric. Age at which the new branch is grafted.
+#' @param tip_label Character string. Label of the new tip.
+#' @param target_clade_tips Character vector. One tip, or a pair of tips, defining the target clade.
+#' @param excluded_subclades_tips_list List of pairs of tips defining the subclades to exclude.
+#' @param root_age Numeric. Optional root age, to avoid recomputing node heights. Default is `NULL`.
+#' @param seed Integer. Optional seed. Default is `NULL`.
+#'
+#' @noRd
+#'
+#' @return The phylogeny with the new grafted tip.
+#'
+
 
 graft_from_divergence_age <- function (phy, # Backbone phylogeny
                                        divergence_age, # Age at which the branch must be grafted

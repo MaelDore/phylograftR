@@ -6,21 +6,78 @@
 ####################################
 
 
-# See REVIEW_NOTES.md for suggested revisions
-
-# Each group of missing taxa sharing the same sister clade (same MRCA node) is grafted as ONE clade on the stem branch of that sister clade.
-# Divergence time drawn with TreeSim::corsim using a BD model fitted on the sister clade (or the smallest enclosing clade with >= min_tips tips).
-# Grow a tree with the requested number of taxa and fitted diversification process, conditioned on the stem age drawn for the missing clade (TreeSim::sim.bd.taxa.age)
-# Graft missing subclade on the stem branch at the given stem age
-
-# Changes:
-#   - backbone ultrametricity checked before grafting (error; the backbone is never modified, the user fixes it beforehand)
-#   - ultrametricity enforced on the NEW terminal branches only, backbone branch lengths untouched
-
-
-# Input format
-# List: Taxa name = c("Taxa_A", "Taxa_B")
-#       Sister_clade = list(c("Tip_AL", "Tip_AR"), c("Tip_BL", "Tip_BR"), ...)
+#' @title Graft missing clades on a time-calibrated phylogeny
+#'
+#' @description This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny as clades sister to clades of the backbone.
+#'   Missing taxa sharing the same sister clade are grafted together as ONE missing clade, on the stem branch of their sister clade.
+#'   The divergence time of the missing clade is drawn from a birth-death model fitted on the sister clade,
+#'   and the missing clade is grown under the same model, conditioned on its number of taxa and its stem age.
+#'
+#' @param phy An object of class `"phylo"`. The backbone phylogeny on which taxa are grafted.
+#'   It must be rooted and ultrametric (i.e., be time-calibrated).
+#' @param missing_taxa_list A list with the information on the taxa to graft. Items:
+#'   * `$Taxa_name`: Character vector of the names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
+#'   * `$Sister_clade`: List (same length as `$Taxa_name`) of character vectors. For each taxon, the tip labels defining the clade of the backbone
+#'     that is sister to the missing clade. A pair of tips defines the clade as their MRCA node. A single tip defines the "clade" as the terminal branch of this tip.
+#'     Taxa with the same sister clade are grafted together as one missing clade.
+#' @param min_tips Integer. Minimum number of tips of the clade used to fit the birth-death model.
+#'   If the sister clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
+#' @param ultrametric_tol Numeric. Tolerance used by `ape::is.ultrametric()` for the ultrametricity checks of the backbone and of the final phylogeny.
+#'   Default is `.Machine$double.eps^0.5`.
+#' @param verbose Logical. Whether to display progress. Messages print every 10 missing clades. Default is `TRUE`.
+#' @param save_temp Logical. Whether to save a temporary version of the grafted phylogeny during the process, to recover from a crash on long runs. Default is `FALSE`.
+#' @param save_temp_every Integer. Frequency of the temporary saves, in number of missing clades grafted. Only used if `save_temp = TRUE`. Default is `10`.
+#' @param temp_file_path Character string. Path of the `.rds` file used for temporary saves. Default is `NULL`, which saves in `"./temp_phy_from_grafting.rds"`.
+#' @param seed Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
+#'   is restored on exit. Set to `NULL` to use the random number generator of the session. Default is `1234`.
+#'
+#' @return The function returns an object of class `"phylo"`: the backbone phylogeny with the grafted taxa added as new tips.
+#'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
+#'
+#' @details
+#' The function stops, before any grafting, if the backbone is not ultrametric, or if a sister clade is the whole tree (it has no stem branch to graft on).
+#'
+#' ### Grafting process
+#'
+#' Groups of missing taxa sharing the same sister clade are ordered by the size of the sister clade, so nested sister clades are processed first.
+#' For each group:
+#' 1. A birth-death model is fitted with `phytools::fit.bd()` on the sister clade, or on the smallest enclosing clade with at least `min_tips` tips.
+#'    The sampling fraction is computed as if only one lineage was missing (the branch leading to the missing clade).
+#' 2. The divergence time of the missing clade is drawn on the stem branch of the sister clade with `TreeSim::corsim()`:
+#'    between the crown age of the sister clade and its stem age (or between the present and the stem age for a single-tip sister clade).
+#' 3. A single missing taxon is grafted as a new tip at this divergence time. For several taxa, a missing clade is grown with `TreeSim::sim.bd.taxa.age()`
+#'    under the fitted model, conditioned on the number of taxa and on its stem age (the drawn divergence time), and grafted on the stem branch of the sister clade.
+#'
+#' ### Enclosing clades
+#'
+#' When a sister clade contains less tips than `min_tips`, an alternative higher clade is selected to fit the birth-death model.
+#' This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the sister clade, until a clade meets the `min_tips` condition.
+#' This ensures that the diversification dynamic modeled have enough tips to be relevant, while being closely associated with the sister clade.
+#'
+#' @export
+#'
+#' @seealso [graft_missing_taxa()] to graft taxa within a target clade with constraints (target clades and excluded subclades),
+#'   and [check_grafting_constraints()] to check a posteriori that grafted taxa respect their constraints.
+#'
+#' @author Maël Doré
+#'
+#' @examples
+#' # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units
+#' set.seed(1234)
+#' phy <- ape::rcoal(n = 30)
+#' phy$edge.length <- phy$edge.length / max(ape::node.depth.edgelength(phy)) * 50
+#'
+#' # List the missing taxa to graft
+#' missing_clades_list <- list(
+#'   Taxa_name = c("M1", "M2", "M3", "M4"),
+#'   # M1 and M2 share the same sister clade: they are grafted together as one missing clade
+#'   Sister_clade = list(c("t8", "t22"), c("t8", "t22"), c("t26", "t18"), "t5"))
+#'
+#' # Graft the missing clades
+#' grafted_phy <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
+#'                                     verbose = FALSE, seed = 1234)
+#' plot(grafted_phy, cex = 0.7)
+#'
 
 
 graft_missing_clades <- function (phy, # Backbone phylogeny

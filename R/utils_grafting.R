@@ -1,7 +1,18 @@
 ##### Internal helpers shared by graft_missing_taxa() and graft_missing_clades() #####
 
-## Identify all descendant nodes from a given node in a tree
-# Fast, non-recursive search for descendants (all internal + terminal nodes below `node`)
+#' @title Get all descendant nodes of a node
+#'
+#' @description Fast, non-recursive search for descendants nodes.
+#'   Include both internal and terminal nodes.
+#'
+#' @param phy Phylogeny of class `"phylo"`.
+#' @param node Integer. Node ID.
+#'
+#' @noRd
+#'
+#' @return Integer vector of descendant node IDs including both internal and terminal nodes.
+#'
+
 get_descendant_nodes <- function (phy, node)
 {
   if (length(node) == 0) return(integer(0))
@@ -18,9 +29,19 @@ get_descendant_nodes <- function (phy, node)
 }
 
 
-## Identify node ID associated to a clade
-# Defined by 1 tip -> tip node
-# Defined by >= 2 tips -> MRCA node
+#' @title Get the node ID of a clade defined by tips
+#'
+#' @description Identify node ID associated to a clade based on tips:
+#'  * If defined by one tip, returns the tip node
+#'  * If defined by two or more tips, returns the MRCA node
+#'
+#' @param phy Phylogeny of class `"phylo"`.
+#' @param tips Character vector. One tip (tip node) or two or more tips (MRCA node).
+#'
+#' @noRd
+#'
+#' @return Integer. Node ID.
+
 get_clade_node <- function (phy, tips)
 {
   tips <- unname(tips)
@@ -36,8 +57,20 @@ get_clade_node <- function (phy, tips)
 }
 
 
-## Identify the parent node of a node (NA for the root)
-# Parent node = tipward node of the branch leading to the focal node
+#' @title Get the parent node of a node
+#'
+#' @description Identify node ID of the parent node of a node.
+#'   A parent node is defined as the rootward node of the branch leading to the focal node (i.e., stem branch).
+#'   Return `NA` for the root as it does not have a stem branch.
+#'
+#' @param phy Phylogeny of class `"phylo"`.
+#' @param node Integer. Node ID.
+#'
+#' @noRd
+#'
+#' @return Integer node ID, or `NA` for the root.
+#'
+
 get_parent_node <- function (phy, node)
 {
   parent_node <- phy$edge[phy$edge[, 2] == node, 1]
@@ -49,7 +82,19 @@ get_parent_node <- function (phy, node)
 }
 
 
-## Safe sample of one element handling edge cases with one or no elements in x
+#' @title Sample randomly one element from a vector
+#'
+#' @description Sample randomly one element from a vector in a safe fashion that
+#'   handles vector of length 0 or 1. Return an error if the vector is empty.
+#'
+#' @param x Vector to sample from.
+#' @param prob Numeric vector. Optional sampling probabilities. Default is `NULL`.
+#'
+#' @noRd
+#'
+#' @return One element of `x`. Stops if `x` is empty.
+#'
+
 sample_one <- function (x, prob = NULL)
 {
   if (length(x) == 0) stop("No valid option to sample from")
@@ -58,10 +103,31 @@ sample_one <- function (x, prob = NULL)
 }
 
 
-## Fit a birth-death model on the clade at `node`.
-# If it has less tips than min_tips, climb towards the root until it has enough (stops at the root in any case).
-# Rationale = have enough divergence times to be able to fit a relevant BD model
-# Returns list(b, d, n_tips, node).
+#' @title Fit a birth-death model on a clade enforcing a minimum number of tips
+#'
+#' @description Fit a birth-death model on a clade enforcing a minimum number of tips.
+#'   If the clade has less tips than `min_tips`, climb towards the root until it has enough (stops at the root in any case).
+#'   This ensures the enclosing clade chosen have enough divergence times to be able to fit a relevant BD model,
+#'   while retaining close relationship with the initial focal clade.
+#'
+#' @param phy Phylogeny of class `"phylo"`.
+#' @param node Integer. Node ID of the clade.
+#' @param n_missing Integer. Number of missing taxa, used for the sampling fraction. Default is `1`.
+#' @param min_tips Integer. Minimum number of tips for the fit. Default is `5`.
+#'
+#' @details The goal is to use the fitted rates to simulate divergence ages of missing taxa using `[TreeSim::corsim()]`.
+#'   Because no new divergence times can be drawn from a negative net diversification process,
+#'   the function ensures that the net diversification rate is always positive by capping the death rate to 99% of the birth rate.
+#'
+#' @noRd
+#'
+#' @return A list with 4 elements:
+#'  * `b` Numeric. Birth rate = speciation rate in events per time per lineage.
+#'  * `d` Numeric. Death rate = extinction rate in events per time per lineage.
+#'  * `n_tips` Integer. Number of tips in the enclosing clade used for fitting.
+#'  * `node` Integer. MRCA node ID of the selected enclosing clade.
+#'
+
 fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5)
 {
   clade_node <- node
@@ -121,11 +187,29 @@ fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5)
 }
 
 
-## Identify similar target/excluded clades and order them by nestedness
+#' @title Group missing taxa by clade and order the clades by nestedness
+#'
+#' @description Group missing taxa by the node of their MRCA, then order groups by size so nested ones come first
+#'   (a clade always has strictly more descendants than any clade nested within it,
+#'   thus sorting on clade size is enough to list nested clades first).
+#'   The rationale is to graft first taxa in nested clade, so they are accounted for when grafting missing taxa in higher clades
+#'   comprising those nested clades.
+#'
+#'   Use tips as inputs to define the associated clades:
+#'     * One tip defines a terminal branch.
+#'     * Two or more tips define a clade based on their MRCA.
+#'
+#' @param phy Phylogeny of class `"phylo"`.
+#' @param clade_tips List of character vectors defining the clade of each taxon.
+#'
+#' @noRd
+#'
+#' @return A list with 3 elements recording information per taxon:
+#'  * `group` Integer. Group ID.
+#'  * `clade_tips` Character vector. Tips used to identify the associated clade.
+#'  * `order`. Integer. Order of the group, ranked by size / nestedness.
+#'
 
-# Group missing taxa by the node of their MRCA,
-# then order groups by size so nested ones come first
-# (a clade always has strictly more descendants than any clade nested within it => sorting on clade size is enough).
 group_and_order_clades <- function (phy, clade_tips)
 {
   # Extract (MRCA) nodes associated to clades
@@ -138,19 +222,32 @@ group_and_order_clades <- function (phy, clade_tips)
   # Compute number of descendants in each group
   n_desc <- vapply(unique(nodes), function (n) length(get_descendant_nodes(phy, n)), numeric(1))
   # Record information per taxa
-  groups_per_taxa <- list(group = group, # Order
+  groups_per_taxa <- list(group = group, # Group ID
                           clade_tips = clade_tips[first], # Tips
-                          order = order(n_desc)) # Order to use in the loop
+                          order = order(n_desc)) # Order of the group to use in the loop
 
   # Export output
   return(groups_per_taxa)
 }
 
 
-## Extract the NEW divergence times returned by TreeSim::corsim()
-# corsim() returns the input times 'x' plus 'missing' new times, sorted in decreasing order.
-# The new times are recovered by removing ONE instance of each input time from the output
-# Contrary to setdiff(), this is robust to a new time being numerically identical to an existing one, and to duplicated input times.
+#' @title Extract the new divergence times returned by `TreeSim::corsim()`
+#'
+#' @description Extract the new divergence times returned by `TreeSim::corsim()`.
+#'   `TreeSim::corsim()` function returns the input times `x` plus `missing` new times associated to the missing taxa, sorted in decreasing order.
+#'   This function ensure a safe comparison between the input times and output times to extract the new divergence times associated with missing taxa,
+#'   by removing ONE instance of each input time from the output.
+#'   Contrary to `setdiff()`, this is robust to a new time being numerically identical to an existing one, and to duplicated input times.
+#'
+#' @param all_times Numeric vector. Output of `TreeSim::corsim()`.
+#' @param old_times Numeric vector. Input times given to `TreeSim::corsim()` as `x`.
+#' @param tol Numeric. Tolerance for the bound checks. Currently unused. Default is `1e-8`.
+#'
+#' @noRd
+#'
+#' @return Numeric vector of the new times.
+#'
+
 extract_new_divergence_times <- function (all_times, # Output of TreeSim::corsim()
                                           old_times, # Input times 'x' given to TreeSim::corsim()
                                           tol = 1e-8) # Tolerance for the bound checks
@@ -172,10 +269,20 @@ extract_new_divergence_times <- function (all_times, # Output of TreeSim::corsim
 }
 
 
-## Seed the RNG for the duration of the calling function only
-# The global RNG state (.Random.seed) is saved and restored when the calling function exits (also on error),
-# so setting a seed inside the grafting functions does not alter the random stream of the user's session.
-# Does nothing if seed is NULL.
+#' @title Set a seed for the duration of the calling function only
+#'
+#' @description Set a seed used internal by the function, without altering the global `.Random.seed` of the R session.
+#'   Restore the global `.Random.seed` when the calling function exits or yield an error.
+#'   Does nothing if seed is `NULL`.
+#'
+#' @param seed Integer. Seed. Nothing is done if `NULL`.
+#' @param envir Environment of the calling function. Default is `parent.frame()`.
+#'
+#' @noRd
+#'
+#' @return Invisible `NULL`.
+#'
+
 set_local_seed <- function (seed, envir = parent.frame())
 {
   if (is.null(seed)) return(invisible(NULL))
@@ -201,22 +308,35 @@ set_local_seed <- function (seed, envir = parent.frame())
 }
 
 
-## Identify the taxa with no branch available for grafting, given their target clade and excluded subclades
-# Static check done on the backbone, before any grafting to save time instead of discovering the problem in the middle of a long grafting run.
-#
-# How it works, for each taxon:
-#   1. Start from the pool of branches of its target clade.
-#      A branch is identified by its tipward node (the node it leads to), so the pool is made of
-#      all the descendant nodes of the MRCA node of the clade, plus the MRCA node itself if the stem is available.
-#   2. Remove from the pool the branches inside each excluded subclade (= all descendant nodes of the subclade's MRCA node).
-#   3. If the pool is empty, the taxon is flagged.
-#
-# It mirrors the rules of the grafting functions:
-#   - the stem of the target clade is available if include_stem = TRUE (never for the root, which has no stem)
-#   - the stem of a single-tip clade is always available (it is its only branch), ignoring include_stem
-#   - branches inside excluded subclades are unavailable, but their own stem stays available
-#
-# Returns a data.frame with the flagged taxa (0 rows if none).
+#' @title Find taxa with no branch available for grafting according to constraints
+#'
+#' @description Identify the taxa with no branch available for grafting, given their target clade and excluded subclades.
+#'   This function is called as an early check, before any grafting, to save time instead of discovering potential problems in the middle of a long grafting run.
+#'
+#'   # How it works, for each taxon:
+#'   1. Start from the pool of branches of its target clade.
+#'      A branch is identified by its tipward node (the node it leads to), so the pool is made of
+#'      all the descendant nodes of the MRCA node of the clade, plus the MRCA node itself if the stem is allowed for grafting (`include_stem = TRUE`).
+#'   2. Remove from the pool the branches inside each excluded subclade (= all descendant nodes of the subclade's MRCA node).
+#'   3. If the pool is empty, the taxon is flagged.
+#'
+#' It mirrors the rules of the grafting functions:
+#'   - the stem of the target clade is available if `include_stem = TRUE` (never for the root, which has no stem)
+#'   - the stem of a single-tip clade is always available (it is its only branch), ignoring `include_stem`
+#'   - branches inside excluded subclades are unavailable, but their own stem stays available
+#'
+#' @param phy Phylogeny of class `"phylo"`.
+#' @param missing_taxa_list List with `Taxa_name`, `Target_clade` and `Excluded_subclades`.
+#' @param include_stem Logical. Default is `TRUE`.
+#' @param use_excluded_subclades Logical. Default is `TRUE`.
+#'
+#' @noRd
+#'
+#' @return A data.frame with two columns summarizing the flagged taxa. It has 0 rows if no taxa were flagged.
+#'   * `Taxa_name` Character string. Name of the missing taxon to graft.
+#'   * `Target_clade` Character string. Tips used to describe the target clade associated with the missing taxon; separated by commas if multiple.
+#'
+
 
 find_taxa_without_allowed_branch <- function (phy,
                                               missing_taxa_list,
@@ -285,3 +405,4 @@ find_taxa_without_allowed_branch <- function (phy,
   # Return df
   return(flagged_taxa_df)
 }
+
