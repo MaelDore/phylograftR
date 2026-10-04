@@ -71,6 +71,11 @@
 #' Branches inside excluded subclades are removed from the pool of available branches. However, the stem branch of an excluded subclade stays available:
 #' the taxon can be sister to the excluded subclade, but never nested within it.
 #'
+#' Excluded subclades are expected to be nested within their target clade. The function checks their position before grafting:
+#' a warning is issued if an excluded subclade is outside the target clade (the exclusion then has no effect).
+#' The function stops if an excluded subclade contains the whole target clade, or is identical to it: no branch (or only the stem branch) would be left for grafting.
+#' To graft taxa specifically on the stem branch of a clade or of a single tip, use [graft_missing_clades()] instead.
+#'
 #' ### Enclosing clades
 #'
 #' Under the `"BD_clades"` method, when a target clade contains fewer tips than `min_tips`, an alternative higher clade is selected to fit the birth-death model.
@@ -202,6 +207,57 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     {
       stop("Some tip labels provided to locate nodes of excluded subclades are missing from the backbone phylogeny\n",
            "Missing tips: ", paste(setdiff(all_excluded_tips, phy$tip.label), collapse = ", "))
+    }
+
+    ## Check the position of the excluded subclades relative to their target clade
+    # Excluded subclades are expected to be nested within their target clade. Three other cases exists and are problematic:
+    #  - Excluded subclade containing the target clade: all branches of the target clade, stem included, are excluded.
+    #    No branch is available, which would stop the grafting anyway: stop now with a message pointing to the problem.
+    #  - Excluded subclade identical to the target clade: the whole crown is excluded. No branch is left if include_stem = FALSE,
+    #    and only the stem branch is left if include_stem = TRUE. Grafting only on a stem branch is not what this function is designed for:
+    #    with 'BD_clades', the divergence age is drawn before applying the exclusions and would most likely fall within the excluded crown,
+    #    where no branch is available, so the run would stop in the middle of the process.
+    #    Stop now, and point to graft_missing_clades(), which is designed to graft specifically on a stem branch (of a clade or of a single tip).
+    #  - Excluded subclade disjoint from the target clade: the exclusion has no effect. Harmless, so only a warning.
+    if (use_excluded_subclades && !is.null(missing_taxa_list$Excluded_subclades))
+    {
+      excluded_position <- check_excluded_subclades_position(phy = phy, missing_taxa_list = missing_taxa_list)
+
+      # Helper to format the list of problematic taxa (max 10 shown)
+      format_excluded_position <- function (df)
+      {
+        n_show <- min(nrow(df), 10)
+        paste0(paste0("  - ", df$Taxa_name[seq_len(n_show)], " (target clade tips: ", df$Target_clade[seq_len(n_show)],
+                      "; excluded subclade tips: ", df$Excluded_subclade[seq_len(n_show)], ")", collapse = "\n"),
+               if (nrow(df) > n_show) paste0("\n  ... and ", nrow(df) - n_show, " more") else "")
+      }
+
+      contains_target <- excluded_position[excluded_position$relation == "contains_target", ]
+      if (nrow(contains_target) > 0)
+      {
+        stop(nrow(contains_target), " excluded subclade(s) contain the whole target clade of their taxon, so all its branches would be excluded.\n",
+             format_excluded_position(contains_target),
+             "\nExcluded subclades must be nested within their target clade. Check the tips defining 'Target_clade' and 'Excluded_subclades'.")
+      }
+
+      identical_clade <- excluded_position[excluded_position$relation == "identical", ]
+      if (nrow(identical_clade) > 0)
+      {
+        stop(nrow(identical_clade), " excluded subclade(s) are identical to the target clade of their taxon, so the whole clade is excluded: ",
+             "no branch would be available for grafting with include_stem = FALSE, and only the stem branch with include_stem = TRUE.\n",
+             format_excluded_position(identical_clade),
+             "\nTo graft taxa specifically on the stem branch of a clade (or of a single tip), use graft_missing_clades() ",
+             "with this clade as 'Sister_clade'. Otherwise, check the tips defining 'Target_clade' and 'Excluded_subclades'.")
+      }
+
+      disjoint <- excluded_position[excluded_position$relation == "disjoint", ]
+      if (nrow(disjoint) > 0)
+      {
+        warning(nrow(disjoint), " excluded subclade(s) are outside the target clade of their taxon: these exclusions have no effect.\n",
+                format_excluded_position(disjoint),
+                "\nExcluded subclades are expected to be nested within their target clade. Check the tips defining 'Target_clade' and 'Excluded_subclades'.",
+                call. = FALSE)
+      }
     }
 
     ## temp_file_path

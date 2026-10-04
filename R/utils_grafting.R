@@ -443,6 +443,102 @@ set_local_seed <- function (seed, envir = parent.frame())
 }
 
 
+#' @title Check the position of the excluded subclades relative to their target clade
+#'
+#' @description Classify, for each taxon, the position of each of its excluded subclades relative to its target clade in the backbone phylogeny.
+#'   Excluded subclades are expected to be nested within the target clade. Because clades of a tree are either nested or disjoint,
+#'   there are four possible relationships (single-tip subclades exclude nothing and are ignored):
+#'   * `"nested"`: The excluded subclade is within the target clade (expected).
+#'   * `"identical"`: The excluded subclade is the target clade itself. The whole crown is excluded, so no branch (or only the stem) is left.
+#'   * `"disjoint"`: The excluded subclade does not overlap with the target clade. The exclusion has no effect.
+#'   * `"contains_target"`: The excluded subclade contains the target clade. All branches of the target clade (stem included) are excluded, so no branch is available.
+#'
+#'   Only the problematic relationships are returned.
+#'
+#' @param phy Backbone phylogeny of class `"phylo"`.
+#' @param missing_taxa_list List with `Taxa_name`, `Target_clade` and `Excluded_subclades`.
+#'
+#' @importFrom ape getMRCA
+#'
+#' @noRd
+#'
+#' @return A data.frame with one row per problematic excluded subclade (0 rows if none), and the columns:
+#'  * `Taxa_name` Character string. Name of the missing taxon.
+#'  * `Target_clade` Character string. Tips defining the target clade, separated by commas.
+#'  * `Excluded_subclade` Character string. Tips defining the excluded subclade, separated by commas.
+#'  * `relation` Character string. One of `"identical"`, `"disjoint"` or `"contains_target"`.
+#'
+
+check_excluded_subclades_position <- function (phy, missing_taxa_list)
+{
+  n_missing <- length(missing_taxa_list$Taxa_name)
+
+  # Cache the MRCA nodes and descendant nodes of clades, as many taxa share the same target clades / excluded subclades
+  # (same approach as in find_taxa_without_allowed_branch() used to compute MRCA nodes and descending nodes once per similar target clades / excluded subclades)
+  cache <- new.env()
+  get_node <- function (tips)
+  {
+    key <- paste0("mrca_", paste(sort(tips), collapse = "|"))
+    if (is.null(cache[[key]])) { cache[[key]] <- get_clade_node(phy, tips) }
+    cache[[key]]
+  }
+  get_desc <- function (node)
+  {
+    key <- paste0("desc_", node)
+    if (is.null(cache[[key]])) { cache[[key]] <- get_descendant_nodes(phy, node) }
+    cache[[key]]
+  }
+
+  # Initiate the output
+  out <- list()
+
+  # Loop per missing taxa
+  for (i in seq_len(n_missing))
+  {
+    # Excluded subclades with at least 2 tips (single-tip or empty subclades exclude nothing)
+    excluded_i <- Filter(function (x) length(x) >= 2, missing_taxa_list$Excluded_subclades[[i]])
+    if (length(excluded_i) == 0) next
+
+    target_clade_tips_i <- missing_taxa_list$Target_clade[[i]]
+    target_node_i <- get_node(target_clade_tips_i)
+
+    for (tips in excluded_i)
+    {
+      excluded_node <- get_node(tips)
+
+      # Compare the position of the excluded subclade to the target clade
+      relation <- if (excluded_node == target_node_i) {
+        "identical" # The excluded subclade is the target clade. ERROR: only the stem branch remain (if include_stem = TRUE) ; advise to use graft_missing_clades with the target calde as Sister_clade instead.
+      } else if (excluded_node %in% get_desc(target_node_i)) {
+        "nested" # Expected case: the excluded subclade is nested in the target clade
+      } else if (target_node_i %in% get_desc(excluded_node)) {
+        "contains_target" # The target clade is nested in the excluded subclade. ERROR: No valid branches remain.
+      } else {
+        "disjoint" # The two clades are polyphyletic and share no descending tips. WARNING: The exclusion is useless.
+      }
+
+      # Format output df wiht only the problematic cases
+      if (relation != "nested")
+      {
+        out[[length(out) + 1]] <- data.frame(
+          Taxa_name = missing_taxa_list$Taxa_name[i],
+          Target_clade = paste(target_clade_tips_i, collapse = ", "),
+          Excluded_subclade = paste(tips, collapse = ", "),
+          relation = relation, stringsAsFactors = FALSE)
+      }
+    }
+  }
+
+  # Return a df, with 0 rows if no problem was found
+  if (length(out) == 0)
+  {
+    return(data.frame(Taxa_name = character(0), Target_clade = character(0),
+                      Excluded_subclade = character(0), relation = character(0), stringsAsFactors = FALSE))
+  }
+  return(do.call(rbind, out))
+}
+
+
 #' @title Find taxa with no branch available for grafting according to constraints
 #'
 #' @description Identify the taxa with no branch available for grafting, given their target clade and excluded subclades.
