@@ -6,7 +6,7 @@ Authors@R:
            comment = c(ORCID = "0000-0003-3242-9242"))
 Description: Graft missing taxa on time-calibrated phylogenies combining
     taxonomic assignments and species attributes to define
-    inclusive/exclusive clades for grafting with diversification modeling
+    target/sister/excluded clades for grafting with diversification modeling
     for inferring divergence times of imputed branches.
 License: MIT + file LICENSE
 Config/roxygen2/version: 8.1.0
@@ -17,6 +17,7 @@ BugReports: https://github.com/MaelDore/phylograftR/issues
 Imports: 
     ape (>= 5.8.0),
     phytools (>= 2.5.0),
+    stats,
     TreeSim (>= 2.4)
 Suggests: 
     testthat (>= 3.3.2)

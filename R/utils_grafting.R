@@ -248,7 +248,6 @@ group_and_order_clades <- function (phy, clade_tips)
 #'
 #' @param all_times Numeric vector. Output of `TreeSim::corsim()`.
 #' @param old_times Numeric vector. Input times given to `TreeSim::corsim()` as `x`.
-#' @param tol Numeric. Tolerance for the bound checks. Currently unused. Default is `1e-8`.
 #'
 #' @noRd
 #'
@@ -256,8 +255,7 @@ group_and_order_clades <- function (phy, clade_tips)
 #'
 
 extract_new_divergence_times <- function (all_times, # Output of TreeSim::corsim()
-                                          old_times, # Input times 'x' given to TreeSim::corsim()
-                                          tol = 1e-8) # Tolerance for the bound checks
+                                          old_times) # Input times 'x' given to TreeSim::corsim()
 {
   all_times <- unname(all_times)
   old_times <- unname(old_times)
