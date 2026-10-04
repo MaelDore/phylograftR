@@ -84,6 +84,20 @@ e-mail](mailto:mael.dore@gmail.com). <br><br>
 > phylogenies combining diversification modeling, taxonomic assignments,
 > and species attributes. (DOI TBA)
 
+**phylograftR** extends the **TACT framework** to enable the
+identification of exclusive subclades where NOT to graft missing species
+based on taxonomic assignments and/or species attributes. Please cite
+the TACT paper as a foundation work for the development of
+**phylograftR**:
+
+> Chang, J., Rabosky, D. L., & Alfaro, M. E. (2019). Estimating
+> diversification rates on incompletely-sampled phylogenies: theoretical
+> concerns and practical solutions. Systematic Biology.
+> <https://doi.org/10.1093/sysbio/syz081>
+
+TACT is available as Python-based software at:
+<https://tact.jonathanchang.org/>
+
 As **phylograftR** relies strongly on functions designed for the
 [phytools R package](https://blog.phytools.org/) and the [TreeSim R
 package](https://CRAN.R-project.org/package=TreeSim), it is good
@@ -95,5 +109,3 @@ practice to also cite these packages:
 
 > Stadler T (2019). TreeSim: Simulating Phylogenetic Trees. R package
 > version 2.4, <https://CRAN.R-project.org/package=TreeSim>
-
-<!-- Acknowledge TAFT and the TAFT paper? -->
