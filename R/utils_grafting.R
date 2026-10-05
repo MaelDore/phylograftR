@@ -1,5 +1,13 @@
 ##### Internal helpers shared by graft_missing_taxa() and graft_missing_clades() #####
 
+####################################
+#       Author: Maël Doré          #
+#  Contact: mael.dore@gmail.com    #
+####################################
+
+## Utility functions used internally by grafting functions
+
+
 #' @title Get all descendant nodes of a node
 #'
 #' @description Fast, non-recursive search for descendants nodes.
