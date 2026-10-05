@@ -60,7 +60,12 @@ i.e., backbone species, missing species nested within the clade, and unsampled s
 are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
 }
 
-Default is \code{NULL}: no unsampled species. See 'Sampling fraction and unsampled species' in Details section.}
+With \code{NULL} (default), no unsampled species are accounted for and no \code{sampling_fraction_df} is returned.
+
+If the list is provided with only \code{NA} in \verb{$total_richness}, no unsampled species are assumed in any clade
+(\code{total_richness} = backbone + missing species), and the \code{sampling_fraction_df} table is returned (with \code{total_richness_provided = FALSE}).
+
+See 'Sampling fraction and unsampled species' in Details section.}
 
 \item{verbose}{Logical. Whether to display progress. Messages print every 100 taxa for \code{method = "uniform"}, and every 10 target clades for \code{method = "BD_clades"}.
 Default is \code{TRUE}.}
@@ -82,11 +87,30 @@ is restored on exit. Set to \code{NULL} to use the random number generator of th
 The function returns an object of class \code{"phylo"}: the backbone phylogeny with the grafted taxa added as new tips.
 Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
 
-If \code{total_richness_per_clades} is provided, the tree has an attribute \code{"sampling_fraction"}: a data frame with one row per clade of \code{total_richness_per_clades}
-(columns \code{Clade_tips}, \code{total_richness}, \code{total_richness_provided}, \code{nb_backbone_species}, \code{nb_missing_species}, \code{nb_unsampled_species}
-and \code{sampling_fraction}). \code{sampling_fraction} is the fraction of the clade richness present in the grafted phylogeny:
-\code{(nb_backbone_species + nb_missing_species) / total_richness}. \code{total_richness} is derived when \code{NA} was provided.
-Note that functions such as \code{ape::drop.tip()} do not keep this attribute.
+In addition to the standard elements of a \code{"phylo"} object, the phylogeny has the following elements:
+\itemize{
+\item \code{grafted_tips} Named logical vector with one value per tip, in the order of \verb{$tip.label}. \code{TRUE} for grafted tips. Names are the tip labels.
+\item \code{grafted_edges} Named logical vector with one value per branch, in the order of the rows of \verb{$edge}. \code{TRUE} for grafted branches,
+i.e., branches with only grafted taxa below them. Names are the IDs of the tipward nodes of the branches (\verb{$edge[, 2]}).
+Use them to color the phylogeny on plots (see examples).
+}
+
+These elements are not updated by functions that modify the phylogeny (e.g., \code{ape::drop.tip()}, which removes tips but keeps the other elements as they are,
+and \code{ape::write.tree()}, which removes them). Use \code{\link[=identify_grafted]{identify_grafted()}} to recompute \code{grafted_tips} and \code{grafted_edges} on a manipulated phylogeny.
+\itemize{
+\item \code{sampling_fraction_df} Only if \code{total_richness_per_clades} is provided (a list with only \code{NA} values also returns it, assuming no unsampled species).
+Data frame with one row per clade of \code{total_richness_per_clades}:
+\itemize{
+\item \code{Clade_tips} Character string. Tips used to identify the clade.
+\item \code{total_richness} Integer. Derived when \code{NA} was provided.
+\item \code{total_richness_provided} Logical. Whether \code{total_richness} of the clade was provided as input in \code{total_richness_per_clades}
+\item \code{nb_backbone_species} Integer. Number of species initially present on the backbone phylogeny.
+\item \code{nb_missing_species} Integer. Number of species that were missing from the backbone phylogeny and are now included in the grafted phylogeny
+\item \code{nb_unsampled_species} Integer. Number of species that are neither on the backbone, nor grafted as missing. Derived from \code{total_richness}.
+\item \code{sampling_fraction} Numeric. Fraction of the clade richness present in the grafted phylogeny as \code{(nb_backbone_species + nb_missing_species) / total_richness}.
+This can be used to account for clade-specific sampling fraction in downstream analyses.
+}
+}
 }
 \description{
 This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny.
@@ -163,12 +187,15 @@ For a clade with a \code{total_richness} value provided: \code{nb_unsampled = to
 whose target clade is this clade or is nested within it. For a clade with no \code{total_richness} value (\code{NA}, or enclosing a target clade without being listed),
 \code{nb_unsampled} is the sum over the largest clades nested within it with a \code{total_richness} value provided.
 As such, the unsampled species of nested clades are summed across disjoint clades but never counted twice within nested clades.
-If \code{total_richness_per_clades = NULL}, \code{nb_unsampled = 0}.
+
+If \code{total_richness_per_clades = NULL}, \code{nb_unsampled = 0} and no \code{sampling_fraction_df} is returned.
+To obtain the \code{sampling_fraction_df} without informing any total richness, provide \code{total_richness_per_clades} with the clades and only \code{NA} in \verb{$total_richness}:
+\code{nb_unsampled = 0} and \code{total_richness} equals the backbone plus missing species in all clades (the sampling fraction is 1).
 
 The function stops, before any grafting, if \code{total_richness_per_clades} does not cover all the target clades, if a \code{total_richness} provided is lower than
 the number of backbone species plus species to graft of the clade, or if a clade has fewer unsampled species than the sum of the clades with
 a \code{total_richness} provided nested within it.
-With \code{method = "uniform"}, no diversification model is used: \code{total_richness_per_clades} is only used to derive the \code{"sampling_fraction"} table (a warning is issued).
+With \code{method = "uniform"}, no diversification model is used: \code{total_richness_per_clades} is only used to derive the \code{sampling_fraction_df} table (a warning is issued).
 }
 }
 \examples{
@@ -190,6 +217,11 @@ grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_li
                                   method = "BD_clades", verbose = FALSE, seed = 1234)
 plot(grafted_phy, cex = 0.7)
 
+# Color the grafted tips and branches in red based on elements returned with the phylogeny
+plot(grafted_phy, cex = 0.7,
+     edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
+     tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+
 # Graft with the "uniform" method, without using the excluded subclades
 grafted_phy_uniform <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
                                           use_excluded_subclades = FALSE,
@@ -209,12 +241,16 @@ grafted_phy_richness <- graft_missing_taxa(phy = phy, missing_taxa_list = missin
                                            total_richness_per_clades = total_richness_per_clades,
                                            method = "BD_clades", verbose = FALSE, seed = 1234)
 # Sampling fraction of the clades in the grafted phylogeny
-attr(grafted_phy_richness, "sampling_fraction")
+grafted_phy_richness$sampling_fraction_df
 
 }
 \seealso{
-\code{\link[=graft_missing_clades]{graft_missing_clades()}} to graft groups of missing taxa as clades sister to a clade of the backbone,
-and \code{\link[=check_grafting_constraints]{check_grafting_constraints()}} to check a posteriori that grafted taxa respect their target clades and excluded subclades.
+Other functions from phylograftR:
+\itemize{
+\item \code{\link[=identify_grafted]{identify_grafted()}} to identify the grafted tips and branches of a phylogeny,
+\item \code{\link[=graft_missing_clades]{graft_missing_clades()}} to graft groups of missing taxa as clades sister to a clade of the backbone,
+\item \code{\link[=check_grafting_constraints]{check_grafting_constraints()}} to check a posteriori that grafted taxa respect their target clades and excluded subclades.
+}
 }
 \author{
 Maël Doré

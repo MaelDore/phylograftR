@@ -3,6 +3,7 @@
 export(check_grafting_constraints)
 export(graft_missing_clades)
 export(graft_missing_taxa)
+export(identify_grafted)
 importFrom(TreeSim,
   corsim,
   sim.bd.taxa.age
@@ -18,7 +19,8 @@ importFrom(ape,
   keep.tip,
   node.depth,
   node.depth.edgelength,
-  prop.part
+  prop.part,
+  reorder.phylo
 )
 importFrom(phytools,
   bind.tip,
