@@ -611,9 +611,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   }
 
   # Add the elements identifying the grafted tips and branches, and the sampling fraction table of the clades if 'total_richness_per_clades' was provided
-  grafted <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxa_name)
-  phy$grafted_tips <- grafted$grafted_tips
-  phy$grafted_edges <- grafted$grafted_edges
+  phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxa_name)
   if (!is.null(richness_info$table)) phy$sampling_fraction_df <- richness_info$table
 
   return(phy)

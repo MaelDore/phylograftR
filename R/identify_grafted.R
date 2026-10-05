@@ -11,8 +11,8 @@
 #' @title Identify the grafted tips and branches of a phylogeny
 #'
 #' @description Identify which tips and which branches of a phylogeny are grafted, as opposed to backbone.
-#'   The output can be used to color the phylogeny on plots (see examples).
-#'   It is also useful to recompute the information after the phylogeny has been manipulated
+#'   The information is added to the phylogeny as two elements, `grafted_tips` and `grafted_edges`, which can be used to color the phylogeny on plots (see examples).
+#'   The function is also useful to update these elements after the phylogeny has been manipulated
 #'   (e.g., with `ape::drop.tip()`, which does not update the elements of the phylogeny it does not know).
 #'
 #' @param phy An object of class `"phylo"`. The phylogeny, including the grafted taxa.
@@ -26,17 +26,17 @@
 #'   (the backbone branch is then split in two pieces, which are both backbone branches).
 #'
 #'   Node IDs are renumbered by functions that remove tips, such as `ape::drop.tip()`:
-#'   use this function again to update the `grafted_tips` and `grafted_edges` in that case.
+#'   use this function again to update the `grafted_tips` and `grafted_edges` elements in that case.
 #'
 #' @importFrom ape Ntip reorder.phylo
 #'
 #' @export
 #'
-#' @seealso Grafting functions, which add the two elements returned by this function to the grafted phylogeny:
+#' @seealso Grafting functions, which already add internally the two elements to the grafted phylogeny with this function:
 #'   * [graft_missing_taxa()] to graft taxa within a target clade with constraints (target clades and excluded subclades),
 #'   * [graft_missing_clades()] to graft groups of missing taxa as clades sister to a clade of the backbone.
 #'
-#' @return A list with 2 elements:
+#' @return The phylogeny `phy` (class `"phylo"`), with two elements added, or replaced if `phy` already had them:
 #'  * `grafted_tips` Named logical vector with one value per tip of `phy`, in the order of `phy$tip.label`.
 #'    `TRUE` for grafted tips. Names are the tip labels.
 #'  * `grafted_edges` Named logical vector with one value per branch (edge) of `phy`, in the order of the rows of `phy$edge`.
@@ -55,15 +55,15 @@
 #' grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
 #'                                   verbose = FALSE, seed = 1234)
 #'
-#' # Identify the grafted tips and branches
-#' grafted <- identify_grafted(phy = grafted_phy, grafted_taxa = missing_taxa_list$Taxa_name)
-#' table(grafted$grafted_tips)
-#' table(grafted$grafted_edges)
+#' # Identify the grafted tips and branches: the function returns the phylogeny with two additional elements
+#' grafted_phy <- identify_grafted(phy = grafted_phy, grafted_taxa = missing_taxa_list$Taxa_name)
+#' table(grafted_phy$grafted_tips)
+#' table(grafted_phy$grafted_edges)
 #'
 #' # Color the grafted tips and branches in red
 #' plot(grafted_phy, cex = 0.7,
-#'      edge.color = c("black", "red")[grafted$grafted_edges + 1],
-#'      tip.color = c("black", "red")[grafted$grafted_tips + 1])
+#'      edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
+#'      tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
 #'
 #' # Prune the phylogeny: drop a grafted tip and a backbone tip
 #' pruned_phy <- ape::drop.tip(phy = grafted_phy, tip = c("X2", "t1"))
@@ -74,10 +74,8 @@
 #'
 #' # Update them with identify_grafted(), using the grafted taxa still in the pruned phylogeny
 #' # (grafted taxa that are not tips are ignored with a warning)
-#' pruned_grafted_list <- identify_grafted(phy = pruned_phy,
-#'                                    grafted_taxa = intersect(missing_taxa_list$Taxa_name, pruned_phy$tip.label))
-#' pruned_phy$grafted_tips <- pruned_grafted_list$grafted_tips
-#' pruned_phy$grafted_edges <- pruned_grafted$_listgrafted_edges
+#' pruned_phy <- identify_grafted(phy = pruned_phy,
+#'                                grafted_taxa = intersect(missing_taxa_list$Taxa_name, pruned_phy$tip.label))
 #'
 #' # Plot the pruned phylogeny with the updated colors
 #' plot(pruned_phy, cex = 0.7,
@@ -128,7 +126,8 @@ identify_grafted <- function (phy, grafted_taxa)
   # Use tipward node ID for branches/edges
   names(is_grafted_edge) <- as.character(phy$edge[, 2])
 
-  ## Format output
-  grafted_list <- list(grafted_tips = is_grafted_tip, grafted_edges = is_grafted_edge)
-  return(grafted_list)
+  ## Add the elements to the phylogeny (replaced if already present) and return it
+  phy$grafted_tips <- is_grafted_tip
+  phy$grafted_edges <- is_grafted_edge
+  return(phy)
 }
