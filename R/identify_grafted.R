@@ -65,6 +65,25 @@
 #'      edge.color = c("black", "red")[grafted$grafted_edges + 1],
 #'      tip.color = c("black", "red")[grafted$grafted_tips + 1])
 #'
+#' # Prune the phylogeny: drop a grafted tip and a backbone tip
+#' pruned_phy <- ape::drop.tip(phy = grafted_phy, tip = c("X2", "t1"))
+#' # The elements 'grafted_tips' and 'grafted_edges' are NOT updated by ape::drop.tip():
+#' # they still have their previous lengths, and are not valid anymore
+#' length(pruned_phy$grafted_tips) == ape::Ntip(pruned_phy)
+#' length(pruned_phy$grafted_edges) == nrow(pruned_phy$edge)
+#'
+#' # Update them with identify_grafted(), using the grafted taxa still in the pruned phylogeny
+#' # (grafted taxa that are not tips are ignored with a warning)
+#' pruned_grafted_list <- identify_grafted(phy = pruned_phy,
+#'                                    grafted_taxa = intersect(missing_taxa_list$Taxa_name, pruned_phy$tip.label))
+#' pruned_phy$grafted_tips <- pruned_grafted_list$grafted_tips
+#' pruned_phy$grafted_edges <- pruned_grafted$_listgrafted_edges
+#'
+#' # Plot the pruned phylogeny with the updated colors
+#' plot(pruned_phy, cex = 0.7,
+#'      edge.color = c("black", "red")[pruned_phy$grafted_edges + 1],
+#'      tip.color = c("black", "red")[pruned_phy$grafted_tips + 1])
+#'
 
 identify_grafted <- function (phy, grafted_taxa)
 {
