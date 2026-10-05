@@ -26,7 +26,8 @@
 #'     A single tip defines the "clade" as the terminal branch of this tip.
 #'   * `$include_target_clade_stem`: (Optional) Logical vector (same length as `$Taxa_name`). For each taxon, whether the stem branch of its target clade
 #'     is available for grafting. It overrides the global argument `include_stem` for this taxon. `NA` values use `include_stem`.
-#'     With `NULL` (default, or no item), `include_stem` applies to all taxa. Ignored for single-tip target clades and for target clades that are the whole tree.
+#'     With `NULL` (default, or no item), `include_stem` applies to all taxa. Ignored for single-tip target clades (their terminal branch is their only branch,
+#'     so the stem is always used; a warning lists the taxa with `FALSE`) and for target clades that are the whole tree.
 #'   * `$Excluded_subclades`: (Optional) List (same length as `$Taxa_name`) of lists of character vectors. For each taxon, the subclades of its target clade
 #'     where the taxon is known not to belong. Each subclade is defined by a pair of tips. Use `NULL` for taxa with no excluded subclades.
 #'     Single-tip subclades exclude nothing.
@@ -290,8 +291,28 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 
     ## Stem availability of each taxon: 'include_target_clade_stem' of the taxon if provided (not NA), otherwise the global 'include_stem'
     # The resolved vector (no NA) replaces the item in the list, so it follows the taxa when they are reordered
+    stem_requested <- missing_taxa_list$include_target_clade_stem # Values provided by the user, before resolution
     missing_taxa_list$include_target_clade_stem <- resolve_include_stem(
-      include_target_clade_stem = missing_taxa_list$include_target_clade_stem, include_stem = include_stem, n_taxa = n_missing)
+      include_target_clade_stem = stem_requested, include_stem = include_stem, n_taxa = n_missing)
+
+    ## Warn (once) about taxa with a single-tip target clade and 'include_target_clade_stem = FALSE'
+    # The terminal branch of the tip is the only branch of a single-tip clade (it is its stem): not including the stem would lead to an error and is ignored.
+    # Only values explicitly set to FALSE are flagged (not NA with a global 'include_stem = FALSE', which is documented as ignored for single tips)
+    if (!is.null(stem_requested))
+    {
+      is_single_tip_target <- vapply(missing_taxa_list$Target_clade, function (tips) length(tips) == 1, logical(1))
+      single_tip_ignored <- which(is_single_tip_target & !is.na(stem_requested) & !as.logical(stem_requested))
+      if (length(single_tip_ignored) > 0)
+      {
+        n_show <- min(length(single_tip_ignored), 10)
+        warning(length(single_tip_ignored), " taxa have a single-tip target clade with 'include_target_clade_stem = FALSE': ",
+                "this value was ignored for the whole run, and the stem was used. The terminal branch of the tip is the only branch of a single-tip clade.\n",
+                paste0("  - ", missing_taxa_list$Taxa_name[single_tip_ignored[seq_len(n_show)]],
+                       " (target tip: ", vapply(missing_taxa_list$Target_clade[single_tip_ignored[seq_len(n_show)]], paste, character(1), collapse = ", "), ")", collapse = "\n"),
+                if (length(single_tip_ignored) > n_show) paste0("\n  ... and ", length(single_tip_ignored) - n_show, " more") else "",
+                call. = FALSE)
+      }
+    }
 
     ## Check that taxa names are truly missing from the backbone
     if (anyDuplicated(missing_taxa_list$Taxa_name) || any(missing_taxa_list$Taxa_name %in% phy$tip.label))

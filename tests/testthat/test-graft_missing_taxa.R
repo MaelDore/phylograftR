@@ -196,6 +196,42 @@ test_that("graft_missing_taxa() validates 'include_target_clade_stem'",
   expect_error(graft_missing_taxa(toy$phy, mtl, include_stem = NA, method = "uniform", verbose = FALSE), "single logical value")
 })
 
+## Test the warning for single-tip target clades with include_target_clade_stem = FALSE
+test_that("graft_missing_taxa() warns once, listing the taxa with a single-tip target clade and include_target_clade_stem = FALSE",
+{
+  toy <- toy_setup()
+  mtl <- list(Taxa_name = c("X1", "X2", "X3", "X4"), Target_clade = list(toy$s, toy$s, toy$A, toy$A),
+              include_target_clade_stem = c(FALSE, TRUE, FALSE, NA), Excluded_subclades = rep(list(NULL), 4))
+  warning_messages <- function (expr)
+  {
+    messages <- character()
+    withCallingHandlers(expr, warning = function (w) { messages <<- c(messages, conditionMessage(w)); invokeRestart("muffleWarning") })
+    messages
+  }
+
+  for (method in c("uniform", "BD_clades"))
+  {
+    messages <- warning_messages(graft_missing_taxa(toy$phy, mtl, method = method, verbose = FALSE))
+    single_tip_messages <- messages[grepl("single-tip target clade", messages)]
+    expect_length(single_tip_messages, 1) # once, at the beginning
+    expect_match(single_tip_messages, "1 taxa")
+    expect_match(single_tip_messages, "X1")
+    expect_no_match(single_tip_messages, "X2|X3|X4") # only the single-tip taxon with FALSE
+    expect_match(single_tip_messages, "ignored")
+  }
+
+  # No warning for NA / TRUE, nor for a global include_stem = FALSE (documented as ignored for single tips)
+  mtl$include_target_clade_stem <- c(NA, TRUE, FALSE, NA)
+  expect_false(any(grepl("single-tip target clade", warning_messages(
+    graft_missing_taxa(toy$phy, mtl, method = "uniform", include_stem = FALSE, verbose = FALSE)))))
+
+  # The taxon is grafted on the branch of its tip, whatever the value
+  mtl$include_target_clade_stem <- c(FALSE, TRUE, NA, NA)
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", seed = 1)
+  checks <- check_grafting_constraints(grafted, toy$phy, mtl, verbose = FALSE)
+  expect_equal(checks$target_position[1:2], c("tip_branch", "tip_branch"))
+})
+
 ## Test that the taxon-level value overrides the global argument, with the 'uniform' method
 test_that("with method = 'uniform', include_target_clade_stem overrides include_stem per taxon, and NA uses include_stem",
 {
