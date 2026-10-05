@@ -66,6 +66,30 @@ test_that("check_grafting_constraints() reports a shift of the backbone branch l
   expect_false(attr(checks, "all_ok"))
 })
 
+## Test flagging of a change in backbone topology
+test_that("check_grafting_constraints() reports a change in the backbone topology",
+{
+  toy <- toy_setup()
+  missing_taxa_list <- list(Taxa_name = "X1", Target_clade = list(toy$A), Excluded_subclades = list(NULL))
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, missing_taxa_list, method = "uniform", seed = 1)
+
+  # Swap the labels of a backbone tip of clade A and of a tip outside it: same branch lengths, but a different backbone topology
+  swapped <- grafted
+  i <- match(c(toy$tipsA[1], toy$o), swapped$tip.label)
+  swapped$tip.label[i] <- swapped$tip.label[rev(i)]
+
+  checks <- check_grafting_constraints(swapped, toy$phy, missing_taxa_list, verbose = FALSE)
+  expect_false(attr(checks, "topology_preserved"))
+  expect_false(attr(checks, "backbone_preserved"))
+  expect_false(attr(checks, "all_ok"))
+  expect_error(check_grafting_constraints(swapped, toy$phy, missing_taxa_list, stop_on_failure = TRUE, verbose = FALSE))
+
+  # Control: the unchanged grafted phylogeny is validated
+  checks_ok <- check_grafting_constraints(grafted, toy$phy, missing_taxa_list, verbose = FALSE)
+  expect_true(attr(checks_ok, "topology_preserved"))
+  expect_true(attr(checks_ok, "all_ok"))
+})
+
 ## Test invalid input stops
 test_that("check_grafting_constraints() stops on invalid inputs, and can stop on failure",
 {

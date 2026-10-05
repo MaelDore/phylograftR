@@ -252,8 +252,8 @@ test_that("build_richness_info() in 'sister' mode only counts the taxa whose sis
   expect_equal(info$table$nb_missing_species, c(0, 0, 5))
 })
 
-## Test that uninformative total_richness_per_clades input returns no table
-test_that("build_richness_info() without totals returns no table and no unsampled species",
+## Test that uninformative total_richness_per_clades input (i.e., vector of NA) returns a table with no unsampled species; and no total_richness_per_clades input returns no table
+test_that("build_richness_info() without totals ('NULL') returns no table; with only 'NA' returns a table with no unsampled species",
 {
   toy <- toy_setup()
   info <- richness_example(toy)
@@ -339,7 +339,7 @@ test_that("check_excluded_subclades_position() flags excluded subclades that are
   expect_equal(nrow(check_excluded_subclades_position(toy$phy, none)), 0)
 })
 
-## Test flagging of taxa whose contraints left no valid branch for grafting
+## Test flagging of taxa whose constraints left no valid branch for grafting
 test_that("find_taxa_without_allowed_branch() lists the taxa whose branches are all excluded",
 {
   toy <- toy_setup()

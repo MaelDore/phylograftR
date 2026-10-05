@@ -29,6 +29,9 @@
 #'   * `$total_richness`: Vector of positive integers, same length as `$Sister_clade`. Total number of species of each clade,
 #'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species
 #'     are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
+#'   With `NULL` (default), no `sampling_fraction_df` is returned and the legacy sampling fraction is used (see Details). If the list is provided with only `NA`
+#'   in `$total_richness`, no unsampled species are assumed in any clade (`total_richness` = backbone + missing species), the `sampling_fraction_df` table is returned
+#'   (with `total_richness_provided = FALSE`), and the sampling fraction of the models accounts for the taxa still to graft but no unsampled species. Values of `0` are not allowed.
 #'
 #'   Missing taxa grafted on the stem of a clade are sister to this clade: they are not counted in its richness.
 #'   Default is `NULL`: no unsampled species. Missing species to graft and backbone species are assumed to cover all species in the focal group.
@@ -46,17 +49,24 @@
 #'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
 #'
 #'   In addition to the standard elements of a `"phylo"` object, the phylogeny has the following elements:
-#'  * `grafted_tips` Named logical vector with one value per tip, in the order of `$tip.label`. `TRUE` for grafted tips. Names are the tip labels.
-#'  * `grafted_edges` Named logical vector with one value per branch, in the order of the rows of `$edge`. `TRUE` for grafted branches,
-#'    i.e., branches with only grafted taxa descending from them. Names are the IDs of the tipward nodes of the branches (`$edge[, 2]`).
-#'    Use them to color the phylogeny on plots (see examples).
-#'  * `sampling_fraction_df` Only if `total_richness_per_clades` is provided. Data frame with one row per clade of `total_richness_per_clades`
-#'    (columns `Clade_tips`, `total_richness`, `total_richness_provided`, `nb_backbone_species`, `nb_missing_species`, `nb_unsampled_species`
-#'    and `sampling_fraction`). `sampling_fraction` is the fraction of the clade richness present in the grafted phylogeny:
-#'    `(nb_backbone_species + nb_missing_species) / total_richness`. `total_richness` is derived when `NA` was provided.
+#'   * `grafted_tips` Named logical vector with one value per tip, in the order of `$tip.label`. `TRUE` for grafted tips. Names are the tip labels.
+#'   * `grafted_edges` Named logical vector with one value per branch, in the order of the rows of `$edge`. `TRUE` for grafted branches,
+#'     i.e., branches with only grafted taxa descending from them. Names are the IDs of the tipward nodes of the branches (`$edge[, 2]`).
+#'     Use them to color the phylogeny on plots (see examples).
 #'
-#'  These elements are not updated by functions that modify the phylogeny (e.g., `ape::drop.tip()`, which removes tips but keeps the other elements as they are,
-#'  and `ape::write.tree()`, which removes them). Use [identify_grafted()] to recompute `grafted_tips` and `grafted_edges` on a manipulated phylogeny.
+#'   These elements are not updated by functions that modify the phylogeny (e.g., `ape::drop.tip()`, which removes tips but keeps the other elements as they are,
+#'   and `ape::write.tree()`, which removes them). Use [identify_grafted()] to recompute `grafted_tips` and `grafted_edges` on a manipulated phylogeny.
+#'
+#'   * `sampling_fraction_df` Only if `total_richness_per_clades` is provided (a list with only `NA` values also returns it, assuming no unsampled species).
+#'     Data frame with one row per clade of `total_richness_per_clades`:
+#'     * `Clade_tips` Character string. Tips used to identify the clade.
+#'     * `total_richness` Integer. Derived when `NA` was provided.
+#'     * `total_richness_provided` Logical. Whether `total_richness` of the clade was provided as input in `total_richness_per_clades`
+#'     * `nb_backbone_species` Integer. Number of species initially present on the backbone phylogeny.
+#'     * `nb_missing_species` Integer. Number of species that were missing from the backbone phylogeny and are now included in the grafted phylogeny
+#'     * `nb_unsampled_species` Integer. Number of species that are neither on the backbone, nor grafted as missing. Derived from `total_richness`.
+#'     * `sampling_fraction` Numeric. Fraction of the clade richness present in the grafted phylogeny as `(nb_backbone_species + nb_missing_species) / total_richness`.
+#'       This can be used to account for clade-specific sampling fraction in downstream analyses.
 #'
 #' @details
 #' The function stops, before any grafting, if the backbone is not ultrametric, or if a sister clade is the whole tree (it has no stem branch to graft on).
@@ -95,9 +105,15 @@
 #' The rationale is that even if `nb_unsampled` cannot be derived from its `total_richness` (as it is not provided for this clade), it has to at least account for the `nb_unsampled`
 #' species that have being identified in its own nested clades.
 #'
-#' The function stops, before any grafting, if `total_richness_per_clades` does not cover all the sister clades, if a `total_richness` value is lower than
+#' If `total_richness_per_clades = NULL`, `nb_unsampled = 0` and no `sampling_fraction_df` is returned.
+#' #' To obtain the `sampling_fraction_df` without informing any total richness, provide `total_richness_per_clades` with the clades and only `NA` in `$total_richness`:
+#' `nb_unsampled = 0` and `total_richness` equals the backbone plus missing species in all clades (the sampling fraction is 1).
+#'
+#' The function stops, before any grafting, if `total_richness_per_clades` does not cover all the sister clades, if a `total_richness` provided is lower than
 #' the number of backbone species plus missing species of the clade, or if a clade has fewer unsampled species than the sum of the clades with
 #' an informed `total_richness` nested within it.
+#' With `method = "uniform"`, no diversification model is used: `total_richness_per_clades` is only used to derive the `sampling_fraction_df` table (a warning is issued).
+#'
 #'
 #' @importFrom ape bind.tree branching.times extract.clade is.ultrametric
 #'
