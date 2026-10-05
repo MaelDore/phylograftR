@@ -72,7 +72,9 @@
 #'
 #' @export
 #'
-#' @seealso Grafting functions: [graft_missing_taxa()], [graft_missing_clades()]
+#' @seealso Grafting functions:
+#'   * [graft_missing_taxa()] to graft taxa within a target clade with constraints (target clades and excluded subclades),
+#'   * [graft_missing_clades()] to graft groups of missing taxa as clades sister to a clade of the backbone.
 #'
 #' @author Maël Doré
 #'

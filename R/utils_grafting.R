@@ -727,7 +727,7 @@ check_temp_file_path <- function (temp_file_path)
 #'   the number of unsampled species, i.e., species of the clade that are neither in the backbone nor in the list of taxa to graft.
 #'   The output is used:
 #'    * (1) to compute the sampling fraction `rho` of the birth-death models fitted during the grafting process;
-#'    * (2) to build the `sampling_fraction` table attached to the grafted phylogeny that describe the distribution of species among
+#'    * (2) to build the `sampling_fraction_df` table added to the grafted phylogeny that describes the distribution of species among
 #'      `nb_backbone_species`, `nb_missing_species`, and `nb_unsampled_species`, for each clade listed in `total_richness_per_clades`.
 #'
 #' @details

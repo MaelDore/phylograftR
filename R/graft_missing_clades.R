@@ -45,11 +45,18 @@
 #' @return The function returns an object of class `"phylo"`: the backbone phylogeny with the grafted taxa added as new tips.
 #'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
 #'
-#'   If `total_richness_per_clades` is provided, the tree has an attribute `"sampling_fraction"`: a data frame with one row per clade of `total_richness_per_clades`
-#'   (columns `Clade_tips`, `total_richness`, `total_richness_provided`, `nb_backbone_species`, `nb_missing_species`, `nb_unsampled_species`
-#'   and `sampling_fraction`). `sampling_fraction` is the fraction of the clade richness present in the grafted phylogeny:
-#'   `(nb_backbone_species + nb_missing_species) / total_richness`. `total_richness` is derived when `NA` was provided.
-#'   Note that functions such as `ape::drop.tip()` do not keep this attribute.
+#'   In addition to the standard elements of a `"phylo"` object, the phylogeny has the following elements:
+#'  * `grafted_tips` Named logical vector with one value per tip, in the order of `$tip.label`. `TRUE` for grafted tips. Names are the tip labels.
+#'  * `grafted_edges` Named logical vector with one value per branch, in the order of the rows of `$edge`. `TRUE` for grafted branches,
+#'    i.e., branches with only grafted taxa descending from them. Names are the IDs of the tipward nodes of the branches (`$edge[, 2]`).
+#'    Use them to color the phylogeny on plots (see examples).
+#'  * `sampling_fraction_df` Only if `total_richness_per_clades` is provided. Data frame with one row per clade of `total_richness_per_clades`
+#'    (columns `Clade_tips`, `total_richness`, `total_richness_provided`, `nb_backbone_species`, `nb_missing_species`, `nb_unsampled_species`
+#'    and `sampling_fraction`). `sampling_fraction` is the fraction of the clade richness present in the grafted phylogeny:
+#'    `(nb_backbone_species + nb_missing_species) / total_richness`. `total_richness` is derived when `NA` was provided.
+#'
+#'  These elements are not updated by functions that modify the phylogeny (e.g., `ape::drop.tip()`, which removes tips but keeps the other elements as they are,
+#'  and `ape::write.tree()`, which removes them). Use [identify_grafted()] to recompute `grafted_tips` and `grafted_edges` on a manipulated phylogeny.
 #'
 #' @details
 #' The function stops, before any grafting, if the backbone is not ultrametric, or if a sister clade is the whole tree (it has no stem branch to graft on).
@@ -100,8 +107,10 @@
 #'
 #' @export
 #'
-#' @seealso [graft_missing_taxa()] to graft taxa within a target clade with constraints (target clades and excluded subclades),
-#'   and [check_grafting_constraints()] to check a posteriori that grafted taxa respect their constraints.
+#' @seealso Other functions from phylograftR:
+#'  * [identify_grafted()] to identify the grafted tips and branches of a phylogeny,
+#'  * [graft_missing_taxa()] to graft taxa within a target clade with constraints (target clades and excluded subclades),
+#'  * [check_grafting_constraints()] to check a posteriori that grafted taxa respect their constraints.
 #'
 #' @author Maël Doré
 #'
@@ -122,6 +131,11 @@
 #'                                     verbose = FALSE, seed = 1234)
 #' plot(grafted_phy, cex = 0.7)
 #'
+#' # Color the grafted tips and branches in red based on elements returned with the phylogeny
+#' plot(grafted_phy, cex = 0.7,
+#'      edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
+#'      tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+#'
 #' # Account for unsampled species with the total richness of the sister clades.
 #' # All the unique sister clades must be listed (NA = unknown richness)
 #' total_richness_per_clades <- list(
@@ -130,7 +144,7 @@
 #' grafted_phy_richness <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
 #'                                              total_richness_per_clades = total_richness_per_clades,
 #'                                              verbose = FALSE, seed = 1234)
-#' attr(grafted_phy_richness, "sampling_fraction")
+#' grafted_phy_richness$sampling_fraction_df
 #'
 
 
@@ -362,8 +376,11 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxa_name, root_age = root_age)
   }
 
-  # Attach the sampling fraction table of the clades if 'total_richness_per_clades' was provided
-  if (!is.null(richness_info$table)) attr(phy, "sampling_fraction") <- richness_info$table
+  # Add the elements identifying the grafted tips and branches, and the sampling fraction table of the clades if 'total_richness_per_clades' was provided
+  grafted <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxa_name)
+  phy$grafted_tips <- grafted$grafted_tips
+  phy$grafted_edges <- grafted$grafted_edges
+  if (!is.null(richness_info$table)) phy$sampling_fraction_df <- richness_info$table
 
   return(phy)
 }
