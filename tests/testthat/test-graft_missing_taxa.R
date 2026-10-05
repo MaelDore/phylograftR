@@ -274,7 +274,7 @@ test_that("with method = 'BD_clades', nested clades are processed first, and gra
   fit_A <- fits[[3]]
   # Fit on A: taxa of B and C (3) are already grafted and counted as present; only the 3 taxa of A are pending
   expect_equal(fit_A$n_tips, toy$nA + 3)
-  expect_equal(fit_A$n_missing, 3)
+  expect_equal(fit_A$n_pending, 3)
 })
 
 
@@ -300,7 +300,7 @@ test_that("total_richness_per_clades is used in the sampling fraction of the bir
   # Sampling fraction of the fit on A (last): backbone + grafted taxa of B and C are present, 4 taxa of A are pending, 31 unsampled
   fit_A <- fits[[3]]
   expect_equal(fit_A$n_tips, toy$nA + 5)
-  expect_equal(fit_A$n_missing, 4)
+  expect_equal(fit_A$n_pending, 4)
   expect_equal(fit_A$n_unsampled, 31)
   expect_equal(fit_A$rho, (toy$nA + 5) / total_A)
 

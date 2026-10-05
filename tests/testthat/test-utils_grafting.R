@@ -144,10 +144,18 @@ test_that("fit_bd_on_clade() climbs to an enclosing clade with enough tips, and 
 {
   toy <- toy_setup()
   # B is a small clade: the fit uses a larger enclosing clade
-  fit <- fit_bd_on_clade(toy$phy, ape::getMRCA(toy$phy, toy$B), n_missing = 2, min_tips = 6)
+  # Without richness information, nothing is pending nor unsampled: sampling fraction of 1
+  fit <- fit_bd_on_clade(toy$phy, ape::getMRCA(toy$phy, toy$B), min_tips = 6)
   expect_gte(fit$n_tips, 6)
   expect_true(fit$b > 0 && fit$d >= 0 && fit$d < fit$b)
-  expect_equal(fit$rho, fit$n_tips / (fit$n_tips + 2))
+  expect_equal(fit$n_pending, 0)
+  expect_equal(fit$rho, 1)
+
+  # The 2 pending taxa nested in B are counted in the enclosing clade
+  richness_B <- build_richness_info(toy$phy, c("b1", "b2"), list(toy$B, toy$B), "target")
+  fit_pending <- fit_bd_on_clade(toy$phy, ape::getMRCA(toy$phy, toy$B), min_tips = 6, richness_info = richness_B)
+  expect_equal(fit_pending$n_pending, 2)
+  expect_equal(fit_pending$rho, fit_pending$n_tips / (fit_pending$n_tips + 2))
 
   # A clade with enough tips is used as it is
   fit_A <- fit_bd_on_clade(toy$phy, ape::getMRCA(toy$phy, toy$A), min_tips = 5)
@@ -175,17 +183,17 @@ test_that("fit_bd_on_clade() accounts for the pending taxa and the unsampled spe
 
   # Fit on A: 3 pending taxa; unsampled species of A = 10 + ... (A includes B)
   fit <- fit_bd_on_clade(toy$phy, node_A, min_tips = 5, richness_info = richness)
-  expect_equal(fit$n_missing, 3)
+  expect_equal(fit$n_pending, 3)
   expect_equal(fit$n_unsampled, 10)
   expect_equal(fit$rho, toy$nA / (toy$nA + 3 + 10))
 
   # Taxa already grafted are in the tree (present): they are not pending anymore
   grafted <- graft_tip_on_branch(toy$phy, "b1", ape::getMRCA(toy$phy, toy$B) , 0.5)
   fit_after <- fit_bd_on_clade(grafted, ape::getMRCA(grafted, toy$A), min_tips = 5, richness_info = richness)
-  expect_equal(fit_after$n_missing, 2)
+  expect_equal(fit_after$n_pending, 2)
   expect_equal(fit_after$n_tips, toy$nA + 1)
   # The denominator always equals the total richness of the clade
-  expect_equal(fit_after$n_tips + fit_after$n_missing + fit_after$n_unsampled, toy$nA + 3 + 10)
+  expect_equal(fit_after$n_tips + fit_after$n_pending + fit_after$n_unsampled, toy$nA + 3 + 10)
 })
 
 

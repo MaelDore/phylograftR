@@ -99,20 +99,52 @@ test_that("graft_missing_clades() returns the grafted tips and branches, and sav
   unlink(temp_file)
 })
 
-## Test proper fit of BD wihtout total richness information
-test_that("graft_missing_clades() keeps the 'one missing lineage' sampling fraction without total richness",
+## Test the sampling fraction of the fits without total richness information
+test_that("graft_missing_clades() fits the crown group, accounting for the taxa still to graft nested in the fitted clade only",
 {
   toy <- toy_setup()
-  mcl <- toy_missing_clades(toy)
+  # M2, M3: sister to B (small clade: the fit uses an enclosing clade). M1: sister to A (outside of A)
+  mcl <- list(Taxa_name = c("M1", "M2", "M3"), Sister_clade = list(toy$A, toy$B, toy$B))
 
   fits <- list()
   original <- fit_bd_on_clade
   local_mocked_bindings(fit_bd_on_clade = function (...) { out <- original(...); fits[[length(fits) + 1]] <<- out; out })
   quiet_graft(graft_missing_clades, toy$phy, mcl, seed = 1)
-  expect_true(all(vapply(fits, function (fit) fit$n_missing == 1 && fit$n_unsampled == 0, logical(1))))
+
+  # Fit for B (first): enclosing clade, in which M2 and M3 are nested and pending. M1 is outside (sister to A, which is not strictly nested)
+  expect_gt(fits[[1]]$n_tips, toy$nB)
+  expect_equal(fits[[1]]$n_pending, 2)
+  expect_equal(fits[[1]]$n_unsampled, 0)
+  expect_equal(fits[[1]]$rho, fits[[1]]$n_tips / (fits[[1]]$n_tips + 2))
+
+  # Fit for A (second): A itself, M2 and M3 are grafted already (present), M1 is sister to A, outside of its crown group: sampling fraction of 1
+  expect_equal(fits[[2]]$n_tips, toy$nA + 2)
+  expect_equal(fits[[2]]$n_pending, 0)
+  expect_equal(fits[[2]]$n_unsampled, 0)
+  expect_equal(fits[[2]]$rho, 1)
 })
 
-## Test proper fit of BD without total richness information
+## Test that NULL and uninformative total richness give the same fits, but only the latter returns the table
+test_that("graft_missing_clades() gives the same result with NULL and with only NA in total_richness_per_clades, but returns the table only with the latter",
+{
+  toy <- toy_setup()
+  mcl <- toy_missing_clades(toy)
+  totals_NA <- list(Sister_clade = list(toy$B, toy$C, toy$s), total_richness = rep(NA_real_, 3))
+
+  grafted_null <- quiet_graft(graft_missing_clades, toy$phy, mcl, seed = 1)
+  grafted_NA <- quiet_graft(graft_missing_clades, toy$phy, mcl, total_richness_per_clades = totals_NA, seed = 1)
+
+  expect_equal(grafted_NA$edge.length, grafted_null$edge.length)
+  expect_equal(grafted_NA$tip.label, grafted_null$tip.label)
+
+  expect_null(grafted_null$sampling_fraction_df)
+  expect_s3_class(grafted_NA$sampling_fraction_df, "data.frame")
+  expect_false(any(grafted_NA$sampling_fraction_df$total_richness_provided))
+  expect_equal(grafted_NA$sampling_fraction_df$nb_unsampled_species, rep(0, 3))
+  expect_equal(grafted_NA$sampling_fraction_df$sampling_fraction, rep(1, 3))
+})
+
+## Test the sampling fraction of the fits with total richness information
 test_that("total_richness_per_clades is used in the sampling fraction of the fits, with missing taxa counted only if nested",
 {
   toy <- toy_setup()
@@ -129,13 +161,13 @@ test_that("total_richness_per_clades is used in the sampling fraction of the fit
   grafted <- quiet_graft(graft_missing_clades, toy$phy, mcl, total_richness_per_clades = totals, min_tips = 3, seed = 1)
 
   # Fit on B (first): nothing missing inside B (M1 is on its stem), 7 unsampled
-  expect_equal(fits[[1]]$n_missing, 0)
+  expect_equal(fits[[1]]$n_pending, 0)
   expect_equal(fits[[1]]$n_unsampled, 7)
   expect_equal(fits[[1]]$rho, fits[[1]]$n_tips / (fits[[1]]$n_tips + 7))
 
   # Fit on A (second): M1 is already grafted (present), M2 (sister to A) is outside A, so nothing pending. 11 unsampled
   expect_equal(fits[[2]]$n_tips, toy$nA + 1)
-  expect_equal(fits[[2]]$n_missing, 0)
+  expect_equal(fits[[2]]$n_pending, 0)
   expect_equal(fits[[2]]$n_unsampled, 11)
 
   # Table

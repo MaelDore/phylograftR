@@ -561,7 +561,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 
       ## Fit Birth-Death on the clade, or on the smallest enclosing clade with >= min_tips tips
       # Stop at the root if reached
-      BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, n_missing = ntips_missing, min_tips = min_tips,
+      BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, min_tips = min_tips,
                              richness_info = richness_info) # Sampling fraction accounts for taxa still to graft and unsampled species
 
       ## Simulate missing divergence times with TreeSim::corsim

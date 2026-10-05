@@ -252,15 +252,14 @@ sample_one <- function (x, prob = NULL)
 #'
 #' @param phy Phylogeny of class `"phylo"`.
 #' @param node Integer. Node ID of the clade.
-#' @param n_missing Integer. Number of missing taxa, used for the sampling fraction. Default is `1`.
-#'   Ignored if `richness_info` is provided (the number of missing taxa is then derived for the clade used for the fit).
 #' @param min_tips Integer. Minimum number of tips for the fit. Default is `5`.
 #' @param richness_info `NULL`, or the output of `build_richness_info()`. If provided, the sampling fraction of the clade used for the fit is
 #'   `n_present / (n_present + n_pending + n_unsampled)`, with:
 #'   * `n_present`: number of tips of the clade in the current tree, i.e., backbone tips plus taxa already grafted (they are not 'missing' anymore).
 #'   * `n_pending`: number of taxa still to graft that belong to the clade.
 #'   * `n_unsampled`: number of unsampled species of the clade, derived from `total_richness_per_clades`.
-#'   Default is `NULL`: the sampling fraction is `n_tips / (n_tips + n_missing)`.
+#'   Default is `NULL`: no taxa to graft and no unsampled species are accounted for, so the sampling fraction is 1.
+#'   The birth-death model is always fitted on the crown group of the selected clade, with a sampling fraction describing this same crown group.
 #'
 #' @details The goal is to use the fitted rates to simulate divergence ages of missing taxa using `TreeSim::corsim()`.
 #'   Because no new divergence times can be drawn from a negative net diversification process,
@@ -278,12 +277,12 @@ sample_one <- function (x, prob = NULL)
 #'  * `d` Numeric. Death rate = extinction rate in events per time per lineage.
 #'  * `n_tips` Integer. Number of tips in the enclosing clade used for fitting.
 #'  * `node` Integer. MRCA node ID of the selected enclosing clade.
-#'  * `n_missing` Numeric. Number of missing taxa used for the sampling fraction (pending taxa if `richness_info` is provided).
+#'  * `n_pending` Numeric. Number of taxa still to graft in the selected clade, used for the sampling fraction (0 if `richness_info = NULL`).
 #'  * `n_unsampled` Numeric. Number of unsampled species used for the sampling fraction.
 #'  * `rho` Numeric. Sampling fraction used for the fit.
 #'
 
-fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5, richness_info = NULL)
+fit_bd_on_clade <- function (phy, node, min_tips = 5, richness_info = NULL)
 {
   clade_node <- node
 
@@ -321,7 +320,8 @@ fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5, richness_in
   }
 
   ## Fit BD with sampling fraction accounting for missing tips (the tips we are aiming to graft) and unsampled species (listed neither in the backbone nor in missing species)
-  # Number of unsampled species (none by default)
+  # Numbers of taxa still to graft and of unsampled species in the selected clade (none by default)
+  n_pending <- 0
   n_unsampled <- 0
   if (!is.null(richness_info))
   {
@@ -331,11 +331,12 @@ fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5, richness_in
     # Missing taxa still to graft that belong to this clade. Taxa already grafted are in the tree: they are in 'n_tips', not missing anymore
     still_to_graft <- !(richness_info$taxa_names %in% phy$tip.label)
     in_clade <- vapply(richness_info$taxon_sets, function (s) node_in_backbone %in% s, logical(1))
-    n_missing <- sum(still_to_graft & in_clade)
+    n_pending <- sum(still_to_graft & in_clade)
     # Unsampled species of the clade, derived from the total richness
     n_unsampled <- richness_info$unsampled_by_node[node_in_backbone]
   }
-  rho <- n_tips / (n_tips + n_missing + n_unsampled) # Compute sampling fraction
+  # Sampling fraction of the crown group of the selected clade (1 if nothing is pending nor unsampled in it)
+  rho <- n_tips / (n_tips + n_pending + n_unsampled)
   clade_tree <- ensure_ultrametry(clade_tree) # Ensure the selected clade is ultrametric
   fit <- phytools::fit.bd(tree = clade_tree, rho = rho)
 
@@ -349,7 +350,7 @@ fit_bd_on_clade <- function (phy, node, n_missing = 1, min_tips = 5, richness_in
   # No divergence times can be drawn from a negative net diversification process
 
   # Record rates, nb of tips in selected enclosing clade, and MRCA node of the selected clade
-  BD_output <- list(b = b, d = d, n_tips = n_tips, node = clade_node, n_missing = n_missing, n_unsampled = n_unsampled, rho = rho)
+  BD_output <- list(b = b, d = d, n_tips = n_tips, node = clade_node, n_pending = n_pending, n_unsampled = n_unsampled, rho = rho)
 
   # Export output
   return(BD_output)
