@@ -90,6 +90,38 @@ test_that("check_grafting_constraints() reports a change in the backbone topolog
   expect_true(attr(checks_ok, "all_ok"))
 })
 
+## Test the stem availability of each taxon
+test_that("check_grafting_constraints() uses include_target_clade_stem of each taxon, and include_stem for NA or no item",
+{
+  toy <- toy_setup()
+  # X1 and X2 are grafted on the stem branch of A
+  on_stem <- graft_tip_on_branch(toy$phy, "X1", toy$node_A, 0.5)
+  on_stem <- graft_tip_on_branch(on_stem, "X2", ape::getMRCA(on_stem, toy$A), 0.5)
+  mtl <- list(Taxa_name = c("X1", "X2"), Target_clade = list(toy$A, toy$A), Excluded_subclades = list(NULL, NULL))
+  check <- function (stem_item, include_stem = TRUE)
+  {
+    mtl$include_target_clade_stem <- stem_item
+    check_grafting_constraints(on_stem, toy$phy, mtl, include_stem = include_stem, verbose = FALSE)
+  }
+
+  # Stem accepted for X1 only
+  checks <- check(c(TRUE, FALSE))
+  expect_equal(checks$target_position, c("stem", "stem"))
+  expect_equal(checks$include_stem, c(TRUE, FALSE))
+  expect_equal(checks$target_ok, c(TRUE, FALSE))
+  expect_false(attr(checks, "all_ok"))
+
+  # NA uses the global value
+  expect_equal(check(c(NA, FALSE), include_stem = TRUE)$target_ok, c(TRUE, FALSE))
+  expect_equal(check(c(NA, TRUE), include_stem = FALSE)$target_ok, c(FALSE, TRUE))
+  # No item: the global value applies to all taxa
+  expect_true(all(check(NULL, include_stem = TRUE)$target_ok))
+  expect_false(any(check(NULL, include_stem = FALSE)$target_ok))
+
+  # Invalid length
+  expect_error(check(TRUE), "same length as 'Taxa_name'")
+})
+
 ## Test invalid input stops
 test_that("check_grafting_constraints() stops on invalid inputs, and can stop on failure",
 {

@@ -24,14 +24,18 @@
 #'   * `$Target_clade`: List (same length as `$Taxa_name`) of character vectors. For each taxon, the tip labels defining its target clade,
 #'     i.e., the clade where the taxon is known to belong (e.g., its genus). A pair of tips defines the clade as their MRCA node.
 #'     A single tip defines the "clade" as the terminal branch of this tip.
+#'   * `$include_target_clade_stem`: (Optional) Logical vector (same length as `$Taxa_name`). For each taxon, whether the stem branch of its target clade
+#'     is available for grafting. It overrides the global argument `include_stem` for this taxon. `NA` values use `include_stem`.
+#'     With `NULL` (default, or no item), `include_stem` applies to all taxa. Ignored for single-tip target clades and for target clades that are the whole tree.
 #'   * `$Excluded_subclades`: (Optional) List (same length as `$Taxa_name`) of lists of character vectors. For each taxon, the subclades of its target clade
 #'     where the taxon is known not to belong. Each subclade is defined by a pair of tips. Use `NULL` for taxa with no excluded subclades.
 #'     Single-tip subclades exclude nothing.
-#' @param include_stem Logical. Whether the stem branch of target clades is available for grafting.
+#' @param include_stem Logical. Whether the stem branch of target clades is available for grafting. This is the default for all taxa:
+#'   taxa with a value in `missing_taxa_list$include_target_clade_stem` use it instead.
 #'   If `TRUE`, a taxon can be grafted on the stem branch, and becomes sister to the target clade.
 #'   Taxa already grafted on the stem can receive further grafts (see 'stem region' in Details section).
 #'   Ignored for single-tip target clades as their terminal branch is their only branch, and is therefore always available for grafting.
-#'   Ignored if the target clade is the whole tree: it has no stem. A warning is issued if `include_stem = TRUE`.
+#'   Ignored if the target clade is the whole tree: it has no stem. A warning is issued if the stem is requested for such a taxon.
 #'   Default is `TRUE`.
 #' @param use_excluded_subclades Logical. Whether to avoid grafting within the excluded subclades provided in `missing_taxa_list$Excluded_subclades`. Default is `TRUE`.
 #' @param method Character string. Method used to draw the divergence times and the branches used for grafting.
@@ -89,13 +93,16 @@
 #' @details
 #' The function stops, before any grafting, if the backbone is not ultrametric, or if some taxa have no branch available for grafting
 #' (i.e., all branches of their target clade are excluded). The taxa concerned are listed in the error message,
-#' so the constraints (`include_stem` or `Excluded_subclades`) can be adjusted.
+#' so the constraints (`include_stem`, `include_target_clade_stem` or `Excluded_subclades`) can be adjusted.
 #' With `method = "BD_clades"`, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon.
 #'
 #' ### Target clades, stem regions and excluded subclades
 #'
 #' Each taxon is grafted within its target clade. The branches available for grafting are all the branches of the target clade
-#' (descending from its MRCA node), plus its stem region if `include_stem = TRUE`. Grafting on the stem places the taxon sister to the target clade.
+#' (descending from its MRCA node), plus its stem region if the stem is available for this taxon (`include_target_clade_stem` of the taxon if provided, otherwise `include_stem`).
+#' Grafting on the stem places the taxon sister to the target clade.
+#' Taxa of the same target clade can therefore differ in their stem availability: the clade is the same (same MRCA node, same richness information),
+#' but the branches and the time window available for the divergence times of these taxa differ.
 #'
 #' The stem region is not restricted to the original stem branch. A taxon grafted on the stem splits it in two pieces, and becomes itself part of the stem region:
 #' later taxa can be grafted on both pieces of the stem, and on the terminal branch of the earlier taxon (the two taxa are then sister, and together sister to the target clade).
@@ -125,15 +132,21 @@
 #'   Note that under a birth-death process, the probability of a side lineage splitting off a branch at age t follows the exponential function e^(-rt),
 #'   with r the net diversification rate (speciation minus extinction).
 #'   A uniform draw implicitly assumes a flat density (r = 0), and gives too much weight to old divergence times compared to the expectation from a birth-death process.
+#'
 #' * `"BD_clades"`: Taxa are grafted per target clade, from the smallest to the largest, so nested clades are processed first (see below).
 #'   For each target clade, a birth-death model is fitted with `phytools::fit.bd()` on the clade, or on the smallest enclosing clade with at least `min_tips` tips.
 #'   The sampling fraction accounts for the number of missing taxa provided for grafting in this clade.
-#'   The divergence times of all taxa missing in the target clade are then jointly drawn with `TreeSim::corsim()`.
+#'   The divergence times of all taxa missing in the target clade are then jointly drawn with `TreeSim::corsim()`, between the present and the stem age of the clade
+#'   (or its crown age if the stem is not available for these taxa).
 #'   Taxa are grafted from the oldest to the youngest divergence time. Each taxon is grafted on a branch drawn uniformly among the available branches that cross its divergence age.
 #'   Younger taxa can therefore be grafted on the branches of older missing taxa. This is the recommended method, but it can be time consuming for large phylogenies.
+#'   Taxa of the same target clade with different stem availability are drawn in separate groups, and the birth-death model is fitted only once per target clade.
+#'   The group of taxa without access to the stem is grafted first, so these taxa are present when drawing the divergence times of the taxa that can also use the stem
+#'   (this is the same logic as for nested clades).
 #'
 #' With both methods, nested clades are processed first, so the taxa of a larger clade are grafted on a tree that already
 #' includes the taxa of the clades nested within it, and can be grafted on their branches.
+#' For taxa of the same clade, those without access to the stem come first.
 #' For `"BD_clades"`, it also ensures that the divergence times of nested clades are accounted for when drawing the divergence times of the larger clade.
 #' Taxa of the same target clade are grafted in random order, so they are exchangeable.
 #' Clades that are not nested do not interact, so the order in which they are processed has no influence.
@@ -189,6 +202,8 @@
 #'   Taxa_name = c("X1", "X2", "X3", "X4"),
 #'   # Target clades defined by pairs of tips (MRCA), or by a single tip
 #'   Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5", c("t26", "t18")),
+#'   # Stem of the target clade available for grafting? NA uses the global 'include_stem' argument (TRUE by default). X4 cannot be grafted on the stem
+#'   include_target_clade_stem = c(NA, NA, NA, FALSE),
 #'   # Excluded subclades defined by pairs of tips. Only X1 has an excluded subclade
 #'   Excluded_subclades = list(list(c("t10", "t19")), NULL, NULL, NULL))
 #'
@@ -225,8 +240,8 @@
 #'
 
 graft_missing_taxa <- function (phy, # Backbone phylogeny
-                                missing_taxa_list, # List with Taxa_name = c(), Target_clade = list(c(), ...), Excluded_subclades = list(list(c(), c()), NULL, ...)
-                                include_stem = TRUE, # Include the stem of the target clades when grafting?
+                                missing_taxa_list, # List with Taxa_name = c(), Target_clade = list(c(), ...), include_target_clade_stem = c(TRUE, NA, FALSE, ...) (optional), Excluded_subclades = list(list(c(), c()), NULL, ...)
+                                include_stem = TRUE, # Include the stem of the target clades when grafting? Default for all taxa, overridden by missing_taxa_list$include_target_clade_stem
                                 use_excluded_subclades = TRUE, # Avoid grafting within Excluded_subclades?
                                 method = "BD_clades", # "uniform" or "BD_clades"
                                 min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model for "BD_clades" (the enclosing clade is used if the focal clade is smaller)
@@ -273,6 +288,11 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     if (!is.null(missing_taxa_list$Excluded_subclades) && length(missing_taxa_list$Excluded_subclades) != n_missing)
       stop("Excluded_subclades must have the same length as Taxa_name")
 
+    ## Stem availability of each taxon: 'include_target_clade_stem' of the taxon if provided (not NA), otherwise the global 'include_stem'
+    # The resolved vector (no NA) replaces the item in the list, so it follows the taxa when they are reordered
+    missing_taxa_list$include_target_clade_stem <- resolve_include_stem(
+      include_target_clade_stem = missing_taxa_list$include_target_clade_stem, include_stem = include_stem, n_taxa = n_missing)
+
     ## Check that taxa names are truly missing from the backbone
     if (anyDuplicated(missing_taxa_list$Taxa_name) || any(missing_taxa_list$Taxa_name %in% phy$tip.label))
       stop("Taxa_name must be unique and absent from the backbone phylogeny")
@@ -297,8 +317,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     # Excluded subclades are expected to be nested within their target clade. Three other cases exists and are problematic:
     #  - Excluded subclade containing the target clade: all branches of the target clade, stem included, are excluded.
     #    No branch is available, which would stop the grafting anyway: stop now with a message pointing to the problem.
-    #  - Excluded subclade identical to the target clade: the whole crown is excluded. No branch is left if include_stem = FALSE,
-    #    and only the stem branch is left if include_stem = TRUE. Grafting only on a stem branch is not what this function is designed for:
+    #  - Excluded subclade identical to the target clade: the whole crown is excluded. No branch is left if the stem is not available,
+    #    and only the stem branch is left if the stem is available. Grafting only on a stem branch is not what this function is designed for:
     #    with 'BD_clades', the divergence age is drawn before applying the exclusions and would most likely fall within the excluded crown,
     #    where no branch is available, so the run would stop in the middle of the process.
     #    Stop now, and point to graft_missing_clades(), which is designed to graft specifically on a stem branch (of a clade or of a single tip).
@@ -328,7 +348,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       if (nrow(identical_clade) > 0)
       {
         stop(nrow(identical_clade), " excluded subclade(s) are identical to the target clade of their taxon, so the whole clade is excluded: ",
-             "no branch would be available for grafting with include_stem = FALSE, and only the stem branch with include_stem = TRUE.\n",
+             "no branch would be available for grafting without the stem, and only the stem branch with the stem included.\n",
              format_excluded_position(identical_clade),
              "\nTo graft taxa specifically on the stem branch of a clade (or of a single tip), use graft_missing_clades() ",
              "with this clade as 'Sister_clade'. Otherwise, check the tips defining 'Target_clade' and 'Excluded_subclades'.")
@@ -366,7 +386,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   ## Check upfront that every taxon has at least one branch available for grafting
   # Better to stop before grafting than in the middle of a long run
   no_branch_taxa <- find_taxa_without_allowed_branch(phy = phy, missing_taxa_list = missing_taxa_list,
-                                                     include_stem = include_stem,
+                                                     include_stem = missing_taxa_list$include_target_clade_stem,
                                                      use_excluded_subclades = use_excluded_subclades)
   if (nrow(no_branch_taxa) > 0)
   {
@@ -374,7 +394,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     stop(nrow(no_branch_taxa), " taxa have no branch available for grafting: all branches of their target clade are excluded.\n",
          paste0("  - ", no_branch_taxa$Taxa_name[seq_len(n_show)], " (target clade tips: ", no_branch_taxa$Target_clade[seq_len(n_show)], ")", collapse = "\n"),
          if (nrow(no_branch_taxa) > n_show) paste0("\n  ... and ", nrow(no_branch_taxa) - n_show, " more") else "",
-         "\nAdjust 'include_stem' or 'missing_taxa_list$Excluded_subclades' for these taxa.")
+         "\nAdjust 'include_stem', 'missing_taxa_list$include_target_clade_stem' or 'missing_taxa_list$Excluded_subclades' for these taxa.")
   }
 
   ## Set seed if provided, for the duration of this function only (the global RNG state is restored on exit)
@@ -397,7 +417,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     # Rationale: taxa of a larger clade are grafted on a tree that already includes the taxa of the clades nested within it,
     # so they can be grafted on the branches of those taxa. This is the same rule as for the 'BD_clades' method.
     # The order of taxa within each target clade remains random.
-    groups_uniform <- group_and_order_clades(phy, missing_taxa_list$Target_clade)
+    groups_uniform <- group_and_order_clades(phy, missing_taxa_list$Target_clade, include_stem = missing_taxa_list$include_target_clade_stem)
     missing_taxa_list <- lapply(X = missing_taxa_list, FUN = function (x) { x[groups_uniform$taxa_order] })
 
     if (verbose) cat(paste0(Sys.time(), " - Start grafting process\n"))
@@ -405,6 +425,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     for (i in seq_len(n_missing))
     {
       focal_taxon_name <- missing_taxa_list$Taxa_name[i]
+      # Is the stem of the target clade available for this taxon?
+      include_stem_i <- missing_taxa_list$include_target_clade_stem[i]
 
       # Get node associated to tips
         # 1 tip => tip node
@@ -425,7 +447,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       }
 
       # Warn if the target clade is the whole tree: it has no stem branch, so only branches inside the clade can be used
-      if (include_stem && length(missing_taxa_list$Target_clade[[i]]) > 1 && is.na(get_parent_node(phy, MRCA_node)))
+      if (include_stem_i && length(missing_taxa_list$Target_clade[[i]]) > 1 && is.na(get_parent_node(phy, MRCA_node)))
       {
         warning("Target clade of '", focal_taxon_name, "' defined by ", paste(missing_taxa_list$Target_clade[[i]], collapse = ", "),
                 " is the whole tree: it has no stem branch, so only branches inside the clade are used")
@@ -434,7 +456,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       # Select branch for grafting using uniform distribution weighted by branch length to ensure a flat density over any time point along branches
       # (no diversification model)
       selected_node_ID <- draw_random_branch_weighted_per_length(
-         phy = phy, MRCA_node = MRCA_node, include_stem = include_stem,
+         phy = phy, MRCA_node = MRCA_node, include_stem = include_stem_i,
          excluded_subclades_MRCA_nodes = excluded_subclades_MRCA_nodes,
          missing_tip_labels = missing_taxa_list$Taxa_name, seed = NULL)
 
@@ -443,7 +465,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       {
         stop("No branch available to graft '", focal_taxon_name, "'.\n",
              "All branches of its target clade (tips: ", paste(missing_taxa_list$Target_clade[[i]], collapse = ", "), ") are excluded.\n",
-             "Adjust 'include_stem' or 'missing_taxa_list$Excluded_subclades' for this taxon.")
+             "Adjust 'include_stem', 'missing_taxa_list$include_target_clade_stem' or 'missing_taxa_list$Excluded_subclades' for this taxon.")
       }
 
       # Extract branch length
@@ -483,10 +505,15 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   {
     if (verbose) cat(paste0(Sys.time(), " - Start identification and ordering of target clades\n"))
 
-    # Identify target clades and order by clade size
+    # Identify groups of taxa (target clade and availability of its stem) and order them by clade size
     # Since nested clades are always smaller than their higher parents, this is equivalent to order by nesting scheme
-    groups <- group_and_order_clades(phy, missing_taxa_list$Target_clade)
+    # Groups of the same clade are consecutive, with the taxa without access to the stem first
+    groups <- group_and_order_clades(phy, missing_taxa_list$Target_clade, include_stem = missing_taxa_list$include_target_clade_stem)
     n_groups <- length(groups$group_clade_tips)
+
+    # Cache of the BD models: the model is fitted once per target clade, before grafting its first group of taxa,
+    # and reused for its other groups (same clade, so same rates and sampling fraction)
+    BD_cache <- list()
 
     if (verbose) cat(paste0(Sys.time(), " - Start grafting process per clades\n"))
 
@@ -503,6 +530,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       missing_taxa_list_i <- lapply(X = missing_taxa_list, FUN = function (x) { x[taxa_ID_i] })
       # Extract the tips defining the target clade
       target_clade_tips_i <- groups$group_clade_tips[[i]]
+      # Is the stem of the target clade available for the taxa of this group?
+      include_stem_i <- groups$group_include_stem[i]
       # Get number of taxa to graft in this group
       ntips_missing <- length(taxa_ID_i)
 
@@ -520,7 +549,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       # Warn against problematic cases with no stem available, because the target clade is the whole tree
       if (is.na(stem_node_i))
       {
-        if (include_stem && !is_single_tip)
+        if (include_stem_i && !is_single_tip)
         {
           warning("Target clade defined by ", paste(target_clade_tips_i, collapse = ", "),
                   " is the whole tree: it has no stem branch, so only branches inside the clade are used")
@@ -554,15 +583,21 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         # Get branching times within the crown clade
         divergence_times_i <- ape::branching.times(crown_clade_tree_i)
         crown_age_i <- max(divergence_times_i)
-        # Use the stem age as upper bound if include_stem = TRUE
+        # Use the stem age as upper bound if the stem is available for the taxa of this group
         # Otherwise, use the crown age
-        upper_age_i <- if (include_stem) stem_age_i else crown_age_i
+        upper_age_i <- if (include_stem_i) stem_age_i else crown_age_i
       }
 
       ## Fit Birth-Death on the clade, or on the smallest enclosing clade with >= min_tips tips
       # Stop at the root if reached
-      BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, min_tips = min_tips,
-                             richness_info = richness_info) # Sampling fraction accounts for taxa still to graft and unsampled species
+      # Fitted only once per target clade (before its first group is grafted, so all its taxa are still pending), then reused
+      clade_key_i <- as.character(groups$group_clade_ID[i])
+      if (is.null(BD_cache[[clade_key_i]]))
+      {
+        BD_cache[[clade_key_i]] <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, min_tips = min_tips,
+                                                   richness_info = richness_info) # Sampling fraction accounts for taxa still to graft and unsampled species
+      }
+      BD_i <- BD_cache[[clade_key_i]]
 
       ## Simulate missing divergence times with TreeSim::corsim
       new_divergence_times_i <- TreeSim::corsim(x = divergence_times_i, lambda = BD_i$b, mu = BD_i$d,
@@ -587,7 +622,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
             tip_label = missing_taxa_list_i$Taxa_name[j],
             target_clade_tips = missing_taxa_list_i$Target_clade[[j]],
             excluded_subclades_tips_list = excluded_subclades_tips_list_i,
-            include_stem = include_stem,
+            include_stem = include_stem_i,
             missing_tip_labels = missing_taxa_list$Taxa_name,
             root_age = root_age,
             seed = NULL)
@@ -785,7 +820,7 @@ graft_from_divergence_age <- function (phy, # Backbone phylogeny
   {
     stop("No branch available at age ", signif(divergence_age, 4), " to graft '", tip_label,"'.\n",
          "All branches of its target clade (tips: ", paste(target_clade_tips, collapse = ", "), ") crossing that age are excluded.\n",
-         "Adjust 'include_stem' or 'missing_taxa_list$Excluded_subclades' for this taxon.")
+         "Adjust 'include_stem' (or 'include_target_clade_stem' of the taxon) or 'missing_taxa_list$Excluded_subclades' for this taxon.")
   }
 
   # Sample one branch (based on tipward nodes) among the valid branches

@@ -324,6 +324,51 @@ test_that("group_and_order_clades() groups taxa by clade and orders the taxa so 
 })
 
 
+## Test grouping and ordering of clades with different stem availability
+test_that("group_and_order_clades() splits the taxa of a clade by stem availability, 'FALSE' first, and ignores it for single tips",
+{
+  toy <- toy_setup()
+  clades <- list(toy$A, toy$B, toy$A, toy$A, toy$s)
+  include_stem <- c(TRUE, TRUE, FALSE, TRUE, FALSE) # FALSE is ignored for the single tip 's'
+  groups <- group_and_order_clades(toy$phy, clades, include_stem = include_stem)
+
+  expect_equal(groups$group_ID, c(1, 2, 3, 1, 4))
+  expect_equal(groups$group_clade_ID, c(1, 2, 1, 3)) # the two groups of A share the ID of their clade
+  expect_equal(groups$group_include_stem, c(TRUE, TRUE, FALSE, TRUE))
+  # Single tip, then B (nested in A), then the groups of A with 'FALSE' first
+  expect_equal(groups$group_order, c(4, 2, 3, 1))
+  expect_equal(groups$taxa_order, c(5, 2, 3, 1, 4))
+
+  # Without 'include_stem': stem available for all, so one group per clade
+  expect_equal(group_and_order_clades(toy$phy, clades)$group_ID, c(1, 2, 1, 1, 3))
+})
+
+## Test the resolution of the stem availability of each taxon
+test_that("resolve_include_stem() uses the taxon values, and the global value for NA or NULL, and validates its inputs",
+{
+  expect_equal(resolve_include_stem(NULL, TRUE, 3), rep(TRUE, 3))
+  expect_equal(resolve_include_stem(NULL, FALSE, 3), rep(FALSE, 3))
+  expect_equal(resolve_include_stem(c(NA, FALSE, TRUE), TRUE, 3), c(TRUE, FALSE, TRUE))
+  expect_equal(resolve_include_stem(c(NA, FALSE, TRUE), FALSE, 3), c(FALSE, FALSE, TRUE))
+  expect_equal(resolve_include_stem(rep(NA_integer_, 3), FALSE, 3), rep(FALSE, 3)) # only NA, whatever the type
+
+  expect_error(resolve_include_stem(c(TRUE, FALSE), TRUE, 3), "same length as 'Taxa_name'")
+  expect_error(resolve_include_stem(c(1, 0, 1), TRUE, 3), "logical vector")
+  expect_error(resolve_include_stem(NULL, NA, 3), "single logical value")
+  expect_error(resolve_include_stem(NULL, c(TRUE, FALSE), 3), "single logical value")
+})
+
+## Test that the taxa without branch are identified with the stem availability of each taxon
+test_that("find_taxa_without_allowed_branch() uses the stem availability of each taxon",
+{
+  toy <- toy_setup()
+  # The excluded subclade is identical to the target clade: no branch without the stem, only the stem branch with it
+  mtl <- list(Taxa_name = c("no_stem", "stem"), Target_clade = list(toy$B, toy$B), Excluded_subclades = list(list(toy$B), list(toy$B)))
+  flagged <- find_taxa_without_allowed_branch(toy$phy, mtl, include_stem = c(FALSE, TRUE))
+  expect_equal(flagged$Taxa_name, "no_stem")
+})
+
+
 # ---- Excluded subclades and available branches ----
 
 ## Test flagging of excluded subclades position relative to their target clade in the backbone

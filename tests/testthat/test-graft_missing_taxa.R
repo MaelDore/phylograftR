@@ -181,6 +181,127 @@ test_that("graft_missing_taxa() returns the grafted tips and branches, and no sa
 })
 
 
+# ---- Stem availability per taxon ----
+
+## Test validity checks for the taxon-level stem availability
+test_that("graft_missing_taxa() validates 'include_target_clade_stem'",
+{
+  toy <- toy_setup()
+  mtl <- list(Taxa_name = c("X1", "X2"), Target_clade = list(toy$A, toy$A))
+
+  expect_error(graft_missing_taxa(toy$phy, c(mtl, list(include_target_clade_stem = TRUE)), method = "uniform", verbose = FALSE),
+                         "same length as 'Taxa_name'")
+  expect_error(graft_missing_taxa(toy$phy, c(mtl, list(include_target_clade_stem = c(1, 0))), method = "uniform", verbose = FALSE),
+                         "logical vector")
+  expect_error(graft_missing_taxa(toy$phy, mtl, include_stem = NA, method = "uniform", verbose = FALSE), "single logical value")
+})
+
+## Test that the taxon-level value overrides the global argument, with the 'uniform' method
+test_that("with method = 'uniform', include_target_clade_stem overrides include_stem per taxon, and NA uses include_stem",
+{
+  toy <- toy_setup()
+  mtl <- list(Taxa_name = paste0("X", 1:4), Target_clade = rep(list(toy$A), 4),
+              include_target_clade_stem = c(TRUE, FALSE, NA, FALSE))
+
+  stem_used <- NULL
+  original <- draw_random_branch_weighted_per_length
+  local_mocked_bindings(draw_random_branch_weighted_per_length = function (...) {
+      stem_used <<- c(stem_used, list(...)$include_stem); original(...) })
+
+  # Global TRUE: NA means TRUE. Taxa without access to the stem come first within their clade
+  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", include_stem = TRUE, seed = 1)
+  expect_equal(stem_used, c(FALSE, FALSE, TRUE, TRUE))
+
+  # Global FALSE: NA means FALSE
+  stem_used <- NULL
+  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", include_stem = FALSE, seed = 1)
+  expect_equal(stem_used, c(FALSE, FALSE, FALSE, TRUE))
+
+  # Without the item, the global value applies to all taxa
+  stem_used <- NULL
+  quiet_graft(graft_missing_taxa, toy$phy, mtl[c("Taxa_name", "Target_clade")], method = "uniform", include_stem = FALSE, seed = 1)
+  expect_equal(stem_used, rep(FALSE, 4))
+})
+
+## Test the groups for the 'BD_clades' method: one fit per clade, taxa without stem first, and the time window of these taxa
+test_that("with method = 'BD_clades', taxa of a clade are grouped by stem availability, with one BD fit per clade",
+{
+  toy <- toy_setup()
+  # X1-X4 target A, with a different stem availability; X5 targets B, nested in A
+  mtl <- list(Taxa_name = paste0("X", 1:5), Target_clade = list(toy$A, toy$A, toy$A, toy$A, toy$B),
+              include_target_clade_stem = c(TRUE, FALSE, NA, FALSE, TRUE), Excluded_subclades = rep(list(NULL), 5))
+
+  n_fits <- 0
+  grafts <- list()
+  original_fit <- fit_bd_on_clade
+  original_graft <- graft_from_divergence_age
+  local_mocked_bindings(
+    fit_bd_on_clade = function (...) { n_fits <<- n_fits + 1; original_fit(...) },
+    graft_from_divergence_age = function (...) {
+      args <- list(...)
+      grafts[[length(grafts) + 1]] <<- data.frame(taxon = args$tip_label, include_stem = args$include_stem, age = args$divergence_age)
+      original_graft(...) })
+
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "BD_clades", seed = 1)
+  grafts <- do.call(rbind, grafts)
+
+  # One fit for B, one for A (although the taxa of A form two groups)
+  expect_equal(n_fits, 2)
+  # Order: B (nested) first, then the taxa of A without access to the stem, then the taxa of A with the stem
+  expect_equal(grafts$taxon[1], "X5")
+  expect_setequal(grafts$taxon[2:3], c("X2", "X4"))
+  expect_setequal(grafts$taxon[4:5], c("X1", "X3"))
+  expect_equal(grafts$include_stem, c(TRUE, FALSE, FALSE, TRUE, TRUE))
+  # Taxa without the stem have divergence ages within the crown of A
+  crown_age_A <- toy$root_age - phytools::nodeheight(toy$phy, toy$node_A)
+  expect_true(all(grafts$age[grafts$taxon %in% c("X2", "X4")] <= crown_age_A))
+
+  # The result respects the constraints of each taxon (X2 and X4 within the crown of A), and the item is taken into account by the checks
+  expect_valid_graft(grafted, toy$phy, mtl)
+  checks <- check_grafting_constraints(grafted, toy$phy, mtl, verbose = FALSE)
+  expect_false(any(checks$target_position[checks$Taxon %in% c("X2", "X4")] == "stem"))
+  expect_equal(checks$include_stem, c(TRUE, FALSE, TRUE, FALSE, TRUE))
+})
+
+## Test that the richness information does not depend on the stem availability for a shared clade
+test_that("clades with different stem availability share the same row of sampling_fraction_df",
+{
+  toy <- toy_setup()
+  mtl <- list(Taxa_name = paste0("X", 1:3), Target_clade = rep(list(toy$A), 3), include_target_clade_stem = c(TRUE, FALSE, NA))
+  totals <- list(Target_clade = list(toy$A), total_richness = toy$nA + 3 + 4)
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "BD_clades", total_richness_per_clades = totals, seed = 1)
+
+  expect_equal(nrow(grafted$sampling_fraction_df), 1)
+  expect_equal(grafted$sampling_fraction_df$nb_missing_species, 3)
+  expect_equal(grafted$sampling_fraction_df$nb_unsampled_species, 4)
+})
+
+## Test the whole tree warning with a taxon-level stem availability
+test_that("graft_missing_taxa() warns about the stem of the whole tree only for the taxa requesting it",
+{
+  toy <- toy_setup()
+  whole_tree <- pair_for_node(toy$phy, ape::Ntip(toy$phy) + 1)
+  mtl <- list(Taxa_name = c("X1", "X2"), Target_clade = list(whole_tree, whole_tree), include_target_clade_stem = c(FALSE, TRUE))
+
+  # Messages of all the warnings (the fit of a BD model on the whole tree can issue unrelated optimizer warnings)
+  warning_messages <- function (expr)
+  {
+    messages <- character()
+    withCallingHandlers(expr, warning = function (w) { messages <<- c(messages, conditionMessage(w)); invokeRestart("muffleWarning") })
+    messages
+  }
+  mtl_no_stem <- mtl
+  mtl_no_stem$include_target_clade_stem <- c(FALSE, NA)
+
+  for (method in c("uniform", "BD_clades"))
+  {
+    expect_true(any(grepl("whole tree", warning_messages(graft_missing_taxa(toy$phy, mtl, method = method, verbose = FALSE)))))
+    expect_false(any(grepl("whole tree", warning_messages(
+      graft_missing_taxa(toy$phy, mtl_no_stem, method = method, include_stem = FALSE, verbose = FALSE)))))
+  }
+})
+
+
 # ---- Stem region ----
 
 ## Test that include_stem = TRUE allows multiple missing taxa to be grafting in the stem region
