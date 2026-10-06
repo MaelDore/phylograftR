@@ -81,8 +81,8 @@ plot(pruned_phy, cex = 0.7,
 \seealso{
 Grafting functions, which already add internally the two elements to the grafted phylogeny with this function:
 \itemize{
-\item \code{\link[=graft_missing_taxa]{graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
-\item \code{\link[=graft_missing_clades]{graft_missing_clades()}} to graft groups of missing taxa as clades sister to a clade of the backbone.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as clades sister to a clade of the backbone.
 }
 }
 \author{

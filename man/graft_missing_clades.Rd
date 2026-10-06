@@ -76,7 +76,7 @@ Use them to color the phylogeny on plots (see examples).
 }
 
 These elements are not updated by functions that modify the phylogeny (e.g., \code{ape::drop.tip()}, which removes tips but keeps the other elements as they are,
-and \code{ape::write.tree()}, which removes them). Use \code{\link[=identify_grafted]{identify_grafted()}} to recompute \code{grafted_tips} and \code{grafted_edges} on a manipulated phylogeny.
+and \code{ape::write.tree()}, which removes them). Use \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to recompute \code{grafted_tips} and \code{grafted_edges} on a manipulated phylogeny.
 \itemize{
 \item \code{sampling_fraction_df} Only if \code{total_richness_per_clades} is provided (a list with only \code{NA} values also returns it, assuming no unsampled species).
 Data frame with one row per clade of \code{total_richness_per_clades}:
@@ -190,9 +190,9 @@ grafted_phy_richness$sampling_fraction_df
 \seealso{
 Other functions from phylograftR:
 \itemize{
-\item \code{\link[=identify_grafted]{identify_grafted()}} to identify the grafted tips and branches of a phylogeny,
-\item \code{\link[=graft_missing_taxa]{graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
-\item \code{\link[=check_grafting_constraints]{check_grafting_constraints()}} to check a posteriori that grafted taxa respect their constraints.
+\item \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to identify the grafted tips and branches of a phylogeny,
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
+\item \code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}} to check a posteriori that grafted taxa respect their constraints.
 }
 }
 \author{

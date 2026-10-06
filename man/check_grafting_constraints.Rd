@@ -24,15 +24,15 @@ check_grafting_constraints(
 
 \item{missing_taxa_list}{A list with the information on the grafted taxa. Typically the same list as used for grafting.
 Items: \verb{$Taxon_name}, \verb{$Target_clade}, and optionally \verb{$include_target_clade_stem}, \verb{$Excluded_subclades} and \verb{$exclude_subclades_stem}.
-Every item provided must be named after \verb{$Taxon_name} (same names, same order), as in \code{\link[=graft_missing_taxa]{graft_missing_taxa()}}, see this function for details.}
+Every item provided must be named after \verb{$Taxon_name} (same names, same order), as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}, see this function for details.}
 
-\item{include_target_clade_stem}{Logical. Same as in \code{\link[=graft_missing_taxa]{graft_missing_taxa()}}: whether grafting on the stem branch of target clades is accepted.
+\item{include_target_clade_stem}{Logical. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: whether grafting on the stem branch of target clades is accepted.
 Taxa with a value in \code{missing_taxa_list$include_target_clade_stem} use it instead (\code{NA} or no item: this global value is used). Default is \code{TRUE}.}
 
-\item{use_excluded_subclades}{Logical. Same as in \code{\link[=graft_missing_taxa]{graft_missing_taxa()}}: whether to check the excluded subclades.
+\item{use_excluded_subclades}{Logical. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: whether to check the excluded subclades.
 If no \verb{$Excluded_subclades} item is found in \code{missing_taxa_list}, a warning is issued and excluded subclades are not checked. Default is \code{TRUE}.}
 
-\item{exclude_subclades_stem}{Logical. Same as in \code{\link[=graft_missing_taxa]{graft_missing_taxa()}}: whether the stem of the excluded subclades is also excluded
+\item{exclude_subclades_stem}{Logical. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: whether the stem of the excluded subclades is also excluded
 (a taxon sister to an excluded subclade is then a violation). Excluded subclades with a value in \code{missing_taxa_list$exclude_subclades_stem} use it instead
 (\code{NA} or no item: this global value is used). Default is \code{TRUE}.}
 
@@ -89,7 +89,7 @@ Only backbone tips are considered when checking the position of a taxon (missing
 A taxon respects its excluded subclades if it is not nested within any of them.
 If the stem of an excluded subclade is excluded (\code{exclude_subclades_stem = TRUE}, the default), the taxon must also not be on its stem, i.e., sister to the subclade
 (or to other missing taxa sister to the subclade), with no other backbone tip in between. For a single-tip excluded subclade, the taxon must not be on the branch of the tip.
-As in \code{\link[=graft_missing_taxa]{graft_missing_taxa()}}, if the stem of the subclade is not excluded, the taxon can be sister to the subclade, not within it.
+As in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}, if the stem of the subclade is not excluded, the taxon can be sister to the subclade, not within it.
 
 Branches of the backbone are matched between the pruned grafted phylogeny and the backbone by the set of tips they subtend.
 Branch lengths are considered preserved if the maximum deviation, relative to the depth of the backbone, is lower than \code{tolerance}.
@@ -121,8 +121,8 @@ attr(check_results, "all_ok")
 \seealso{
 Grafting functions:
 \itemize{
-\item \code{\link[=graft_missing_taxa]{graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
-\item \code{\link[=graft_missing_clades]{graft_missing_clades()}} to graft groups of missing taxa as clades sister to a clade of the backbone.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as clades sister to a clade of the backbone.
 }
 }
 \author{

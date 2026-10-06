@@ -365,7 +365,7 @@ fit_bd_on_clade <- function (phy, node, min_tips = 5, richness_info = NULL)
 #'
 #' @param missing_taxa_list List with the items `Taxon_name`, `Target_clade` (or `Sister_clade`), and optionally
 #'   `include_target_clade_stem`, `Excluded_subclades` and `exclude_subclades_stem`.
-#' @param clade_item Character string. `"Target_clade"` (for [graft_missing_taxa()] and [check_grafting_constraints()]) or `"Sister_clade"` (for [graft_missing_clades()]).
+#' @param clade_item Character string. `"Target_clade"` (for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::check_grafting_constraints()`][check_grafting_constraints]) or `"Sister_clade"` (for [`phylograftR::graft_missing_clades()`][graft_missing_clades]).
 #' @param optional_items Character vector. Other items validated if they are provided.
 #'
 #' @noRd

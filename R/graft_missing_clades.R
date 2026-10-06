@@ -55,7 +55,7 @@
 #'     Use them to color the phylogeny on plots (see examples).
 #'
 #'   These elements are not updated by functions that modify the phylogeny (e.g., `ape::drop.tip()`, which removes tips but keeps the other elements as they are,
-#'   and `ape::write.tree()`, which removes them). Use [identify_grafted()] to recompute `grafted_tips` and `grafted_edges` on a manipulated phylogeny.
+#'   and `ape::write.tree()`, which removes them). Use [`phylograftR::identify_grafted()`][identify_grafted] to recompute `grafted_tips` and `grafted_edges` on a manipulated phylogeny.
 #'
 #'   * `sampling_fraction_df` Only if `total_richness_per_clades` is provided (a list with only `NA` values also returns it, assuming no unsampled species).
 #'     Data frame with one row per clade of `total_richness_per_clades`:
@@ -128,9 +128,9 @@
 #' @export
 #'
 #' @seealso Other functions from phylograftR:
-#'  * [identify_grafted()] to identify the grafted tips and branches of a phylogeny,
-#'  * [graft_missing_taxa()] to graft taxa within a target clade with constraints (target clades and excluded subclades),
-#'  * [check_grafting_constraints()] to check a posteriori that grafted taxa respect their constraints.
+#'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny,
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade with constraints (target clades and excluded subclades),
+#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints.
 #'
 #' @author Maël Doré
 #'

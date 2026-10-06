@@ -33,8 +33,8 @@
 #' @export
 #'
 #' @seealso Grafting functions, which already add internally the two elements to the grafted phylogeny with this function:
-#'   * [graft_missing_taxa()] to graft taxa within a target clade with constraints (target clades and excluded subclades),
-#'   * [graft_missing_clades()] to graft groups of missing taxa as clades sister to a clade of the backbone.
+#'   * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade with constraints (target clades and excluded subclades),
+#'   * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to a clade of the backbone.
 #'
 #' @return The phylogeny `phy` (class `"phylo"`), with two elements added, or replaced if `phy` already had them:
 #'  * `grafted_tips` Named logical vector with one value per tip of `phy`, in the order of `phy$tip.label`.

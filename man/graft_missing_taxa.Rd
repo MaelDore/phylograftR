@@ -116,7 +116,7 @@ Use them to color the phylogeny on plots (see examples).
 }
 
 These elements are not updated by functions that modify the phylogeny (e.g., \code{ape::drop.tip()}, which removes tips but keeps the other elements as they are,
-and \code{ape::write.tree()}, which removes them). Use \code{\link[=identify_grafted]{identify_grafted()}} to recompute \code{grafted_tips} and \code{grafted_edges} on a manipulated phylogeny.
+and \code{ape::write.tree()}, which removes them). Use \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to recompute \code{grafted_tips} and \code{grafted_edges} on a manipulated phylogeny.
 \itemize{
 \item \code{sampling_fraction_df} Only if \code{total_richness_per_clades} is provided (a list with only \code{NA} values also returns it, assuming no unsampled species).
 Data frame with one row per clade of \code{total_richness_per_clades}:
@@ -169,7 +169,7 @@ The setting is specific to each excluded subclade, so a taxon can have excluded 
 Excluded subclades are expected to be nested within their target clade. The function checks their position before grafting:
 a warning is issued if an excluded subclade is outside the target clade (the exclusion then has no effect).
 The function stops if an excluded subclade contains the whole target clade, or is identical to it: no branch (or only the stem branch) would be left for grafting.
-To graft taxa specifically on the stem branch of a clade or of a single tip, use \code{\link[=graft_missing_clades]{graft_missing_clades()}} instead.
+To graft taxa specifically on the stem branch of a clade or of a single tip, use \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} instead.
 A warning lists the single-tip excluded subclades with a stem that is not excluded, as they exclude nothing.
 }
 
@@ -245,7 +245,8 @@ missing_taxa_list <- list(
   # All the other items are named after Taxon_name (same names, same order)
   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")),
   # Stem of the target clade available for grafting?
-  # NA uses the global 'include_target_clade_stem' argument (TRUE by default). X4 cannot be grafted on the stem
+  # NA uses the global 'include_target_clade_stem' argument (TRUE by default)
+  # X4 cannot be grafted on the stem
   include_target_clade_stem = c(X1 = NA, X2 = NA, X3 = NA, X4 = FALSE),
   # Excluded subclades defined by pairs of tips. Only X1 has an excluded subclade
   # (the optional name of the excluded subclade, here 'clade_A', is used in messages)
@@ -253,7 +254,7 @@ missing_taxa_list <- list(
   # Stem of the excluded subclades also excluded?
   # NA / NULL use the global 'exclude_subclades_stem' argument (TRUE by default).
   # Here the stem of the excluded subclade of X1 stays available,
-  # so X1 can be sister to it, but never nested within it
+  # so X1 can be sister to it, but never nested within it.
   exclude_subclades_stem = list(X1 = FALSE, X2 = NULL, X3 = NULL, X4 = NULL))
 
 # Graft with the default method ("BD_clades")
@@ -291,9 +292,9 @@ grafted_phy_richness$sampling_fraction_df
 \seealso{
 Other functions from phylograftR:
 \itemize{
-\item \code{\link[=identify_grafted]{identify_grafted()}} to identify the grafted tips and branches of a phylogeny,
-\item \code{\link[=graft_missing_clades]{graft_missing_clades()}} to graft groups of missing taxa as clades sister to a clade of the backbone,
-\item \code{\link[=check_grafting_constraints]{check_grafting_constraints()}} to check a posteriori that grafted taxa respect their target clades and excluded subclades.
+\item \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to identify the grafted tips and branches of a phylogeny,
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as clades sister to a clade of the backbone,
+\item \code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}} to check a posteriori that grafted taxa respect their target clades and excluded subclades.
 }
 }
 \author{

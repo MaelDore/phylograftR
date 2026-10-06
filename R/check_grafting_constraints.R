@@ -18,12 +18,12 @@
 #' @param phy_backbone An object of class `"phylo"`. The backbone phylogeny used for grafting (i.e., before grafting).
 #' @param missing_taxa_list A list with the information on the grafted taxa. Typically the same list as used for grafting.
 #'   Items: `$Taxon_name`, `$Target_clade`, and optionally `$include_target_clade_stem`, `$Excluded_subclades` and `$exclude_subclades_stem`.
-#'   Every item provided must be named after `$Taxon_name` (same names, same order), as in [graft_missing_taxa()], see this function for details.
-#' @param include_target_clade_stem Logical. Same as in [graft_missing_taxa()]: whether grafting on the stem branch of target clades is accepted.
+#'   Every item provided must be named after `$Taxon_name` (same names, same order), as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa], see this function for details.
+#' @param include_target_clade_stem Logical. Same as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]: whether grafting on the stem branch of target clades is accepted.
 #'   Taxa with a value in `missing_taxa_list$include_target_clade_stem` use it instead (`NA` or no item: this global value is used). Default is `TRUE`.
-#' @param use_excluded_subclades Logical. Same as in [graft_missing_taxa()]: whether to check the excluded subclades.
+#' @param use_excluded_subclades Logical. Same as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]: whether to check the excluded subclades.
 #'   If no `$Excluded_subclades` item is found in `missing_taxa_list`, a warning is issued and excluded subclades are not checked. Default is `TRUE`.
-#' @param exclude_subclades_stem Logical. Same as in [graft_missing_taxa()]: whether the stem of the excluded subclades is also excluded
+#' @param exclude_subclades_stem Logical. Same as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]: whether the stem of the excluded subclades is also excluded
 #'   (a taxon sister to an excluded subclade is then a violation). Excluded subclades with a value in `missing_taxa_list$exclude_subclades_stem` use it instead
 #'   (`NA` or no item: this global value is used). Default is `TRUE`.
 #' @param check_backbone Logical. Whether to check that the topology and branch lengths of the backbone are preserved once the grafted taxa are pruned. Default is `TRUE`.
@@ -69,7 +69,7 @@
 #' A taxon respects its excluded subclades if it is not nested within any of them.
 #' If the stem of an excluded subclade is excluded (`exclude_subclades_stem = TRUE`, the default), the taxon must also not be on its stem, i.e., sister to the subclade
 #' (or to other missing taxa sister to the subclade), with no other backbone tip in between. For a single-tip excluded subclade, the taxon must not be on the branch of the tip.
-#' As in [graft_missing_taxa()], if the stem of the subclade is not excluded, the taxon can be sister to the subclade, not within it.
+#' As in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa], if the stem of the subclade is not excluded, the taxon can be sister to the subclade, not within it.
 #'
 #' Branches of the backbone are matched between the pruned grafted phylogeny and the backbone by the set of tips they subtend.
 #' Branch lengths are considered preserved if the maximum deviation, relative to the depth of the backbone, is lower than `tolerance`.
@@ -81,8 +81,8 @@
 #' @export
 #'
 #' @seealso Grafting functions:
-#'   * [graft_missing_taxa()] to graft taxa within a target clade with constraints (target clades and excluded subclades),
-#'   * [graft_missing_clades()] to graft groups of missing taxa as clades sister to a clade of the backbone.
+#'   * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade with constraints (target clades and excluded subclades),
+#'   * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to a clade of the backbone.
 #'
 #' @author Maël Doré
 #'
