@@ -186,15 +186,15 @@ get_stem_region_nodes <- function (phy, node, missing_tip_labels = character(0))
 #' @description Identify the tipward node IDs of all the branches available for grafting a taxon within a target clade,
 #'   before removing the branches of the excluded subclades:
 #'   * All branches within the clade (descending from its MRCA node).
-#'   * The stem region of the clade (see `get_stem_region_nodes()`), if `include_stem = TRUE`.
+#'   * The stem region of the clade (see `get_stem_region_nodes()`), if `include_target_clade_stem = TRUE`.
 #'     A taxon grafted on the stem region becomes sister to the clade, or sister to other missing taxa already grafted on the stem.
 #'
-#'   Single-tip clades always use their stem region (their tip branch is their only branch), whatever the value of `include_stem`.
+#'   Single-tip clades always use their stem region (their tip branch is their only branch), whatever the value of `include_target_clade_stem`.
 #'   The root has no stem, thus no stem region.
 #'
 #' @param phy Phylogeny of class `"phylo"`, possibly including taxa already grafted.
 #' @param MRCA_node Integer. Node ID of the clade (tip node for a single-tip clade).
-#' @param include_stem Logical. Whether the stem region of the clade is available. Default is `TRUE`.
+#' @param include_target_clade_stem Logical. Whether the stem region of the clade is available. Default is `TRUE`.
 #' @param missing_tip_labels Character vector. Labels of all the taxa to graft (grafted or not). Default is `character(0)`.
 #'
 #' @importFrom ape Ntip
@@ -204,16 +204,16 @@ get_stem_region_nodes <- function (phy, node, missing_tip_labels = character(0))
 #' @return Integer vector of tipward node IDs.
 #'
 
-get_available_branch_nodes <- function (phy, MRCA_node, include_stem = TRUE, missing_tip_labels = character(0))
+get_available_branch_nodes <- function (phy, MRCA_node, include_target_clade_stem = TRUE, missing_tip_labels = character(0))
 {
   # All branches within the clade
   available_nodes <- get_descendant_nodes(phy = phy, node = MRCA_node)
 
-  # Single-tip clades: the tip branch is the only branch available (it is the stem of the clade), so include_stem is ignored (set to TRUE)
-  if (MRCA_node <= ape::Ntip(phy)) { include_stem <- TRUE }
+  # Single-tip clades: the tip branch is the only branch available (it is the stem of the clade), so include_target_clade_stem is ignored (set to TRUE)
+  if (MRCA_node <= ape::Ntip(phy)) { include_target_clade_stem <- TRUE }
 
   # Add the stem region if requested. It is empty for the root, which has no stem
-  if (include_stem)
+  if (include_target_clade_stem)
   {
     available_nodes <- c(available_nodes, get_stem_region_nodes(phy = phy, node = MRCA_node, missing_tip_labels = missing_tip_labels)$nodes)
   }
@@ -359,11 +359,11 @@ fit_bd_on_clade <- function (phy, node, min_tips = 5, richness_info = NULL)
 
 #' @title Resolve whether the stem of the target clade is available for each taxon
 #'
-#' @description Combine the taxon-level values `include_target_clade_stem` (from `missing_taxa_list`) with the global `include_stem` argument:
-#'   taxa with `NA` (or all taxa if `include_target_clade_stem` is `NULL`) use the global value.
+#' @description Combine the taxon-level values `$include_target_clade_stem` (from `missing_taxa_list`) with the global `include_target_clade_stem` argument:
+#'   taxa with `NA` (or all taxa if it is `NULL`) use the global value.
 #'
-#' @param include_target_clade_stem `NULL`, or a logical vector (`TRUE`, `FALSE` or `NA`) with one value per taxon.
-#' @param include_stem Logical. Global value (single `TRUE` or `FALSE`).
+#' @param include_target_clade_stem_taxa `NULL`, or a logical vector (`TRUE`, `FALSE` or `NA`) with one value per taxon.
+#' @param include_target_clade_stem Logical. Global value (single `TRUE` or `FALSE`).
 #' @param n_taxa Integer. Number of taxa.
 #'
 #' @noRd
@@ -371,33 +371,33 @@ fit_bd_on_clade <- function (phy, node, min_tips = 5, richness_info = NULL)
 #' @return A logical vector without `NA`, with one value per taxon.
 #'
 
-resolve_include_stem <- function (include_target_clade_stem = NULL, include_stem = TRUE, n_taxa)
+resolve_include_target_clade_stem <- function (include_target_clade_stem_taxa = NULL, include_target_clade_stem = TRUE, n_taxa)
 {
-  if (!is.logical(include_stem) || length(include_stem) != 1 || is.na(include_stem))
+  if (!is.logical(include_target_clade_stem) || length(include_target_clade_stem) != 1 || is.na(include_target_clade_stem))
   {
     stop("the global 'include_target_clade_stem' must be a single logical value (TRUE or FALSE)")
   }
   # Default: the global argument applies to all taxa
-  if (is.null(include_target_clade_stem)) { return(rep(include_stem, n_taxa)) }
+  if (is.null(include_target_clade_stem_taxa)) { return(rep(include_target_clade_stem, n_taxa)) }
 
-  if (length(include_target_clade_stem) != n_taxa)
+  if (length(include_target_clade_stem_taxa) != n_taxa)
   {
     stop("'include_target_clade_stem' must have the same length as 'Taxa_name'")
   }
   # A vector with only NA of another type (e.g., NA_integer_) is accepted as logical
-  if (!is.logical(include_target_clade_stem))
+  if (!is.logical(include_target_clade_stem_taxa))
   {
-    if (!all(is.na(include_target_clade_stem)))
+    if (!all(is.na(include_target_clade_stem_taxa)))
     {
       stop("'include_target_clade_stem' must be a logical vector (TRUE, FALSE or NA)")
     }
-    include_target_clade_stem <- as.logical(include_target_clade_stem)
+    include_target_clade_stem_taxa <- as.logical(include_target_clade_stem_taxa)
   }
   # NA: use the global argument
-  include_target_clade_stem[is.na(include_target_clade_stem)] <- include_stem
+  include_target_clade_stem_taxa[is.na(include_target_clade_stem_taxa)] <- include_target_clade_stem
 
   # Return the output as an unname logical vector
-  return(unname(include_target_clade_stem))
+  return(unname(include_target_clade_stem_taxa))
 }
 
 
@@ -547,8 +547,8 @@ get_excluded_branch_nodes <- function (phy, excluded_subclades_tips_list, exclud
 #'   The rationale is to graft taxa in nested clades first, so they are accounted for when grafting missing taxa in higher clades
 #'   comprising those nested clades.
 #'
-#'   Taxa with the same target clade but different `include_stem` values form different groups, because the time window available
-#'   for their divergence times differs (stem age or crown age). The groups of a same clade are consecutive, with `include_stem = FALSE` first
+#'   Taxa with the same target clade but different `include_target_clade_stem` values form different groups, because the time window available
+#'   for their divergence times differs (stem age or crown age). The groups of a same clade are consecutive, with `include_target_clade_stem = FALSE` first
 #'   (taxa restricted to the crown are grafted first, so they are present when drawing the taxa that can also use the stem).
 #'
 #'   Use tips as inputs to define the associated clades:
@@ -557,7 +557,7 @@ get_excluded_branch_nodes <- function (phy, excluded_subclades_tips_list, exclud
 #'
 #' @param phy Phylogeny of class `"phylo"`.
 #' @param clade_tips List of character vectors defining the clade of each taxon.
-#' @param include_stem Logical vector with one value per taxon (no `NA`), or `NULL` (all `TRUE`).
+#' @param include_target_clade_stem Logical vector with one value per taxon (no `NA`), or `NULL` (all `TRUE`).
 #'   Whether the stem of the target clade is available for each taxon. It is always `TRUE` for single-tip clades (their only branch is their stem).
 #'
 #' @noRd
@@ -565,18 +565,18 @@ get_excluded_branch_nodes <- function (phy, excluded_subclades_tips_list, exclud
 #' @return A list with 6 elements.
 #'
 #'  The first two are taxon-level elements (one value per taxon):
-#'  * `group_ID` Integer vector. ID of the group (i.e., unique clade and `include_stem` value) the taxon belongs to.
+#'  * `group_ID` Integer vector. ID of the group (i.e., unique clade and `include_target_clade_stem` value) the taxon belongs to.
 #'  * `taxa_order` Integer vector. Indices of the taxa ordered by group, so the taxa of nested clades come first.
 #'     Used to graft taxa one by one while processing nested clades first.
 #'
 #'  The last four elements are group-level elements (one value per group):
 #'  * `group_clade_tips` List with one element per group. Character vector of the tips used to identify the associated clade.
 #'  * `group_clade_ID` Integer vector. ID of the unique clade of the group. Groups of the same clade share it.
-#'  * `group_include_stem` Logical vector. Whether the stem of the target clade is available for the taxa of the group.
+#'  * `group_include_target_clade_stem` Logical vector. Whether the stem of the target clade is available for the taxa of the group.
 #'  * `group_order` Integer vector with one value per group. Group IDs ranked by clade size, so nested clades come first.
 #'
 
-group_and_order_clades <- function (phy, clade_tips, include_stem = NULL)
+group_and_order_clades <- function (phy, clade_tips, include_target_clade_stem = NULL)
 {
   n_taxa <- length(clade_tips)
   # Extract (MRCA) nodes associated to clades
@@ -585,23 +585,23 @@ group_and_order_clades <- function (phy, clade_tips, include_stem = NULL)
   clade_ID <- match(nodes, unique(nodes))
 
   # Availability of the stem. Single-tip clades always use their stem
-  if (is.null(include_stem)) { include_stem <- rep(TRUE, n_taxa) }
-  include_stem <- include_stem | (nodes <= ape::Ntip(phy))
+  if (is.null(include_target_clade_stem)) { include_target_clade_stem <- rep(TRUE, n_taxa) }
+  include_target_clade_stem <- include_target_clade_stem | (nodes <= ape::Ntip(phy))
 
   # Group taxa by clade and stem availability
-  key <- paste(clade_ID, include_stem, sep = "_")
+  key <- paste(clade_ID, include_target_clade_stem, sep = "_")
   group <- match(key, unique(key))
   # Record first appearance of each group in the list
   first <- match(seq_along(unique(key)), group)
   group_clade_ID <- clade_ID[first]
-  group_include_stem <- include_stem[first]
+  group_include_target_clade_stem <- include_target_clade_stem[first]
 
   # Compute number of descendants of each clade, and record it per group
   n_desc_clade <- vapply(unique(nodes), function (n) length(get_descendant_nodes(phy, n)), numeric(1))
   n_desc <- n_desc_clade[group_clade_ID]
 
-  # Order of the groups: smallest clades first. Groups of the same clade stay together, with 'include_stem = FALSE' first
-  group_order <- order(n_desc, group_clade_ID, group_include_stem)
+  # Order of the groups: smallest clades first. Groups of the same clade stay together, with 'include_target_clade_stem = FALSE' first
+  group_order <- order(n_desc, group_clade_ID, group_include_target_clade_stem)
   # Rank of each group: 1 for the first group to graft
   rank_of_group <- match(seq_along(group_order), group_order)
 
@@ -610,7 +610,7 @@ group_and_order_clades <- function (phy, clade_tips, include_stem = NULL)
                           taxa_order = order(rank_of_group[group]), # Order of the taxa by group, nested clades first.
                           group_clade_tips = clade_tips[first], # Tips defining the clade of each group
                           group_clade_ID = group_clade_ID, # ID of the unique clade of each group
-                          group_include_stem = group_include_stem, # Stem availability of each group
+                          group_include_target_clade_stem = group_include_target_clade_stem, # Stem availability of each group
                           group_order = group_order) # Order of the groups to use in the loop
 
   # Export output
@@ -806,20 +806,20 @@ check_excluded_subclades_position <- function (phy, missing_taxa_list)
 #'   # How it works, for each taxon:
 #'   1. Start from the pool of branches of its target clade.
 #'      A branch is identified by its tipward node (the node it leads to), so the pool is made of
-#'      all the descendant nodes of the MRCA node of the clade, plus the MRCA node itself if the stem is allowed for grafting (`include_stem = TRUE` for this taxon).
+#'      all the descendant nodes of the MRCA node of the clade, plus the MRCA node itself if the stem is allowed for grafting (`include_target_clade_stem = TRUE` for this taxon).
 #'   2. Remove from the pool the branches inside each excluded subclade (= all descendant nodes of the subclade's MRCA node),
 #'      and the stem branch of each excluded subclade whose stem is excluded (`exclude_subclades_stem = TRUE`).
 #'      A single-tip subclade has no branch but its stem: it excludes nothing if its stem is not excluded.
 #'   3. If the pool is empty, the taxon is flagged.
 #'
 #' It mirrors the rules of the grafting functions:
-#'   - the stem of the target clade is available if `include_stem = TRUE` (never for the root, which has no stem)
-#'   - the stem of a single-tip clade is always available (it is its only branch), ignoring `include_stem`
+#'   - the stem of the target clade is available if `include_target_clade_stem = TRUE` (never for the root, which has no stem)
+#'   - the stem of a single-tip clade is always available (it is its only branch), ignoring `include_target_clade_stem`
 #'   - branches inside excluded subclades are unavailable, and so is their own stem if it is excluded (`exclude_subclades_stem = TRUE`)
 #'
 #' @param phy Phylogeny of class `"phylo"`.
 #' @param missing_taxa_list List with `Taxa_name`, `Target_clade` and `Excluded_subclades`.
-#' @param include_stem Logical. Single value used for all taxa, or one value per taxon (resolved from `include_target_clade_stem`, see `resolve_include_stem()`). Default is `TRUE`.
+#' @param include_target_clade_stem Logical. Single value used for all taxa, or one value per taxon (resolved from `include_target_clade_stem`, see `resolve_include_target_clade_stem()`). Default is `TRUE`.
 #' @param use_excluded_subclades Logical. Default is `TRUE`.
 #' @param exclude_subclades_stem Logical, or list with one element per taxon of logical vectors (one value per excluded subclade), as resolved by
 #'   `resolve_exclude_subclades_stem()`. Whether the stem of the excluded subclades is excluded. Default is `TRUE`.
@@ -835,14 +835,14 @@ check_excluded_subclades_position <- function (phy, missing_taxa_list)
 
 find_taxa_without_allowed_branch <- function (phy,
                                               missing_taxa_list,
-                                              include_stem = TRUE,
+                                              include_target_clade_stem = TRUE,
                                               use_excluded_subclades = TRUE,
                                               exclude_subclades_stem = TRUE)
 {
   n_missing <- length(missing_taxa_list$Taxa_name)
   root_node <- setdiff(phy$edge[, 1], phy$edge[, 2])
   # One value per taxon
-  include_stem_taxa <- rep_len(include_stem, n_missing)
+  include_target_clade_stem_taxa <- rep_len(include_target_clade_stem, n_missing)
 
   # Use temporary internal environment as cache to store associated MRCA nodes and descendant nodes information.
   # Rationale: Many taxa share the same target/excluded clades. Instead of recomputing descendant nodes for each target/excluded clades,
@@ -872,7 +872,7 @@ find_taxa_without_allowed_branch <- function (phy,
 
     # Is the stem available for grafting?
     # Only if requested or the 'clade' is a tip; but the clade cannot be the whole tree.
-    stem_available <- (include_stem_taxa[i] || is_single_tip) && (MRCA_node_i != root_node)
+    stem_available <- (include_target_clade_stem_taxa[i] || is_single_tip) && (MRCA_node_i != root_node)
 
     # Identify the tipward nodes associated with the valid branches (from cache env. or compute for the first time)
     allowed_nodes <- c(cached(paste0("desc_", MRCA_node_i), get_descendant_nodes(phy, MRCA_node_i)),

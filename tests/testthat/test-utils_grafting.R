@@ -72,15 +72,15 @@ test_that("get_available_branch_nodes() adds the stem region only if requested, 
 {
   toy <- toy_setup()
   phy <- toy$phy
-  with_stem <- get_available_branch_nodes(phy, toy$node_B, include_stem = TRUE)
-  without_stem <- get_available_branch_nodes(phy, toy$node_B, include_stem = FALSE)
+  with_stem <- get_available_branch_nodes(phy, toy$node_B, include_target_clade_stem = TRUE)
+  without_stem <- get_available_branch_nodes(phy, toy$node_B, include_target_clade_stem = FALSE)
   expect_true(toy$node_B %in% with_stem)
   expect_false(toy$node_B %in% without_stem)
   expect_setequal(setdiff(with_stem, without_stem), toy$node_B)
 
   # A single tip: its terminal branch is its stem, always available
   tip_node <- match(toy$s, phy$tip.label)
-  expect_identical(get_available_branch_nodes(phy, tip_node, include_stem = FALSE), tip_node)
+  expect_identical(get_available_branch_nodes(phy, tip_node, include_target_clade_stem = FALSE), tip_node)
 })
 
 # ---- Sampling and seeds ----
@@ -329,33 +329,33 @@ test_that("group_and_order_clades() splits the taxa of a clade by stem availabil
 {
   toy <- toy_setup()
   clades <- list(toy$A, toy$B, toy$A, toy$A, toy$s)
-  include_stem <- c(TRUE, TRUE, FALSE, TRUE, FALSE) # FALSE is ignored for the single tip 's'
-  groups <- group_and_order_clades(toy$phy, clades, include_stem = include_stem)
+  include_target_clade_stem <- c(TRUE, TRUE, FALSE, TRUE, FALSE) # FALSE is ignored for the single tip 's'
+  groups <- group_and_order_clades(toy$phy, clades, include_target_clade_stem = include_target_clade_stem)
 
   expect_equal(groups$group_ID, c(1, 2, 3, 1, 4))
   expect_equal(groups$group_clade_ID, c(1, 2, 1, 3)) # the two groups of A share the ID of their clade
-  expect_equal(groups$group_include_stem, c(TRUE, TRUE, FALSE, TRUE))
+  expect_equal(groups$group_include_target_clade_stem, c(TRUE, TRUE, FALSE, TRUE))
   # Single tip, then B (nested in A), then the groups of A with 'FALSE' first
   expect_equal(groups$group_order, c(4, 2, 3, 1))
   expect_equal(groups$taxa_order, c(5, 2, 3, 1, 4))
 
-  # Without 'include_stem': stem available for all, so one group per clade
+  # Without 'include_target_clade_stem': stem available for all, so one group per clade
   expect_equal(group_and_order_clades(toy$phy, clades)$group_ID, c(1, 2, 1, 1, 3))
 })
 
 ## Test the resolution of the stem availability of each taxon
-test_that("resolve_include_stem() uses the taxon values, and the global value for NA or NULL, and validates its inputs",
+test_that("resolve_include_target_clade_stem() uses the taxon values, and the global value for NA or NULL, and validates its inputs",
 {
-  expect_equal(resolve_include_stem(NULL, TRUE, 3), rep(TRUE, 3))
-  expect_equal(resolve_include_stem(NULL, FALSE, 3), rep(FALSE, 3))
-  expect_equal(resolve_include_stem(c(NA, FALSE, TRUE), TRUE, 3), c(TRUE, FALSE, TRUE))
-  expect_equal(resolve_include_stem(c(NA, FALSE, TRUE), FALSE, 3), c(FALSE, FALSE, TRUE))
-  expect_equal(resolve_include_stem(rep(NA_integer_, 3), FALSE, 3), rep(FALSE, 3)) # only NA, whatever the type
+  expect_equal(resolve_include_target_clade_stem(NULL, TRUE, 3), rep(TRUE, 3))
+  expect_equal(resolve_include_target_clade_stem(NULL, FALSE, 3), rep(FALSE, 3))
+  expect_equal(resolve_include_target_clade_stem(c(NA, FALSE, TRUE), TRUE, 3), c(TRUE, FALSE, TRUE))
+  expect_equal(resolve_include_target_clade_stem(c(NA, FALSE, TRUE), FALSE, 3), c(FALSE, FALSE, TRUE))
+  expect_equal(resolve_include_target_clade_stem(rep(NA_integer_, 3), FALSE, 3), rep(FALSE, 3)) # only NA, whatever the type
 
-  expect_error(resolve_include_stem(c(TRUE, FALSE), TRUE, 3), "same length as 'Taxa_name'")
-  expect_error(resolve_include_stem(c(1, 0, 1), TRUE, 3), "logical vector")
-  expect_error(resolve_include_stem(NULL, NA, 3), "single logical value")
-  expect_error(resolve_include_stem(NULL, c(TRUE, FALSE), 3), "single logical value")
+  expect_error(resolve_include_target_clade_stem(c(TRUE, FALSE), TRUE, 3), "same length as 'Taxa_name'")
+  expect_error(resolve_include_target_clade_stem(c(1, 0, 1), TRUE, 3), "logical vector")
+  expect_error(resolve_include_target_clade_stem(NULL, NA, 3), "single logical value")
+  expect_error(resolve_include_target_clade_stem(NULL, c(TRUE, FALSE), 3), "single logical value")
 })
 
 ## Test that the taxa without branch are identified with the stem availability of each taxon
@@ -365,7 +365,7 @@ test_that("find_taxa_without_allowed_branch() uses the stem availability of each
   # The excluded subclade is identical to the target clade
   mtl <- list(Taxa_name = c("no_stem", "stem_open", "stem_closed"), Target_clade = list(toy$B, toy$B, toy$B),
               Excluded_subclades = list(list(toy$B), list(toy$B), list(toy$B)))
-  flagged <- find_taxa_without_allowed_branch(toy$phy, mtl, include_stem = c(FALSE, TRUE, TRUE),
+  flagged <- find_taxa_without_allowed_branch(toy$phy, mtl, include_target_clade_stem = c(FALSE, TRUE, TRUE),
                                               exclude_subclades_stem = list(TRUE, FALSE, TRUE))
   # No branch without the stem of the target clade; only the stem if the stem of the excluded subclade is not excluded; no branch if it is excluded
   expect_equal(flagged$Taxa_name, c("no_stem", "stem_closed"))
@@ -482,14 +482,14 @@ test_that("find_taxa_without_allowed_branch() lists the taxa whose branches are 
     Excluded_subclades = list(list(toy$B), NULL, list(toy$B)))
 
   # Without the stem, the whole crown of B is excluded: no branch for 'bad'
-  flagged <- find_taxa_without_allowed_branch(toy$phy, missing_taxa_list, include_stem = FALSE)
+  flagged <- find_taxa_without_allowed_branch(toy$phy, missing_taxa_list, include_target_clade_stem = FALSE)
   expect_identical(flagged$Taxa_name, "bad")
 
   # A single tip always has its terminal branch, and A has branches outside B
   expect_false(any(c("tip", "fine") %in% flagged$Taxa_name))
 
   # Ignoring the excluded subclades: nothing is flagged
-  expect_equal(nrow(find_taxa_without_allowed_branch(toy$phy, missing_taxa_list, include_stem = FALSE, use_excluded_subclades = FALSE)), 0)
+  expect_equal(nrow(find_taxa_without_allowed_branch(toy$phy, missing_taxa_list, include_target_clade_stem = FALSE, use_excluded_subclades = FALSE)), 0)
 })
 
 

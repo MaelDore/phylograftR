@@ -242,7 +242,7 @@ test_that("with method = 'uniform', include_target_clade_stem overrides the glob
   stem_used <- NULL
   original <- draw_random_branch_weighted_per_length
   local_mocked_bindings(draw_random_branch_weighted_per_length = function (...) {
-      stem_used <<- c(stem_used, list(...)$include_stem); original(...) })
+      stem_used <<- c(stem_used, list(...)$include_target_clade_stem); original(...) })
 
   # Global TRUE: NA means TRUE. Taxa without access to the stem come first within their clade
   quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", include_target_clade_stem = TRUE, seed = 1)
@@ -275,7 +275,7 @@ test_that("with method = 'BD_clades', taxa of a clade are grouped by stem availa
     fit_bd_on_clade = function (...) { n_fits <<- n_fits + 1; original_fit(...) },
     graft_from_divergence_age = function (...) {
       args <- list(...)
-      grafts[[length(grafts) + 1]] <<- data.frame(taxon = args$tip_label, include_stem = args$include_stem, age = args$divergence_age)
+      grafts[[length(grafts) + 1]] <<- data.frame(taxon = args$tip_label, include_target_clade_stem = args$include_target_clade_stem, age = args$divergence_age)
       original_graft(...) })
 
   grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "BD_clades", seed = 1)
@@ -287,7 +287,7 @@ test_that("with method = 'BD_clades', taxa of a clade are grouped by stem availa
   expect_equal(grafts$taxon[1], "X5")
   expect_setequal(grafts$taxon[2:3], c("X2", "X4"))
   expect_setequal(grafts$taxon[4:5], c("X1", "X3"))
-  expect_equal(grafts$include_stem, c(TRUE, FALSE, FALSE, TRUE, TRUE))
+  expect_equal(grafts$include_target_clade_stem, c(TRUE, FALSE, FALSE, TRUE, TRUE))
   # Taxa without the stem have divergence ages within the crown of A
   crown_age_A <- toy$root_age - phytools::nodeheight(toy$phy, toy$node_A)
   expect_true(all(grafts$age[grafts$taxon %in% c("X2", "X4")] <= crown_age_A))

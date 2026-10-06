@@ -127,8 +127,8 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
   n_taxa <- length(taxa_names)
 
   # Stem availability of each taxon: 'missing_taxa_list$include_target_clade_stem' of the taxon if provided, otherwise the global 'include_target_clade_stem'
-  include_stem_taxa <- resolve_include_stem(include_target_clade_stem = missing_taxa_list$include_target_clade_stem,
-                                            include_stem = include_target_clade_stem, n_taxa = n_taxa)
+  include_target_clade_stem_taxa <- resolve_include_target_clade_stem(include_target_clade_stem_taxa = missing_taxa_list$include_target_clade_stem,
+                                                      include_target_clade_stem = include_target_clade_stem, n_taxa = n_taxa)
 
   # Check presence of excluded subclades
   excluded_list <- missing_taxa_list$Excluded_subclades
@@ -201,7 +201,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
   # Initiate resulting data.frame
   res <- data.frame(Taxon = taxa_names,
                     in_tree = taxa_names %in% phy_grafted$tip.label,
-                    include_target_clade_stem = include_stem_taxa,
+                    include_target_clade_stem = include_target_clade_stem_taxa,
                     target_position = NA, # "crown", "stem", "outside", or "tip_branch" (single-tip clade)
                     target_ok = NA,
                     excluded_ok = NA,
@@ -247,7 +247,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
       # If not, use 'no_foreign_backbone_tip' to distinguish between taxa grafted on the stem branch, and taxa outside of the target clade
       res$target_position[i] <- ifelse(in_crown, "crown", ifelse(no_foreign_backbone_tip, "stem", "outside"))
       # Target is okay if in_crown or on the stem when the stem is accepted for this taxon
-      res$target_ok[i] <- in_crown | (include_stem_taxa[i] & no_foreign_backbone_tip)
+      res$target_ok[i] <- in_crown | (include_target_clade_stem_taxa[i] & no_foreign_backbone_tip)
     }
 
     ## Excluded subclades
