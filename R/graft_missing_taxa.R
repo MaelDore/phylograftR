@@ -19,23 +19,25 @@
 #'
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which taxa are grafted.
 #'   It must be rooted and ultrametric (i.e., be time-calibrated).
-#' @param missing_taxa_list A list with the information on the taxa to graft. Items:
-#'   * `$Taxa_name`: Character vector of the names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
-#'   * `$Target_clade`: List (same length as `$Taxa_name`) of character vectors. For each taxon, the tip labels defining its target clade,
+#' @param missing_taxa_list A list with the information on the taxa to graft. Every item provided must be named after `$Taxon_name`. Items:
+#'   * `$Taxon_name`: Character vector of the names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
+#'   * `$Target_clade`: List (named after `$Taxon_name`) of character vectors. For each taxon, the tip labels defining its target clade,
 #'     i.e., the clade where the taxon is known to belong (e.g., its genus). A pair of tips defines the clade as their MRCA node.
 #'     A single tip defines the "clade" as the terminal branch of this tip.
-#'   * `$include_target_clade_stem`: (Optional) Logical vector (same length as `$Taxa_name`). For each taxon, whether the stem branch of its target clade
+#'   * `$include_target_clade_stem`: (Optional) Logical vector (named after `$Taxon_name`). For each taxon, whether the stem branch of its target clade
 #'     is available for grafting. It overrides the global argument `include_target_clade_stem` for this taxon. `NA` values use the global argument.
 #'     With `NULL` (default, or no item), the global argument applies to all taxa. Ignored for single-tip target clades (their terminal branch is their only branch,
 #'     so the stem is always used; a warning lists the taxa with `FALSE`) and for target clades that are the whole tree.
-#'   * `$Excluded_subclades`: (Optional) List (same length as `$Taxa_name`) of lists of character vectors. For each taxon, the subclades of its target clade
+#'   * `$Excluded_subclades`: (Optional) List (named after `$Taxon_name`) of lists of character vectors. For each taxon, the subclades of its target clade
 #'     where the taxon is known not to belong. Each subclade is defined by a pair of tips (or a single tip, which excludes its terminal branch, see `exclude_subclades_stem`).
 #'     Use `NULL` for taxa with no excluded subclades.
-#'   * `$exclude_subclades_stem`: (Optional) List (same length as `$Taxa_name`) of logical vectors. For each taxon, whether the stem of each of its excluded subclades
+#'   * `$exclude_subclades_stem`: (Optional) List (named after `$Taxon_name`) of logical vectors. For each taxon, whether the stem of each of its excluded subclades
 #'     is also excluded, with one value per subclade of `$Excluded_subclades` (a single value is used for all the subclades of the taxon; `NULL` uses `exclude_subclades_stem`).
 #'     It overrides the global argument `exclude_subclades_stem` for these subclades. `NA` values use `exclude_subclades_stem`.
 #'     A logical vector with one value per taxon is also accepted (each value is used for all the excluded subclades of the taxon).
-#'     For example, `Excluded_subclades = list(list(c("t1", "t2"), "t7"), NULL)` with `exclude_subclades_stem = list(c(FALSE, TRUE), NULL)`.
+#'     For example, `Excluded_subclades = list(X1 = list(c("t1", "t2"), "t7"), X2 = NULL)` with `exclude_subclades_stem = list(X1 = c(FALSE, TRUE), X2 = NULL)`.
+#'     The excluded subclades of a taxon can also be named (e.g., `list(X1 = list(grp_A = c("t1", "t2"), grp_B = "t7"))`): these optional names are used in messages,
+#'     and must match the names of the values of `exclude_subclades_stem` of the taxon if both are named.
 #' @param include_target_clade_stem Logical. Whether the stem branch of target clades is available for grafting. This is the default for all taxa:
 #'   taxa with a value in `missing_taxa_list$include_target_clade_stem` use this specific instead.
 #'   If `TRUE`, a taxon can be grafted on the stem branch, and becomes sister to the target clade.
@@ -94,6 +96,7 @@
 #'   * `sampling_fraction_df` Only if `total_richness_per_clades` is provided (a list with only `NA` values also returns it, assuming no unsampled species).
 #'     Data frame with one row per clade of `total_richness_per_clades`:
 #'     * `Clade_tips` Character string. Tips used to identify the clade.
+#'     * `Missing_taxa` Character string. Names of the missing taxa counted in the clade (separated by commas, empty if none): those with the clade as target clade or a target clade nested within it (for sister clades: only nested within it), as in `nb_missing_species`.
 #'     * `total_richness` Integer. Derived when `NA` was provided.
 #'     * `total_richness_provided` Logical. Whether `total_richness` of the clade was provided as input in `total_richness_per_clades`
 #'     * `nb_backbone_species` Integer. Number of species initially present on the backbone phylogeny.
@@ -118,7 +121,7 @@
 #'
 #' The stem region is not restricted to the original stem branch. A taxon grafted on the stem splits it in two pieces, and becomes itself part of the stem region:
 #' later taxa can be grafted on both pieces of the stem, and on the terminal branch of the earlier taxon (the two taxa are then sister, and together sister to the target clade).
-#' More generally, the stem region includes all the branches of the 'missing-only subtrees' hanging from the stem, i.e., subtrees containing only taxa of `missing_taxa_list$Taxa_name`,
+#' More generally, the stem region includes all the branches of the 'missing-only subtrees' hanging from the stem, i.e., subtrees containing only taxa of `missing_taxa_list$Taxon_name`,
 #' whatever their own target clade. This mirrors what happens within the crown group, where missing taxa can already be grafted on the branches of other missing taxa.
 #'
 #' Branches inside excluded subclades are removed from the pool of available branches. By default (`exclude_subclades_stem = TRUE`),
@@ -217,16 +220,18 @@
 #'
 #' # List the missing taxa to graft
 #' missing_taxa_list <- list(
-#'   Taxa_name = c("X1", "X2", "X3", "X4"),
+#'   Taxon_name = c("X1", "X2", "X3", "X4"),
 #'   # Target clades defined by pairs of tips (MRCA), or by a single tip
-#'   Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5", c("t26", "t18")),
+#'   # All the other items are named after Taxon_name (same names, same order)
+#'   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")),
 #'   # Stem of the target clade available for grafting? NA uses the global 'include_target_clade_stem' argument (TRUE by default). X4 cannot be grafted on the stem
-#'   include_target_clade_stem = c(NA, NA, NA, FALSE),
+#'   include_target_clade_stem = c(X1 = NA, X2 = NA, X3 = NA, X4 = FALSE),
 #'   # Excluded subclades defined by pairs of tips. Only X1 has an excluded subclade
-#'   Excluded_subclades = list(list(c("t10", "t19")), NULL, NULL, NULL),
+#'   # (the optional name of the excluded subclade, here 'clade_A', is used in messages)
+#'   Excluded_subclades = list(X1 = list(clade_A = c("t10", "t19")), X2 = NULL, X3 = NULL, X4 = NULL),
 #'   # Stem of the excluded subclades also excluded? NA / NULL use the global 'exclude_subclades_stem' argument (TRUE by default).
 #'   # Here the stem of the excluded subclade of X1 stays available, so X1 can be sister to it, but never nested within it
-#'   exclude_subclades_stem = list(FALSE, NULL, NULL, NULL))
+#'   exclude_subclades_stem = list(X1 = FALSE, X2 = NULL, X3 = NULL, X4 = NULL))
 #'
 #' # Graft with the default method ("BD_clades")
 #' grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
@@ -261,7 +266,7 @@
 #'
 
 graft_missing_taxa <- function (phy, # Backbone phylogeny
-                                missing_taxa_list, # List with Taxa_name = c(), Target_clade = list(c(), ...), include_target_clade_stem = c(TRUE, NA, FALSE, ...) (optional), Excluded_subclades = list(list(c(), c()), NULL, ...), exclude_subclades_stem = list(c(TRUE, NA), NULL, ...) (optional)
+                                missing_taxa_list, # List with Taxon_name = c(), and items named after Taxon_name: Target_clade = list(X1 = c(), ...), include_target_clade_stem = c(X1 = TRUE, ...) (optional), Excluded_subclades = list(X1 = list(c(), c()), X2 = NULL, ...), exclude_subclades_stem = list(X1 = c(TRUE, NA), X2 = NULL, ...) (optional)
                                 include_target_clade_stem = TRUE, # Include the stem of the target clades when grafting? Default for all taxa, overridden by missing_taxa_list$include_target_clade_stem
                                 use_excluded_subclades = TRUE, # Avoid grafting within Excluded_subclades?
                                 exclude_subclades_stem = TRUE, # Also exclude the stem of the excluded subclades? Default for all subclades, overridden by missing_taxa_list$exclude_subclades_stem
@@ -299,28 +304,23 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
            "Choose method = 'uniform', lower 'min_tips', or provide a larger backbone phylogeny.")
     }
 
-    ## Check length of items in missing_taxa_list
-    n_missing <- length(missing_taxa_list$Taxa_name)
-
-    if (n_missing == 0) stop("'missing_taxa_list$Taxa_name' is empty")
-
-    if (length(missing_taxa_list$Target_clade) != n_missing)
-      stop("Target_clade must have the same length as Taxa_name")
-
-    if (!is.null(missing_taxa_list$Excluded_subclades) && length(missing_taxa_list$Excluded_subclades) != n_missing)
-      stop("Excluded_subclades must have the same length as Taxa_name")
+    ## Check the structure of missing_taxa_list: Taxon_name, and the items provided (same length and names identical to Taxon_name, in the same order)
+    validate_missing_taxa_list(missing_taxa_list, clade_item = "Target_clade")
+    n_missing <- length(missing_taxa_list$Taxon_name)
 
     ## Stem availability of each taxon: 'missing_taxa_list$include_target_clade_stem' of the taxon if provided (not NA), otherwise the global 'include_target_clade_stem' argument
     # The resolved vector (no NA) replaces the item in the list, so it follows the taxa when they are reordered
     stem_requested <- missing_taxa_list$include_target_clade_stem # Values provided by the user, before resolution
     missing_taxa_list$include_target_clade_stem <- resolve_include_target_clade_stem(
-      include_target_clade_stem_taxa = stem_requested, include_target_clade_stem = include_target_clade_stem, n_taxa = n_missing)
+      include_target_clade_stem_taxa = stem_requested, include_target_clade_stem = include_target_clade_stem, n_taxa = n_missing,
+      taxon_names = missing_taxa_list$Taxon_name)
 
     ## Stem exclusion of each excluded subclade: 'missing_taxa_list$exclude_subclades_stem' of the subclade if provided (not NA), otherwise the global 'exclude_subclades_stem'
     # The resolved list (one logical vector per taxon, no NA) replaces the item in the list, so it follows the taxa when they are reordered
     missing_taxa_list$exclude_subclades_stem <- resolve_exclude_subclades_stem(
       exclude_subclades_stem_taxa = missing_taxa_list$exclude_subclades_stem, exclude_subclades_stem = exclude_subclades_stem,
-      excluded_subclades = missing_taxa_list$Excluded_subclades, n_taxa = n_missing)
+      excluded_subclades = missing_taxa_list$Excluded_subclades, n_taxa = n_missing,
+      taxon_names = missing_taxa_list$Taxon_name)
 
     ## Warn (once) about taxa with a single-tip target clade and 'include_target_clade_stem = FALSE'
     # The terminal branch of the tip is the only branch of a single-tip clade (it is its stem): not including the stem would lead to an error and is ignored.
@@ -334,7 +334,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         n_show <- min(length(single_tip_ignored), 10)
         warning(length(single_tip_ignored), " taxa have a single-tip target clade with 'include_target_clade_stem = FALSE': ",
                 "this value was ignored for the whole run, and the stem was used. The terminal branch of the tip is the only branch of a single-tip clade.\n",
-                paste0("  - ", missing_taxa_list$Taxa_name[single_tip_ignored[seq_len(n_show)]],
+                paste0("  - ", missing_taxa_list$Taxon_name[single_tip_ignored[seq_len(n_show)]],
                        " (target tip: ", vapply(missing_taxa_list$Target_clade[single_tip_ignored[seq_len(n_show)]], paste, character(1), collapse = ", "), ")", collapse = "\n"),
                 if (length(single_tip_ignored) > n_show) paste0("\n  ... and ", length(single_tip_ignored) - n_show, " more") else "",
                 call. = FALSE)
@@ -350,22 +350,23 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         subclades_i <- missing_taxa_list$Excluded_subclades[[i]]
         noop <- which(vapply(subclades_i, length, integer(1)) == 1 & !missing_taxa_list$exclude_subclades_stem[[i]])
         if (length(noop) == 0) return(NULL)
-        data.frame(Taxa_name = missing_taxa_list$Taxa_name[i], tip = vapply(subclades_i[noop], function (x) x[1], character(1)), stringsAsFactors = FALSE)
+        data.frame(Taxon_name = missing_taxa_list$Taxon_name[i], tip = label_excluded_subclades(subclades_i[noop]), stringsAsFactors = FALSE)
       }))
       if (!is.null(single_tip_noop))
       {
         n_show <- min(nrow(single_tip_noop), 10)
         warning(nrow(single_tip_noop), " single-tip excluded subclade(s) have 'exclude_subclades_stem = FALSE': they exclude nothing, ",
                 "as the terminal branch of a tip is its only branch (its stem).\n",
-                paste0("  - ", single_tip_noop$Taxa_name[seq_len(n_show)], " (excluded tip: ", single_tip_noop$tip[seq_len(n_show)], ")", collapse = "\n"),
+                paste0("  - ", single_tip_noop$Taxon_name[seq_len(n_show)], " (excluded subclade: ", single_tip_noop$tip[seq_len(n_show)], ")", collapse = "\n"),
                 if (nrow(single_tip_noop) > n_show) paste0("\n  ... and ", nrow(single_tip_noop) - n_show, " more") else "",
                 call. = FALSE)
       }
     }
 
     ## Check that taxa names are truly missing from the backbone
-    if (anyDuplicated(missing_taxa_list$Taxa_name) || any(missing_taxa_list$Taxa_name %in% phy$tip.label))
-      stop("Taxa_name must be unique and absent from the backbone phylogeny")
+    if (any(missing_taxa_list$Taxon_name %in% phy$tip.label))
+      stop("Taxon_name must be absent from the backbone phylogeny. Present: ",
+           paste(intersect(missing_taxa_list$Taxon_name, phy$tip.label), collapse = ", "))
 
     ## Check that all tips used to define target clades are present in the backbone
     all_target_clade_tips <- unique(unlist(missing_taxa_list$Target_clade))
@@ -401,8 +402,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       format_excluded_position <- function (df)
       {
         n_show <- min(nrow(df), 10)
-        paste0(paste0("  - ", df$Taxa_name[seq_len(n_show)], " (target clade tips: ", df$Target_clade[seq_len(n_show)],
-                      "; excluded subclade tips: ", df$Excluded_subclade[seq_len(n_show)], ")", collapse = "\n"),
+        paste0(paste0("  - ", df$Taxon_name[seq_len(n_show)], " (target clade tips: ", df$Target_clade[seq_len(n_show)],
+                      "; excluded subclade: ", df$Excluded_subclade[seq_len(n_show)], ")", collapse = "\n"),
                if (nrow(df) > n_show) paste0("\n  ... and ", nrow(df) - n_show, " more") else "")
       }
 
@@ -441,7 +442,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     ## Richness of the clades (unsampled species)
     # Validates 'total_richness_per_clades' if provided, and derives the number of unsampled species of each node of the backbone.
     # Always computed: it also provides the number of missing taxa to include in the sampling fraction of the BD models
-    richness_info <- build_richness_info(phy = phy, missing_taxa_names = missing_taxa_list$Taxa_name,
+    richness_info <- build_richness_info(phy = phy, missing_taxa_names = missing_taxa_list$Taxon_name,
                                          missing_clades = missing_taxa_list$Target_clade,
                                          mode = "target", total_richness_per_clades = total_richness_per_clades)
 
@@ -463,7 +464,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   {
     n_show <- min(nrow(no_branch_taxa), 10)
     stop(nrow(no_branch_taxa), " taxa have no branch available for grafting: all branches of their target clade are excluded.\n",
-         paste0("  - ", no_branch_taxa$Taxa_name[seq_len(n_show)], " (target clade tips: ", no_branch_taxa$Target_clade[seq_len(n_show)], ")", collapse = "\n"),
+         paste0("  - ", no_branch_taxa$Taxon_name[seq_len(n_show)], " (target clade tips: ", no_branch_taxa$Target_clade[seq_len(n_show)], ")", collapse = "\n"),
          if (nrow(no_branch_taxa) > n_show) paste0("\n  ... and ", nrow(no_branch_taxa) - n_show, " more") else "",
          "\nAdjust 'include_target_clade_stem' (global or in missing_taxa_list), 'missing_taxa_list$Excluded_subclades' or 'exclude_subclades_stem' for these taxa.")
   }
@@ -495,7 +496,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 
     for (i in seq_len(n_missing))
     {
-      focal_taxon_name <- missing_taxa_list$Taxa_name[i]
+      focal_taxon_name <- missing_taxa_list$Taxon_name[i]
       # Is the stem of the target clade available for this taxon?
       include_target_clade_stem_i <- missing_taxa_list$include_target_clade_stem[i]
 
@@ -511,7 +512,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       {
         excluded_nodes <- get_excluded_branch_nodes(phy = phy, excluded_subclades_tips_list = missing_taxa_list$Excluded_subclades[[i]],
                                                     exclude_subclades_stem = missing_taxa_list$exclude_subclades_stem[[i]],
-                                                    missing_tip_labels = missing_taxa_list$Taxa_name)
+                                                    missing_tip_labels = missing_taxa_list$Taxon_name)
       }
 
       # Warn if the target clade is the whole tree: it has no stem branch, so only branches inside the clade can be used
@@ -526,7 +527,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       selected_node_ID <- draw_random_branch_weighted_per_length(
          phy = phy, MRCA_node = MRCA_node, include_target_clade_stem = include_target_clade_stem_i,
          excluded_nodes = excluded_nodes,
-         missing_tip_labels = missing_taxa_list$Taxa_name, seed = NULL)
+         missing_tip_labels = missing_taxa_list$Taxon_name, seed = NULL)
 
       # Stop with an informative message if no branch is available (all branches excluded by the user's constraints)
       if (is.na(selected_node_ID))
@@ -612,7 +613,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       # Missing taxa previously grafted on the stem created new nodes between the clade and its backbone parent.
       # Walking rootward past those nodes (they only have 'missing-only' subtrees as side branches) gives the true stem node,
       # so the stem age is always the one of the backbone, and not the age of a node created by a graft.
-      stem_node_i <- get_stem_region_nodes(phy, MRCA_node_i, missing_tip_labels = missing_taxa_list$Taxa_name)$top_parent
+      stem_node_i <- get_stem_region_nodes(phy, MRCA_node_i, missing_tip_labels = missing_taxa_list$Taxon_name)$top_parent
 
       # Warn against problematic cases with no stem available, because the target clade is the whole tree
       if (is.na(stem_node_i))
@@ -687,12 +688,12 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         phy <- graft_from_divergence_age(
             phy = phy,
             divergence_age = divergence_times_missing_taxa_i[j],
-            tip_label = missing_taxa_list_i$Taxa_name[j],
+            tip_label = missing_taxa_list_i$Taxon_name[j],
             target_clade_tips = missing_taxa_list_i$Target_clade[[j]],
             excluded_subclades_tips_list = excluded_subclades_tips_list_i,
             exclude_subclades_stem = missing_taxa_list_i$exclude_subclades_stem[[j]],
             include_target_clade_stem = include_target_clade_stem_i,
-            missing_tip_labels = missing_taxa_list$Taxa_name,
+            missing_tip_labels = missing_taxa_list$Taxon_name,
             root_age = root_age,
             seed = NULL)
       }
@@ -726,11 +727,11 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   {
     if (verbose) { cat(paste0(Sys.time(), " - Ensure the ultrametricity of the final tree\n") )}
     # Force ultrametry to avoid issue with bad rounding, but only of the grafted tips, to keep the backbone intact
-    phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxa_name, root_age = root_age)
+    phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxon_name, root_age = root_age)
   }
 
   # Add the elements identifying the grafted tips and branches, and the sampling fraction table of the clades if 'total_richness_per_clades' was provided
-  phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxa_name)
+  phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxon_name)
   if (!is.null(richness_info$table)) phy$sampling_fraction_df <- richness_info$table
 
   return(phy)

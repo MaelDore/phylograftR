@@ -16,7 +16,7 @@
 #'   (e.g., with `ape::drop.tip()`, which does not update the elements of the phylogeny it does not know).
 #'
 #' @param phy An object of class `"phylo"`. The phylogeny, including the grafted taxa.
-#' @param grafted_taxa Character vector. Labels of the grafted taxa (e.g., `missing_taxa_list$Taxa_name`).
+#' @param grafted_taxa Character vector. Labels of the grafted taxa (e.g., `missing_taxa_list$Taxon_name`).
 #'   Labels that are not tips of `phy` are ignored, with a warning.
 #'
 #' @details A tip is grafted if its label is in `grafted_taxa`.
@@ -50,13 +50,13 @@
 #' phy <- ape::rcoal(n = 30)
 #' phy$edge.length <- phy$edge.length / max(ape::node.depth.edgelength(phy)) * 50
 #' missing_taxa_list <- list(
-#'   Taxa_name = c("X1", "X2", "X3", "X4"),
-#'   Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5", c("t26", "t18")))
+#'   Taxon_name = c("X1", "X2", "X3", "X4"),
+#'   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")))
 #' grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
 #'                                   verbose = FALSE, seed = 1234)
 #'
 #' # Identify the grafted tips and branches: the function returns the phylogeny with two additional elements
-#' grafted_phy <- identify_grafted(phy = grafted_phy, grafted_taxa = missing_taxa_list$Taxa_name)
+#' grafted_phy <- identify_grafted(phy = grafted_phy, grafted_taxa = missing_taxa_list$Taxon_name)
 #' table(grafted_phy$grafted_tips)
 #' table(grafted_phy$grafted_edges)
 #'
@@ -75,7 +75,7 @@
 #' # Update them with identify_grafted(), using the grafted taxa still in the pruned phylogeny
 #' # (grafted taxa that are not tips are ignored with a warning)
 #' pruned_phy <- identify_grafted(phy = pruned_phy,
-#'                                grafted_taxa = intersect(missing_taxa_list$Taxa_name, pruned_phy$tip.label))
+#'                                grafted_taxa = intersect(missing_taxa_list$Taxon_name, pruned_phy$tip.label))
 #'
 #' # Plot the pruned phylogeny with the updated colors
 #' plot(pruned_phy, cex = 0.7,

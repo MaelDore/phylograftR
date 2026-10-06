@@ -16,8 +16,8 @@
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which taxa are grafted.
 #'   It must be rooted and ultrametric (i.e., be time-calibrated).
 #' @param missing_taxa_list A list with the information on the taxa to graft. Items:
-#'   * `$Taxa_name`: Character vector of the names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
-#'   * `$Sister_clade`: List (same length as `$Taxa_name`) of character vectors. For each taxon, the tip labels defining the clade of the backbone
+#'   * `$Taxon_name`: Character vector of the names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
+#'   * `$Sister_clade`: List (named after `$Taxon_name`) of character vectors. For each taxon, the tip labels defining the clade of the backbone
 #'     that is sister to the missing clade. A pair of tips defines the clade as their MRCA node. A single tip defines the "clade" as the terminal branch of this tip.
 #'     Taxa with the same sister clade are grafted together as one missing clade.
 #' @param min_tips Integer. Minimum number of tips of the clade used to fit the birth-death model.
@@ -60,6 +60,7 @@
 #'   * `sampling_fraction_df` Only if `total_richness_per_clades` is provided (a list with only `NA` values also returns it, assuming no unsampled species).
 #'     Data frame with one row per clade of `total_richness_per_clades`:
 #'     * `Clade_tips` Character string. Tips used to identify the clade.
+#'     * `Missing_taxa` Character string. Names of the missing taxa counted in the clade (separated by commas, empty if none): those with the clade as target clade or a target clade nested within it (for sister clades: only nested within it), as in `nb_missing_species`.
 #'     * `total_richness` Integer. Derived when `NA` was provided.
 #'     * `total_richness_provided` Logical. Whether `total_richness` of the clade was provided as input in `total_richness_per_clades`
 #'     * `nb_backbone_species` Integer. Number of species initially present on the backbone phylogeny.
@@ -142,9 +143,10 @@
 #'
 #' # List the missing taxa to graft
 #' missing_clades_list <- list(
-#'   Taxa_name = c("M1", "M2", "M3", "M4"),
+#'   Taxon_name = c("M1", "M2", "M3", "M4"),
+#'   # Sister_clade is named after Taxon_name (same names, same order)
 #'   # M1 and M2 share the same sister clade: they are grafted together as one missing clade
-#'   Sister_clade = list(c("t8", "t22"), c("t8", "t22"), c("t26", "t18"), "t5"))
+#'   Sister_clade = list(M1 = c("t8", "t22"), M2 = c("t8", "t22"), M3 = c("t26", "t18"), M4 = "t5"))
 #'
 #' # Graft the missing clades
 #' grafted_phy <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
@@ -195,17 +197,14 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
            "Lower 'min_tips' or provide a larger backbone phylogeny.")
     }
 
-    ## Check length of items in missing_taxa_list
-    n_missing <- length(missing_taxa_list$Taxa_name)
-
-    if (n_missing == 0) stop("'missing_taxa_list$Taxa_name' is empty")
-
-    if (length(missing_taxa_list$Sister_clade) != n_missing)
-      stop("Sister_clade must have the same length as Taxa_name")
+    ## Check the structure of missing_taxa_list: Taxon_name, and Sister_clade (same length and names identical to Taxon_name, in the same order)
+    validate_missing_taxa_list(missing_taxa_list, clade_item = "Sister_clade", optional_items = character(0))
+    n_missing <- length(missing_taxa_list$Taxon_name)
 
     ## Check that taxa names are truly missing from the backbone
-    if (anyDuplicated(missing_taxa_list$Taxa_name) || any(missing_taxa_list$Taxa_name %in% phy$tip.label))
-      stop("Taxa_name must be unique and absent from the backbone phylogeny")
+    if (any(missing_taxa_list$Taxon_name %in% phy$tip.label))
+      stop("Taxon_name must be absent from the backbone phylogeny. Present: ",
+           paste(intersect(missing_taxa_list$Taxon_name, phy$tip.label), collapse = ", "))
 
     ## Check that all tips used to define sister clades are present in the backbone
     all_sister_clade_tips <- unique(unlist(missing_taxa_list$Sister_clade))
@@ -222,7 +221,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     ## Richness of the clades (unsampled species)
     # Validates 'total_richness_per_clades' if provided, and derives the number of unsampled species of each node of the backbone.
     # Always computed: it also provides the taxa still to graft to include in the sampling fraction of the BD models
-    richness_info <- build_richness_info(phy = phy, missing_taxa_names = missing_taxa_list$Taxa_name,
+    richness_info <- build_richness_info(phy = phy, missing_taxa_names = missing_taxa_list$Taxon_name,
                                          missing_clades = missing_taxa_list$Sister_clade,
                                          mode = "sister", total_richness_per_clades = total_richness_per_clades)
   }
@@ -339,7 +338,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
       ## Case where the missing 'clade' is a single tip
 
       # Graft the unique tip
-      phy <- phytools::bind.tip(tree = phy, tip.label = missing_taxa_list_i$Taxa_name,
+      phy <- phytools::bind.tip(tree = phy, tip.label = missing_taxa_list_i$Taxon_name,
                                 edge.length = divergence_time_missing_clade_i,
                                 where = MRCA_node_i, position = position_i)
     } else {
@@ -352,14 +351,14 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
                                                   lambda = BD_i$b, mu = BD_i$d,
                                                   frac = 1, age = divergence_time_missing_clade_i,
                                                   mrca = FALSE)[[1]] # mrca = FALSE: 'age' is the stem age (time since origin)
-      missing_clade_i$tip.label <- missing_taxa_list_i$Taxa_name
+      missing_clade_i$tip.label <- missing_taxa_list_i$Taxon_name
 
       # Graft the generated subclade
       phy <- ape::bind.tree(x = phy, y = missing_clade_i, where = MRCA_node_i, position = position_i)
     }
 
     # Enforce ultrametricity for the new terminal branches only (backbone branches are left untouched)
-    phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list_i$Taxa_name, root_age = root_age)
+    phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list_i$Taxon_name, root_age = root_age)
 
     # Update counts of grafted taxa and grafted missing clades
     nb_taxa_grafted <- nb_taxa_grafted + nb_missing_taxa
@@ -388,11 +387,11 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
   {
     if (verbose) { cat(paste0(Sys.time(), " - Ensure the ultrametricity of the final tree\n") )}
     # Force ultrametry to avoid issue with bad rounding
-    phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxa_name, root_age = root_age)
+    phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxon_name, root_age = root_age)
   }
 
   # Add the elements identifying the grafted tips and branches, and the sampling fraction table of the clades if 'total_richness_per_clades' was provided
-  phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxa_name)
+  phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxon_name)
   if (!is.null(richness_info$table)) phy$sampling_fraction_df <- richness_info$table
 
   return(phy)

@@ -96,7 +96,22 @@ quiet_graft <- function (fun, ...) { suppressWarnings(fun(..., verbose = FALSE))
 expect_valid_graft <- function (grafted, phy, missing_taxa_list, ...)
 {
   expect_true(ape::is.ultrametric(grafted))
-  expect_true(all(missing_taxa_list$Taxa_name %in% grafted$tip.label))
+  expect_true(all(missing_taxa_list$Taxon_name %in% grafted$tip.label))
   checks <- suppressWarnings(check_grafting_constraints(grafted, phy, missing_taxa_list, verbose = FALSE, ...))
   expect_true(isTRUE(attr(checks, "all_ok")))
+}
+
+## Name the items of a missing_taxa_list after 'Taxon_name' (same names, same order), as required by the grafting functions
+# Items that do not have the length of 'Taxon_name' are left unchanged, so that the length checks can be tested
+name_items <- function (missing_taxa_list)
+{
+  items <- c("Target_clade", "Sister_clade", "include_target_clade_stem", "Excluded_subclades", "exclude_subclades_stem")
+  for (item in items)
+  {
+    if (!is.null(missing_taxa_list[[item]]) && length(missing_taxa_list[[item]]) == length(missing_taxa_list$Taxon_name))
+    {
+      names(missing_taxa_list[[item]]) <- missing_taxa_list$Taxon_name
+    }
+  }
+  missing_taxa_list
 }
