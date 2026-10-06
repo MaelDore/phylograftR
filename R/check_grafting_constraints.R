@@ -17,11 +17,14 @@
 #' @param phy_grafted An object of class `"phylo"`. The phylogeny after grafting.
 #' @param phy_backbone An object of class `"phylo"`. The backbone phylogeny used for grafting (i.e., before grafting).
 #' @param missing_taxa_list A list with the information on the grafted taxa. Typically the same list as used for grafting.
-#'   Items: `$Taxa_name`, `$Target_clade`, and optionally `$include_target_clade_stem` and `$Excluded_subclades`. See [graft_missing_taxa()] for details.
-#' @param include_stem Logical. Same as in [graft_missing_taxa()]: whether grafting on the stem branch of target clades is accepted.
+#'   Items: `$Taxa_name`, `$Target_clade`, and optionally `$include_target_clade_stem`, `$Excluded_subclades` and `$exclude_subclades_stem`. See [graft_missing_taxa()] for details.
+#' @param include_target_clade_stem Logical. Same as in [graft_missing_taxa()]: whether grafting on the stem branch of target clades is accepted.
 #'   Taxa with a value in `missing_taxa_list$include_target_clade_stem` use it instead (`NA` or no item: this global value is used). Default is `TRUE`.
 #' @param use_excluded_subclades Logical. Same as in [graft_missing_taxa()]: whether to check the excluded subclades.
 #'   If no `$Excluded_subclades` item is found in `missing_taxa_list`, a warning is issued and excluded subclades are not checked. Default is `TRUE`.
+#' @param exclude_subclades_stem Logical. Same as in [graft_missing_taxa()]: whether the stem of the excluded subclades is also excluded
+#'   (a taxon sister to an excluded subclade is then a violation). Excluded subclades with a value in `missing_taxa_list$exclude_subclades_stem` use it instead
+#'   (`NA` or no item: this global value is used). Default is `TRUE`.
 #' @param check_backbone Logical. Whether to check that the topology and branch lengths of the backbone are preserved once the grafted taxa are pruned. Default is `TRUE`.
 #' @param tolerance Numeric. Tolerance for the maximum deviation in backbone branch lengths, relative to the depth (root age) of the backbone.
 #'   Default is `1e-6`.
@@ -32,11 +35,11 @@
 #'
 #' * `$Taxon`: Name of the taxon.
 #' * `$in_tree`: Logical. Whether the taxon is found in the grafted phylogeny.
-#' * `$include_stem`: Logical. Whether the stem of the target clade was accepted for this taxon (`$include_target_clade_stem` of the taxon if provided, otherwise the global `include_stem`).
+#' * `$include_target_clade_stem`: Logical. Whether the stem of the target clade was accepted for this taxon (`missing_taxa_list$include_target_clade_stem` of the taxon if provided, otherwise the global `include_target_clade_stem` argument).
 #' * `$target_position`: Character string. Position of the taxon relative to its target clade: `"crown"` (within the clade), `"stem"` (sister to the clade, or to other missing taxa grafted on the stem),
 #'      `"tip_branch"` (on the branch of the tip, for single-tip target clades), or `"outside"` (neither within the clade nor on its stem = an error).
 #' * `$target_ok`: Logical. Whether the position respects the target clade (`"crown"` or, if the stem is accepted for the taxon, `"stem"`; `"tip_branch"` for single-tip clades).
-#' * `$excluded_ok`: Logical. Whether the taxon is outside all its excluded subclades.
+#' * `$excluded_ok`: Logical. Whether the taxon is outside all its excluded subclades (and not on their stem, for the subclades with an excluded stem).
 #' * `$n_excluded_violated`: Integer. Number of excluded subclades violated.
 #' * `$excluded_violated`: Character string. Indices of the excluded subclades violated, separated by commas (`NA` if none).
 #' * `$ok`: Logical. Whether the taxon respects both its target clade and its excluded subclades.
@@ -53,7 +56,8 @@
 #'
 #'
 #' @details
-#' A taxon respects its target clade if it is found within the clade, or on its stem branch if the stem is accepted for this taxon (`include_stem = TRUE`, or `include_target_clade_stem = TRUE` for this taxon)
+#' A taxon respects its target clade if it is found within the clade, or on its stem branch if the stem is accepted for this taxon:
+#' global `include_target_clade_stem = TRUE`, or `missing_taxa_list$include_target_clade_stem` of this taxon
 #' (the taxon is then sister to the target clade, or to other missing taxa sister to the target clade, with no other backbone tip in between).
 #' For a single-tip target clade, the taxon must be on the branch of the tip, with no other backbone tip in between.
 #'
@@ -62,7 +66,9 @@
 #' Only backbone tips are considered when checking the position of a taxon (missing taxa are ignored), so such configurations are valid.
 #'
 #' A taxon respects its excluded subclades if it is not nested within any of them.
-#' As in [graft_missing_taxa()], the stem branch of an excluded subclade is allowed: the taxon is then sister to the subclade, not within it.
+#' If the stem of an excluded subclade is excluded (`exclude_subclades_stem = TRUE`, the default), the taxon must also not be on its stem, i.e., sister to the subclade
+#' (or to other missing taxa sister to the subclade), with no other backbone tip in between. For a single-tip excluded subclade, the taxon must not be on the branch of the tip.
+#' As in [graft_missing_taxa()], if the stem of the subclade is not excluded, the taxon can be sister to the subclade, not within it.
 #'
 #' Branches of the backbone are matched between the pruned grafted phylogeny and the backbone by the set of tips they subtend.
 #' Branch lengths are considered preserved if the maximum deviation, relative to the depth of the backbone, is lower than `tolerance`.
@@ -105,9 +111,10 @@
 
 check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                                         phy_backbone, # Backbone phylogeny used for the grafting (before grafting)
-                                        missing_taxa_list, # Same list as used for grafting. Items: Taxa_name, Target_clade, include_target_clade_stem, Excluded_subclades
-                                        include_stem = TRUE, # Same as in graft_missing_taxa(): accept grafting on the stem branch of the target clade?
+                                        missing_taxa_list, # Same list as used for grafting. Items: Taxa_name, Target_clade, include_target_clade_stem, Excluded_subclades, exclude_subclades_stem
+                                        include_target_clade_stem = TRUE, # Same as in graft_missing_taxa(): accept grafting on the stem branch of the target clade?
                                         use_excluded_subclades = TRUE, # Same as in graft_missing_taxa(): check the excluded subclades?
+                                        exclude_subclades_stem = TRUE, # Same as in graft_missing_taxa(): is the stem of the excluded subclades also excluded?
                                         check_backbone = TRUE, # Check that the backbone topology and branch lengths are preserved after pruning the grafted taxa
                                         tolerance = 1e-6, # Tolerance for the max deviation in backbone branch lengths, relative to the depth (root age) of the backbone
                                         stop_on_failure = FALSE, # Stop with an error if any constraint is violated
@@ -119,9 +126,9 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
   taxa_names <- as.character(missing_taxa_list$Taxa_name)
   n_taxa <- length(taxa_names)
 
-  # Stem availability of each taxon: 'include_target_clade_stem' of the taxon if provided, otherwise the global 'include_stem'
+  # Stem availability of each taxon: 'missing_taxa_list$include_target_clade_stem' of the taxon if provided, otherwise the global 'include_target_clade_stem'
   include_stem_taxa <- resolve_include_stem(include_target_clade_stem = missing_taxa_list$include_target_clade_stem,
-                                            include_stem = include_stem, n_taxa = n_taxa)
+                                            include_stem = include_target_clade_stem, n_taxa = n_taxa)
 
   # Check presence of excluded subclades
   excluded_list <- missing_taxa_list$Excluded_subclades
@@ -140,6 +147,11 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
   {
     stop("'Excluded_subclades' must have the same length as 'Taxa_name' (use NULL for taxa without excluded subclades)")
   }
+
+  # Stem exclusion of each excluded subclade: 'missing_taxa_list$exclude_subclades_stem' of the subclade if provided, otherwise the global 'exclude_subclades_stem'
+  exclude_stem_list <- resolve_exclude_subclades_stem(exclude_subclades_stem_taxa = missing_taxa_list$exclude_subclades_stem,
+                                                      exclude_subclades_stem = exclude_subclades_stem,
+                                                      excluded_subclades = if (use_excluded_subclades) excluded_list else NULL, n_taxa = n_taxa)
 
   # Check tips used to define the clades are in the backbone
   defining_tips <- unique(unlist(c(missing_taxa_list$Target_clade, if (use_excluded_subclades) excluded_list)))
@@ -189,7 +201,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
   # Initiate resulting data.frame
   res <- data.frame(Taxon = taxa_names,
                     in_tree = taxa_names %in% phy_grafted$tip.label,
-                    include_stem = include_stem_taxa,
+                    include_target_clade_stem = include_stem_taxa,
                     target_position = NA, # "crown", "stem", "outside", or "tip_branch" (single-tip clade)
                     target_ok = NA,
                     excluded_ok = NA,
@@ -242,18 +254,34 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
     if (use_excluded_subclades)
     {
       excluded_i <- excluded_list[[i]]
+      stem_excluded_i <- exclude_stem_list[[i]] # Is the stem of each excluded subclade also excluded?
       violated <- c()
       for (j in seq_along(excluded_i))
       {
         E_tips <- unique(unname(excluded_i[[j]]))
+        if (length(E_tips) == 0) { next }
 
-        # Case with only a single tip as Excluded subclade
-        if (length(E_tips) < 2) { next } # A single tip has no descendants: nothing to violate
+        # Case with only a single tip as Excluded subclade: it has no descendants, only its terminal branch (its stem) can be excluded
+        if (length(E_tips) == 1)
+        {
+          in_E_crown <- FALSE
+        } else {
+          # Case with a clade (pairs of tips) as Excluded subclade(s)
+          E_node <- ape::getMRCA(phy = phy_grafted, tip = E_tips)
+          # Check that the clade containing the target taxon on the grafted tree does not include tips from the excluded subclade(s)
+          in_E_crown <- taxon_idx %in% tips_of_node_g(E_node)
+        }
+        if (in_E_crown) { violated <- c(violated, j); next }
 
-        # Case with a clade (pairs of tips) as Excluded subclade(s)
-        E_node <- ape::getMRCA(phy = phy_grafted, tip = E_tips)
-        # Check that the clade containing the target taxon on the grafted tree does not include tips from the excluded subclade(s)
-        if (taxon_idx %in% tips_of_node_g(E_node)) { violated <- c(violated, j) }
+        # If the stem of the excluded subclade is excluded: the taxon must not be on its stem, i.e., sister to the subclade
+        # (or to other missing taxa sister to it), with no other backbone tip in between
+        if (stem_excluded_i[j])
+        {
+          Z_node <- ape::getMRCA(phy = phy_grafted, tip = c(E_tips, taxa_names[i]))
+          Z_tips_idx <- tips_of_node_g(Z_node)
+          Z_backbone_tips <- phy_grafted$tip.label[Z_tips_idx[is_backbone_tip_g[Z_tips_idx]]]
+          if (all(Z_backbone_tips %in% get_backbone_clade_tips(E_tips))) { violated <- c(violated, j) }
+        }
       }
       # Record the number of excluded subclades violated
       res$n_excluded_violated[i] <- length(violated)

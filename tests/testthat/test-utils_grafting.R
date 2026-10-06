@@ -359,13 +359,78 @@ test_that("resolve_include_stem() uses the taxon values, and the global value fo
 })
 
 ## Test that the taxa without branch are identified with the stem availability of each taxon
-test_that("find_taxa_without_allowed_branch() uses the stem availability of each taxon",
+test_that("find_taxa_without_allowed_branch() uses the stem availability of each taxon, and the stem exclusion of each excluded subclade",
 {
   toy <- toy_setup()
-  # The excluded subclade is identical to the target clade: no branch without the stem, only the stem branch with it
-  mtl <- list(Taxa_name = c("no_stem", "stem"), Target_clade = list(toy$B, toy$B), Excluded_subclades = list(list(toy$B), list(toy$B)))
-  flagged <- find_taxa_without_allowed_branch(toy$phy, mtl, include_stem = c(FALSE, TRUE))
-  expect_equal(flagged$Taxa_name, "no_stem")
+  # The excluded subclade is identical to the target clade
+  mtl <- list(Taxa_name = c("no_stem", "stem_open", "stem_closed"), Target_clade = list(toy$B, toy$B, toy$B),
+              Excluded_subclades = list(list(toy$B), list(toy$B), list(toy$B)))
+  flagged <- find_taxa_without_allowed_branch(toy$phy, mtl, include_stem = c(FALSE, TRUE, TRUE),
+                                              exclude_subclades_stem = list(TRUE, FALSE, TRUE))
+  # No branch without the stem of the target clade; only the stem if the stem of the excluded subclade is not excluded; no branch if it is excluded
+  expect_equal(flagged$Taxa_name, c("no_stem", "stem_closed"))
+
+  # A single tip: its terminal branch is the only branch, excluded only if its stem is excluded
+  tip <- list(Taxa_name = "x", Target_clade = list(toy$s), Excluded_subclades = list(list(toy$s)))
+  expect_equal(find_taxa_without_allowed_branch(toy$phy, tip, exclude_subclades_stem = TRUE)$Taxa_name, "x")
+  expect_equal(nrow(find_taxa_without_allowed_branch(toy$phy, tip, exclude_subclades_stem = FALSE)), 0)
+})
+
+## Test the resolution of the stem exclusion of each excluded subclade
+test_that("resolve_exclude_subclades_stem() uses the subclade values, and the global value for NA or NULL, and validates its inputs",
+{
+  excluded <- list(list("a", c("b", "c")), NULL, list("d"))
+  resolve <- function (item, global = TRUE) resolve_exclude_subclades_stem(item, global, excluded, 3)
+
+  # No item: global value for each subclade
+  expect_equal(resolve(NULL), list(c(TRUE, TRUE), logical(0), TRUE))
+  expect_equal(resolve(NULL, FALSE), list(c(FALSE, FALSE), logical(0), FALSE))
+  # One value per subclade, one value recycled, NA and NULL use the global value
+  expect_equal(resolve(list(c(FALSE, NA), NULL, FALSE)), list(c(FALSE, TRUE), logical(0), FALSE))
+  expect_equal(resolve(list(FALSE, NULL, NA)), list(c(FALSE, FALSE), logical(0), TRUE))
+  expect_equal(resolve(list(NULL, NULL, NULL), FALSE), list(c(FALSE, FALSE), logical(0), FALSE))
+  # A vector with one value per taxon is recycled over the subclades of each taxon
+  expect_equal(resolve(c(FALSE, NA, TRUE)), list(c(FALSE, FALSE), logical(0), TRUE))
+  # Values for a taxon without excluded subclades are ignored
+  expect_equal(resolve(list(NULL, c(TRUE, FALSE), NULL)), list(c(TRUE, TRUE), logical(0), TRUE))
+
+  expect_error(resolve(list(TRUE, NULL)), "same length as 'Taxa_name'")
+  expect_error(resolve(list(c(TRUE, FALSE, TRUE), NULL, NULL)), "element 1 has 3 values")
+  expect_error(resolve(list(c(1, 0), NULL, NULL)), "logical values")
+  expect_error(resolve(NULL, NA), "single logical value")
+  expect_error(resolve(NULL, c(TRUE, FALSE)), "single logical value")
+  # Without any excluded subclades
+  expect_equal(resolve_exclude_subclades_stem(NULL, TRUE, NULL, 2), list(logical(0), logical(0)))
+})
+
+## Test the branches of the excluded subclades
+test_that("get_excluded_branch_nodes() returns the branches within the subclades, plus their stem region if their stem is excluded",
+{
+  toy <- toy_setup()
+  phy <- toy$phy
+  desc_B <- get_descendant_nodes(phy, toy$node_B)
+  tip_s <- match(toy$s, phy$tip.label)
+
+  # A clade: crown, plus the stem if excluded
+  expect_setequal(get_excluded_branch_nodes(phy, list(toy$B), TRUE), c(desc_B, toy$node_B))
+  expect_setequal(get_excluded_branch_nodes(phy, list(toy$B), FALSE), desc_B)
+
+  # A single tip: its terminal branch if its stem is excluded, otherwise nothing
+  expect_equal(get_excluded_branch_nodes(phy, list(toy$s), TRUE), tip_s)
+  expect_equal(get_excluded_branch_nodes(phy, list(toy$s), FALSE), integer(0))
+
+  # Several subclades with their own setting; empty subclades exclude nothing
+  mixed <- get_excluded_branch_nodes(phy, list(toy$B, toy$s, character(0), toy$C), c(TRUE, FALSE, TRUE, FALSE))
+  expect_setequal(mixed, c(desc_B, toy$node_B, get_descendant_nodes(phy, toy$node_C)))
+  expect_equal(get_excluded_branch_nodes(phy, NULL), integer(0))
+
+  # The stem region follows the grafts on the stem of the excluded subclade: pieces of the stem and branches of the missing-only subtrees
+  grafted <- graft_tip_on_branch(phy, "X1", toy$node_B, 0.5)
+  stem_region <- get_excluded_branch_nodes(grafted, list(toy$B), TRUE, missing_tip_labels = "X1")
+  expect_true(match("X1", grafted$tip.label) %in% stem_region)
+  expect_gt(length(stem_region), length(desc_B) + 1)
+  # Without declaring the taxon as missing, its subtree is a backbone subtree: the stem region stops there
+  expect_false(match("X1", grafted$tip.label) %in% get_excluded_branch_nodes(grafted, list(toy$B), TRUE))
 })
 
 
@@ -387,9 +452,24 @@ test_that("check_excluded_subclades_position() flags excluded subclades that are
   expect_identical(flagged$relation[flagged$Taxa_name == "identical"], "identical")
   expect_identical(flagged$relation[flagged$Taxa_name == "contains"], "contains_target")
 
-  # Nothing to flag without excluded subclades, or with single-tip subclades
+  # Nothing to flag without excluded subclades, or with a nested single-tip subclade
   none <- list(Taxa_name = c("x", "y"), Target_clade = list(toy$A, toy$A), Excluded_subclades = list(NULL, list(toy$s)))
   expect_equal(nrow(check_excluded_subclades_position(toy$phy, none)), 0)
+})
+
+## Test the position of single-tip excluded subclades
+test_that("check_excluded_subclades_position() checks single-tip subclades, unless their stem is not excluded (they exclude nothing)",
+{
+  toy <- toy_setup()
+  mtl <- list(Taxa_name = c("identical", "disjoint", "contains"), Target_clade = list(toy$s, toy$A, toy$s),
+              Excluded_subclades = list(list(toy$s), list(toy$o), list(toy$A)))
+  flagged <- check_excluded_subclades_position(toy$phy, mtl)
+  expect_equal(flagged$relation[match(c("identical", "disjoint", "contains"), flagged$Taxa_name)], c("identical", "disjoint", "contains_target"))
+
+  # Single-tip subclades with a stem that is not excluded exclude nothing: not checked
+  mtl$exclude_subclades_stem <- list(FALSE, FALSE, TRUE)
+  flagged <- check_excluded_subclades_position(toy$phy, mtl)
+  expect_equal(flagged$Taxa_name, "contains")
 })
 
 ## Test flagging of taxa whose constraints left no valid branch for grafting

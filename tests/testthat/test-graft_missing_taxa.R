@@ -63,7 +63,7 @@ test_that("graft_missing_taxa() checks the position of the excluded subclades re
   expect_error(graft_missing_taxa(toy$phy, one(toy$B, toy$A), verbose = FALSE), "contain the whole target clade")
   for (method in c("uniform", "BD_clades")) for (stem in c(TRUE, FALSE))
   {
-    expect_error(graft_missing_taxa(toy$phy, one(toy$B, toy$B), method = method, include_stem = stem, verbose = FALSE),
+    expect_error(graft_missing_taxa(toy$phy, one(toy$B, toy$B), method = method, include_target_clade_stem = stem, verbose = FALSE),
                  "graft_missing_clades\\(\\)")
   }
 
@@ -85,8 +85,8 @@ test_that("graft_missing_taxa() warns if the target clade is the whole tree and 
   whole_tree <- pair_for_node(toy$phy, ape::Ntip(toy$phy) + 1)
   mtl <- list(Taxa_name = "X1", Target_clade = list(whole_tree))
 
-  expect_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", include_stem = TRUE, verbose = FALSE), "whole tree")
-  expect_no_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", include_stem = FALSE, verbose = FALSE))
+  expect_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", include_target_clade_stem = TRUE, verbose = FALSE), "whole tree")
+  expect_no_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", include_target_clade_stem = FALSE, verbose = FALSE))
 })
 
 
@@ -193,7 +193,7 @@ test_that("graft_missing_taxa() validates 'include_target_clade_stem'",
                          "same length as 'Taxa_name'")
   expect_error(graft_missing_taxa(toy$phy, c(mtl, list(include_target_clade_stem = c(1, 0))), method = "uniform", verbose = FALSE),
                          "logical vector")
-  expect_error(graft_missing_taxa(toy$phy, mtl, include_stem = NA, method = "uniform", verbose = FALSE), "single logical value")
+  expect_error(graft_missing_taxa(toy$phy, mtl, include_target_clade_stem = NA, method = "uniform", verbose = FALSE), "single logical value")
 })
 
 ## Test the warning for single-tip target clades with include_target_clade_stem = FALSE
@@ -220,10 +220,10 @@ test_that("graft_missing_taxa() warns once, listing the taxa with a single-tip t
     expect_match(single_tip_messages, "ignored")
   }
 
-  # No warning for NA / TRUE, nor for a global include_stem = FALSE (documented as ignored for single tips)
+  # No warning for NA / TRUE, nor for a global include_target_clade_stem = FALSE (documented as ignored for single tips)
   mtl$include_target_clade_stem <- c(NA, TRUE, FALSE, NA)
   expect_false(any(grepl("single-tip target clade", warning_messages(
-    graft_missing_taxa(toy$phy, mtl, method = "uniform", include_stem = FALSE, verbose = FALSE)))))
+    graft_missing_taxa(toy$phy, mtl, method = "uniform", include_target_clade_stem = FALSE, verbose = FALSE)))))
 
   # The taxon is grafted on the branch of its tip, whatever the value
   mtl$include_target_clade_stem <- c(FALSE, TRUE, NA, NA)
@@ -233,7 +233,7 @@ test_that("graft_missing_taxa() warns once, listing the taxa with a single-tip t
 })
 
 ## Test that the taxon-level value overrides the global argument, with the 'uniform' method
-test_that("with method = 'uniform', include_target_clade_stem overrides include_stem per taxon, and NA uses include_stem",
+test_that("with method = 'uniform', include_target_clade_stem overrides the global include_target_clade_stem per taxon, and NA uses it",
 {
   toy <- toy_setup()
   mtl <- list(Taxa_name = paste0("X", 1:4), Target_clade = rep(list(toy$A), 4),
@@ -245,17 +245,17 @@ test_that("with method = 'uniform', include_target_clade_stem overrides include_
       stem_used <<- c(stem_used, list(...)$include_stem); original(...) })
 
   # Global TRUE: NA means TRUE. Taxa without access to the stem come first within their clade
-  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", include_stem = TRUE, seed = 1)
+  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", include_target_clade_stem = TRUE, seed = 1)
   expect_equal(stem_used, c(FALSE, FALSE, TRUE, TRUE))
 
   # Global FALSE: NA means FALSE
   stem_used <- NULL
-  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", include_stem = FALSE, seed = 1)
+  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", include_target_clade_stem = FALSE, seed = 1)
   expect_equal(stem_used, c(FALSE, FALSE, FALSE, TRUE))
 
   # Without the item, the global value applies to all taxa
   stem_used <- NULL
-  quiet_graft(graft_missing_taxa, toy$phy, mtl[c("Taxa_name", "Target_clade")], method = "uniform", include_stem = FALSE, seed = 1)
+  quiet_graft(graft_missing_taxa, toy$phy, mtl[c("Taxa_name", "Target_clade")], method = "uniform", include_target_clade_stem = FALSE, seed = 1)
   expect_equal(stem_used, rep(FALSE, 4))
 })
 
@@ -296,7 +296,7 @@ test_that("with method = 'BD_clades', taxa of a clade are grouped by stem availa
   expect_valid_graft(grafted, toy$phy, mtl)
   checks <- check_grafting_constraints(grafted, toy$phy, mtl, verbose = FALSE)
   expect_false(any(checks$target_position[checks$Taxon %in% c("X2", "X4")] == "stem"))
-  expect_equal(checks$include_stem, c(TRUE, FALSE, TRUE, FALSE, TRUE))
+  expect_equal(checks$include_target_clade_stem, c(TRUE, FALSE, TRUE, FALSE, TRUE))
 })
 
 ## Test that the richness information does not depend on the stem availability for a shared clade
@@ -333,15 +333,15 @@ test_that("graft_missing_taxa() warns about the stem of the whole tree only for 
   {
     expect_true(any(grepl("whole tree", warning_messages(graft_missing_taxa(toy$phy, mtl, method = method, verbose = FALSE)))))
     expect_false(any(grepl("whole tree", warning_messages(
-      graft_missing_taxa(toy$phy, mtl_no_stem, method = method, include_stem = FALSE, verbose = FALSE)))))
+      graft_missing_taxa(toy$phy, mtl_no_stem, method = method, include_target_clade_stem = FALSE, verbose = FALSE)))))
   }
 })
 
 
 # ---- Stem region ----
 
-## Test that include_stem = TRUE allows multiple missing taxa to be grafting in the stem region
-test_that("with include_stem = TRUE, taxa grafted on the stem can receive further grafts",
+## Test that include_target_clade_stem = TRUE allows multiple missing taxa to be grafting in the stem region
+test_that("with include_target_clade_stem = TRUE, taxa grafted on the stem can receive further grafts",
 {
   toy <- toy_setup()
   # Many taxa on a single tip: only its terminal branch is available, so the taxa must be grafted on each other
@@ -366,19 +366,165 @@ test_that("with include_stem = TRUE, taxa grafted on the stem can receive furthe
   expect_valid_graft(grafted_bd, toy$phy, mtl)
 })
 
-## Test that include_stem = FALSE does NOT allow missing taxa to be grafting in the stem region
-test_that("with include_stem = FALSE, all taxa are grafted within the crown of their target clade",
+## Test that include_target_clade_stem = FALSE does NOT allow missing taxa to be grafting in the stem region
+test_that("with include_target_clade_stem = FALSE, all taxa are grafted within the crown of their target clade",
 {
   toy <- toy_setup()
   mtl <- list(Taxa_name = paste0("X", 1:4), Target_clade = rep(list(toy$A), 4), Excluded_subclades = rep(list(NULL), 4))
 
   for (method in c("uniform", "BD_clades"))
   {
-    grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = method, include_stem = FALSE, seed = 2)
-    checks <- check_grafting_constraints(grafted, toy$phy, mtl, include_stem = FALSE, verbose = FALSE)
+    grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = method, include_target_clade_stem = FALSE, seed = 2)
+    checks <- check_grafting_constraints(grafted, toy$phy, mtl, include_target_clade_stem = FALSE, verbose = FALSE)
     expect_true(attr(checks, "all_ok"))
     expect_false(any(checks$target_position == "stem"))
   }
+})
+
+
+# ---- Stem of the excluded subclades ----
+
+## Identify "cherries" on the toy backbone: a pair of sister tips, used as a target clade with only two terminal branches
+# Used to test exclusion from one of its terminal branches => the grafted taxa must land on the remaining sister-branch.
+toy_cherry <- function (phy)
+{
+  n <- ape::Ntip(phy)
+  parents <- phy$edge[phy$edge[, 2] <= n, 1]
+  node <- unique(parents[duplicated(parents)])[1]
+  phy$tip.label[phy$edge[phy$edge[, 1] == node, 2]]
+}
+
+## Concatenate as a message all warnings raised when evaluating an expression
+warning_messages <- function (expr)
+{
+  messages <- character()
+  withCallingHandlers(expr, warning = function (w) { messages <<- c(messages, conditionMessage(w)); invokeRestart("muffleWarning") })
+  messages
+}
+
+## Test the validation of the stem exclusion of the excluded subclades
+test_that("graft_missing_taxa() validates 'exclude_subclades_stem'",
+{
+  toy <- toy_setup()
+  mtl <- list(Taxa_name = c("X1", "X2"), Target_clade = list(toy$A, toy$A), Excluded_subclades = list(list(toy$B, toy$C), NULL))
+
+  expect_error(graft_missing_taxa(toy$phy, mtl, exclude_subclades_stem = NA, method = "uniform", verbose = FALSE), "single logical value")
+  expect_error(graft_missing_taxa(toy$phy, c(mtl, list(exclude_subclades_stem = list(TRUE))), method = "uniform", verbose = FALSE),
+               "same length as 'Taxa_name'")
+  expect_error(graft_missing_taxa(toy$phy, c(mtl, list(exclude_subclades_stem = list(c(TRUE, FALSE, TRUE), NULL))), method = "uniform", verbose = FALSE),
+               "excluded subclades")
+  expect_error(graft_missing_taxa(toy$phy, c(mtl, list(exclude_subclades_stem = list(c(1, 0), NULL))), method = "uniform", verbose = FALSE),
+               "logical values")
+})
+
+## Test all combinations of branch exclusions in the uniform method
+test_that("with method = 'uniform', the stem of an excluded subclade is excluded by default, with the setting of each subclade",
+{
+  toy <- toy_setup()
+  desc <- function (node) get_descendant_nodes(toy$phy, node)
+  excluded_used <- list()
+  original <- draw_random_branch_weighted_per_length
+  local_mocked_bindings(draw_random_branch_weighted_per_length = function (...) {
+    excluded_used[[length(excluded_used) + 1]] <<- list(...)$excluded_nodes; original(...) })
+
+  mtl <- list(Taxa_name = "X1", Target_clade = list(toy$A), Excluded_subclades = list(list(toy$B, toy$C)))
+
+  # Default: the stem is excluded for both subclades
+  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", seed = 1)
+  expect_setequal(excluded_used[[1]], c(desc(toy$node_B), toy$node_B, desc(toy$node_C), toy$node_C))
+
+  # Global FALSE: only the branches within the subclades
+  excluded_used <- list()
+  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", exclude_subclades_stem = FALSE, seed = 1)
+  expect_setequal(excluded_used[[1]], c(desc(toy$node_B), desc(toy$node_C)))
+
+  # Setting specific to each subclade, with NA using the global value
+  excluded_used <- list()
+  quiet_graft(graft_missing_taxa, toy$phy, c(mtl, list(exclude_subclades_stem = list(c(TRUE, NA)))), method = "uniform", exclude_subclades_stem = FALSE, seed = 1)
+  expect_setequal(excluded_used[[1]], c(desc(toy$node_B), toy$node_B, desc(toy$node_C)))
+
+  # A single value for all the subclades of the taxon, or no exclusion at all
+  excluded_used <- list()
+  quiet_graft(graft_missing_taxa, toy$phy, c(mtl, list(exclude_subclades_stem = c(FALSE))), method = "uniform", seed = 1)
+  expect_setequal(excluded_used[[1]], c(desc(toy$node_B), desc(toy$node_C)))
+  excluded_used <- list()
+  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", use_excluded_subclades = FALSE, seed = 1)
+  expect_length(excluded_used, 0) # nothing excluded: NULL passed to the draw
+})
+
+## Test the stem exclusion passed to each taxon in the 'BD_clades' method
+test_that("with method = 'BD_clades', the stem exclusion of each excluded subclade is used for each taxon",
+{
+  toy <- toy_setup()
+  mtl <- list(Taxa_name = c("X1", "X2"), Target_clade = list(toy$A, toy$A), Excluded_subclades = list(list(toy$B, toy$C), list(toy$B)),
+              exclude_subclades_stem = list(c(TRUE, FALSE), NA))
+  used <- list()
+  original <- graft_from_divergence_age
+  local_mocked_bindings(graft_from_divergence_age = function (...) {
+    args <- list(...); used[[args$tip_label]] <<- args$exclude_subclades_stem; original(...) })
+
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "BD_clades", seed = 1)
+  expect_equal(used$X1, c(TRUE, FALSE))
+  expect_equal(used$X2, TRUE) # NA uses the global value
+  expect_valid_graft(grafted, toy$phy, mtl)
+})
+
+## Test that a single tip can be excluded: its terminal branch is not available
+test_that("a single-tip excluded subclade excludes its terminal branch by default, with both methods",
+{
+  toy <- toy_setup()
+  cherry <- toy_cherry(toy$phy)
+  # Target clade with only two terminal branches (no stem), one of them excluded: the only branch left is the other one
+  mtl <- list(Taxa_name = "X1", Target_clade = list(cherry), Excluded_subclades = list(list(cherry[1])))
+
+  for (method in c("uniform", "BD_clades"))
+  {
+    for (seed in 1:3)
+    {
+      grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = method, include_target_clade_stem = FALSE, seed = seed)
+      sister_tips <- grafted$tip.label[phytools::getDescendants(grafted, ape::getMRCA(grafted, c("X1", cherry[2])))]
+      sister_tips <- sister_tips[!is.na(sister_tips)]
+      expect_setequal(sister_tips, c("X1", cherry[2]))
+      checks <- check_grafting_constraints(grafted, toy$phy, mtl, include_target_clade_stem = FALSE, verbose = FALSE)
+      expect_true(checks$excluded_ok)
+    }
+  }
+
+  # The same exclusion is an error when the terminal branch is the only one left to exclude: target and excluded tip are identical
+  same_tip <- list(Taxa_name = "X1", Target_clade = list(toy$s), Excluded_subclades = list(list(toy$s)))
+  expect_error(graft_missing_taxa(toy$phy, same_tip, method = "uniform", verbose = FALSE), "graft_missing_clades\\(\\)")
+  # ... but not if the exclusion has no effect
+  expect_true("X1" %in% quiet_graft(graft_missing_taxa, toy$phy, same_tip, method = "uniform", exclude_subclades_stem = FALSE, seed = 1)$tip.label)
+})
+
+## Test the warning for single-tip excluded subclades that exclude nothing
+test_that("graft_missing_taxa() warns once, listing the single-tip excluded subclades with exclude_subclades_stem = FALSE",
+{
+  toy <- toy_setup()
+  mtl <- list(Taxa_name = c("X1", "X2", "X3"), Target_clade = list(toy$A, toy$A, toy$A),
+              Excluded_subclades = list(list(toy$s, toy$B), list(toy$B), NULL),
+              exclude_subclades_stem = list(c(FALSE, TRUE), FALSE, NULL))
+
+  for (method in c("uniform", "BD_clades"))
+  {
+    messages <- warning_messages(graft_missing_taxa(toy$phy, mtl, method = method, verbose = FALSE))
+    noop_messages <- messages[grepl("single-tip excluded subclade", messages)]
+    expect_length(noop_messages, 1) # once, at the beginning
+    expect_match(noop_messages, "1 single-tip")
+    expect_match(noop_messages, "X1")
+    expect_match(noop_messages, toy$s, fixed = TRUE)
+    expect_no_match(noop_messages, "X2|X3") # X2 has a true clade with FALSE: the exclusion has an effect
+  }
+
+  # A global FALSE also warns (single tips then exclude nothing), and the default or TRUE values do not
+  mtl$exclude_subclades_stem <- NULL
+  expect_true(any(grepl("single-tip excluded subclade", warning_messages(
+    graft_missing_taxa(toy$phy, mtl, method = "uniform", exclude_subclades_stem = FALSE, verbose = FALSE)))))
+  expect_false(any(grepl("single-tip excluded subclade", warning_messages(
+    graft_missing_taxa(toy$phy, mtl, method = "uniform", verbose = FALSE)))))
+  # No warning if the excluded subclades are not used
+  expect_false(any(grepl("single-tip excluded subclade", warning_messages(
+    graft_missing_taxa(toy$phy, mtl, method = "uniform", exclude_subclades_stem = FALSE, use_excluded_subclades = FALSE, verbose = FALSE)))))
 })
 
 
