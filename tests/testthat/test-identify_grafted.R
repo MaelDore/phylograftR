@@ -23,10 +23,10 @@ reference_grafted_edges <- function (tree, grafted)
 toy_grafted <- function ()
 {
   toy <- toy_setup()
-  missing_taxa_list <- list(Taxa_name = paste0("X", 1:5),
-                            Target_clade = list(toy$B, toy$B, toy$C, toy$s, toy$s))
+  missing_taxa_list <- name_items(list(Taxon_name = paste0("X", 1:5),
+                            Target_clade = list(toy$B, toy$B, toy$C, toy$s, toy$s)))
   grafted <- quiet_graft(graft_missing_taxa, toy$phy, missing_taxa_list, method = "uniform", seed = 3)
-  list(toy = toy, grafted = grafted, taxa = missing_taxa_list$Taxa_name)
+  list(toy = toy, grafted = grafted, taxa = missing_taxa_list$Taxon_name)
 }
 
 ## Test that the output phylogeny contains valid grafted elements

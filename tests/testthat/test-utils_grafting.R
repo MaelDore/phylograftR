@@ -227,6 +227,9 @@ test_that("build_richness_info() derives the unsampled species of each clade, wi
 
   # unsampled species per node
   expect_equal(info$unsampled_by_node[c(toy$node_B, toy$node_C, toy$node_A)], c(12, 0, 31))
+
+  # Names of the missing taxa counted in each clade (nested clades included)
+  expect_equal(tb$Missing_taxa, c("b1, b2, b3", "c1, c2", "b1, b2, b3, c1, c2, a1, a2, a3, a4"))
 })
 
 ## Test that build_richness_info() derives the unsampled species of clades based on information from its nested clades
@@ -352,7 +355,7 @@ test_that("resolve_include_target_clade_stem() uses the taxon values, and the gl
   expect_equal(resolve_include_target_clade_stem(c(NA, FALSE, TRUE), FALSE, 3), c(FALSE, FALSE, TRUE))
   expect_equal(resolve_include_target_clade_stem(rep(NA_integer_, 3), FALSE, 3), rep(FALSE, 3)) # only NA, whatever the type
 
-  expect_error(resolve_include_target_clade_stem(c(TRUE, FALSE), TRUE, 3), "same length as 'Taxa_name'")
+  expect_error(resolve_include_target_clade_stem(c(TRUE, FALSE), TRUE, 3), "same length as 'Taxon_name'")
   expect_error(resolve_include_target_clade_stem(c(1, 0, 1), TRUE, 3), "logical vector")
   expect_error(resolve_include_target_clade_stem(NULL, NA, 3), "single logical value")
   expect_error(resolve_include_target_clade_stem(NULL, c(TRUE, FALSE), 3), "single logical value")
@@ -363,16 +366,16 @@ test_that("find_taxa_without_allowed_branch() uses the stem availability of each
 {
   toy <- toy_setup()
   # The excluded subclade is identical to the target clade
-  mtl <- list(Taxa_name = c("no_stem", "stem_open", "stem_closed"), Target_clade = list(toy$B, toy$B, toy$B),
+  mtl <- list(Taxon_name = c("no_stem", "stem_open", "stem_closed"), Target_clade = list(toy$B, toy$B, toy$B),
               Excluded_subclades = list(list(toy$B), list(toy$B), list(toy$B)))
   flagged <- find_taxa_without_allowed_branch(toy$phy, mtl, include_target_clade_stem = c(FALSE, TRUE, TRUE),
                                               exclude_subclades_stem = list(TRUE, FALSE, TRUE))
   # No branch without the stem of the target clade; only the stem if the stem of the excluded subclade is not excluded; no branch if it is excluded
-  expect_equal(flagged$Taxa_name, c("no_stem", "stem_closed"))
+  expect_equal(flagged$Taxon_name, c("no_stem", "stem_closed"))
 
   # A single tip: its terminal branch is the only branch, excluded only if its stem is excluded
-  tip <- list(Taxa_name = "x", Target_clade = list(toy$s), Excluded_subclades = list(list(toy$s)))
-  expect_equal(find_taxa_without_allowed_branch(toy$phy, tip, exclude_subclades_stem = TRUE)$Taxa_name, "x")
+  tip <- list(Taxon_name = "x", Target_clade = list(toy$s), Excluded_subclades = list(list(toy$s)))
+  expect_equal(find_taxa_without_allowed_branch(toy$phy, tip, exclude_subclades_stem = TRUE)$Taxon_name, "x")
   expect_equal(nrow(find_taxa_without_allowed_branch(toy$phy, tip, exclude_subclades_stem = FALSE)), 0)
 })
 
@@ -394,7 +397,7 @@ test_that("resolve_exclude_subclades_stem() uses the subclade values, and the gl
   # Values for a taxon without excluded subclades are ignored
   expect_equal(resolve(list(NULL, c(TRUE, FALSE), NULL)), list(c(TRUE, TRUE), logical(0), TRUE))
 
-  expect_error(resolve(list(TRUE, NULL)), "same length as 'Taxa_name'")
+  expect_error(resolve(list(TRUE, NULL)), "same length as 'Taxon_name'")
   expect_error(resolve(list(c(TRUE, FALSE, TRUE), NULL, NULL)), "element 1 has 3 values")
   expect_error(resolve(list(c(1, 0), NULL, NULL)), "logical values")
   expect_error(resolve(NULL, NA), "single logical value")
@@ -441,19 +444,19 @@ test_that("check_excluded_subclades_position() flags excluded subclades that are
 {
   toy <- toy_setup()
   missing_taxa_list <- list(
-    Taxa_name = c("nested", "disjoint", "identical", "contains"),
+    Taxon_name = c("nested", "disjoint", "identical", "contains"),
     Target_clade = list(toy$A, toy$A, toy$B, toy$B),
     Excluded_subclades = list(list(toy$B), list(toy$D), list(toy$B), list(toy$A)))
   flagged <- check_excluded_subclades_position(toy$phy, missing_taxa_list)
 
   # The nested exclusion is fine and not reported
-  expect_setequal(flagged$Taxa_name, c("disjoint", "identical", "contains"))
-  expect_identical(flagged$relation[flagged$Taxa_name == "disjoint"], "disjoint")
-  expect_identical(flagged$relation[flagged$Taxa_name == "identical"], "identical")
-  expect_identical(flagged$relation[flagged$Taxa_name == "contains"], "contains_target")
+  expect_setequal(flagged$Taxon_name, c("disjoint", "identical", "contains"))
+  expect_identical(flagged$relation[flagged$Taxon_name == "disjoint"], "disjoint")
+  expect_identical(flagged$relation[flagged$Taxon_name == "identical"], "identical")
+  expect_identical(flagged$relation[flagged$Taxon_name == "contains"], "contains_target")
 
   # Nothing to flag without excluded subclades, or with a nested single-tip subclade
-  none <- list(Taxa_name = c("x", "y"), Target_clade = list(toy$A, toy$A), Excluded_subclades = list(NULL, list(toy$s)))
+  none <- list(Taxon_name = c("x", "y"), Target_clade = list(toy$A, toy$A), Excluded_subclades = list(NULL, list(toy$s)))
   expect_equal(nrow(check_excluded_subclades_position(toy$phy, none)), 0)
 })
 
@@ -461,15 +464,15 @@ test_that("check_excluded_subclades_position() flags excluded subclades that are
 test_that("check_excluded_subclades_position() checks single-tip subclades, unless their stem is not excluded (they exclude nothing)",
 {
   toy <- toy_setup()
-  mtl <- list(Taxa_name = c("identical", "disjoint", "contains"), Target_clade = list(toy$s, toy$A, toy$s),
+  mtl <- list(Taxon_name = c("identical", "disjoint", "contains"), Target_clade = list(toy$s, toy$A, toy$s),
               Excluded_subclades = list(list(toy$s), list(toy$o), list(toy$A)))
   flagged <- check_excluded_subclades_position(toy$phy, mtl)
-  expect_equal(flagged$relation[match(c("identical", "disjoint", "contains"), flagged$Taxa_name)], c("identical", "disjoint", "contains_target"))
+  expect_equal(flagged$relation[match(c("identical", "disjoint", "contains"), flagged$Taxon_name)], c("identical", "disjoint", "contains_target"))
 
   # Single-tip subclades with a stem that is not excluded exclude nothing: not checked
   mtl$exclude_subclades_stem <- list(FALSE, FALSE, TRUE)
   flagged <- check_excluded_subclades_position(toy$phy, mtl)
-  expect_equal(flagged$Taxa_name, "contains")
+  expect_equal(flagged$Taxon_name, "contains")
 })
 
 ## Test flagging of taxa whose constraints left no valid branch for grafting
@@ -477,16 +480,16 @@ test_that("find_taxa_without_allowed_branch() lists the taxa whose branches are 
 {
   toy <- toy_setup()
   missing_taxa_list <- list(
-    Taxa_name = c("bad", "tip", "fine"),
+    Taxon_name = c("bad", "tip", "fine"),
     Target_clade = list(toy$B, toy$s, toy$A),
     Excluded_subclades = list(list(toy$B), NULL, list(toy$B)))
 
   # Without the stem, the whole crown of B is excluded: no branch for 'bad'
   flagged <- find_taxa_without_allowed_branch(toy$phy, missing_taxa_list, include_target_clade_stem = FALSE)
-  expect_identical(flagged$Taxa_name, "bad")
+  expect_identical(flagged$Taxon_name, "bad")
 
   # A single tip always has its terminal branch, and A has branches outside B
-  expect_false(any(c("tip", "fine") %in% flagged$Taxa_name))
+  expect_false(any(c("tip", "fine") %in% flagged$Taxon_name))
 
   # Ignoring the excluded subclades: nothing is flagged
   expect_equal(nrow(find_taxa_without_allowed_branch(toy$phy, missing_taxa_list, include_target_clade_stem = FALSE, use_excluded_subclades = FALSE)), 0)
@@ -507,4 +510,92 @@ test_that("check_temp_file_path() validates the path of the temporary file",
   expect_error(check_temp_file_path(file.path(tempdir(), "missing_dir", "temp_phy.rds")), "does not exist")
   expect_error(check_temp_file_path(1), "single character string")
   expect_error(check_temp_file_path(c(good, good)), "single character string")
+})
+
+
+# ---- Names of the items of missing_taxa_list ----
+
+## Test the validation of the structure of missing_taxa_list: items named after Taxon_name
+test_that("validate_missing_taxa_list() requires items named after Taxon_name, in the same order, only for the items provided",
+{
+  valid <- list(Taxon_name = c("X1", "X2"),
+                Target_clade = list(X1 = c("t1", "t2"), X2 = "t3"),
+                include_target_clade_stem = c(X1 = TRUE, X2 = NA),
+                Excluded_subclades = list(X1 = list(c("t1", "t2")), X2 = NULL),
+                exclude_subclades_stem = list(X1 = FALSE, X2 = NULL))
+  expect_equal(validate_missing_taxa_list(valid), c("X1", "X2"))
+  # Optional items that are NULL (or absent) do not need names
+  expect_silent(validate_missing_taxa_list(valid[c("Taxon_name", "Target_clade")]))
+  expect_silent(validate_missing_taxa_list(c(valid[c("Taxon_name", "Target_clade")], list(include_target_clade_stem = NULL))))
+  # Names inside the items (e.g., named excluded subclades) are not required
+  expect_silent(validate_missing_taxa_list(valid))
+
+  # Taxon_name
+  expect_error(validate_missing_taxa_list("a"), "must be a list")
+  expect_error(validate_missing_taxa_list(valid[-1]), "missing or empty")
+  expect_error(validate_missing_taxa_list(modifyList(valid, list(Taxon_name = character(0)))), "missing or empty")
+  expect_error(validate_missing_taxa_list(modifyList(valid, list(Taxon_name = c("X1", NA)))), "character vector without missing values")
+  expect_error(validate_missing_taxa_list(modifyList(valid, list(Taxon_name = 1:2))), "character vector")
+  expect_error(validate_missing_taxa_list(modifyList(valid, list(Taxon_name = c("X1", "X1")))), "unique names.*X1")
+
+  # Item defining the clades
+  expect_error(validate_missing_taxa_list(valid[-2]), "'missing_taxa_list\\$Target_clade' is missing")
+  expect_error(validate_missing_taxa_list(valid, clade_item = "Sister_clade"), "Sister_clade' is missing")
+
+  # Every item provided: same length, names, same names in the same order
+  for (item in c("Target_clade", "include_target_clade_stem", "Excluded_subclades", "exclude_subclades_stem"))
+  {
+    too_long <- valid; too_long[[item]] <- c(valid[[item]], list(X3 = NULL))
+    expect_error(validate_missing_taxa_list(too_long), paste0(item, ".*same length as 'Taxon_name' \\(3 vs 2\\)"))
+
+    unnamed <- valid; names(unnamed[[item]]) <- NULL
+    expect_error(validate_missing_taxa_list(unnamed), paste0(item, ".*must be named after 'Taxon_name'.*no names"))
+
+    wrong <- valid; names(wrong[[item]]) <- c("X1", "Y2")
+    expect_error(validate_missing_taxa_list(wrong), paste0(item, ".*do not match.*position 2: 'Y2' in '", item, "' vs 'X2' in 'Taxon_name'"))
+
+    swapped <- valid; names(swapped[[item]]) <- c("X2", "X1")
+    expect_error(validate_missing_taxa_list(swapped), paste0(item, ".*not in the same order"))
+
+    na_name <- valid; names(na_name[[item]]) <- c("X1", NA)
+    expect_error(validate_missing_taxa_list(na_name), "must match 'Taxon_name'")
+  }
+
+  # Only the items listed are validated
+  unnamed_excluded <- valid; names(unnamed_excluded$Excluded_subclades) <- NULL
+  expect_silent(validate_missing_taxa_list(unnamed_excluded, optional_items = character(0)))
+})
+
+## Test the labels of the excluded subclades in messages
+test_that("label_excluded_subclades() uses the optional names of the excluded subclades", 
+{
+  expect_equal(label_excluded_subclades(list(c("a", "b"), "c")), c("a, b", "c"))
+  expect_equal(label_excluded_subclades(list(grp = c("a", "b"), "c")), c("'grp' (a, b)", "c")) # partly named
+  expect_equal(label_excluded_subclades(list(g1 = "a", g2 = "b")), c("'g1' (a)", "'g2' (b)"))
+  expect_equal(label_excluded_subclades(list(g1 = letters[1:8]), max_tips = 3), "'g1' (a, b, c, ... (8 tips))")
+  expect_equal(label_excluded_subclades(list(g1 = letters[1:8]), max_tips = Inf), paste0("'g1' (", paste(letters[1:8], collapse = ", "), ")"))
+  expect_equal(label_excluded_subclades(NULL), character(0))
+})
+
+## Test that the resolvers name their outputs after the taxa (and the excluded subclades), and use the names in messages
+test_that("the resolvers of the stem settings return outputs named after the taxa, and report taxa by name", 
+{
+  expect_equal(resolve_include_target_clade_stem(c(NA, FALSE), TRUE, 2, taxon_names = c("X1", "X2")), c(X1 = TRUE, X2 = FALSE))
+  expect_equal(resolve_include_target_clade_stem(NULL, FALSE, 2, taxon_names = c("X1", "X2")), c(X1 = FALSE, X2 = FALSE))
+  expect_null(names(resolve_include_target_clade_stem(NULL, FALSE, 2))) # no names without taxon names
+
+  excluded <- list(X1 = list(grp_B = c("a", "b"), "c"), X2 = NULL)
+  out <- resolve_exclude_subclades_stem(list(X1 = c(FALSE, NA), X2 = NULL), TRUE, excluded, 2, taxon_names = c("X1", "X2"))
+  expect_named(out, c("X1", "X2"))
+  expect_equal(out$X1, stats::setNames(c(FALSE, TRUE), c("grp_B", ""))) # names of the excluded subclades are carried
+  expect_equal(out$X2, logical(0))
+  expect_named(resolve_exclude_subclades_stem(NULL, TRUE, excluded, 2, taxon_names = c("X1", "X2")), c("X1", "X2"))
+
+  # Messages name the taxon
+  expect_error(resolve_exclude_subclades_stem(list(X1 = c(TRUE, FALSE, TRUE), X2 = NULL), TRUE, excluded, 2, taxon_names = c("X1", "X2")), "taxon 'X1' has 3 values")
+  expect_error(resolve_exclude_subclades_stem(list(X1 = c(1, 0), X2 = NULL), TRUE, excluded, 2, taxon_names = c("X1", "X2")), "logical values.*taxon 'X1'")
+
+  # If both the values and the excluded subclades are named, the names must match
+  expect_equal(unname(resolve_exclude_subclades_stem(list(X1 = stats::setNames(c(FALSE, TRUE), c("grp_B", "")), X2 = NULL), TRUE, excluded, 2)[[1]]), c(FALSE, TRUE))
+  expect_error(resolve_exclude_subclades_stem(list(X1 = c(grp_C = FALSE, other = TRUE), X2 = NULL), TRUE, excluded, 2), "must match the names of its excluded subclades")
 })
