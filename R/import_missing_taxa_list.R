@@ -27,43 +27,46 @@
 #'
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which the taxa will be grafted. It is used to check the validity of the tips and clades provided.
 #' @param sep Character string. Field separator of a text file. Default is `NULL`, to choose it from the extension of the file:
-#'   `","` for `.csv`, and a tab for `.tsv`, `.tab` and `.txt`.
+#'   `","` for `.csv`, and a tab for `.tsv`, `.tab` and `.txt`. Commas and semicolons are also used inside the cells, to separate the tips and the subclades:
+#'   to distinguish from the field separator, the cells containing tips and the subclades data must be quoted.
 #' @param sheet Character string or integer. Only used for Excel files. Name or position of the sheet to read. Default is `1`.
 #' @param reader Function. Optional function used to read `file`, to import any other format (e.g., `.ods`, or an export of an online spreadsheet).
 #'   It must take the path of the file as first argument and return a data frame. If provided, it is used whatever the extension of the file.
 #'   Default is `NULL`.
 #' @param ... Further arguments passed to the function reading the file (`utils::read.table()` for text files, `readxl::read_excel()` for Excel files, or `reader`).
 #'
-#' @details The columns of `file` are the items of `missing_taxa_list` as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades].
-#'   Column names must be written exactly as below. Tips are separated by commas (`,`), and the subclades by semicolons (`;`). Spaces around separators are ignored.
-#'   Values are `TRUE` or `FALSE` (also accepts `T`, `F`, `yes`, `no`, `1`, `0`), or `NA`.
+#' @details
+#' The columns of `file` are the items of `missing_taxa_list` as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades].
+#' Column names must be written exactly as below. Tips are separated by commas (`,`), and the subclades by semicolons (`;`). Spaces around separators are ignored.
+#' Values are `TRUE` or `FALSE` (also accepts `T`, `F`, `yes`, `no`, `1`, `0`), or `NA`.
 #'
-#'     * `Taxon_name` (Required): Names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
-#'     * `Target_clade` or `Sister_clade` (Required): Tip labels defining a target clade per taxon, i.e., the clade where the taxon is known to belong (e.g., its genus);
-#'       or a sister clade, i.e., the clade to which the taxon is to be attached on the stem of.
-#'       A pair of tips defines the clade as their MRCA node (e.g., `"t8, t20"`).
-#'       A single tip defines the "clade" as the terminal branch of this tip (e.g., `"t15"`).
-#'       Use `Sister_clade` to prepare a list for [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
-#'       the columns specific to [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] below must then be absent.
-#'     * `include_target_clade_stem`: (Optional) Logical values. For each taxon, whether the stem branch of its target clade is available for grafting.
-#'       `NA` values and blank cells use the global `include_target_clade_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
-#'     * `Excluded_subclades`: (Optional) For each taxon, labels of the subclades of its target clade where the taxon is known not to belong.
-#'       Each subclade is defined by a pair of tips or a single tip.
-#'       Ex: `"t10, t19; t5, t12; t7"` for three subclades, the last one being a single tip.
-#'       Blank cells for taxa without excluded subclades.
-#'     * `exclude_subclades_stem`: (Optional) Logical values. For each taxon, whether the stem of each of its excluded subclades is also excluded,
-#'       with one value per subclade of `Excluded_subclades` separated by semicolons, or a single value used for all of them.
-#'       Ex: `"FALSE; TRUE; TRUE"`.
-#'       `NA` values and blank cells use the global `exclude_subclades_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
+#' * `Taxon_name` (Required): Names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
+#' * `Target_clade` or `Sister_clade` (Required): Tip labels defining a target clade per taxon, i.e., the clade where the taxon is known to belong (e.g., its genus);
+#'   or a sister clade, i.e., the clade on whose stem branch the taxon is grafted, as its sister.
+#'   A pair of tips defines the clade as their MRCA node (e.g., `"t26, t18"`).
+#'   A single tip defines the "clade" as the terminal branch of this tip (e.g., `"t15"`).
+#'   Use `Sister_clade` to prepare a list for [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
+#'   the columns specific to [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] below (`Target_clade_name`, `include_target_clade_stem`, `Excluded_subclades`, `Excluded_subclades_names` and `exclude_subclades_stem`) are ignored, with a warning.
+#' * `include_target_clade_stem`: (Optional) Logical values. For each taxon, whether the stem branch of its target clade is available for grafting.
+#'   `NA` values and blank cells use the global `include_target_clade_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
+#' * `Excluded_subclades`: (Optional) For each taxon, tip labels defining the subclades of its target clade where the taxon is known not to belong.
+#'   Each subclade is defined by a pair of tips or a single tip.
+#'   Ex: `"t10, t19; t5, t12; t7"` for three subclades, the last one being a single tip.
+#'   Blank cells for taxa without excluded subclades.
+#' * `exclude_subclades_stem`: (Optional) Logical values. For each taxon, whether the stem of each of its excluded subclades is also excluded,
+#'   with one value per subclade of `Excluded_subclades` separated by semicolons, or a single value used for all of them.
+#'   Ex: `"FALSE; TRUE; TRUE"`.
+#'   `NA` values and blank cells use the global `exclude_subclades_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
 #'
-#'    Two additional columns not matching items in `missing_taxa_list` can be used to provide names of clades:
-#'     * `Target_clade_name` or `Sister_clade_name` (Optional): Label of the target (or sister) clade.
-#'       It is only used to check that the clades are defined consistently (see [`phylograftR::convert_missing_taxa_list()`][convert_missing_taxa_list]).
-#'     * `Excluded_subclades_names` (Optional): Labels of the excluded subclades, separated by semicolons, in the same order as in `Excluded_subclades`.
-#'       Ex: `"group_1; group_2; tip_t7"`. There must be one label per subclade.
-#'       If provided, they are used as names of the subclades in the `Excluded_subclades` item of the list, and in the messages of the grafting functions.
+#' Optional columns that do not match items in `missing_taxa_list` can be used to provide names of clades:
 #'
-#'   Other columns are ignored, with a warning.
+#' * `Target_clade_name` or `Sister_clade_name` (Optional): Label of the target (or sister) clade.
+#'   It is only used to check that the clades are defined consistently (see [`phylograftR::convert_missing_taxa_list()`][convert_missing_taxa_list]).
+#' * `Excluded_subclades_names` (Optional): Labels of the excluded subclades, separated by semicolons, in the same order as in `Excluded_subclades`.
+#'   Ex: `"group_1; group_2; tip_t7"`. There must be one label per subclade.
+#'   If provided, they are used as names of the subclades in the `Excluded_subclades` item of the list, and in the messages of the grafting functions.
+#'
+#' Other columns are ignored, with a warning.
 #'
 #' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions, with the following items:
 #'  * `$Taxon_name` Character vector.
@@ -181,14 +184,14 @@ import_missing_taxa_list <- function (file, # Path to the table
 #'
 #'  * `Taxon_name` (Required): Names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
 #'  * `Target_clade` or `Sister_clade` (Required): Tip labels defining a target clade per taxon, i.e., the clade where the taxon is known to belong (e.g., its genus);
-#'    or a sister clade, i.e., the clade to which the taxon is to be attached on the stem of.
-#'    A pair of tips defines the clade as their MRCA node (e.g., `"t8, t20"`).
+#'    or a sister clade, i.e., the clade on whose stem branch the taxon is grafted, as its sister.
+#'    A pair of tips defines the clade as their MRCA node (e.g., `"t26, t18"`).
 #'    A single tip defines the "clade" as the terminal branch of this tip (e.g., `"t15"`).
 #'    Use `Sister_clade` to prepare a list for [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
-#'    the columns specific to [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] below must then be absent.
+#'    the columns specific to [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] below are then ignored, with a warning.
 #'  * `include_target_clade_stem`: (Optional) Logical values. For each taxon, whether the stem branch of its target clade is available for grafting.
 #'    `NA` values and blank cells use the global `include_target_clade_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
-#'  * `Excluded_subclades`: (Optional) For each taxon, labels of the subclades of its target clade where the taxon is known not to belong.
+#'  * `Excluded_subclades`: (Optional) For each taxon, tip labels defining the subclades of its target clade where the taxon is known not to belong.
 #'    Each subclade is defined by a pair of tips or a single tip.
 #'    Ex: `"t10, t19; t5, t12; t7"` for three subclades, the last one being a single tip.
 #'    Blank cells for taxa without excluded subclades.
@@ -197,7 +200,7 @@ import_missing_taxa_list <- function (file, # Path to the table
 #'    Ex: `"FALSE; TRUE; TRUE"`.
 #'    `NA` values and blank cells use the global `exclude_subclades_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
 #'
-#' Two additional columns not matching items in `missing_taxa_list` can be used to provide names of clades:
+#' Optional columns that do not match items in `missing_taxa_list` can be used to provide names of clades:
 #'  * `Target_clade_name` or `Sister_clade_name` (Optional): Label of the target (or sister) clade.
 #'    It is only used to check that the clades are defined consistently (see [`phylograftR::convert_missing_taxa_list()`][convert_missing_taxa_list]).
 #'  * `Excluded_subclades_names` (Optional): Labels of the excluded subclades, separated by semicolons, in the same order as in `Excluded_subclades`.
@@ -219,7 +222,7 @@ import_missing_taxa_list <- function (file, # Path to the table
 #' The function stops with an informative message if:
 #'  * Required columns are missing, or one `Taxon_name` is missing, duplicated, or already in `phy`.
 #'  * A clade has no tips, or tips are repeated, or are absent from `phy`.
-#'  * The number of values in `exclude_subclades_stem` does not match the number of excluded subclades.
+#'  * The number of values in `exclude_subclades_stem`, or of labels in `Excluded_subclades_names`, does not match the number of excluded subclades.
 #'  * Labels are inconsistent (see above).
 #'  * An excluded subclade is identical to, or contains, the target clade of its taxon (no branch would remain).
 #'    A warning is issued if it is outside of the target clade (the exclusion has no effect).

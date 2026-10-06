@@ -48,9 +48,15 @@
 #'   It shows target clades defined by one or two tips, excluded subclades (named or not, with one tip or several), and the stem settings.
 #'
 #' @usage data(toy_missing_taxa_list)
-#' @format A named list with the items `$Taxon_name`, `$Target_clade`, `$Target_clade_name`, `$include_target_clade_stem`,
-#'   `$Excluded_subclades` and `$exclude_subclades_stem`.
-#'   See [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] for the description of the items.
+#' @format A named list with 7 taxa and the following items. Every item is named after the taxa (`$Taxon_name`), in the same order.
+#'  * `$Taxon_name` Character vector. Names of the taxa to graft.
+#'  * `$Target_clade` List of character vectors of tips defining the target clade of each taxon (one tip: the terminal branch of this tip).
+#'  * `$Target_clade_name` Character vector. Labels of the target clades. Ignored by the grafting functions.
+#'  * `$include_target_clade_stem` Logical vector. Whether the stem of the target clade of each taxon is available for grafting (`NA` uses the global argument).
+#'  * `$Excluded_subclades` List (one element per taxon) of named lists of character vectors of tips defining the excluded subclades, or `NULL`.
+#'  * `$exclude_subclades_stem` List (one element per taxon) of logical vectors (one value per excluded subclade), or `NULL`.
+#'
+#'   See [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] for the use of the items in the grafting.
 #'
 #' @seealso [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list], [`phylograftR::convert_missing_taxa_list()`][convert_missing_taxa_list]
 #'
@@ -70,11 +76,7 @@
 #' @title Toy total richness of the target clades
 #'
 #' @description List usable as `total_richness_per_clades` with [`phylograftR::toy_backbone`][toy_backbone] and [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list].
-#' It is built from the table `system.file("extdata", "toy_total_richness.csv", package = "phylograftR")`, with the tips of each clade separated by commas:
-#'
-#' ```
-
-#' ```
+#' It is built from the table `system.file("extdata", "toy_total_richness.csv", package = "phylograftR")`, with the tips of each clade separated by commas (see the examples).
 #'
 #' @usage data(toy_total_richness_per_clades)
 #' @format A list with the items `$Target_clade` (list of character vectors of tips) and `$total_richness` (numeric vector, `NA` if unknown).
