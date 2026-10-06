@@ -7,8 +7,9 @@
 graft_missing_taxa(
   phy,
   missing_taxa_list,
-  include_stem = TRUE,
+  include_target_clade_stem = TRUE,
   use_excluded_subclades = TRUE,
+  exclude_subclades_stem = TRUE,
   method = "BD_clades",
   min_tips = 5,
   total_richness_per_clades = NULL,
@@ -24,25 +25,44 @@ graft_missing_taxa(
 \item{phy}{An object of class \code{"phylo"}. The backbone phylogeny on which taxa are grafted.
 It must be rooted and ultrametric (i.e., be time-calibrated).}
 
-\item{missing_taxa_list}{A list with the information on the taxa to graft. Items:
+\item{missing_taxa_list}{A list with the information on the taxa to graft. Every item provided must be named after \verb{$Taxon_name}. Items:
 \itemize{
-\item \verb{$Taxa_name}: Character vector of the names of the taxa to graft. Names must be unique and absent from \code{phy$tip.label}.
-\item \verb{$Target_clade}: List (same length as \verb{$Taxa_name}) of character vectors. For each taxon, the tip labels defining its target clade,
+\item \verb{$Taxon_name}: Character vector of the names of the taxa to graft. Names must be unique and absent from \code{phy$tip.label}.
+\item \verb{$Target_clade}: List (named after \verb{$Taxon_name}) of character vectors. For each taxon, the tip labels defining its target clade,
 i.e., the clade where the taxon is known to belong (e.g., its genus). A pair of tips defines the clade as their MRCA node.
 A single tip defines the "clade" as the terminal branch of this tip.
-\item \verb{$Excluded_subclades}: (Optional) List (same length as \verb{$Taxa_name}) of lists of character vectors. For each taxon, the subclades of its target clade
-where the taxon is known not to belong. Each subclade is defined by a pair of tips. Use \code{NULL} for taxa with no excluded subclades.
-Single-tip subclades exclude nothing.
+\item \verb{$include_target_clade_stem}: (Optional) Logical vector (named after \verb{$Taxon_name}). For each taxon, whether the stem branch of its target clade
+is available for grafting. It overrides the global argument \code{include_target_clade_stem} for this taxon. \code{NA} values use the global argument.
+With \code{NULL} (default, or no item), the global argument applies to all taxa. Ignored for single-tip target clades (their terminal branch is their only branch,
+so the stem is always used; a warning lists the taxa with \code{FALSE}) and for target clades that are the whole tree.
+\item \verb{$Excluded_subclades}: (Optional) List (named after \verb{$Taxon_name}) of lists of character vectors. For each taxon, the subclades of its target clade
+where the taxon is known not to belong. Each subclade is defined by a pair of tips (or a single tip, which excludes its terminal branch, see \code{exclude_subclades_stem}).
+Use \code{NULL} for taxa with no excluded subclades.
+\item \verb{$exclude_subclades_stem}: (Optional) List (named after \verb{$Taxon_name}) of logical vectors. For each taxon, whether the stem of each of its excluded subclades
+is also excluded, with one value per subclade of \verb{$Excluded_subclades} (a single value is used for all the subclades of the taxon; \code{NULL} uses \code{exclude_subclades_stem}).
+It overrides the global argument \code{exclude_subclades_stem} for these subclades. \code{NA} values use \code{exclude_subclades_stem}.
+A logical vector with one value per taxon is also accepted (each value is used for all the excluded subclades of the taxon).
+For example, \code{Excluded_subclades = list(X1 = list(c("t1", "t2"), "t7"), X2 = NULL)} with \code{exclude_subclades_stem = list(X1 = c(FALSE, TRUE), X2 = NULL)}.
+The excluded subclades of a taxon can also be named (e.g., \code{list(X1 = list(grp_A = c("t1", "t2"), grp_B = "t7"))}): these optional names are used in messages,
+and must match the names of the values of \code{exclude_subclades_stem} of the taxon if both are named.
 }}
 
-\item{include_stem}{Logical. Whether the stem branch of target clades is available for grafting.
+\item{include_target_clade_stem}{Logical. Whether the stem branch of target clades is available for grafting. This is the default for all taxa:
+taxa with a value in \code{missing_taxa_list$include_target_clade_stem} use this specific instead.
 If \code{TRUE}, a taxon can be grafted on the stem branch, and becomes sister to the target clade.
 Taxa already grafted on the stem can receive further grafts (see 'stem region' in Details section).
 Ignored for single-tip target clades as their terminal branch is their only branch, and is therefore always available for grafting.
-Ignored if the target clade is the whole tree: it has no stem. A warning is issued if \code{include_stem = TRUE}.
+Ignored if the target clade is the whole tree: it has no stem. A warning is issued if the stem is requested for such a taxon.
 Default is \code{TRUE}.}
 
 \item{use_excluded_subclades}{Logical. Whether to avoid grafting within the excluded subclades provided in \code{missing_taxa_list$Excluded_subclades}. Default is \code{TRUE}.}
+
+\item{exclude_subclades_stem}{Logical. Whether the stem of the excluded subclades is also excluded. This is the default for all the excluded subclades:
+those with a value in \code{missing_taxa_list$exclude_subclades_stem} use this specific value instead.
+If \code{TRUE}, a taxon cannot be grafted on the stem of an excluded subclade (it cannot be sister to it): the subclade is excluded entirely, crown and stem.
+If \code{FALSE}, only the branches within the subclade are excluded, and the taxon can be sister to it.
+For a single-tip excluded subclade, the terminal branch is the only branch of the tip, and it is its stem: the tip excludes nothing if \code{FALSE}
+(a warning lists these cases). Only used if \code{use_excluded_subclades = TRUE}. Default is \code{TRUE}.}
 
 \item{method}{Character string. Method used to draw the divergence times and the branches used for grafting.
 Must be one of \code{"uniform"} or \code{"BD_clades"} (default). See Details.}
@@ -123,25 +143,34 @@ The backbone is never modified: only new tips are added.
 \details{
 The function stops, before any grafting, if the backbone is not ultrametric, or if some taxa have no branch available for grafting
 (i.e., all branches of their target clade are excluded). The taxa concerned are listed in the error message,
-so the constraints (\code{include_stem} or \code{Excluded_subclades}) can be adjusted.
+so the constraints (\code{include_target_clade_stem}, \code{Excluded_subclades} or \code{exclude_subclades_stem}) can be adjusted.
 With \code{method = "BD_clades"}, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon.
 \subsection{Target clades, stem regions and excluded subclades}{
 
 Each taxon is grafted within its target clade. The branches available for grafting are all the branches of the target clade
-(descending from its MRCA node), plus its stem region if \code{include_stem = TRUE}. Grafting on the stem places the taxon sister to the target clade.
+(descending from its MRCA node), plus its stem region if the stem is available for this taxon (\code{missing_taxa_list$include_target_clade_stem} of the taxon if provided, otherwise the global argument \code{include_target_clade_stem}).
+Grafting on the stem places the taxon sister to the target clade.
+Taxa of the same target clade can therefore differ in their stem availability: the clade is the same (same MRCA node, same richness information),
+but the branches and the time window available for the divergence times of these taxa differ.
 
 The stem region is not restricted to the original stem branch. A taxon grafted on the stem splits it in two pieces, and becomes itself part of the stem region:
 later taxa can be grafted on both pieces of the stem, and on the terminal branch of the earlier taxon (the two taxa are then sister, and together sister to the target clade).
-More generally, the stem region includes all the branches of the 'missing-only subtrees' hanging from the stem, i.e., subtrees containing only taxa of \code{missing_taxa_list$Taxa_name},
+More generally, the stem region includes all the branches of the 'missing-only subtrees' hanging from the stem, i.e., subtrees containing only taxa of \code{missing_taxa_list$Taxon_name},
 whatever their own target clade. This mirrors what happens within the crown group, where missing taxa can already be grafted on the branches of other missing taxa.
 
-Branches inside excluded subclades are removed from the pool of available branches. However, the stem branch of an excluded subclade stays available:
-the taxon can be sister to the excluded subclade, but never nested within it.
+Branches inside excluded subclades are removed from the pool of available branches. By default (\code{exclude_subclades_stem = TRUE}),
+the stem region of the excluded subclades is removed as well: the taxon can be neither nested within the excluded subclade,
+nor sister to it (nor sister to the missing taxa already grafted on its stem).
+This is the only way to exclude a single tip, as its terminal branch is its only branch.
+With \code{exclude_subclades_stem = FALSE} (globally, or for a given subclade in \code{missing_taxa_list$exclude_subclades_stem}), the stem of the excluded subclade stays available:
+the taxon can be sister to the excluded subclade, but never nested within it. A single tip then excludes nothing.
+The setting is specific to each excluded subclade, so a taxon can have excluded subclades with different settings.
 
 Excluded subclades are expected to be nested within their target clade. The function checks their position before grafting:
 a warning is issued if an excluded subclade is outside the target clade (the exclusion then has no effect).
 The function stops if an excluded subclade contains the whole target clade, or is identical to it: no branch (or only the stem branch) would be left for grafting.
 To graft taxa specifically on the stem branch of a clade or of a single tip, use \code{\link[=graft_missing_clades]{graft_missing_clades()}} instead.
+A warning lists the single-tip excluded subclades with a stem that is not excluded, as they exclude nothing.
 }
 
 \subsection{Enclosing clades}{
@@ -163,13 +192,18 @@ A uniform draw implicitly assumes a flat density (r = 0), and gives too much wei
 \item \code{"BD_clades"}: Taxa are grafted per target clade, from the smallest to the largest, so nested clades are processed first (see below).
 For each target clade, a birth-death model is fitted with \code{phytools::fit.bd()} on the clade, or on the smallest enclosing clade with at least \code{min_tips} tips.
 The sampling fraction accounts for the number of missing taxa provided for grafting in this clade.
-The divergence times of all taxa missing in the target clade are then jointly drawn with \code{TreeSim::corsim()}.
+The divergence times of all taxa missing in the target clade are then jointly drawn with \code{TreeSim::corsim()}, between the present and the stem age of the clade
+(or its crown age if the stem is not available for these taxa).
 Taxa are grafted from the oldest to the youngest divergence time. Each taxon is grafted on a branch drawn uniformly among the available branches that cross its divergence age.
 Younger taxa can therefore be grafted on the branches of older missing taxa. This is the recommended method, but it can be time consuming for large phylogenies.
+Taxa of the same target clade with different stem availability are drawn in separate groups, and the birth-death model is fitted only once per target clade.
+The group of taxa without access to the stem is grafted first, so these taxa are present when drawing the divergence times of the taxa that can also use the stem
+(this is the same logic as for nested clades).
 }
 
 With both methods, nested clades are processed first, so the taxa of a larger clade are grafted on a tree that already
 includes the taxa of the clades nested within it, and can be grafted on their branches.
+For taxa of the same clade, those without access to the stem come first.
 For \code{"BD_clades"}, it also ensures that the divergence times of nested clades are accounted for when drawing the divergence times of the larger clade.
 Taxa of the same target clade are grafted in random order, so they are exchangeable.
 Clades that are not nested do not interact, so the order in which they are processed has no influence.
@@ -206,11 +240,18 @@ phy$edge.length <- phy$edge.length / max(ape::node.depth.edgelength(phy)) * 50
 
 # List the missing taxa to graft
 missing_taxa_list <- list(
-  Taxa_name = c("X1", "X2", "X3", "X4"),
+  Taxon_name = c("X1", "X2", "X3", "X4"),
   # Target clades defined by pairs of tips (MRCA), or by a single tip
-  Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5", c("t26", "t18")),
+  # All the other items are named after Taxon_name (same names, same order)
+  Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")),
+  # Stem of the target clade available for grafting? NA uses the global 'include_target_clade_stem' argument (TRUE by default). X4 cannot be grafted on the stem
+  include_target_clade_stem = c(X1 = NA, X2 = NA, X3 = NA, X4 = FALSE),
   # Excluded subclades defined by pairs of tips. Only X1 has an excluded subclade
-  Excluded_subclades = list(list(c("t10", "t19")), NULL, NULL, NULL))
+  # (the optional name of the excluded subclade, here 'clade_A', is used in messages)
+  Excluded_subclades = list(X1 = list(clade_A = c("t10", "t19")), X2 = NULL, X3 = NULL, X4 = NULL),
+  # Stem of the excluded subclades also excluded? NA / NULL use the global 'exclude_subclades_stem' argument (TRUE by default).
+  # Here the stem of the excluded subclade of X1 stays available, so X1 can be sister to it, but never nested within it
+  exclude_subclades_stem = list(X1 = FALSE, X2 = NULL, X3 = NULL, X4 = NULL))
 
 # Graft with the default method ("BD_clades")
 grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,

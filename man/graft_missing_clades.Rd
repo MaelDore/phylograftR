@@ -23,8 +23,8 @@ It must be rooted and ultrametric (i.e., be time-calibrated).}
 
 \item{missing_taxa_list}{A list with the information on the taxa to graft. Items:
 \itemize{
-\item \verb{$Taxa_name}: Character vector of the names of the taxa to graft. Names must be unique and absent from \code{phy$tip.label}.
-\item \verb{$Sister_clade}: List (same length as \verb{$Taxa_name}) of character vectors. For each taxon, the tip labels defining the clade of the backbone
+\item \verb{$Taxon_name}: Character vector of the names of the taxa to graft. Names must be unique and absent from \code{phy$tip.label}.
+\item \verb{$Sister_clade}: List (named after \verb{$Taxon_name}) of character vectors. For each taxon, the tip labels defining the clade of the backbone
 that is sister to the missing clade. A pair of tips defines the clade as their MRCA node. A single tip defines the "clade" as the terminal branch of this tip.
 Taxa with the same sister clade are grafted together as one missing clade.
 }}
@@ -161,9 +161,10 @@ phy$edge.length <- phy$edge.length / max(ape::node.depth.edgelength(phy)) * 50
 
 # List the missing taxa to graft
 missing_clades_list <- list(
-  Taxa_name = c("M1", "M2", "M3", "M4"),
+  Taxon_name = c("M1", "M2", "M3", "M4"),
+  # Sister_clade is named after Taxon_name (same names, same order)
   # M1 and M2 share the same sister clade: they are grafted together as one missing clade
-  Sister_clade = list(c("t8", "t22"), c("t8", "t22"), c("t26", "t18"), "t5"))
+  Sister_clade = list(M1 = c("t8", "t22"), M2 = c("t8", "t22"), M3 = c("t26", "t18"), M4 = "t5"))
 
 # Graft the missing clades
 grafted_phy <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
