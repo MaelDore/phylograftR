@@ -11,9 +11,9 @@
 test_that("check_grafting_constraints() validates a correct grafting",
 {
   toy <- toy_setup()
-  missing_taxa_list <- name_items(list(Taxon_name = c("X1", "X2", "X3"),
-                            Target_clade = list(toy$A, toy$B, toy$s),
-                            Excluded_subclades = list(list(toy$B), NULL, NULL)))
+  missing_taxa_list <- list(Taxon_name = c("X1", "X2", "X3"),
+                            Target_clade = list(X1 = toy$A, X2 = toy$B, X3 = toy$s),
+                            Excluded_subclades = list(X1 = list(toy$B), X2 = NULL, X3 = NULL))
   grafted <- quiet_graft(graft_missing_taxa, toy$phy, missing_taxa_list, method = "uniform", seed = 1)
 
   checks <- check_grafting_constraints(grafted, toy$phy, missing_taxa_list, verbose = FALSE)
@@ -33,7 +33,7 @@ test_that("check_grafting_constraints() flags a taxon grafted inside an excluded
   # X1 is grafted on a tip of B, but B is excluded for X1 (target clade A)
   inside_B <- graft_tip_on_branch(toy$phy, "X1", match(toy$tipsB[1], toy$phy$tip.label), 0.5)
   checks <- check_grafting_constraints(inside_B, toy$phy,
-                                       name_items(list(Taxon_name = "X1", Target_clade = list(toy$A), Excluded_subclades = list(list(toy$B)))),
+                                       list(Taxon_name = "X1", Target_clade = list(X1 = toy$A), Excluded_subclades = list(X1 = list(toy$B))),
                                        verbose = FALSE)
   expect_false(checks$excluded_ok)
   expect_false(attr(checks, "all_ok"))
@@ -45,7 +45,7 @@ test_that("check_grafting_constraints() flags a taxon grafted outside its target
   toy <- toy_setup()
   outside <- graft_tip_on_branch(toy$phy, "X1", match(toy$o, toy$phy$tip.label), 0.5)
   checks <- check_grafting_constraints(outside, toy$phy,
-                                       name_items(list(Taxon_name = "X1", Target_clade = list(toy$A), Excluded_subclades = list(NULL))),
+                                       list(Taxon_name = "X1", Target_clade = list(X1 = toy$A), Excluded_subclades = list(X1 = NULL)),
                                        verbose = FALSE)
   expect_false(checks$target_ok)
   expect_false(attr(checks, "all_ok"))
@@ -55,7 +55,7 @@ test_that("check_grafting_constraints() flags a taxon grafted outside its target
 test_that("check_grafting_constraints() reports a shift of the backbone branch lengths",
 {
   toy <- toy_setup()
-  missing_taxa_list <- name_items(list(Taxon_name = "X1", Target_clade = list(toy$A), Excluded_subclades = list(NULL)))
+  missing_taxa_list <- list(Taxon_name = "X1", Target_clade = list(X1 = toy$A), Excluded_subclades = list(X1 = NULL))
   grafted <- quiet_graft(graft_missing_taxa, toy$phy, missing_taxa_list, method = "uniform", seed = 1)
   shifted <- grafted
   shifted$edge.length[3] <- shifted$edge.length[3] * 1.01
@@ -70,7 +70,7 @@ test_that("check_grafting_constraints() reports a shift of the backbone branch l
 test_that("check_grafting_constraints() reports a change in the backbone topology",
 {
   toy <- toy_setup()
-  missing_taxa_list <- name_items(list(Taxon_name = "X1", Target_clade = list(toy$A), Excluded_subclades = list(NULL)))
+  missing_taxa_list <- list(Taxon_name = "X1", Target_clade = list(X1 = toy$A), Excluded_subclades = list(X1 = NULL))
   grafted <- quiet_graft(graft_missing_taxa, toy$phy, missing_taxa_list, method = "uniform", seed = 1)
 
   # Swap the labels of a backbone tip of clade A and of a tip outside it: same branch lengths, but a different backbone topology
@@ -97,24 +97,23 @@ test_that("check_grafting_constraints() uses 'missing_species_list$include_targe
   # X1 and X2 are grafted on the stem branch of A
   on_stem <- graft_tip_on_branch(toy$phy, "X1", toy$node_A, 0.5)
   on_stem <- graft_tip_on_branch(on_stem, "X2", ape::getMRCA(on_stem, toy$A), 0.5)
-  mtl <- name_items(list(Taxon_name = c("X1", "X2"), Target_clade = list(toy$A, toy$A), Excluded_subclades = list(NULL, NULL)))
+  mtl <- list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$A, X2 = toy$A), Excluded_subclades = list(X1 = NULL, X2 = NULL))
   check <- function (stem_item, global = TRUE)
   {
     mtl$include_target_clade_stem <- stem_item
-    mtl <- name_items(mtl)
     check_grafting_constraints(on_stem, toy$phy, mtl, include_target_clade_stem = global, verbose = FALSE)
   }
 
   # Stem accepted for X1 only
-  checks <- check(c(TRUE, FALSE))
+  checks <- check(c(X1 = TRUE, X2 = FALSE))
   expect_equal(checks$target_position, c("stem", "stem"))
   expect_equal(checks$include_target_clade_stem, c(TRUE, FALSE))
   expect_equal(checks$target_ok, c(TRUE, FALSE))
   expect_false(attr(checks, "all_ok"))
 
   # NA uses the global value
-  expect_equal(check(c(NA, FALSE), global = TRUE)$target_ok, c(TRUE, FALSE))
-  expect_equal(check(c(NA, TRUE), global = FALSE)$target_ok, c(FALSE, TRUE))
+  expect_equal(check(c(X1 = NA, X2 = FALSE), global = TRUE)$target_ok, c(TRUE, FALSE))
+  expect_equal(check(c(X1 = NA, X2 = TRUE), global = FALSE)$target_ok, c(FALSE, TRUE))
   # No item: the global value applies to all taxa
   expect_true(all(check(NULL, global = TRUE)$target_ok))
   expect_false(any(check(NULL, global = FALSE)$target_ok))
@@ -130,8 +129,8 @@ test_that("check_grafting_constraints() flags a taxon sister to an excluded subc
   # X1 is grafted on the stem of B, which is excluded; X2 is grafted on the terminal branch of the excluded tip 's'
   on_stem_B <- graft_tip_on_branch(toy$phy, "X1", toy$node_B, 0.5)
   on_tip_s <- graft_tip_on_branch(toy$phy, "X2", match(toy$s, toy$phy$tip.label), 0.5)
-  mtl <- name_items(list(Taxon_name = "X1", Target_clade = list(toy$A), Excluded_subclades = list(list(toy$B))))
-  mtl_tip <- name_items(list(Taxon_name = "X2", Target_clade = list(toy$A), Excluded_subclades = list(list(toy$s))))
+  mtl <- list(Taxon_name = "X1", Target_clade = list(X1 = toy$A), Excluded_subclades = list(X1 = list(toy$B)))
+  mtl_tip <- list(Taxon_name = "X2", Target_clade = list(X2 = toy$A), Excluded_subclades = list(X2 = list(toy$s)))
 
   check <- function (phy_grafted, mtl, ...) check_grafting_constraints(phy_grafted, toy$phy, mtl, verbose = FALSE, ...)
 
@@ -153,8 +152,8 @@ test_that("check_grafting_constraints() flags a taxon sister to an excluded subc
   expect_false(check(inside_B, mtl, exclude_subclades_stem = FALSE)$excluded_ok)
 
   # Several excluded subclades with their own setting: only the violated one is reported
-  mtl_two <- name_items(list(Taxon_name = "X1", Target_clade = list(toy$A), Excluded_subclades = list(list(toy$C, toy$B)),
-                  exclude_subclades_stem = list(c(TRUE, FALSE))))
+  mtl_two <- list(Taxon_name = "X1", Target_clade = list(X1 = toy$A), Excluded_subclades = list(X1 = list(toy$C, toy$B)),
+                  exclude_subclades_stem = list(X1 = c(TRUE, FALSE)))
   expect_true(check(on_stem_B, mtl_two)$excluded_ok) # B's stem is not excluded
   mtl_two$exclude_subclades_stem <- list(X1 = c(FALSE, TRUE))
   checks <- check(on_stem_B, mtl_two)
@@ -174,19 +173,19 @@ test_that("check_grafting_constraints() flags a taxon sister to an excluded subc
 test_that("check_grafting_constraints() stops on invalid inputs, and can stop on failure",
 {
   toy <- toy_setup()
-  missing_taxa_list <- name_items(list(Taxon_name = "X1", Target_clade = list(toy$A), Excluded_subclades = list(NULL)))
+  missing_taxa_list <- list(Taxon_name = "X1", Target_clade = list(X1 = toy$A), Excluded_subclades = list(X1 = NULL))
   grafted <- quiet_graft(graft_missing_taxa, toy$phy, missing_taxa_list, method = "uniform", seed = 1)
 
   # No excluded subclades in the list: warning, and not checked
-  expect_warning(check_grafting_constraints(grafted, toy$phy, name_items(list(Taxon_name = "X1", Target_clade = list(toy$A))), verbose = FALSE),
+  expect_warning(check_grafting_constraints(grafted, toy$phy, list(Taxon_name = "X1", Target_clade = list(X1 = toy$A)), verbose = FALSE),
                  "excluded subclades are not checked")
   # Inconsistent lengths
-  expect_error(check_grafting_constraints(grafted, toy$phy, name_items(list(Taxon_name = c("X1", "X2"), Target_clade = list(toy$A),
-                                                                 Excluded_subclades = list(NULL))), verbose = FALSE),
+  expect_error(check_grafting_constraints(grafted, toy$phy, list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$A),
+                                                                 Excluded_subclades = list(X1 = NULL)), verbose = FALSE),
                "same length")
   # Tips missing from the backbone
-  expect_error(check_grafting_constraints(grafted, toy$phy, name_items(list(Taxon_name = "X1", Target_clade = list(c("zz", "yy")),
-                                                                 Excluded_subclades = list(NULL))), verbose = FALSE),
+  expect_error(check_grafting_constraints(grafted, toy$phy, list(Taxon_name = "X1", Target_clade = list(X1 = c("zz", "yy")),
+                                                                 Excluded_subclades = list(X1 = NULL)), verbose = FALSE),
                "missing from the backbone")
 
   # stop_on_failure
@@ -199,8 +198,8 @@ test_that("check_grafting_constraints() stops on invalid inputs, and can stop on
 test_that("check_grafting_constraints() requires named items, and reports the failed taxa and violated excluded subclades by name",
 {
   toy <- toy_setup()
-  mtl <- name_items(list(Taxon_name = c("X1", "X2"), Target_clade = list(toy$A, toy$A),
-                         Excluded_subclades = list(list(sub_B = toy$B), NULL)))
+  mtl <- list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$A, X2 = toy$A),
+                         Excluded_subclades = list(X1 = list(sub_B = toy$B), X2 = NULL))
   grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", seed = 1)
   checks <- check_grafting_constraints(grafted, toy$phy, mtl, verbose = FALSE)
   expect_equal(checks$Taxon_name, c("X1", "X2"))

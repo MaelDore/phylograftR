@@ -1069,7 +1069,7 @@ check_temp_file_path <- function (temp_file_path)
 #'   The output is used:
 #'    * (1) to compute the sampling fraction `rho` of the birth-death models fitted during the grafting process;
 #'    * (2) to build the `sampling_fraction_df` table added to the grafted phylogeny that describes the distribution of species among
-#'      `Missing_taxa` (names of the taxa to graft counted in the clade), `nb_backbone_species`, `nb_missing_species`, and `nb_unsampled_species`, for each clade listed in `total_richness_per_clades`.
+#'      `nb_backbone_species`, `nb_missing_species`, and `nb_unsampled_species`, for each clade listed in `total_richness_per_clades`.
 #'
 #' @details
 #' ### Counts
@@ -1256,7 +1256,6 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
 
     richness_table <- data.frame(
       Clade_tips = clade_labels,
-      Missing_taxa = vapply(clade_nodes, function (k) paste(missing_taxa_names[vapply(taxon_sets, function (s) k %in% s, logical(1))], collapse = ", "), character(1)),
       total_richness = nb_backbone + nb_missing + nb_unsampled,
       total_richness_provided = provided,
       nb_backbone_species = nb_backbone,

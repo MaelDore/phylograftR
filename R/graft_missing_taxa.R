@@ -96,7 +96,6 @@
 #'   * `sampling_fraction_df` Only if `total_richness_per_clades` is provided (a list with only `NA` values also returns it, assuming no unsampled species).
 #'     Data frame with one row per clade of `total_richness_per_clades`:
 #'     * `Clade_tips` Character string. Tips used to identify the clade.
-#'     * `Missing_taxa` Character string. Names of the missing taxa counted in the clade (separated by commas, empty if none): those with the clade as target clade or a target clade nested within it (for sister clades: only nested within it), as in `nb_missing_species`.
 #'     * `total_richness` Integer. Derived when `NA` was provided.
 #'     * `total_richness_provided` Logical. Whether `total_richness` of the clade was provided as input in `total_richness_per_clades`
 #'     * `nb_backbone_species` Integer. Number of species initially present on the backbone phylogeny.

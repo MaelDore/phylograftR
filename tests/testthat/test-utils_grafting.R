@@ -227,9 +227,6 @@ test_that("build_richness_info() derives the unsampled species of each clade, wi
 
   # unsampled species per node
   expect_equal(info$unsampled_by_node[c(toy$node_B, toy$node_C, toy$node_A)], c(12, 0, 31))
-
-  # Names of the missing taxa counted in each clade (nested clades included)
-  expect_equal(tb$Missing_taxa, c("b1, b2, b3", "c1, c2", "b1, b2, b3, c1, c2, a1, a2, a3, a4"))
 })
 
 ## Test that build_richness_info() derives the unsampled species of clades based on information from its nested clades

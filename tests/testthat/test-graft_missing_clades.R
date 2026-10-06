@@ -11,8 +11,8 @@
 # Missing taxa: M1 and M2 share the sister clade B (grafted together as one clade), M3 is sister to C, M4 is sister to a single tip
 toy_missing_clades <- function (toy)
 {
-  name_items(list(Taxon_name = c("M1", "M2", "M3", "M4"),
-       Sister_clade = list(toy$B, toy$B, toy$C, toy$s)))
+  list(Taxon_name = c("M1", "M2", "M3", "M4"),
+       Sister_clade = list(M1 = toy$B, M2 = toy$B, M3 = toy$C, M4 = toy$s))
 }
 
 ## Check if removing the grafted taxa gives back the backbone (topology and branch lengths)
@@ -34,17 +34,17 @@ test_that("graft_missing_clades() stops on invalid inputs, before any grafting",
   expect_error(graft_missing_clades(not_ultra, mcl, verbose = FALSE), "not ultrametric")
 
   expect_error(graft_missing_clades(phy, mcl, min_tips = 2, verbose = FALSE), "min_tips")
-  expect_error(graft_missing_clades(make_toy_phy(n_tips = 4), name_items(list(Taxon_name = "M1", Sister_clade = list(c("t1", "t2")))), verbose = FALSE),
+  expect_error(graft_missing_clades(make_toy_phy(n_tips = 4), list(Taxon_name = "M1", Sister_clade = list(M1 = c("t1", "t2"))), verbose = FALSE),
                "too small to fit a birth-death model")
-  expect_error(graft_missing_clades(phy, name_items(list(Taxon_name = character(0), Sister_clade = list())), verbose = FALSE), "empty")
-  expect_error(graft_missing_clades(phy, name_items(list(Taxon_name = c("M1", "M2"), Sister_clade = list(toy$B))), verbose = FALSE), "same length as 'Taxon_name'")
-  expect_error(graft_missing_clades(phy, name_items(list(Taxon_name = c("M1", "M1"), Sister_clade = list(toy$B, toy$B))), verbose = FALSE), "unique names")
-  expect_error(graft_missing_clades(phy, name_items(list(Taxon_name = "M1", Sister_clade = list(c("zz", "yy")))), verbose = FALSE), "missing from the backbone")
+  expect_error(graft_missing_clades(phy, list(Taxon_name = character(0), Sister_clade = list()), verbose = FALSE), "empty")
+  expect_error(graft_missing_clades(phy, list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B)), verbose = FALSE), "same length as 'Taxon_name'")
+  expect_error(graft_missing_clades(phy, list(Taxon_name = c("M1", "M1"), Sister_clade = list(M1 = toy$B, M1 = toy$B)), verbose = FALSE), "unique names")
+  expect_error(graft_missing_clades(phy, list(Taxon_name = "M1", Sister_clade = list(M1 = c("zz", "yy"))), verbose = FALSE), "missing from the backbone")
   expect_error(graft_missing_clades(phy, mcl, temp_file_path = "temp.txt", verbose = FALSE), "must end with '.rds'")
 
   # A sister clade that is the whole tree has no stem
   whole_tree <- pair_for_node(phy, ape::Ntip(phy) + 1)
-  expect_error(graft_missing_clades(phy, name_items(list(Taxon_name = "M1", Sister_clade = list(whole_tree))), verbose = FALSE), "whole tree")
+  expect_error(graft_missing_clades(phy, list(Taxon_name = "M1", Sister_clade = list(M1 = whole_tree)), verbose = FALSE), "whole tree")
 })
 
 ## Test valid location of grafted taxa on the stem of their sister clade
@@ -73,7 +73,7 @@ test_that("graft_missing_clades() handles nested sister clades, and is reproduci
 {
   toy <- toy_setup()
   # A and B are nested sister clades, each with a missing taxon
-  mcl <- name_items(list(Taxon_name = c("M1", "M2"), Sister_clade = list(toy$B, toy$A)))
+  mcl <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B, M2 = toy$A))
   a <- quiet_graft(graft_missing_clades, toy$phy, mcl, seed = 4)
   b <- quiet_graft(graft_missing_clades, toy$phy, mcl, seed = 4)
   expect_equal(a, b)
@@ -104,7 +104,7 @@ test_that("graft_missing_clades() fits the crown group, accounting for the taxa 
 {
   toy <- toy_setup()
   # M2, M3: sister to B (small clade: the fit uses an enclosing clade). M1: sister to A (outside of A)
-  mcl <- name_items(list(Taxon_name = c("M1", "M2", "M3"), Sister_clade = list(toy$A, toy$B, toy$B)))
+  mcl <- list(Taxon_name = c("M1", "M2", "M3"), Sister_clade = list(M1 = toy$A, M2 = toy$B, M3 = toy$B))
 
   fits <- list()
   original <- fit_bd_on_clade
@@ -149,7 +149,7 @@ test_that("total_richness_per_clades is used in the sampling fraction of the fit
 {
   toy <- toy_setup()
   # M1: sister to B (on the stem of B: in A, not in B). M2: sister to A (outside A).
-  mcl <- name_items(list(Taxon_name = c("M1", "M2"), Sister_clade = list(toy$B, toy$A)))
+  mcl <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B, M2 = toy$A))
   total_B <- toy$nB + 7
   total_A <- toy$nA + 1 + 11 # M1 is nested in A, M2 is not
   totals <- list(Sister_clade = list(toy$B, toy$A), total_richness = c(total_B, total_A))
@@ -190,7 +190,7 @@ test_that("graft_missing_clades() stops before grafting if total_richness_per_cl
 test_that("graft_missing_clades() requires Sister_clade to be named after Taxon_name (same names, same order)",
 {
   toy <- toy_setup()
-  mcl <- name_items(list(Taxon_name = c("M1", "M2"), Sister_clade = list(toy$B, toy$A)))
+  mcl <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B, M2 = toy$A))
   expect_no_error(quiet_graft(graft_missing_clades, toy$phy, mcl, seed = 1))
 
   unnamed <- mcl; names(unnamed$Sister_clade) <- NULL
@@ -199,9 +199,4 @@ test_that("graft_missing_clades() requires Sister_clade to be named after Taxon_
   expect_error(graft_missing_clades(toy$phy, wrong, verbose = FALSE), "Sister_clade.*do not match.*'M3'")
   swapped <- mcl; swapped$Sister_clade <- rev(swapped$Sister_clade)
   expect_error(graft_missing_clades(toy$phy, swapped, verbose = FALSE), "not in the same order")
-
-  # The table of sampling fractions lists the names of the missing taxa nested in each sister clade
-  totals <- list(Sister_clade = list(toy$A, toy$B), total_richness = c(NA, NA))
-  grafted <- quiet_graft(graft_missing_clades, toy$phy, mcl, total_richness_per_clades = totals, seed = 1)
-  expect_equal(grafted$sampling_fraction_df$Missing_taxa, c("M1", ""))  # M1 (sister to B) is nested in A, M2 (sister to A) is not nested in A or B
 })

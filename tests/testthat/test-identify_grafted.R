@@ -23,8 +23,8 @@ reference_grafted_edges <- function (tree, grafted)
 toy_grafted <- function ()
 {
   toy <- toy_setup()
-  missing_taxa_list <- name_items(list(Taxon_name = paste0("X", 1:5),
-                            Target_clade = list(toy$B, toy$B, toy$C, toy$s, toy$s)))
+  missing_taxa_list <- list(Taxon_name = c("X1", "X2", "X3", "X4", "X5"),
+                            Target_clade = list(X1 = toy$B, X2 = toy$B, X3 = toy$C, X4 = toy$s, X5 = toy$s))
   grafted <- quiet_graft(graft_missing_taxa, toy$phy, missing_taxa_list, method = "uniform", seed = 3)
   list(toy = toy, grafted = grafted, taxa = missing_taxa_list$Taxon_name)
 }
