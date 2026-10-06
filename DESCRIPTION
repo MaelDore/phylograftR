@@ -18,7 +18,11 @@ Imports:
     ape (>= 5.8.0),
     phytools (>= 2.5.0),
     stats,
-    TreeSim (>= 2.4)
+    TreeSim (>= 2.4),
+    utils
 Suggests: 
-    testthat (>= 3.3.2)
+    readxl (>= 1.5.0.1),
+    testthat (>= 3.3.2),
+    writexl (>= 2.0.1)
 Config/testthat/edition: 3
+LazyData: true
