@@ -97,3 +97,4 @@
 #'   total_richness = tab$total_richness)
 #'
 "toy_total_richness_per_clades"
+
