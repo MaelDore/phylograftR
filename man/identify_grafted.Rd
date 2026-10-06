@@ -48,7 +48,8 @@ missing_taxa_list <- list(
 grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
                                   verbose = FALSE, seed = 1234)
 
-# Identify the grafted tips and branches: the function returns the phylogeny with two additional elements
+# Identify the grafted tips and branches:
+# the function returns the phylogeny with two additional elements
 grafted_phy <- identify_grafted(phy = grafted_phy, grafted_taxa = missing_taxa_list$Taxon_name)
 table(grafted_phy$grafted_tips)
 table(grafted_phy$grafted_edges)
@@ -67,8 +68,9 @@ length(pruned_phy$grafted_edges) == nrow(pruned_phy$edge)
 
 # Update them with identify_grafted(), using the grafted taxa still in the pruned phylogeny
 # (grafted taxa that are not tips are ignored with a warning)
-pruned_phy <- identify_grafted(phy = pruned_phy,
-                               grafted_taxa = intersect(missing_taxa_list$Taxon_name, pruned_phy$tip.label))
+pruned_phy <- identify_grafted(
+   phy = pruned_phy,
+   grafted_taxa = intersect(missing_taxa_list$Taxon_name, pruned_phy$tip.label))
 
 # Plot the pruned phylogeny with the updated colors
 plot(pruned_phy, cex = 0.7,

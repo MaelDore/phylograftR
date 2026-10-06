@@ -223,13 +223,16 @@
 #'   # Target clades defined by pairs of tips (MRCA), or by a single tip
 #'   # All the other items are named after Taxon_name (same names, same order)
 #'   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")),
-#'   # Stem of the target clade available for grafting? NA uses the global 'include_target_clade_stem' argument (TRUE by default). X4 cannot be grafted on the stem
+#'   # Stem of the target clade available for grafting?
+#'   # NA uses the global 'include_target_clade_stem' argument (TRUE by default). X4 cannot be grafted on the stem
 #'   include_target_clade_stem = c(X1 = NA, X2 = NA, X3 = NA, X4 = FALSE),
 #'   # Excluded subclades defined by pairs of tips. Only X1 has an excluded subclade
 #'   # (the optional name of the excluded subclade, here 'clade_A', is used in messages)
 #'   Excluded_subclades = list(X1 = list(clade_A = c("t10", "t19")), X2 = NULL, X3 = NULL, X4 = NULL),
-#'   # Stem of the excluded subclades also excluded? NA / NULL use the global 'exclude_subclades_stem' argument (TRUE by default).
-#'   # Here the stem of the excluded subclade of X1 stays available, so X1 can be sister to it, but never nested within it
+#'   # Stem of the excluded subclades also excluded?
+#'   # NA / NULL use the global 'exclude_subclades_stem' argument (TRUE by default).
+#'   # Here the stem of the excluded subclade of X1 stays available,
+#'   # so X1 can be sister to it, but never nested within it
 #'   exclude_subclades_stem = list(X1 = FALSE, X2 = NULL, X3 = NULL, X4 = NULL))
 #'
 #' # Graft with the default method ("BD_clades")
