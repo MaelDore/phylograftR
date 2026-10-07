@@ -24,6 +24,8 @@
 #'   * `$Target_clade`: List (named after `$Taxon_name`) of character vectors. For each taxon, the tip labels defining its target clade,
 #'     i.e., the clade where the taxon is known to belong (e.g., its genus). A pair of tips defines the clade as their MRCA node.
 #'     A single tip defines the "clade" as the terminal branch of this tip.
+#'     Clades, including the excluded subclades (see below), must be defined by tips: node IDs are not accepted (the function stops, and lists some of them).
+#'     Use [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] to convert node IDs into pairs of tips.
 #'   * `$include_target_clade_stem`: (Optional) Logical vector (named after `$Taxon_name`). For each taxon, whether the stem branch of its target clade
 #'     is available for grafting. It overrides the global argument `include_target_clade_stem` for this taxon. `NA` values use the global argument.
 #'     With `NULL` (default, or no item), the global argument applies to all taxa. Ignored for single-tip target clades (their terminal branch is their only branch,
@@ -59,6 +61,8 @@
 #' @param total_richness_per_clades (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
 #'   nor in `missing_taxa_list` (unsampled species). Items:
 #'   * `$Target_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Target_clade`.
+#'     Node IDs are not accepted: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
+#'     so the tips of the clades match between both objects.
 #'     It must cover all the unique target clades of `missing_taxa_list`. It can include other clades, e.g., enclosing clades.
 #'   * `$total_richness`: Vector of positive integers, same length as `$Target_clade`. Total number of species of each clade,
 #'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species

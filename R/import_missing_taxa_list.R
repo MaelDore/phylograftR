@@ -1,4 +1,4 @@
-##### Functions to import and convert tables into a missing_taxa_list #####
+##### Functions to import and build a missing_taxa_list from a table #####
 
 ####################################
 #       Author: Maël Doré          #
@@ -13,7 +13,7 @@
 #' @description Read a table (e.g., a .csv file, or an Excel sheet) describing the taxa to graft, and convert it into a valid `missing_taxa_list`
 #'   object ready-to-be-used as input for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades].
 #'
-#'   The table is converted by [`phylograftR::convert_missing_taxa_list()`][convert_missing_taxa_list], which also runs all the checks of validity
+#'   The table is converted by [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list], which also runs all the checks of validity
 #'   against the backbone phylogeny to ensure the `missing_taxa_list` provides information that are valid to process the grafting.
 #'
 #' @param file Character string. Path to the file with the table.
@@ -33,6 +33,7 @@
 #' @param reader Function. Optional function used to read `file`, to import any other format (e.g., `.ods`, or an export of an online spreadsheet).
 #'   It must take the path of the file as first argument and return a data frame. If provided, it is used whatever the extension of the file.
 #'   Default is `NULL`.
+#' @param verbose Logical. Whether to print the conversions of node IDs into tips (if any). Default is `TRUE`.
 #' @param ... Further arguments passed to the function reading the file (`utils::read.table()` for text files, `readxl::read_excel()` for Excel files, or `reader`).
 #'
 #' @details
@@ -45,14 +46,15 @@
 #'   or a sister clade, i.e., the clade on whose stem branch the taxon is grafted, as its sister.
 #'   A pair of tips defines the clade as their MRCA node (e.g., `"t26, t18"`).
 #'   A single tip defines the "clade" as the terminal branch of this tip (e.g., `"t15"`).
+#'   A node ID of `phy` (digits only, e.g., `"34"`) also defines the clade, see 'Node IDs' below.
 #'   Use `Sister_clade` to prepare a list for [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
 #'   the columns specific to [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] below (`Target_clade_name`, `include_target_clade_stem`, `Excluded_subclades`, `Excluded_subclades_names` and `exclude_subclades_stem`) are ignored, with a warning.
 #' * `include_target_clade_stem`: (Optional) Logical values. For each taxon, whether the stem branch of its target clade is available for grafting.
 #'   `NA` values and blank cells use the global `include_target_clade_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
 #' * `Excluded_subclades`: (Optional) For each taxon, tip labels defining the subclades of its target clade where the taxon is known not to belong.
-#'   Each subclade is defined by a pair of tips or a single tip.
-#'   Ex: `"t10, t19; t5, t12; t7"` for three subclades, the last one being a single tip.
-#'   Blank cells for taxa without excluded subclades.
+#'   Each subclade is defined by a pair of tips, a single tip, or a node ID.
+#'   Ex: `"t10, t19; 50; t7"` for three subclades, the two first being clades with multiple species defined by a pair of tips (`"t10, t19"`), and an internal node ID (`"50"`).
+#'   The last one is a single tip define by its tip label (`"t7"`). Use blank cells for taxa without excluded subclades.
 #' * `exclude_subclades_stem`: (Optional) Logical values. For each taxon, whether the stem of each of its excluded subclades is also excluded,
 #'   with one value per subclade of `Excluded_subclades` separated by semicolons, or a single value used for all of them.
 #'   Ex: `"FALSE; TRUE; TRUE"`.
@@ -61,12 +63,30 @@
 #' Optional columns that do not match items in `missing_taxa_list` can be used to provide names of clades:
 #'
 #' * `Target_clade_name` or `Sister_clade_name` (Optional): Label of the target (or sister) clade.
-#'   It is only used to check that the clades are defined consistently (see [`phylograftR::convert_missing_taxa_list()`][convert_missing_taxa_list]).
+#'   It is only used to check that the clades are defined consistently (see [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]).
 #' * `Excluded_subclades_names` (Optional): Labels of the excluded subclades, separated by semicolons, in the same order as in `Excluded_subclades`.
 #'   Ex: `"group_1; group_2; tip_t7"`. There must be one label per subclade.
 #'   If provided, they are used as names of the subclades in the `Excluded_subclades` item of the list, and in the messages of the grafting functions.
 #'
 #' Other columns are ignored, with a warning.
+#'
+#' ### Node IDs
+#'
+#' Clades (`Target_clade`, `Sister_clade`, and each subclade of `Excluded_subclades`) are typically defined by (pairs of) tips.
+#' However, the function also accepts clades defined by the ID of a node of `phy` instead of tips, in the same table, and even in the same cell
+#' (e.g., `"50; t5, t12; t7"` for three excluded subclades defined respectively by an internal node, a pair of tips, a terminal tip label).
+#' Node IDs are integers: `1` to N, with N being the number of tips (`ape::Ntip(phy)`), correspond to terminal nodes, and thus define single-tip clades.
+#' Following IDs are the internal nodes, as shown by `ape::nodelabels()`, and correspond to clades with multiple descending species.
+#'
+#' A value made only of digits is a node ID, so **tip labels must include at least one other character than digits** to be distinguished.
+#' A clade is defined by tips or by one node ID, not both, and one node ID defines the clade alone.
+#' Node IDs are converted into tips before any other check, as done by [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips],
+#' and the conversions are printed if `verbose = TRUE`.
+#'
+#' The warnings and errors that follow, and the grafting functions, therefore use the tips that are traced back to your node IDs in the messages.
+#' If a clade is already defined by tips in the table, a node ID of the same clade is converted into the same tips.
+#' Convert `total_richness_per_clades` (if you use it) at the same time as the list, with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips],
+#' so the tips of the clades match between both objects.
 #'
 #' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions, with the following items:
 #'  * `$Taxon_name` Character vector.
@@ -80,7 +100,7 @@
 #'  Every item is named after the taxa (`$Taxon_name`), in the same order.
 #'
 #' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::convert_missing_taxa_list()`][convert_missing_taxa_list] to convert a data frame already loaded in R,
+#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to convert a data frame already loaded in R,
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] that use the list for grafting.
 #'
 #' @importFrom utils read.table
@@ -121,6 +141,7 @@ import_missing_taxa_list <- function (file, # Path to the table
                                       sep = NULL, # Field separator of text files. By default, from the extension
                                       sheet = 1, # Sheet of Excel files
                                       reader = NULL, # Optional function to read other formats
+                                      verbose = TRUE, # Print the conversions of node IDs into tips
                                       ...)
 {
   ## 1.1/ Check the inputs ####
@@ -162,17 +183,17 @@ import_missing_taxa_list <- function (file, # Path to the table
 
   ## 1.3/ Convert it ####
 
-  convert_missing_taxa_list(data = data, phy = phy)
+  build_missing_taxa_list(data = data, phy = phy, verbose = verbose)
 }
 
 
-### 2/ Convert a data frame as a missing_taxa_list ####
+### 2/ Build a missing_taxa_list from a data frame ####
 
-#' @title Convert a table of missing taxa into a `missing_taxa_list`
+#' @title Build a `missing_taxa_list` from a table of missing taxa
 #'
-#' @description Convert a data frame describing the taxa to graft (one row per taxon, e.g., read from a .csv file) into a valid `missing_taxa_list`
+#' @description Build a valid `missing_taxa_list` from a data frame describing the taxa to graft (one row per taxon, e.g., read from a .csv file),
 #'   for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades].
-#'   Lists of tips are written in the cells of the table, and the function splits them, names every item after the taxa (as required by the grafting functions),
+#'   Lists of tips (or node IDs, see Details) are written in the cells of the table, and the function parses them and names every item after the taxa (as required by the grafting functions),
 #'   and runs all the checks of validity against the backbone phylogeny.
 #'
 #'   Use [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to read the table directly from a file.
@@ -180,7 +201,8 @@ import_missing_taxa_list <- function (file, # Path to the table
 #' @param data A data frame, with one row per taxon to graft.
 #'   Its columns are the items of `missing_taxa_list` as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades].
 #'   See Details for a full description. All the columns are read as text.  Blank cells and `NA` are missing values.
-#' @param phy An object of class `"phylo"`. The backbone phylogeny on which the taxa will be grafted. It is used to check the tips and clades.
+#' @param phy An object of class `"phylo"`. The backbone phylogeny on which the taxa will be grafted. It is used to check the tips and clades, and to convert node IDs into tips.
+#' @param verbose Logical. Whether to print the conversions of node IDs into tips (if any). Default is `TRUE`.
 #'
 #' @details
 #' The columns of `data` are the items of `missing_taxa_list` as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades].
@@ -192,14 +214,15 @@ import_missing_taxa_list <- function (file, # Path to the table
 #'    or a sister clade, i.e., the clade on whose stem branch the taxon is grafted, as its sister.
 #'    A pair of tips defines the clade as their MRCA node (e.g., `"t26, t18"`).
 #'    A single tip defines the "clade" as the terminal branch of this tip (e.g., `"t15"`).
+#'    A node ID of `phy` (digits only, e.g., `"34"`) also defines the clade, see 'Node IDs' below.
 #'    Use `Sister_clade` to prepare a list for [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
 #'    the columns specific to [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] below are then ignored, with a warning.
 #'  * `include_target_clade_stem`: (Optional) Logical values. For each taxon, whether the stem branch of its target clade is available for grafting.
 #'    `NA` values and blank cells use the global `include_target_clade_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
 #'  * `Excluded_subclades`: (Optional) For each taxon, tip labels defining the subclades of its target clade where the taxon is known not to belong.
-#'    Each subclade is defined by a pair of tips or a single tip.
-#'    Ex: `"t10, t19; t5, t12; t7"` for three subclades, the last one being a single tip.
-#'    Blank cells for taxa without excluded subclades.
+#'   Each subclade is defined by a pair of tips, a single tip, or a node ID.
+#'   Ex: `"t10, t19; 50; t7"` for three subclades, the two first being clades with multiple species defined by a pair of tips (`"t10, t19"`), and an internal node ID (`"50"`).
+#'   The last one is a single tip define by its tip label (`"t7"`). Use blank cells for taxa without excluded subclades.
 #'  * `exclude_subclades_stem`: (Optional) Logical values. For each taxon, whether the stem of each of its excluded subclades is also excluded,
 #'    with one value per subclade of `Excluded_subclades` separated by semicolons, or a single value used for all of them.
 #'    Ex: `"FALSE; TRUE; TRUE"`.
@@ -207,12 +230,30 @@ import_missing_taxa_list <- function (file, # Path to the table
 #'
 #' Optional columns that do not match items in `missing_taxa_list` can be used to provide names of clades:
 #'  * `Target_clade_name` or `Sister_clade_name` (Optional): Label of the target (or sister) clade.
-#'    It is only used to check that the clades are defined consistently (see [`phylograftR::convert_missing_taxa_list()`][convert_missing_taxa_list]).
+#'    It is only used to check that the clades are defined consistently (see 'Labels of the clades' section below).
 #'  * `Excluded_subclades_names` (Optional): Labels of the excluded subclades, separated by semicolons, in the same order as in `Excluded_subclades`.
 #'    Ex: `"group_1; group_2; tip_t7"`. There must be one label per subclade.
 #'    If provided, they are used as names of the subclades in the `Excluded_subclades` item of the list, and in the messages of the grafting functions.
 #'
 #'  Other columns are ignored, with a warning.
+#'
+#' ### Node IDs
+#'
+#' Clades (`Target_clade`, `Sister_clade`, and each subclade of `Excluded_subclades`) are typically defined by (pairs of) tips.
+#' However, the function also accepts clades defined by the ID of a node of `phy` instead of tips, in the same table, and even in the same cell
+#' (e.g., `"50; t5, t12; t7"` for three excluded subclades defined respectively by an internal node, a pair of tips, a terminal tip label).
+#' Node IDs are integers: `1` to N, with N being the number of tips (`ape::Ntip(phy)`) correspond to terminal nodes, and thus define single-tip clades.
+#' Following IDs are the internal nodes, as shown by `ape::nodelabels()`, and correspond to clades with multiple descending species.
+#'
+#' A value made only of digits is a node ID, so **tip labels must include at least one other character than digits** to be distinguinshed.
+#' A clade is defined by tips or by one node ID, not both, and one node ID defines the clade alone.
+#' Node IDs are converted into tips before any other check, as done by [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips],
+#' and the conversions are printed if `verbose = TRUE`.
+#'
+#' The warnings and errors that follow, and the grafting functions, therefore use the tips that are traced back to your node IDs in the messages.
+#' If a clade is already defined by tips in the table, a node ID of the same clade is converted into the same tips.
+#' Convert `total_richness_per_clades` (if you use it) at the same time as the list, with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips],
+#' so the tips of the clades match between both objects.
 #'
 #' ### Labels of the clades
 #'
@@ -247,6 +288,7 @@ import_missing_taxa_list <- function (file, # Path to the table
 #'
 #' @seealso Other functions from phylograftR:
 #'  * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to read the table from a file,
+#'  * [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] to convert the node IDs of a list built 'by hand',
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] that use the list for grafting.
 #'
 #' @importFrom ape getMRCA
@@ -261,7 +303,7 @@ import_missing_taxa_list <- function (file, # Path to the table
 #' missing_taxa_table <- read.csv(file_path)
 #'
 #' # Convert it into a 'missing_taxa_list', checking it against the backbone phylogeny
-#' missing_taxa_list <- convert_missing_taxa_list(data = missing_taxa_table, phy = toy_backbone)
+#' missing_taxa_list <- build_missing_taxa_list(data = missing_taxa_table, phy = toy_backbone)
 #' # Items are named after the taxa, tips are split, and excluded subclades are named
 #' str(missing_taxa_list, 2)
 #'
@@ -270,12 +312,22 @@ import_missing_taxa_list <- function (file, # Path to the table
 #'                        Target_clade = c("t26, t18", "t5"),
 #'                        Excluded_subclades = c("t10, t19; t26, t4", NA),
 #'                        Excluded_subclades_names = c("group_1; group_2", NA))
-#' my_missing_taxa_list <- convert_missing_taxa_list(data = my_table, phy = toy_backbone)
+#' my_missing_taxa_list <- build_missing_taxa_list(data = my_table, phy = toy_backbone)
 #' str(my_missing_taxa_list, 2)
 #'
+#' # Clades can also be defined by node IDs (digits only), alone or mixed with tips.
+#' # Node IDs are converted into tips, and the conversions are printed.
+#' ape::plot.phylo(toy_backbone, cex = 0.7, no.margin = TRUE)
+#' ape::nodelabels(cex = 0.6, frame = "none", col = "blue")
+#' my_table_nodes <- data.frame(Taxon_name = c("M1", "M2"),
+#'                              Target_clade = c("34", "t5, t12"),
+#'                              Excluded_subclades = c("50", NA))
+#' str(build_missing_taxa_list(data = my_table_nodes, phy = toy_backbone), 2)
+#'
 
-convert_missing_taxa_list <- function (data, # Data frame, one row per taxon
-                                       phy) # Backbone phylogeny
+build_missing_taxa_list <- function (data, # Data frame, one row per taxon
+                                     phy, # Backbone phylogeny
+                                     verbose = TRUE) # Print the conversions of node IDs into tips
 {
   ## 2.1/ Check the inputs ####
 
@@ -340,6 +392,47 @@ convert_missing_taxa_list <- function (data, # Data frame, one row per taxon
 
   # Label of a taxon in messages
   label_taxon <- function (i) paste0("'", taxon_name[i], "' (row ", i, ")")
+
+  ## 2.1.3/ Convert the node IDs into tips ####
+
+  # Clades defined by a node ID (digits only) are converted into tips, before any check based on tips.
+  # Clades defined by tips are left unchanged. Empty tips or subclades are left to the checks of the tips below.
+
+  # Use an internal environment to record conversion such as a node ID is converted into the tips already used for the same clade
+  recorder <- new.env(parent = emptyenv())
+  recorder$rows <- list()
+
+  # Function to parse cell information
+  split_cell <- function (cell, split_subclades)
+  {
+    if (is.na(cell)) { return(list()) }
+    pieces <- if (split_subclades) trimws(strsplit(cell, ";", fixed = TRUE)[[1]]) else cell
+    lapply(pieces, function (piece) trimws(strsplit(piece, ",", fixed = TRUE)[[1]]))
+  }
+  known <- unlist(lapply(seq_len(n_taxa), function (i) split_cell(data[[clade_item]][i], FALSE)), recursive = FALSE)
+  if ("Excluded_subclades" %in% names(data))
+  {
+    known <- c(known, unlist(lapply(seq_len(n_taxa), function (i) split_cell(data$Excluded_subclades[i], TRUE)), recursive = FALSE))
+  }
+  lookup <- build_tips_lookup(phy, known)
+  convert_cell <- function (cell, item, who, split_subclades)
+  {
+    if (is.na(cell)) { return(cell) }
+    pieces <- if (split_subclades) trimws(strsplit(cell, ";", fixed = TRUE)[[1]]) else cell
+    converted <- vapply(pieces, function (piece)
+    {
+      tokens <- trimws(strsplit(piece, ",", fixed = TRUE)[[1]])
+      if (length(tokens) == 0 || any(tokens == "")) { return(piece) }
+      paste(resolve_clade_tokens(tokens, phy = phy, item = item, who = who, recorder = recorder, cell = piece, lookup = lookup), collapse = ",")
+    }, character(1), USE.NAMES = FALSE)
+    paste(converted, collapse = ";")
+  }
+  data[[clade_item]] <- vapply(seq_len(n_taxa), function (i) convert_cell(data[[clade_item]][i], clade_item, taxon_name[i], FALSE), character(1))
+  if ("Excluded_subclades" %in% names(data))
+  {
+    data$Excluded_subclades <- vapply(seq_len(n_taxa), function (i) convert_cell(data$Excluded_subclades[i], "Excluded_subclades", taxon_name[i], TRUE), character(1))
+  }
+  report_node_conversions(recorder$rows, phy = phy, verbose = verbose)
 
   ## 2.2/ Clades of the taxa: Target_clade or Sister_clade ####
 

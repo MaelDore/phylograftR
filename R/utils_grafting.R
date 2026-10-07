@@ -367,6 +367,9 @@ fit_bd_on_clade <- function (phy, node, min_tips = 5, richness_info = NULL)
 #'   `include_target_clade_stem`, `Excluded_subclades` and `exclude_subclades_stem`.
 #' @param clade_item Character string. `"Target_clade"` (for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::check_grafting_constraints()`][check_grafting_constraints]) or `"Sister_clade"` (for [`phylograftR::graft_missing_clades()`][graft_missing_clades]).
 #' @param optional_items Character vector. Other items validated if they are provided.
+#' @param allow_node_ids Logical. Whether clades defined by node IDs are accepted. If `FALSE` (default), the function stops if a clade
+#'   (target or sister clade, or excluded subclade) is defined by a node ID, and points to [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips].
+#'   `TRUE` is used by [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] itself.
 #'
 #' @noRd
 #'
@@ -375,7 +378,8 @@ fit_bd_on_clade <- function (phy, node, min_tips = 5, richness_info = NULL)
 
 validate_missing_taxa_list <- function (missing_taxa_list,
                                         clade_item = c("Target_clade", "Sister_clade"),
-                                        optional_items = c("include_target_clade_stem", "Excluded_subclades", "exclude_subclades_stem"))
+                                        optional_items = c("include_target_clade_stem", "Excluded_subclades", "exclude_subclades_stem"),
+                                        allow_node_ids = FALSE)
 {
   clade_item <- match.arg(clade_item)
   if (!is.list(missing_taxa_list)) { stop("'missing_taxa_list' must be a list") }
@@ -420,7 +424,90 @@ validate_missing_taxa_list <- function (missing_taxa_list,
            if (length(differ) > n_show) paste0("\n  ... and ", length(differ) - n_show, " more") else "")
     }
   }
+
+  ## Clades must be defined by tips: node IDs have to be converted first
+  if (!allow_node_ids) { check_no_node_ids(missing_taxa_list, clade_item = clade_item) }
+
   invisible(taxon_name)
+}
+
+
+#' @title Detect a clade defined by a node ID
+#'
+#' @description A clade defined by a node ID is a number, or a text made only of digits (tip labels must include at least one other character).
+#'
+#' @param x A clade: character vector of tips, or node ID.
+#'
+#' @noRd
+#'
+#' @return Logical. `TRUE` if the clade seems defined by a node ID.
+#'
+
+is_node_id_clade <- function (x)
+{
+  if (is.factor(x)) { x <- as.character(x) }
+  if (is.numeric(x)) { return(length(x) > 0) }
+  if (is.character(x)) { return(length(x) > 0 && any(!is.na(x) & grepl("^[[:space:]]*[0-9]+[[:space:]]*$", x))) }
+  FALSE
+}
+
+
+#' @title Stop if clades are defined by node IDs
+#'
+#' @description Check the clades of `missing_taxa_list` (`Target_clade` or `Sister_clade`, and `Excluded_subclades`), and stop with a message
+#'   that lists some of the node IDs and points to [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] if some are found.
+#'
+#' @param missing_taxa_list List of missing taxa.
+#' @param clade_item Character string. `"Target_clade"` or `"Sister_clade"`.
+#' @param max_show Integer. Maximum number of node IDs listed in the message.
+#'
+#' @noRd
+#'
+#' @return Nothing. Stops if a clade is defined by a node ID.
+#'
+
+check_no_node_ids <- function (missing_taxa_list, clade_item, max_show = 5)
+{
+  found <- character(0)
+  taxon_name <- missing_taxa_list$Taxon_name
+  show_value <- function (x) paste0(if (length(x) > 1) "c(" else "", paste(if (is.character(x)) paste0("\"", x, "\"") else x, collapse = ", "), if (length(x) > 1) ")" else "")
+
+  clades <- missing_taxa_list[[clade_item]]
+  if (is.list(clades))
+  {
+    for (i in seq_along(clades))
+    {
+      if (is_node_id_clade(clades[[i]])) { found <- c(found, paste0("'", clade_item, "' of '", taxon_name[i], "': ", show_value(clades[[i]]))) }
+    }
+  }
+  excluded <- missing_taxa_list$Excluded_subclades
+  if (is.list(excluded))
+  {
+    for (i in seq_along(excluded))
+    {
+      subclades <- excluded[[i]]
+      if (!is.list(subclades)) { next }
+      for (k in seq_along(subclades))
+      {
+        if (is_node_id_clade(subclades[[k]]))
+        {
+          label <- if (!is.null(names(subclades)) && !is.na(names(subclades)[k]) && names(subclades)[k] != "") paste0("'", names(subclades)[k], "'") else paste0("#", k)
+          found <- c(found, paste0("'Excluded_subclades' of '", taxon_name[i], "' (subclade ", label, "): ", show_value(subclades[[k]])))
+        }
+      }
+    }
+  }
+
+  if (length(found) > 0)
+  {
+    n_show <- min(length(found), max_show)
+    stop(length(found), " clade(s) of 'missing_taxa_list' are defined by node IDs, but tips are required:\n",
+         paste0("  - ", found[seq_len(n_show)], collapse = "\n"),
+         if (length(found) > n_show) paste0("\n  ... and ", length(found) - n_show, " more") else "",
+         "\nUse phylograftR::convert_nodes_to_tips(missing_taxa_list, phy) to convert the node IDs into pairs of tips (the conversions are printed), ",
+         "and pass the converted list.", call. = FALSE)
+  }
+  invisible(NULL)
 }
 
 
@@ -1157,6 +1244,18 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
     }
     clades <- total_richness_per_clades[[clade_element]]
     values <- total_richness_per_clades$total_richness
+    node_clades <- which(vapply(clades, is_node_id_clade, logical(1)))
+    if (is.list(clades) && length(node_clades) > 0)
+    {
+      n_show <- min(length(node_clades), 5)
+      stop(length(node_clades), " clade(s) of 'total_richness_per_clades$", clade_element, "' are defined by node IDs, but tips are required:\n",
+           paste0("  - clade ", node_clades[seq_len(n_show)], ": ", vapply(clades[node_clades[seq_len(n_show)]], paste, character(1), collapse = ", "), collapse = "\n"),
+           if (length(node_clades) > n_show) paste0("\n  ... and ", length(node_clades) - n_show, " more") else "",
+           "\n'total_richness_per_clades' must be converted AT THE SAME TIME as its associated 'missing_taxa_list', so that the tips defining a clade match between both objects:\n",
+           "  converted <- phylograftR::convert_nodes_to_tips(missing_taxa_list, phy, total_richness_per_clades = total_richness_per_clades)\n",
+           "and pass converted$missing_taxa_list and converted$total_richness_per_clades.\n",
+           "If 'missing_taxa_list' was already converted, use it in this call as a template: the tips it already uses for the clades are matched to the node IDs of 'total_richness_per_clades'.", call. = FALSE)
+    }
     if (!is.list(clades) || length(clades) == 0 || !all(vapply(clades, function (x) is.character(x) && length(x) >= 1, logical(1))))
     {
       stop("'total_richness_per_clades$", clade_element, "' must be a non-empty list of character vectors of tips")

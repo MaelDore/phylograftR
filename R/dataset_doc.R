@@ -58,7 +58,7 @@
 #'
 #'   See [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] for the use of the items in the grafting.
 #'
-#' @seealso [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list], [`phylograftR::convert_missing_taxa_list()`][convert_missing_taxa_list]
+#' @seealso [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list], [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]
 #'
 #' @examples
 #' # Import the list from loaded datasets
