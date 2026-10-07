@@ -26,8 +26,8 @@ toy_table <- function ()
 # Use a new empty directory in the temporary directory of the session (removed at its end)
 temp_dir <- function () { d <- tempfile("phylograftR_"); dir.create(d); d }
 
-# Perform the silent conversion of a table into a missing_taxa_list
-convert_quiet <- function (data, phy = phylograftR::toy_backbone) suppressWarnings(build_missing_taxa_list(data, phy))
+# Perform the silent conversion of a table into a missing_taxa_list (i.e., build a missing_taxa_list)
+build_quiet <- function (data, phy = phylograftR::toy_backbone) suppressWarnings(build_missing_taxa_list(data, phy))
 
 
 ### 1/ Datasets ####
@@ -96,7 +96,7 @@ test_that("the backbone dataset is an ultrametric tree with the expected size",
 
 test_that("build_missing_taxa_list() splits the tips and the subclades, and names every item after the taxa",
 {
-  l <- convert_quiet(toy_table())
+  l <- build_quiet(toy_table())
   expect_identical(l$Taxon_name, c("X1", "X2", "X3"))
   expect_identical(l$Target_clade, list(X1 = c("t26", "t18"), X2 = c("t26", "t18"), X3 = c("t8", "t22")))
   expect_identical(l$Excluded_subclades$X1, list(group_1 = c("t10", "t19"), group_2 = c("t26", "t4")))
@@ -114,19 +114,19 @@ test_that("build_missing_taxa_list() trims spaces and accepts spaces around sepa
   d$Target_clade <- c(" t26 , t18 ", "t26,t18", "t8, t22")
   d$Excluded_subclades <- c("t10, t19 ; t26 , t4", "t10,t19", NA)
   d$Excluded_subclades_names <- c(" group_1 ; group_2 ", "group_1", NA)
-  l <- convert_quiet(d)
-  expect_identical(l, convert_quiet(toy_table()))
+  l <- build_quiet(d)
+  expect_identical(l, build_quiet(toy_table()))
 })
 
 test_that("the optional columns can be omitted when building a missing_taxa_list from a data.frame",
 {
   d <- data.frame(Taxon_name = c("X1", "X2"), Target_clade = c("t26,t18", "t5"), stringsAsFactors = FALSE)
-  l <- convert_quiet(d)
+  l <- build_quiet(d)
   expect_identical(names(l), c("Taxon_name", "Target_clade"))
   expect_identical(l$Target_clade, list(X1 = c("t26", "t18"), X2 = "t5"))
   # Excluded subclades without names: no inner names
   d$Excluded_subclades <- c("t10,t19;t26,t4", NA)
-  l <- convert_quiet(d)
+  l <- build_quiet(d)
   expect_null(names(l$Excluded_subclades$X1))
   expect_length(l$Excluded_subclades$X1, 2)
 })
@@ -135,22 +135,22 @@ test_that("build_missing_taxa_list() keeps a single value of exclude_subclades_s
 {
   d <- toy_table()
   d$exclude_subclades_stem <- c("true;False", "FALSE", NA)
-  l <- convert_quiet(d)
+  l <- build_quiet(d)
   expect_identical(l$exclude_subclades_stem$X1, c(group_1 = TRUE, group_2 = FALSE))
   expect_identical(unname(l$exclude_subclades_stem$X2), FALSE)
   d <- toy_table()
   d$include_target_clade_stem <- c("TRUE", "false", "")
-  l <- convert_quiet(d)
+  l <- build_quiet(d)
   expect_identical(unname(l$include_target_clade_stem), c(TRUE, FALSE, NA))
   expect_identical(names(l$include_target_clade_stem), c("X1", "X2", "X3"))
   d$include_target_clade_stem <- c("yes", "N", "1")
-  expect_identical(unname(convert_quiet(d)$include_target_clade_stem), c(TRUE, FALSE, TRUE))
+  expect_identical(unname(build_quiet(d)$include_target_clade_stem), c(TRUE, FALSE, TRUE))
 })
 
 test_that("build_missing_taxa_list() accepts the sister clades and yields a list usable by graft_missing_clades()",
 {
   d <- data.frame(Taxon_name = c("X1", "X2"), Sister_clade = c("t8,t22", "t5"), Sister_clade_name = c("clade_B", "tip_t5"), stringsAsFactors = FALSE)
-  l <- convert_quiet(d)
+  l <- build_quiet(d)
   expect_identical(names(l), c("Taxon_name", "Sister_clade", "Sister_clade_name"))
   phy <- phylograftR::toy_backbone
   grafted <- quiet_graft(graft_missing_clades, phy, l, seed = 1)
@@ -159,7 +159,7 @@ test_that("build_missing_taxa_list() accepts the sister clades and yields a list
 
 test_that("the list with the optional label columns grafts like the list without them",
 {
-  l <- convert_quiet(toy_table())
+  l <- build_quiet(toy_table())
   grafted <- quiet_graft(graft_missing_taxa, phylograftR::toy_backbone, l, method = "uniform", seed = 5)
   expect_true(all(l$Taxon_name %in% grafted$tip.label))
   res <- check_grafting_constraints(grafted, phylograftR::toy_backbone, l, verbose = FALSE)
@@ -260,7 +260,7 @@ test_that("build_missing_taxa_list() manage labels properly: the same subclade m
   expect_error(build_missing_taxa_list(d, phy), "Inconsistent labels in 'Excluded_subclades_names'")
   # t19,t10,t30 has the same MRCA as t10,t19 (node 37): fine with the same label
   d <- toy_table(); d$Excluded_subclades[2] <- "t19,t10,t30"
-  l <- convert_quiet(d)
+  l <- build_quiet(d)
   expect_identical(l$Excluded_subclades$X2, list(group_1 = c("t19", "t10", "t30")))
   # The same clade with different labels
   d <- toy_table(); d$Excluded_subclades_names[2] <- "group_9"
@@ -279,7 +279,7 @@ test_that("build_missing_taxa_list() manage labels properly: the optional labels
 {
   phy <- phylograftR::toy_backbone
   d <- toy_table(); d$Target_clade_name <- c("clade_A", "clade_A", "clade_B")
-  l <- convert_quiet(d)
+  l <- build_quiet(d)
   expect_identical(unname(l$Target_clade_name), c("clade_A", "clade_A", "clade_B"))
   d$Target_clade_name <- c("clade_A", "clade_B", "clade_B")
   expect_error(build_missing_taxa_list(d, phy), "Inconsistent labels in 'Target_clade_name'")
@@ -311,7 +311,7 @@ test_that("import_missing_taxa_list() reads .csv, .tsv, .txt and files with a gi
 {
   phy <- phylograftR::toy_backbone
   d <- toy_table()
-  expected <- convert_quiet(d)
+  expected <- build_quiet(d)
   dir <- temp_dir()
 
   utils::write.csv(d, file.path(dir, "t.csv"), row.names = FALSE, na = "")
@@ -341,10 +341,10 @@ test_that("import_missing_taxa_list() reads Excel files",
   d <- toy_table()
   path <- file.path(temp_dir(), "t.xlsx")
   writexl::write_xlsx(d, path)
-  expect_identical(suppressWarnings(import_missing_taxa_list(path, phy)), convert_quiet(d))
+  expect_identical(suppressWarnings(import_missing_taxa_list(path, phy)), build_quiet(d))
   # Several sheets
   writexl::write_xlsx(list(first = d[1, ], second = d), path)
-  expect_identical(suppressWarnings(import_missing_taxa_list(path, phy, sheet = "second")), convert_quiet(d))
+  expect_identical(suppressWarnings(import_missing_taxa_list(path, phy, sheet = "second")), build_quiet(d))
   expect_identical(names(import_missing_taxa_list(path, phy, sheet = 1)$Target_clade), "X1")
   # Logical columns written as booleans in Excel
   d$include_target_clade_stem <- c(TRUE, FALSE, NA)
@@ -359,7 +359,7 @@ test_that("import_missing_taxa_list() accepts a user-supplied reader",
   d <- toy_table()
   path <- file.path(temp_dir(), "t.rds")
   saveRDS(d, path)
-  expect_identical(suppressWarnings(import_missing_taxa_list(path, phy, reader = readRDS)), convert_quiet(d))
+  expect_identical(suppressWarnings(import_missing_taxa_list(path, phy, reader = readRDS)), build_quiet(d))
   # Extra arguments are passed to the reader
   reader <- function (file, keep) { x <- readRDS(file); x[keep, ] }
   l <- suppressWarnings(import_missing_taxa_list(path, phy, reader = reader, keep = 1:2))

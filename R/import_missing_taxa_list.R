@@ -335,14 +335,15 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
   if (!is.data.frame(data)) { stop("'data' must be a data frame") }
   if (nrow(data) == 0) { stop("'data' has no rows") }
 
-  ## 2.1.1/ Columns ####
+  ## 2.1.1/ Check columns ####
 
+  # Columns recognized with each type of clade column. 'Target_clade' goes with the items of graft_missing_taxa(), 'Sister_clade' with those of graft_missing_clades()
   columns_taxa <- c("Taxon_name", "Target_clade", "Target_clade_name", "include_target_clade_stem",
                     "Excluded_subclades", "Excluded_subclades_names", "exclude_subclades_stem")
   columns_clades <- c("Taxon_name", "Sister_clade", "Sister_clade_name")
   all_columns <- unique(c(columns_taxa, columns_clades))
 
-  # Names of the columns without extra spaces. All the cells are read as trimmed text. Blank cells are missing values
+  # Clean the table: names of the columns without extra spaces, and every cell as trimmed text. Blank cells and "NA" are missing values (NA)
   data <- as.data.frame(data, stringsAsFactors = FALSE)
   names(data) <- trimws(names(data))
   if (anyDuplicated(names(data))) { stop("Some columns have the same name: ", paste(unique(names(data)[duplicated(names(data))]), collapse = ", ")) }
@@ -350,6 +351,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
 
   if (!("Taxon_name" %in% names(data))) { stop("The table must have a column 'Taxon_name'") }
 
+  # Exactly one of 'Target_clade' and 'Sister_clade' is required: it decides which list is built (for graft_missing_taxa() or graft_missing_clades())
   has_target <- "Target_clade" %in% names(data)
   has_sister <- "Sister_clade" %in% names(data)
   if (has_target && has_sister) { stop("The table has both 'Target_clade' and 'Sister_clade': use only one, depending on the grafting function (graft_missing_taxa() or graft_missing_clades())") }
@@ -358,7 +360,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
   label_item <- paste0(clade_item, "_name")
   allowed_columns <- if (has_target) columns_taxa else columns_clades
 
-  # Columns not recognized (typos) or not used with the clade column provided
+  # Columns not recognized (typos) or not used with the clade column provided: warn, and keep only the usable columns
   unknown <- setdiff(names(data), all_columns)
   not_used <- setdiff(intersect(names(data), all_columns), allowed_columns)
   if (length(unknown) > 0)
@@ -377,7 +379,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
     stop("The column 'Excluded_subclades_names' needs the column 'Excluded_subclades'")
   }
 
-  ## 2.1.2/ Taxa ####
+  ## 2.1.2/ Check Taxa ####
 
   n_taxa <- nrow(data)
   row_id <- seq_len(n_taxa)
@@ -395,54 +397,87 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
 
   ## 2.1.3/ Convert the node IDs into tips ####
 
-  # Clades defined by a node ID (digits only) are converted into tips, before any check based on tips.
-  # Clades defined by tips are left unchanged. Empty tips or subclades are left to the checks of the tips below.
+  # GOAL: A clade can be written in a cell with tips ("t8, t7") or with a node ID of 'phy' ("34"). Here, every node ID is replaced by tips in the TEXT of the cell,
+  # so the rest of the function (parsing and checks, from 2.2) only ever sees tips. Cells that already contain tips are left unchanged.
+  # Cells with problems (e.g., empty tips like "t1,,t2") are left as they are: they are reported by the checks of the tips in the next sections.
 
-  # Use an internal environment to record conversion such as a node ID is converted into the tips already used for the same clade
+  # Example for a cell of 'Excluded_subclades': "50; t5, t12; t7"
+  #   split on ";"  ->  "50"  |  "t5, t12"  |  "t7"
+  #   node ID "50" is replaced by a pair of tips  ->  "t13,t27"  |  "t5,t12"  |  "t7"
+  #   cell becomes: "t13,t27;t5,t12;t7"
+
+  # 'recorder' is a small environment (i.e., a list that can be modified from inside the functions below) where each conversion is noted
+  # (node ID, tips used, column, taxon). It is used to print the conversions at the end of this section.
   recorder <- new.env(parent = emptyenv())
   recorder$rows <- list()
 
-  # Function to parse cell information
+  # Step A. Find the clades that are ALREADY written with tips in the table, to build a 'lookup' (node of the clade -> tips used to write it).
+  # It ensures the same clade is always written with the same tips: if a row writes "t26, t18" (MRCA node 32) and another row writes "32",
+  # the node ID 32 is converted into "t26, t18" (the tips already used) and not into another pair of tips with the same MRCA node.
+
+  # This internal function splits the text of a cell into vectors of tips (here, node IDs are just pieces of text that are skipped when building the lookup).
   split_cell <- function (cell, split_subclades)
   {
     if (is.na(cell)) { return(list()) }
+    # Excluded_subclades: several clades per cell, separated by ";". Target_clade/Sister_clade: one clade per cell
     pieces <- if (split_subclades) trimws(strsplit(cell, ";", fixed = TRUE)[[1]]) else cell
+    # Each clade is a vector of tips separated by ","
     lapply(pieces, function (piece) trimws(strsplit(piece, ",", fixed = TRUE)[[1]]))
   }
+
+  # Record all the clades of the table, as a flat list of vectors of tips: target (or sister) clades, then excluded subclades
   known <- unlist(lapply(seq_len(n_taxa), function (i) split_cell(data[[clade_item]][i], FALSE)), recursive = FALSE)
   if ("Excluded_subclades" %in% names(data))
   {
     known <- c(known, unlist(lapply(seq_len(n_taxa), function (i) split_cell(data$Excluded_subclades[i], TRUE)), recursive = FALSE))
   }
+  # Keep the clades written with tips (valid in 'phy'), and associate each to its MRCA node
   lookup <- build_tips_lookup(phy, known)
+
+  # Step B. Build a function to rewrite one cell, replacing its node IDs by tips.
+
+  # Internal function to parse text of a cell and replace its node IDs by tips
+  # 'cell': text of the cell. 'item': name of the column, and 'who': name of the taxon (both for the messages and the record of the conversions).
+  # 'split_subclades': TRUE if the cell has several clades separated by ";" ('Excluded_subclades'), FALSE if it has one clade ('Target_clade' or 'Sister_clade').
   convert_cell <- function (cell, item, who, split_subclades)
   {
     if (is.na(cell)) { return(cell) }
     pieces <- if (split_subclades) trimws(strsplit(cell, ";", fixed = TRUE)[[1]]) else cell
     converted <- vapply(pieces, function (piece)
     {
+      # 'piece' is one clade, e.g., "t5, t12" or "50". Its tokens are the tips, or the node ID
       tokens <- trimws(strsplit(piece, ",", fixed = TRUE)[[1]])
-      if (length(tokens) == 0 || any(tokens == "")) { return(piece) }
+      if (length(tokens) == 0 || any(tokens == "")) { return(piece) } # Left unchanged: reported later by parse_tips()
+      # resolve_clade_tokens() returns the tips unchanged if the clade is written with tips; and converts it if the clade is a node ID.
+      # It stops if tips and node IDs are mixed in the same clade, or if the node ID is invalid.
+      # The tips already used for this node ('lookup') are preferred over the default pair of tips of the node.
       paste(resolve_clade_tokens(tokens, phy = phy, item = item, who = who, recorder = recorder, cell = piece, lookup = lookup), collapse = ",")
     }, character(1), USE.NAMES = FALSE)
+    # Reassemble the clades of the cell with ";"
     paste(converted, collapse = ";")
   }
+
+  # Step C. Apply it to every row of the columns defining clades: the text of these columns is replaced
   data[[clade_item]] <- vapply(seq_len(n_taxa), function (i) convert_cell(data[[clade_item]][i], clade_item, taxon_name[i], FALSE), character(1))
   if ("Excluded_subclades" %in% names(data))
   {
     data$Excluded_subclades <- vapply(seq_len(n_taxa), function (i) convert_cell(data$Excluded_subclades[i], "Excluded_subclades", taxon_name[i], TRUE), character(1))
   }
+
+  # Print the conversions (nothing is printed if there was no node ID, or if verbose = FALSE)
   report_node_conversions(recorder$rows, phy = phy, verbose = verbose)
 
   ## 2.2/ Clades of the taxa: Target_clade or Sister_clade ####
 
+  # From here, all the clades are written with tips: parse the text of each cell into a vector of tips.
+  # We now check that the tips are in 'phy', and identify the node of each clade (tip node for one tip, MRCA node for two or more tips)
   clade_cells <- data[[clade_item]]
   if (anyNA(clade_cells)) { stop("'", clade_item, "' is empty for: ", paste(label_taxon(which(is.na(clade_cells))), collapse = ", ")) }
   clade_tips <- lapply(seq_len(n_taxa), function (i) parse_tips(clade_cells[i], label_taxon(i), clade_item))
   check_tips_in_phy(clade_tips, phy, taxon_name, clade_item)
   clade_nodes <- vapply(clade_tips, function (tips) get_clade_node(phy, tips), numeric(1))
 
-  # Optional labels of the clades
+  # Optional labels of the clades: the same clade (same MRCA node) must have the same label across taxa, and different clades different labels
   clade_labels <- NULL
   if (label_item %in% names(data))
   {
@@ -452,6 +487,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
 
   ## 2.3/ Stem of the target clade ####
 
+  # One logical value per taxon (NA = use the global argument of graft_missing_taxa())
   include_stem <- NULL
   if ("include_target_clade_stem" %in% names(data))
   {
@@ -460,13 +496,17 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
 
   ## 2.4/ Excluded subclades and their stem ####
 
+  # 'excluded' will be a list with one element per taxon: a list of vectors of tips (one per excluded subclade), or NULL for a taxon with no excluded subclade.
+  # 'exclude_stem' will be a list with one element per taxon: a logical vector (one value per excluded subclade), or NULL.
   excluded <- NULL
   exclude_stem <- NULL
   if ("Excluded_subclades" %in% names(data))
   {
     excluded <- vector("list", n_taxa)
+    # Loop on the taxa that have excluded subclades
     for (i in which(!is.na(data$Excluded_subclades)))
     {
+      # Split the cell into subclades (separated by ";"), then each subclade into tips (separated by ",")
       subclades <- trimws(strsplit(data$Excluded_subclades[i], ";", fixed = TRUE)[[1]])
       if (any(subclades == "")) { stop("'Excluded_subclades' of ", label_taxon(i), " has an empty subclade (check the ';' separators): ", data$Excluded_subclades[i]) }
       subclades_tips <- lapply(subclades, function (cell) parse_tips(cell, label_taxon(i), "Excluded_subclades"))
@@ -497,7 +537,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
       if (length(orphans) > 0) { stop("'Excluded_subclades_names' is provided but 'Excluded_subclades' is empty for: ", paste(label_taxon(orphans), collapse = ", ")) }
     }
 
-    # Tips in the backbone
+    # Tips of the excluded subclades must be in the backbone
     check_tips_in_phy(lapply(excluded, function (x) unique(unlist(x))), phy, taxon_name, "Excluded_subclades")
 
     # Labels of the excluded subclades: the same clade (same MRCA node) must have the same label, and different clades different labels
@@ -513,7 +553,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
       }
     }
 
-    # Stem of the excluded subclades
+    # Stem of the excluded subclades: one value per subclade, separated by ";", or a single value used for all the subclades of the taxon
     if ("exclude_subclades_stem" %in% names(data))
     {
       exclude_stem <- vector("list", n_taxa)
@@ -540,6 +580,9 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
 
   ## 2.5/ Position of the excluded subclades relative to the target clade ####
 
+  # Only for target clades: the excluded subclades must be nested within the target clade of their taxon.
+  # The check uses the same function as check_grafting_constraints(), on a temporary list ('mtl_check') with the same items as a 'missing_taxa_list'
+  # to ensure that the position of the excluded subclades is valid relative to their target clade.
   if (!is.null(excluded) && has_target)
   {
     # The stem of a subclade is excluded unless set to FALSE (the global default of graft_missing_taxa())
@@ -573,6 +616,9 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
 
   ## 2.6/ Build the list, with all the items named after the taxa ####
 
+  # Every item is named after the taxa (same names, same order), as required by the grafting functions.
+  # Items absent from the table are not added. Items that may contain NULL (excluded subclades and their stem) are assigned with 'list()'
+  # so the NULL elements (taxa without excluded subclades) are kept in the list.
   missing_taxa_list <- list(Taxon_name = taxon_name)
   missing_taxa_list[[clade_item]] <- stats::setNames(clade_tips, taxon_name)
   if (!is.null(clade_labels)) { missing_taxa_list[[label_item]] <- stats::setNames(clade_labels, taxon_name) }
