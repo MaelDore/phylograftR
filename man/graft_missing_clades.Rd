@@ -25,8 +25,10 @@ It must be rooted and ultrametric (i.e., be time-calibrated).}
 \itemize{
 \item \verb{$Taxon_name}: Character vector of the names of the taxa to graft. Names must be unique and absent from \code{phy$tip.label}.
 \item \verb{$Sister_clade}: List (named after \verb{$Taxon_name}) of character vectors. For each taxon, the tip labels defining the clade of the backbone
-that is sister to the missing clade. A pair of tips defines the clade as their MRCA node. A single tip defines the "clade" as the terminal branch of this tip.
-Taxa with the same sister clade are grafted together as one missing clade.
+that is sister to the missing clade. Taxa with the same sister clade are grafted together as one missing clade.
+A pair of tips defines the clade as their MRCA node. A single tip defines the "clade" as the terminal branch of this tip.
+Clades, including the excluded subclades (see below), must be defined by tips: node IDs are not accepted (the function stops, and lists some of them).
+Use \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} to convert node IDs into pairs of tips.
 }}
 
 \item{min_tips}{Integer. Minimum number of tips of the clade used to fit the birth-death model.
@@ -36,6 +38,8 @@ If the sister clade has fewer tips, the smallest enclosing clade with at least \
 nor in \code{missing_taxa_list} (i.e., unsampled species) when fitting the birth-death models. Items:
 \itemize{
 \item \verb{$Sister_clade}: List of character vectors of tips, defining clades as in \code{missing_taxa_list$Sister_clade}.
+Node IDs are not accepted: convert them with \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} in the same call as \code{missing_taxa_list},
+so the tips of the clades match between both objects.
 It must cover all the unique sister clades of \code{missing_taxa_list}. It can include other clades, e.g., enclosing clades.
 \item \verb{$total_richness}: Vector of positive integers, same length as \verb{$Sister_clade}. Total number of species of each clade,
 i.e., backbone species, missing species nested within the clade, and unsampled species. Use \code{NA} if unknown: the unsampled species

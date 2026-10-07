@@ -4,7 +4,15 @@
 \alias{import_missing_taxa_list}
 \title{Import a table of missing taxa as a \code{missing_taxa_list} object}
 \usage{
-import_missing_taxa_list(file, phy, sep = NULL, sheet = 1, reader = NULL, ...)
+import_missing_taxa_list(
+  file,
+  phy,
+  sep = NULL,
+  sheet = 1,
+  reader = NULL,
+  verbose = TRUE,
+  ...
+)
 }
 \arguments{
 \item{file}{Character string. Path to the file with the table.
@@ -28,6 +36,8 @@ to distinguish from the field separator, the cells containing tips and the subcl
 It must take the path of the file as first argument and return a data frame. If provided, it is used whatever the extension of the file.
 Default is \code{NULL}.}
 
+\item{verbose}{Logical. Whether to print the conversions of node IDs into tips (if any). Default is \code{TRUE}.}
+
 \item{...}{Further arguments passed to the function reading the file (\code{utils::read.table()} for text files, \code{readxl::read_excel()} for Excel files, or \code{reader}).}
 }
 \value{
@@ -48,7 +58,7 @@ Every item is named after the taxa (\verb{$Taxon_name}), in the same order.
 Read a table (e.g., a .csv file, or an Excel sheet) describing the taxa to graft, and convert it into a valid \code{missing_taxa_list}
 object ready-to-be-used as input for \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}.
 
-The table is converted by \code{\link[=convert_missing_taxa_list]{phylograftR::convert_missing_taxa_list()}}, which also runs all the checks of validity
+The table is converted by \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}}, which also runs all the checks of validity
 against the backbone phylogeny to ensure the \code{missing_taxa_list} provides information that are valid to process the grafting.
 }
 \details{
@@ -61,14 +71,15 @@ Values are \code{TRUE} or \code{FALSE} (also accepts \code{T}, \code{F}, \code{y
 or a sister clade, i.e., the clade on whose stem branch the taxon is grafted, as its sister.
 A pair of tips defines the clade as their MRCA node (e.g., \code{"t26, t18"}).
 A single tip defines the "clade" as the terminal branch of this tip (e.g., \code{"t15"}).
+A node ID of \code{phy} (digits only, e.g., \code{"34"}) also defines the clade, see 'Node IDs' below.
 Use \code{Sister_clade} to prepare a list for \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}:
 the columns specific to \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} below (\code{Target_clade_name}, \code{include_target_clade_stem}, \code{Excluded_subclades}, \code{Excluded_subclades_names} and \code{exclude_subclades_stem}) are ignored, with a warning.
 \item \code{include_target_clade_stem}: (Optional) Logical values. For each taxon, whether the stem branch of its target clade is available for grafting.
 \code{NA} values and blank cells use the global \code{include_target_clade_stem} argument of \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}.
 \item \code{Excluded_subclades}: (Optional) For each taxon, tip labels defining the subclades of its target clade where the taxon is known not to belong.
-Each subclade is defined by a pair of tips or a single tip.
-Ex: \code{"t10, t19; t5, t12; t7"} for three subclades, the last one being a single tip.
-Blank cells for taxa without excluded subclades.
+Each subclade is defined by a pair of tips, a single tip, or a node ID.
+Ex: \code{"t10, t19; 50; t7"} for three subclades, the two first being clades with multiple species defined by a pair of tips (\code{"t10, t19"}), and an internal node ID (\code{"50"}).
+The last one is a single tip define by its tip label (\code{"t7"}). Use blank cells for taxa without excluded subclades.
 \item \code{exclude_subclades_stem}: (Optional) Logical values. For each taxon, whether the stem of each of its excluded subclades is also excluded,
 with one value per subclade of \code{Excluded_subclades} separated by semicolons, or a single value used for all of them.
 Ex: \code{"FALSE; TRUE; TRUE"}.
@@ -78,13 +89,31 @@ Ex: \code{"FALSE; TRUE; TRUE"}.
 Optional columns that do not match items in \code{missing_taxa_list} can be used to provide names of clades:
 \itemize{
 \item \code{Target_clade_name} or \code{Sister_clade_name} (Optional): Label of the target (or sister) clade.
-It is only used to check that the clades are defined consistently (see \code{\link[=convert_missing_taxa_list]{phylograftR::convert_missing_taxa_list()}}).
+It is only used to check that the clades are defined consistently (see \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}}).
 \item \code{Excluded_subclades_names} (Optional): Labels of the excluded subclades, separated by semicolons, in the same order as in \code{Excluded_subclades}.
 Ex: \code{"group_1; group_2; tip_t7"}. There must be one label per subclade.
 If provided, they are used as names of the subclades in the \code{Excluded_subclades} item of the list, and in the messages of the grafting functions.
 }
 
 Other columns are ignored, with a warning.
+\subsection{Node IDs}{
+
+Clades (\code{Target_clade}, \code{Sister_clade}, and each subclade of \code{Excluded_subclades}) are typically defined by (pairs of) tips.
+However, the function also accepts clades defined by the ID of a node of \code{phy} instead of tips, in the same table, and even in the same cell
+(e.g., \code{"50; t5, t12; t7"} for three excluded subclades defined respectively by an internal node, a pair of tips, a terminal tip label).
+Node IDs are integers: \code{1} to N, with N being the number of tips (\code{ape::Ntip(phy)}), correspond to terminal nodes, and thus define single-tip clades.
+Following IDs are the internal nodes, as shown by \code{ape::nodelabels()}, and correspond to clades with multiple descending species.
+
+A value made only of digits is a node ID, so \strong{tip labels must include at least one other character than digits} to be distinguished.
+A clade is defined by tips or by one node ID, not both, and one node ID defines the clade alone.
+Node IDs are converted into tips before any other check, as done by \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}},
+and the conversions are printed if \code{verbose = TRUE}.
+
+The warnings and errors that follow, and the grafting functions, therefore use the tips that are traced back to your node IDs in the messages.
+If a clade is already defined by tips in the table, a node ID of the same clade is converted into the same tips.
+Convert \code{total_richness_per_clades} (if you use it) at the same time as the list, with \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}},
+so the tips of the clades match between both objects.
+}
 }
 \examples{
 # Path to an example table of missing taxa, provided with the package
@@ -107,11 +136,16 @@ identical(missing_taxa_list, toy_missing_taxa_list)
 grafted_phy <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = missing_taxa_list,
                                   method = "uniform", verbose = FALSE, seed = 1234)
 
+# Plot the pruned phylogeny with the updated colors
+plot(grafted_phy, cex = 0.7,
+     edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
+     tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+
 }
 \seealso{
 Other functions from phylograftR:
 \itemize{
-\item \code{\link[=convert_missing_taxa_list]{phylograftR::convert_missing_taxa_list()}} to convert a data frame already loaded in R,
+\item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to convert a data frame already loaded in R,
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} that use the list for grafting.
 }
 }

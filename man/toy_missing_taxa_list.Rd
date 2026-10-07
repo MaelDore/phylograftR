@@ -38,6 +38,6 @@ system.file("extdata", "toy_missing_taxa.csv", package = "phylograftR")
 
 }
 \seealso{
-\code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}}, \code{\link[=convert_missing_taxa_list]{phylograftR::convert_missing_taxa_list()}}
+\code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}}, \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}}
 }
 \keyword{datasets}
