@@ -18,9 +18,9 @@
 #' @title Toy backbone phylogeny
 #'
 #' @description Simulated ultrametric phylogeny with 30 tips (`t1` to `t30`) and a root age of 50, used in the examples and vignettes.
+#'
 #' Generated with `ape::rcoal()` (seed 1234) and rescaled. Internal branches shorter than 1 (2% of the root age) were lengthened by moving
 #' their rootward node towards the root, so that no node looks like a polytomy on a plot (the topology, the root age and the ultrametry are unchanged).
-#' See `data-raw/toy_data.R`.
 #'
 #' @usage data(toy_backbone)
 #' @format An object of class `"phylo"` with 30 tips and 29 internal nodes.
@@ -116,8 +116,6 @@
 #'   * The three states cover similar shares of the total branch length (about 34% `"green"`, 32% `"red"` and 34% `"blue"`).
 #'   * A moderate number of transitions: 14 changes of state, along 12 of the 58 branches (no branch has more than 3 pieces).
 #'   * Each state is found in 8 to 11 of the 30 tips.
-#'
-#'   See `data-raw/toy_data.R`.
 #'
 #' @usage data(toy_simmap)
 #' @format An object of classes `"simmap"` and `"phylo"` (see `phytools::make.simmap()`), with the same tips, topology and branch lengths as

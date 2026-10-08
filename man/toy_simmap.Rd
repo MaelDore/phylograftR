@@ -25,8 +25,6 @@ Among the first 1000 seeds, the one used (50) is the first giving a balanced map
 \item A moderate number of transitions: 14 changes of state, along 12 of the 58 branches (no branch has more than 3 pieces).
 \item Each state is found in 8 to 11 of the 30 tips.
 }
-
-See \code{data-raw/toy_data.R}.
 }
 \examples{
 # Import the data

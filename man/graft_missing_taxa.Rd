@@ -347,7 +347,8 @@ data(toy_simmap)
 data(toy_missing_taxa_list)
 
 # Perform grafting informed with the simmap and associated 'allowed_states'
-grafted_phy_states <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = toy_missing_taxa_list,
+grafted_phy_states <- graft_missing_taxa(phy = toy_backbone,
+                                         missing_taxa_list = toy_missing_taxa_list,
                                          simmap = toy_simmap, allowed_states = c("blue", "green"),
                                          method = "uniform", verbose = FALSE, seed = 1234)
 
