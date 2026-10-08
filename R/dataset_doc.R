@@ -10,6 +10,7 @@
 #  - A backbone phylogeny for grafting
 #  - A list of missing taxa to be grafted
 #  - A table of total richness per clades to inform sampling fractions with unsampled species
+#  - A stochastic character map (simmap) of the backbone phylogeny, mapping a trait or range with three states
 
 
 ##### 1/ Toy backbone phylogeny #####
@@ -98,3 +99,40 @@
 #'
 "toy_total_richness_per_clades"
 
+
+##### 4/ Toy simmap #####
+
+#' @title Toy stochastic character map of the toy backbone phylogeny
+#'
+#' @description Stochastic character map (simmap) of [`phylograftR::toy_backbone`][toy_backbone] with three states, `"blue"`, `"green"` and `"red"`,
+#'   named after colors to ease their visualization. It can be used as `simmap` to restrict grafting to branches in some states
+#'   (see the examples of the grafting functions).
+#'
+#'   It was simulated with `phytools::sim.history()` from a root in state `"green"`, with equal transition rates between the three states
+#'   (0.04 per unit of time, i.e., one transition every 12.5 time units on average on a lineage, for a root age of 50).
+#'   Among the first 1000 seeds, the one used (50) is the first giving a balanced map:
+#'   * The three states cover similar shares of the total branch length (about 33% `"green"`, 37% `"red"` and 29% `"blue"`).
+#'   * A moderate number of transitions: 14 changes of state, along 12 of the 58 branches (no branch has more than 4 pieces).
+#'   * Each state is found in 7 to 13 of the 30 tips.
+#'
+#'   See `data-raw/toy_data.R`.
+#'
+#' @usage data(toy_simmap)
+#' @format An object of classes `"simmap"` and `"phylo"` (see `phytools::make.simmap()`), with the same tips, topology and branch lengths as
+#'   [`phylograftR::toy_backbone`][toy_backbone], and the additional elements `$maps` (for each branch, the duration spent in each state,
+#'   from the rootward node to the tipward node), `$mapped.edge` (total duration per state and branch), `$node.states` and `$states` (states of the nodes and tips).
+#'
+#' @seealso [`phylograftR::toy_backbone`][toy_backbone], [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
+#'
+#' @examples
+#' # Import the data
+#' data(toy_simmap)
+#'
+#' # Plot the map, using less flashy colors than the ones of the states
+#' state_colors <- c(blue = "dodgerblue", green = "limegreen", red = "firebrick")
+#' phytools::plotSimmap(toy_simmap, colors = state_colors, fsize = 0.7, ftype = "i")
+#'
+#' # Duration spent in each state (sum on all the branches)
+#' colSums(toy_simmap$mapped.edge)
+#'
+"toy_simmap"

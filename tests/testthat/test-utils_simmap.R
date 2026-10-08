@@ -288,3 +288,29 @@ test_that("get_state_at_position() solves ties at the limit of two pieces with t
   expect_identical(get_state_at_position(tracker, phy, node, limit, allowed_states = state_root_side, edge_ages = edge_ages), state_root_side)
   expect_identical(get_state_at_position(tracker, phy, node, limit, allowed_states = state_tip_side, edge_ages = edge_ages), state_tip_side)
 })
+
+
+##### 3/ Tests of the toy simmap #####
+
+## Test that the toy simmap can be used with the toy backbone, and is balanced as described in its documentation
+test_that("toy_simmap is a valid simmap of toy_backbone with three states of similar importance and a moderate number of transitions",
+{
+  toy_backbone <- phylograftR::toy_backbone
+  toy_simmap <- phylograftR::toy_simmap
+
+  checked <- validate_simmap(toy_simmap, toy_backbone)
+  expect_equal(checked$states, c("blue", "green", "red"))
+  expect_equal(checked$edge_map, seq_len(nrow(toy_backbone$edge)))
+
+  # Each state covers between a quarter and 40% of the total branch length
+  share_of_length <- colSums(toy_simmap$mapped.edge) / sum(toy_simmap$mapped.edge)
+  expect_true(all(share_of_length > 0.25 & share_of_length < 0.40))
+
+  # Moderate number of transitions: some but not all the branches include a change of state
+  share_of_branches_with_change <- mean(lengths(toy_simmap$maps) > 1)
+  expect_true(share_of_branches_with_change >= 0.15 && share_of_branches_with_change <= 0.30)
+  expect_lte(max(lengths(toy_simmap$maps)), 4)
+
+  # Each state is found in several tips
+  expect_true(all(table(toy_simmap$states) >= 7))
+})

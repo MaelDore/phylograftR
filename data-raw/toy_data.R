@@ -7,7 +7,7 @@
 
 # Run from the root of the package, after loading it (devtools::load_all() or devtools::install()).
 # Produces:
-#  * data/toy_backbone.rda, data/toy_missing_taxa_list.rda, data/toy_total_richness_per_clades.rda
+#  * data/toy_backbone.rda, data/toy_missing_taxa_list.rda, data/toy_total_richness_per_clades.rda, data/toy_simmap.rda
 #  * inst/extdata/toy_missing_taxa.csv, inst/extdata/toy_total_richness.csv
 
 
@@ -62,9 +62,60 @@ toy_total_richness_per_clades <- list(
   Target_clade = strsplit(toy_total_richness_table$Target_clade, ",", fixed = TRUE),
   total_richness = toy_total_richness_table$total_richness)
 
-##### 5/ Save objects #####
+##### 5/ Create a stochastic character map (simmap) of the backbone #####
+
+# Three states named after colors, to ease their visualization: "blue", "green" and "red" -------------------
+
+# Equal transition rates between the three states (symmetric Q matrix), so the three states are expected in similar amounts.
+# The rate (0.04 per unit of time between each pair of states, i.e., one transition every 12.5 time units on average on a lineage,
+# for a root age of 50) gives a moderate number of transitions: about one branch out of five includes a change of state.
+toy_simmap_states <- c("blue", "green", "red")
+toy_simmap_rate <- 0.04
+toy_simmap_Q <- matrix(toy_simmap_rate, nrow = 3, ncol = 3, dimnames = list(toy_simmap_states, toy_simmap_states))
+diag(toy_simmap_Q) <- -2 * toy_simmap_rate
+
+# A single history is simulated from a root in state "green" (phytools::sim.history()), but the seed is chosen so that the map is balanced:
+# the first seed (among 1 to 1000) for which
+#  * each state covers between 29% and 38% of the total length of the branches,
+#  * between 15% and 30% of the branches include a change of state, and no branch has more than 4 pieces,
+#  * each state is found in 7 to 13 of the 30 tips.
+simulate_toy_simmap <- function (seed)
+{
+  set.seed(seed)
+  phytools::sim.history(tree = toy_backbone, Q = toy_simmap_Q, anc = "green", message = FALSE)
+}
+
+is_balanced_simmap <- function (simmap)
+{
+  duration_per_state <- colSums(simmap$mapped.edge)
+  if (!all(toy_simmap_states %in% names(duration_per_state))) { return(FALSE) }
+  share_of_length <- duration_per_state[toy_simmap_states] / sum(duration_per_state)
+  share_of_branches_with_change <- mean(lengths(simmap$maps) > 1)
+  tips_per_state <- table(factor(simmap$states, levels = toy_simmap_states))
+  all(abs(share_of_length - 1/3) < 0.04) &&
+    share_of_branches_with_change >= 0.15 && share_of_branches_with_change <= 0.30 && max(lengths(simmap$maps)) <= 4 &&
+    all(tips_per_state >= 7) && all(tips_per_state <= 13)
+}
+
+toy_simmap_seed <- NULL
+for (seed in 1:1000)
+{
+  if (is_balanced_simmap(simulate_toy_simmap(seed))) { toy_simmap_seed <- seed; break }
+}
+stopifnot(!is.null(toy_simmap_seed))
+toy_simmap <- simulate_toy_simmap(toy_simmap_seed)
+
+# Summary of the map
+toy_simmap_seed # 50
+round(colSums(toy_simmap$mapped.edge) / sum(toy_simmap$mapped.edge), 2) # Share of the total branch length in each state
+sum(lengths(toy_simmap$maps) - 1) # Number of changes of state along the branches
+table(toy_simmap$states) # States of the tips
+
+
+##### 6/ Save objects #####
 
 dir.create("data", showWarnings = FALSE)
 save(toy_backbone, file = "data/toy_backbone.rda", compress = "gzip", version = 2)
 save(toy_missing_taxa_list, file = "data/toy_missing_taxa_list.rda", compress = "gzip", version = 2)
 save(toy_total_richness_per_clades, file = "data/toy_total_richness_per_clades.rda", compress = "gzip", version = 2)
+save(toy_simmap, file = "data/toy_simmap.rda", compress = "gzip", version = 2)
