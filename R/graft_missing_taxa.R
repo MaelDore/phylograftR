@@ -479,6 +479,10 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   ## Set seed if provided, for the duration of this function only (the global RNG state is restored on exit)
   set_local_seed(seed)
 
+  ## Label the internal nodes of the backbone, to identify them in the grafted tree (node IDs change after each graft) and restore the original node labels at the end
+  labelled_backbone <- label_backbone_nodes(phy)
+  phy <- labelled_backbone$phy
+
   ## Randomize the order of taxa so it has no influence on the pattern of grafting
   # Taxa of the same target clade are exchangeable: their order is random.
     # With method = 'uniform', taxa are then re-ordered by target clade so nested clades are processed first (the random order is kept within each clade).
@@ -564,7 +568,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         {
           temp_file_path <- "./temp_phy_from_grafting.rds"
         }
-        saveRDS(object = phy, file = file.path(temp_file_path))
+        # Save the phylogeny with original node labels restored
+        saveRDS(object = restore_node_labels(phy = phy, labelled = labelled_backbone), file = file.path(temp_file_path))
       }
 
       # Print progress if requested
@@ -572,7 +577,6 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       {
         cat(paste0(Sys.time(), " - Missing taxa grafted n\u00b0", i, "/", n_missing, "\n"))
       }
-
     }
   }
 
@@ -716,7 +720,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         {
           temp_file_path <- "./temp_phy_from_grafting.rds"
         }
-        saveRDS(object = phy, file = file.path(temp_file_path))
+        saveRDS(object = restore_node_labels(phy = phy, labelled = labelled_backbone), file = file.path(temp_file_path))
       }
 
       # Print progress if requested
@@ -736,6 +740,9 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     # Force ultrametry to avoid issue with bad rounding, but only of the grafted tips, to keep the backbone intact
     phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxon_name, root_age = root_age)
   }
+
+  # Restore the original node labels (none if the backbone had none, and an empty string for the nodes created by grafting otherwise)
+  phy <- restore_node_labels(phy = phy, labelled = labelled_backbone)
 
   # Add the elements identifying the grafted tips and branches, and the sampling fraction table of the clades if 'total_richness_per_clades' was provided
   phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxon_name)

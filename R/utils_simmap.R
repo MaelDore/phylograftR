@@ -23,11 +23,12 @@
 #     * Any branch of a 'missing-only subtree' (a grafted taxon, and the taxa grafted on its branch, etc.) is entirely in one state:
 #       the state of the point of the backbone where the first taxon of the subtree was grafted.
 #   To follow these lineages after each graft, the internal nodes of the tree are labelled (in `phy$node.label`) with a key,
-#   because labels are kept by `phytools::bind.tip()` while node IDs are not:
+#   because labels are kept by `phytools::bind.tip()` while node IDs are not.
+#   The backbone is labelled by the grafting functions (see `label_backbone_nodes()` and `restore_node_labels()` in utils_grafting.R), and the new nodes by `track_graft()`:
 #     * "bb<k>": original node k of the backbone. The branch leading to it belongs to the backbone branch k (identified by its tipward node).
 #     * "gr<k>": node created by a graft on the backbone branch k.
 #     * "ms<j>": node created by a graft on a branch of a missing-only subtree in the state number j (index in the states of the simmap).
-#   The tips are identified by their label. The original `node.label` of the backbone (e.g., support values) is stored and restored at the end.
+#   The tips are identified by their label. The original `node.label` of the backbone (e.g., support values) is restored at the end.
 
 
 #' @title Check that a simmap matches with the backbone phylogeny
@@ -210,10 +211,9 @@ build_state_table <- function (phy, simmap, edge_map)
 
 #' @title Start tracking the states along the branches during grafting
 #'
-#' @description Prepare the tracking of the states of the simmap along the lineages of the backbone while taxa are grafted (see the header of this file),
-#'   and label the internal nodes of the backbone.
+#' @description Prepare the tracking of the states of the simmap along the lineages of the backbone while taxa are grafted (see the header of this file).
 #'
-#' @param phy Backbone phylogeny of class `"phylo"`, ultrametric.
+#' @param phy Backbone phylogeny of class `"phylo"`, ultrametric, with its internal nodes labelled by `label_backbone_nodes()`.
 #' @param simmap Object of class `"simmap"` matching `phy`.
 #' @param tol Numeric. Tolerance used to validate the simmap. Default is `1e-6`.
 #'
@@ -221,13 +221,17 @@ build_state_table <- function (phy, simmap, edge_map)
 #'
 #' @noRd
 #'
-#' @return A list with 2 elements:
-#'  * `phy` The backbone phylogeny, with its internal nodes labelled `"bb<node ID>"`.
-#'  * `tracker` List used by the functions below to follow the states: the table of the states of the backbone, its states, and the information on the backbone nodes.
+#' @return A list used by the functions below to follow the states (the tracker): the table of the states of the backbone, its states,
+#'   and the information on the backbone nodes.
 #'
 
 start_state_tracking <- function (phy, simmap, tol = 1e-6)
 {
+  # The internal nodes of the backbone must be labelled to be followed during grafting
+  if (!identical(phy$node.label, paste0("bb", ape::Ntip(phy) + seq_len(phy$Nnode))))
+  {
+    stop("Internal error: the nodes of the backbone must be labelled with label_backbone_nodes() to track the states during grafting.")
+  }
   checked <- validate_simmap(simmap = simmap, phy = phy, tol = tol)
   state_table <- build_state_table(phy = phy, simmap = simmap, edge_map = checked$edge_map)
   n_tips <- ape::Ntip(phy)
@@ -247,11 +251,9 @@ start_state_tracking <- function (phy, simmap, tol = 1e-6)
     tip_labels = phy$tip.label,
     n_tips = n_tips,
     node_age = node_age,
-    original_node_labels = phy$node.label,
     missing_state = character(0)) # State of each grafted taxon (named by its label)
 
-  phy$node.label <- paste0("bb", n_tips + seq_len(phy$Nnode))
-  list(phy = phy, tracker = tracker)
+  tracker
 }
 
 
@@ -466,34 +468,4 @@ track_graft <- function (tracker, phy_before, phy_after, node, position, tip_lab
 
   tracker$missing_state[tip_label] <- state
   list(phy = phy_after, tracker = tracker)
-}
-
-
-#' @title Stop tracking the states: restore the original node labels
-#'
-#' @description Remove the labels used for tracking. The tree gets back the node labels of the backbone (e.g., support values),
-#'   and `NA` for the nodes created by grafting. If the backbone had no node labels, the tree has none.
-#'
-#' @param tracker Output of `start_state_tracking()`, updated by `track_graft()`.
-#' @param phy Phylogeny of class `"phylo"`, with the nodes labelled by the tracking functions.
-#'
-#' @noRd
-#'
-#' @return The phylogeny with its original node labels.
-#'
-
-stop_state_tracking <- function (tracker, phy)
-{
-  if (is.null(tracker$original_node_labels))
-  {
-    phy$node.label <- NULL
-    return(phy)
-  }
-  labels <- phy$node.label
-  original_id <- suppressWarnings(as.integer(substring(labels, 3)))
-  is_original <- !is.na(labels) & substr(labels, 1, 2) == "bb" & !is.na(original_id)
-  restored <- rep(NA_character_, length(labels))
-  restored[is_original] <- tracker$original_node_labels[original_id[is_original] - tracker$n_tips]
-  phy$node.label <- restored
-  phy
 }

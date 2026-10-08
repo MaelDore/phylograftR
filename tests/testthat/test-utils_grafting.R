@@ -596,3 +596,51 @@ test_that("the resolvers of the stem settings return outputs named after the tax
   expect_equal(unname(resolve_exclude_subclades_stem(list(X1 = stats::setNames(c(FALSE, TRUE), c("grp_B", "")), X2 = NULL), TRUE, excluded, 2)[[1]]), c(FALSE, TRUE))
   expect_error(resolve_exclude_subclades_stem(list(X1 = c(grp_C = FALSE, other = TRUE), X2 = NULL), TRUE, excluded, 2), "must match the names of its excluded subclades")
 })
+
+# ---- Node labels of the backbone ----
+
+## Test that the internal nodes of the backbone are labelled with their ID, keeping the original labels aside
+test_that("label_backbone_nodes() labels the internal nodes with their ID and keeps the original labels",
+{
+  phy <- make_toy_phy()
+  labelled <- label_backbone_nodes(phy)
+  expect_equal(labelled$phy$node.label, paste0("bb", ape::Ntip(phy) + seq_len(phy$Nnode)))
+  expect_null(labelled$original_node_labels)
+  expect_equal(labelled$n_tips, ape::Ntip(phy))
+
+  phy$node.label <- paste0("support", seq_len(phy$Nnode))
+  labelled <- label_backbone_nodes(phy)
+  expect_equal(labelled$original_node_labels, phy$node.label)
+  expect_equal(labelled$phy$node.label, paste0("bb", ape::Ntip(phy) + seq_len(phy$Nnode)))
+})
+
+## Test that no label is returned if the backbone had none, and an empty string is given to the new nodes otherwise
+test_that("restore_node_labels() gives no labels if the backbone had none, and an empty string to the new nodes otherwise",
+{
+  phy <- make_toy_phy()
+  toy_node <- phy$edge[5, 2]
+
+  # No original labels: no labels after grafting
+  labelled <- label_backbone_nodes(phy)
+  grafted <- graft_tip_on_branch(labelled$phy, "X1", toy_node)
+  expect_null(restore_node_labels(grafted, labelled)$node.label)
+  expect_null(restore_node_labels(labelled$phy, labelled)$node.label)
+
+  # Original labels: kept for the backbone nodes, empty string for the nodes created by grafting (whatever the label given by the binding function)
+  phy$node.label <- paste0("support", seq_len(phy$Nnode))
+  labelled <- label_backbone_nodes(phy)
+  grafted <- graft_tip_on_branch(labelled$phy, "X1", toy_node)
+  grafted <- graft_tip_on_branch(grafted, "X2", match("X1", grafted$tip.label))
+  restored <- restore_node_labels(grafted, labelled)
+  expect_length(restored$node.label, restored$Nnode)
+  expect_equal(sum(restored$node.label == ""), 2)
+  expect_setequal(restored$node.label[restored$node.label != ""], phy$node.label)
+  expect_false(anyNA(restored$node.label))
+
+  # Original labels that are NA or empty are kept as they are
+  phy$node.label[c(2, 4)] <- c(NA, "")
+  labelled <- label_backbone_nodes(phy)
+  restored <- restore_node_labels(graft_tip_on_branch(labelled$phy, "X1", toy_node), labelled)
+  expect_identical(sum(is.na(restored$node.label)), 1L)
+  expect_identical(sum(restored$node.label == "", na.rm = TRUE), 2L)
+})

@@ -705,3 +705,49 @@ test_that("graft_missing_taxa() uses the names of the excluded subclades in its 
   expect_match(outside, paste0("X2 (target clade tips:"), fixed = TRUE)
   expect_match(outside, paste0("excluded subclade: ", paste(toy$D, collapse = ", ")), fixed = TRUE) # unnamed: tips only
 })
+
+# ---- Node labels ----
+
+## Test that node labels of the backbone are kept, with an empty string for the nodes created by grafting, and no labels if the backbone had none
+test_that("graft_missing_taxa() keeps the node labels of the backbone and gives an empty string to the new nodes, for both methods",
+{
+  toy <- toy_setup()
+  mtl <- list(Taxon_name = c("X1", "X2", "X3"), Target_clade = list(X1 = toy$A, X2 = toy$B, X3 = toy$A))
+  phy_labelled <- toy$phy
+  phy_labelled$node.label <- paste0("support", seq_len(phy_labelled$Nnode))
+
+  for (method in c("uniform", "BD_clades"))
+  {
+    # Backbone without labels
+    grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = method, seed = 1)
+    expect_null(grafted$node.label)
+
+    # Backbone with labels: same tree as without labels, original labels kept, new nodes labelled with an empty string
+    grafted_labelled <- quiet_graft(graft_missing_taxa, phy_labelled, mtl, method = method, seed = 1)
+    expect_equal(grafted_labelled$edge, grafted$edge)
+    expect_equal(grafted_labelled$edge.length, grafted$edge.length)
+    expect_length(grafted_labelled$node.label, grafted_labelled$Nnode)
+    expect_equal(sum(grafted_labelled$node.label == ""), 3)
+    expect_setequal(grafted_labelled$node.label[grafted_labelled$node.label != ""], phy_labelled$node.label)
+    expect_false(anyNA(grafted_labelled$node.label))
+  }
+})
+
+## Test that the temporary phylogenies saved during grafting do not contain the labels used to follow the nodes
+test_that("graft_missing_taxa() saves temporary phylogenies with the original node labels",
+{
+  toy <- toy_setup()
+  mtl <- list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$A, X2 = toy$A))
+  phy_labelled <- toy$phy
+  phy_labelled$node.label <- paste0("support", seq_len(phy_labelled$Nnode))
+  temp_file <- tempfile(fileext = ".rds")
+  on.exit(unlink(temp_file))
+  for (method in c("uniform", "BD_clades"))
+  {
+    quiet_graft(graft_missing_taxa, phy_labelled, mtl, method = method, seed = 1, save_temp = TRUE, save_temp_every = 1, temp_file_path = temp_file)
+    saved <- readRDS(temp_file)
+    expect_false(any(grepl("^bb", saved$node.label)))
+    expect_setequal(saved$node.label[saved$node.label != ""], phy_labelled$node.label)
+    unlink(temp_file)
+  }
+})

@@ -200,3 +200,25 @@ test_that("graft_missing_clades() requires Sister_clade to be named after Taxon_
   swapped <- mcl; swapped$Sister_clade <- rev(swapped$Sister_clade)
   expect_error(graft_missing_clades(toy$phy, swapped, verbose = FALSE), "not in the same order")
 })
+
+## Test that node labels of the backbone are kept, with an empty string for the nodes created by grafting, and no labels if the backbone had none
+test_that("graft_missing_clades() keeps the node labels of the backbone and gives an empty string to the new nodes",
+{
+  toy <- toy_setup()
+  mcl <- toy_missing_clades(toy)
+  phy_labelled <- toy$phy
+  phy_labelled$node.label <- paste0("support", seq_len(phy_labelled$Nnode))
+
+  # Backbone without labels
+  grafted <- suppressWarnings(graft_missing_clades(toy$phy, mcl, verbose = FALSE, seed = 1))
+  expect_null(grafted$node.label)
+
+  # Backbone with labels: same tree as without labels, original labels kept, new nodes labelled with an empty string
+  grafted_labelled <- suppressWarnings(graft_missing_clades(phy_labelled, mcl, verbose = FALSE, seed = 1))
+  expect_equal(grafted_labelled$edge, grafted$edge)
+  expect_equal(grafted_labelled$edge.length, grafted$edge.length)
+  expect_length(grafted_labelled$node.label, grafted_labelled$Nnode)
+  expect_setequal(grafted_labelled$node.label[grafted_labelled$node.label != ""], phy_labelled$node.label)
+  expect_equal(sum(grafted_labelled$node.label != ""), phy_labelled$Nnode)
+  expect_false(anyNA(grafted_labelled$node.label))
+})

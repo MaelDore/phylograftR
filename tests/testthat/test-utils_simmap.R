@@ -147,38 +147,33 @@ test_that("build_state_table() describes the pieces of each branch from its tipw
 test_that("get_allowed_segments_tracked() returns whole branches when all states are allowed, and only the allowed pieces otherwise",
 {
   s <- toy_simmap_setup()
-  started <- start_state_tracking(s$phy, s$simmap)
-  phy <- started$phy
+  phy <- label_backbone_nodes(s$phy)$phy
+  tracker <- start_state_tracking(phy, s$simmap)
   root_age <- max(phytools::nodeHeights(phy)[, 2])
   edge_ages <- root_age - phytools::nodeHeights(phy)
   nodes <- phy$edge[, 2]
 
-  all_states <- get_allowed_segments_tracked(started$tracker, phy, nodes, c("A", "B", "C"), edge_ages)
+  all_states <- get_allowed_segments_tracked(tracker, phy, nodes, c("A", "B", "C"), edge_ages)
   expect_identical(all_states, get_branch_segments(phy, nodes))
 
-  only_A <- get_allowed_segments_tracked(started$tracker, phy, nodes, "A", edge_ages)
+  only_A <- get_allowed_segments_tracked(tracker, phy, nodes, "A", edge_ages)
   expect_equal(sum(only_A$to - only_A$from), unname(colSums(s$simmap$mapped.edge)["A"]))
   expect_true(all(only_A$to > only_A$from))
   # The order of the input nodes is kept
-  reversed <- get_allowed_segments_tracked(started$tracker, phy, rev(nodes), c("A", "B"), edge_ages)
+  reversed <- get_allowed_segments_tracked(tracker, phy, rev(nodes), c("A", "B"), edge_ages)
   expect_equal(sum(reversed$to - reversed$from), sum(colSums(s$simmap$mapped.edge)[c("A", "B")]), ignore_attr = TRUE)
   expect_false(is.unsorted(match(reversed$node, rev(nodes))))
 })
 
-test_that("node labels are labelled for tracking and restored at the end, with or without original labels",
+## Test that the tracking requires the nodes of the backbone to be labelled with label_backbone_nodes()
+test_that("start_state_tracking() stops if the nodes of the backbone were not labelled for tracking",
 {
   s <- toy_simmap_setup()
-  expect_null(s$phy$node.label)
-  started <- start_state_tracking(s$phy, s$simmap)
-  expect_equal(started$phy$node.label, paste0("bb", ape::Ntip(s$phy) + seq_len(s$phy$Nnode)))
-  expect_null(stop_state_tracking(started$tracker, started$phy)$node.label)
-
-  # With support values
-  phy_support <- s$phy; phy_support$node.label <- paste0("support", seq_len(phy_support$Nnode))
-  started <- start_state_tracking(phy_support, s$simmap)
-  expect_equal(started$tracker$original_node_labels, phy_support$node.label)
-  restored <- stop_state_tracking(started$tracker, started$phy)
-  expect_identical(restored$node.label, phy_support$node.label)
+  expect_error(start_state_tracking(s$phy, s$simmap), "label_backbone_nodes")
+  phy_support <- s$phy
+  phy_support$node.label <- paste0("support", seq_len(phy_support$Nnode))
+  expect_error(start_state_tracking(phy_support, s$simmap), "label_backbone_nodes")
+  expect_type(start_state_tracking(label_backbone_nodes(phy_support)$phy, s$simmap), "list")
 })
 
 ## Graft taxa at random positions among the allowed segments, following the tracking, and check the tracking against independent computations
@@ -187,8 +182,9 @@ run_random_grafts <- function (n_grafts, allowed_per_graft, seed = 1, support = 
   s <- toy_simmap_setup()
   backbone <- s$phy
   if (support) backbone$node.label <- paste0("support", seq_len(backbone$Nnode))
-  started <- start_state_tracking(backbone, s$simmap)
-  phy <- started$phy; tracker <- started$tracker
+  labelled <- label_backbone_nodes(backbone)
+  phy <- labelled$phy
+  tracker <- start_state_tracking(phy, s$simmap)
   root_age <- max(phytools::nodeHeights(phy)[, 2])
   expected_grafted_length <- c(A = 0, B = 0, C = 0) # Length of the grafted branches in each state, computed independently
   set.seed(seed)
@@ -230,7 +226,7 @@ run_random_grafts <- function (n_grafts, allowed_per_graft, seed = 1, support = 
     seg <- get_allowed_segments_tracked(tracker, phy, phy$edge[, 2], st, edge_ages)
     expect_equal(sum(seg$to - seg$from), unname(colSums(s$simmap$mapped.edge)[st] + expected_grafted_length[st]), tolerance = 1e-8)
   }
-  list(phy = phy, tracker = tracker, simmap = s$simmap, backbone = backbone, log = log)
+  list(phy = phy, tracker = tracker, simmap = s$simmap, backbone = backbone, labelled = labelled, log = log)
 }
 
 test_that("tracking follows the states through successive grafts, including grafts on previously grafted branches",
@@ -250,31 +246,38 @@ test_that("tracking follows the states when the allowed states change from one g
   for (i in seq_along(states)) expect_true(states[[paste0("X", i)]] %in% allowed[[(i - 1) %% length(allowed) + 1]])
 })
 
-test_that("restoring the labels after grafting gives the original node labels, NA for the new nodes, and no labels if there were none",
+## Test that the node labels used for tracking are replaced by the original ones after grafting with tracking
+test_that("restoring the labels after tracked grafts gives the original node labels, and an empty string for the new nodes",
 {
+  # Backbone without node labels: none after grafting
   res <- run_random_grafts(15, list(c("A", "B", "C")), seed = 3)
-  expect_null(stop_state_tracking(res$tracker, res$phy)$node.label)
+  expect_null(restore_node_labels(res$phy, res$labelled)$node.label)
 
+  # Backbone with node labels
   res <- run_random_grafts(15, list(c("A", "B", "C")), seed = 3, support = TRUE)
-  restored <- stop_state_tracking(res$tracker, res$phy)
+  restored <- restore_node_labels(res$phy, res$labelled)
   expect_length(restored$node.label, restored$Nnode)
-  expect_equal(sum(!is.na(restored$node.label)), res$backbone$Nnode)
-  expect_setequal(restored$node.label[!is.na(restored$node.label)], res$backbone$node.label)
-  # Each support value is still on the node subtending the same backbone tips
+  expect_equal(sum(restored$node.label != ""), res$backbone$Nnode)
+  expect_setequal(restored$node.label[restored$node.label != ""], res$backbone$node.label)
+  # Each node label is still on the node subtending the same backbone tips
+  tips_below <- function (tree, node)
+  {
+    d <- phytools::getDescendants(tree, node)
+    sort(setdiff(tree$tip.label[d[d <= ape::Ntip(tree)]], paste0("X", 1:15)))
+  }
   for (lab in res$backbone$node.label[1:5])
   {
     node_before <- ape::Ntip(res$backbone) + match(lab, res$backbone$node.label)
     node_after <- ape::Ntip(restored) + match(lab, restored$node.label)
-    tips <- function (tree, node) { d <- phytools::getDescendants(tree, node); sort(setdiff(tree$tip.label[d[d <= ape::Ntip(tree)]], paste0("X", 1:15))) }
-    expect_equal(tips(restored, node_after), tips(res$backbone, node_before))
+    expect_equal(tips_below(restored, node_after), tips_below(res$backbone, node_before))
   }
 })
 
 test_that("get_state_at_position() solves ties at the limit of two pieces with the allowed states",
 {
   s <- toy_simmap_setup()
-  started <- start_state_tracking(s$phy, s$simmap)
-  phy <- started$phy
+  phy <- label_backbone_nodes(s$phy)$phy
+  tracker <- start_state_tracking(phy, s$simmap)
   root_age <- max(phytools::nodeHeights(phy)[, 2])
   edge_ages <- root_age - phytools::nodeHeights(phy)
   multi <- which(lengths(s$simmap$maps) > 1)[1]
@@ -282,6 +285,6 @@ test_that("get_state_at_position() solves ties at the limit of two pieces with t
   map <- s$simmap$maps[[multi]]
   limit <- phy$edge.length[multi] - map[[1]] # distance from the tipward node to the limit between the first two pieces (from the root)
   state_root_side <- names(map)[1]; state_tip_side <- names(map)[2]
-  expect_identical(get_state_at_position(started$tracker, phy, node, limit, allowed_states = state_root_side, edge_ages = edge_ages), state_root_side)
-  expect_identical(get_state_at_position(started$tracker, phy, node, limit, allowed_states = state_tip_side, edge_ages = edge_ages), state_tip_side)
+  expect_identical(get_state_at_position(tracker, phy, node, limit, allowed_states = state_root_side, edge_ages = edge_ages), state_root_side)
+  expect_identical(get_state_at_position(tracker, phy, node, limit, allowed_states = state_tip_side, edge_ages = edge_ages), state_tip_side)
 })

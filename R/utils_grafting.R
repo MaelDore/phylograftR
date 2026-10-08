@@ -1369,3 +1369,60 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
   list(phy_backbone = phy, mode = mode, taxa_names = missing_taxa_names, taxon_sets = taxon_sets,
        unsampled_by_node = unsampled_by_node, table = richness_table)
 }
+
+
+#' @title Label the internal nodes of the backbone to follow them during grafting
+#'
+#' @description Node IDs are renumbered each time a tip is grafted, but node labels are kept by `phytools::bind.tip()` and `ape::bind.tree()`.
+#'   The internal nodes of the backbone are therefore labelled `"bb<node ID>"`, so they can be identified in the grafted tree
+#'   (and the original node labels restored with `restore_node_labels()`).
+#'   The labelling is done in all cases, so the labels of the final tree do not depend on the options used to graft (e.g., with or without a simmap).
+#'
+#' @param phy Backbone phylogeny of class `"phylo"`.
+#'
+#' @noRd
+#'
+#' @return A list with 3 elements:
+#'  * `phy` The backbone phylogeny with its internal nodes labelled `"bb<node ID>"`.
+#'  * `original_node_labels` The original `node.label` of the backbone (`NULL` if it had none), to restore at the end.
+#'  * `n_tips` Integer. Number of tips of the backbone, used to find the original label of a node.
+#'
+
+label_backbone_nodes <- function (phy)
+{
+  original_node_labels <- phy$node.label
+  n_tips <- length(phy$tip.label)
+  phy$node.label <- paste0("bb", n_tips + seq_len(phy$Nnode))
+  list(phy = phy, original_node_labels = original_node_labels, n_tips = n_tips)
+}
+
+
+#' @title Restore the original node labels of the backbone after grafting
+#'
+#' @description Replace the labels used to follow the nodes of the backbone (see `label_backbone_nodes()`) by their original labels.
+#'   * If the backbone had no node labels, the grafted tree has no node labels either.
+#'   * If the backbone had node labels (e.g., support values), its nodes keep them, and the nodes created by grafting are labelled with an empty string (`""`).
+#'
+#' @param phy Phylogeny of class `"phylo"`, grafted from a backbone labelled with `label_backbone_nodes()`.
+#' @param labelled Output of `label_backbone_nodes()` on the backbone.
+#'
+#' @noRd
+#'
+#' @return The phylogeny with its original node labels.
+#'
+
+restore_node_labels <- function (phy, labelled)
+{
+  if (is.null(labelled$original_node_labels))
+  {
+    phy$node.label <- NULL
+    return(phy)
+  }
+  labels <- phy$node.label
+  backbone_node <- suppressWarnings(as.integer(substring(labels, 3)))
+  is_backbone_node <- !is.na(labels) & substr(labels, 1, 2) == "bb" & !is.na(backbone_node)
+  restored <- rep("", length(labels))
+  restored[is_backbone_node] <- labelled$original_node_labels[backbone_node[is_backbone_node] - labelled$n_tips]
+  phy$node.label <- restored
+  phy
+}
