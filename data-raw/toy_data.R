@@ -65,6 +65,6 @@ toy_total_richness_per_clades <- list(
 ##### 5/ Save objects #####
 
 dir.create("data", showWarnings = FALSE)
-save(toy_backbone, file = "data/toy_backbone.rda", compress = "bzip2", version = 2)
-save(toy_missing_taxa_list, file = "data/toy_missing_taxa_list.rda", compress = "bzip2", version = 2)
-save(toy_total_richness_per_clades, file = "data/toy_total_richness_per_clades.rda", compress = "bzip2", version = 2)
+save(toy_backbone, file = "data/toy_backbone.rda", compress = "gzip", version = 2)
+save(toy_missing_taxa_list, file = "data/toy_missing_taxa_list.rda", compress = "gzip", version = 2)
+save(toy_total_richness_per_clades, file = "data/toy_total_richness_per_clades.rda", compress = "gzip", version = 2)

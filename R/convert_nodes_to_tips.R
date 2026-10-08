@@ -118,7 +118,8 @@
 #'
 #' # Node 34 is the same clade in both objects, and is defined by the same tips
 #' converted$missing_taxa_list$Target_clade$X1
-#' # An already converted list can be used: the node IDs of the total richness are matched to the tips in the list
+#' # An already converted list can be used:
+#' # the node IDs of the total richness are matched to the tips in the list
 #' converted_again <- convert_nodes_to_tips(converted$missing_taxa_list, phy = toy_backbone,
 #'                                          total_richness_per_clades = list(Target_clade = list(34),
 #'                                                                           total_richness = 14))
