@@ -10,6 +10,9 @@ graft_missing_taxa(
   include_target_clade_stem = TRUE,
   use_excluded_subclades = TRUE,
   exclude_subclades_stem = TRUE,
+  simmap = NULL,
+  allowed_states = NULL,
+  min_valid_fraction = 0.1,
   method = "BD_clades",
   min_tips = 5,
   total_richness_per_clades = NULL,
@@ -23,7 +26,7 @@ graft_missing_taxa(
 }
 \arguments{
 \item{phy}{An object of class \code{"phylo"}. The backbone phylogeny on which taxa are grafted.
-It must be rooted and ultrametric (i.e., be time-calibrated).}
+It must be rooted, binary (no polytomies) and ultrametric (i.e., be time-calibrated).}
 
 \item{missing_taxa_list}{A list with the information on the taxa to graft. Every item provided must be named after \verb{$Taxon_name}. Items:
 \itemize{
@@ -47,6 +50,9 @@ A logical vector with one value per taxon is also accepted (each value is used f
 For example, \code{Excluded_subclades = list(X1 = list(c("t1", "t2"), "t7"), X2 = NULL)} with \code{exclude_subclades_stem = list(X1 = c(FALSE, TRUE), X2 = NULL)}.
 The excluded subclades of a taxon can also be named (e.g., \code{list(X1 = list(grp_A = c("t1", "t2"), grp_B = "t7"))}): these optional names are used in messages,
 and must match the names of the values of \code{exclude_subclades_stem} of the taxon if both are named.
+\item \verb{$allowed_states}: (Optional) List (named after \verb{$Taxon_name}) of character vectors. For each taxon, the states of the \code{simmap} in which it can be grafted.
+It overrides the global argument \code{allowed_states} for this taxon. \code{NULL} or \code{NA} use the global argument.
+Only used with a \code{simmap}. For example, \code{allowed_states = list(X1 = c("blue", "green"), X2 = NULL)}.
 }}
 
 \item{include_target_clade_stem}{Logical. Whether the stem branch of target clades is available for grafting. This is the default for all taxa:
@@ -65,6 +71,23 @@ If \code{TRUE}, a taxon cannot be grafted on the stem of an excluded subclade (i
 If \code{FALSE}, only the branches within the subclade are excluded, and the taxon can be sister to it.
 For a single-tip excluded subclade, the terminal branch is the only branch of the tip, and it is its stem: the tip excludes nothing if \code{FALSE}
 (a warning lists these cases). Only used if \code{use_excluded_subclades = TRUE}. Default is \code{TRUE}.}
+
+\item{simmap}{(Optional) A single stochastic character map of the backbone, of class \code{"simmap"} (e.g., from \code{phytools::make.simmap()} or \code{phytools::sim.history()}),
+mapping a species attribute (e.g., a trait or a range) with discrete states along the branches of \code{phy}.
+It must have the same tips, topology and branch lengths as \code{phy}. With a \code{simmap}, taxa can only be grafted on the parts of the branches
+that are in their allowed states (see \code{allowed_states}). A list of maps (\code{"multiSimmap"}) is not accepted.
+See 'Species attributes' in Details section. Currently only available with \code{method = "uniform"}.
+Default is \code{NULL} (no restriction for grafting based on states).}
+
+\item{allowed_states}{Character vector. The states of \code{simmap} in which grafting is allowed. This is the default for all taxa:
+taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. States are matched exactly with the states of the \code{simmap}.
+The function stops if a \code{simmap} is provided and some taxa have no allowed states (neither a global nor a taxon-level value),
+if some states are not in the \code{simmap}, or if \code{allowed_states} is provided without a \code{simmap}.
+Default is \code{NULL} (no restriction for grafting based on states).}
+
+\item{min_valid_fraction}{Numeric between 0 and 1. Only used with a \code{simmap}. Threshold of the fraction of the total length of the available branches
+of a taxon (its target clade, minus the excluded subclades) that is in its allowed states. A warning lists the taxa below the threshold for inspection,
+as their grafting positions are concentrated on a small part of their target clade. The fraction is computed on the backbone, before grafting. Default is \code{0.1}.}
 
 \item{method}{Character string. Method used to draw the divergence times and the branches used for grafting.
 Must be one of \code{"uniform"} or \code{"BD_clades"} (default). See Details.}
@@ -145,9 +168,9 @@ or drawn from a birth-death model fitted on the target clade (\code{method = "BD
 The backbone is never modified: only new tips are added.
 }
 \details{
-The function stops, before any grafting, if the backbone is not ultrametric, or if some taxa have no branch available for grafting
-(i.e., all branches of their target clade are excluded). The taxa concerned are listed in the error message,
-so the constraints (\code{include_target_clade_stem}, \code{Excluded_subclades} or \code{exclude_subclades_stem}) can be adjusted.
+The function stops, before any grafting, if the backbone is not ultrametric, or is not binary (i.e., all nodes have only two descendent lineages).
+It also stops if some taxa have no branch available for grafting. The taxa concerned are listed in the error message,
+so the constraints (\code{include_target_clade_stem}, \code{Excluded_subclades}, \code{exclude_subclades_stem} or, with a \code{simmap}, the allowed states) can be adjusted.
 With \code{method = "BD_clades"}, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon.
 \subsection{Target clades, stem regions and excluded subclades}{
 
@@ -175,6 +198,23 @@ a warning is issued if an excluded subclade is outside the target clade (the exc
 The function stops if an excluded subclade contains the whole target clade, or is identical to it: no branch (or only the stem branch) would be left for grafting.
 To graft taxa specifically on the stem branch of a clade or of a single tip, use \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} instead.
 A warning lists the single-tip excluded subclades with a stem that is not excluded, as they exclude nothing.
+}
+
+\subsection{Species attributes: allowed states of a simmap}{
+
+A \code{simmap} describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
+With a \code{simmap}, each taxon can only be grafted on the pieces of the available branches that are in its allowed states
+(\code{missing_taxa_list$allowed_states} of the taxon if provided, otherwise the global argument \code{allowed_states}).
+This combines with the other constraints: the available branches are those of the target clade, minus the excluded subclades, restricted to the allowed states.
+
+A grafted taxon is assumed to be in the state of the point of the backbone where it was grafted, along its whole branch,
+and so are the taxa grafted on its branch later. Taxa grafted later can therefore be grafted on the branches of taxa grafted earlier,
+if their state is allowed. The \code{simmap} itself is not modified.
+
+With \code{method = "uniform"}, the draw is uniform over the available pieces, weighted by their length: every time point in an allowed state has the same chance to be selected.
+If all the states are allowed, the result is the same as without \code{simmap}.
+The function stops, before any grafting, if some taxa have no piece of branch in their allowed states (these taxa are listed),
+and warns about the taxa with less than \code{min_valid_fraction} of their available branch length in allowed states.
 }
 
 \subsection{Enclosing clades}{
@@ -237,6 +277,8 @@ With \code{method = "uniform"}, no diversification model is used: \code{total_ri
 }
 }
 \examples{
+# --- Prepare data --- #
+
 # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units
 set.seed(1234)
 phy <- ape::rcoal(n = 30)
@@ -261,6 +303,8 @@ missing_taxa_list <- list(
   # so X1 can be sister to it, but never nested within it.
   exclude_subclades_stem = list(X1 = FALSE, X2 = NULL, X3 = NULL, X4 = NULL))
 
+# --- Perform grafting --- #
+
 # Graft with the default method ("BD_clades")
 grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
                                   method = "BD_clades", verbose = FALSE, seed = 1234)
@@ -280,6 +324,8 @@ grafted_phy_uniform <- graft_missing_taxa(phy = phy, missing_taxa_list = missing
 check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
                            missing_taxa_list = missing_taxa_list)
 
+# --- Account for unsampled species --- #
+
 # Account for unsampled species with the total richness of the clades.
 # All the unique target clades must be listed
 # (NA = unknown richness, i.e., no unsampled species beyond nested clades)
@@ -291,6 +337,24 @@ grafted_phy_richness <- graft_missing_taxa(phy = phy, missing_taxa_list = missin
                                            method = "BD_clades", verbose = FALSE, seed = 1234)
 # Sampling fraction of the clades in the grafted phylogeny
 grafted_phy_richness$sampling_fraction_df
+
+# --- Apply attribute-based exclusions --- #
+
+# Restrict the grafting to some states of a stochastic character map (simmap) of the backbone
+# The toy simmap has three states, "blue", "green" and "red"
+data(toy_backbone)
+data(toy_simmap)
+data(toy_missing_taxa_list)
+
+# Perform grafting informed with the simmap and associated 'allowed_states'
+grafted_phy_states <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = toy_missing_taxa_list,
+                                         simmap = toy_simmap, allowed_states = c("blue", "green"),
+                                         method = "uniform", verbose = FALSE, seed = 1234)
+
+# Plot output
+plot(grafted_phy_states, cex = 0.7,
+     edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
+     tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
 
 }
 \seealso{

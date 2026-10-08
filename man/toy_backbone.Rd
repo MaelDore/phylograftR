@@ -12,7 +12,9 @@ data(toy_backbone)
 }
 \description{
 Simulated ultrametric phylogeny with 30 tips (\code{t1} to \code{t30}) and a root age of 50, used in the examples and vignettes.
-Generated with \code{ape::rcoal()} (seed 1234) and rescaled. See \code{data-raw/toy_data.R}.
+Generated with \code{ape::rcoal()} (seed 1234) and rescaled. Internal branches shorter than 1 (2\% of the root age) were lengthened by moving
+their rootward node towards the root, so that no node looks like a polytomy on a plot (the topology, the root age and the ultrametry are unchanged).
+See \code{data-raw/toy_data.R}.
 }
 \examples{
 # Import the phylogeny

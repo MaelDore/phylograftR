@@ -19,7 +19,7 @@ graft_missing_clades(
 }
 \arguments{
 \item{phy}{An object of class \code{"phylo"}. The backbone phylogeny on which taxa are grafted.
-It must be rooted and ultrametric (i.e., be time-calibrated).}
+It must be rooted, binary (no polytomies) and ultrametric (i.e., be time-calibrated).}
 
 \item{missing_taxa_list}{A list with the information on the taxa to graft. Items:
 \itemize{
