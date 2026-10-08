@@ -7,52 +7,7 @@
 ####################################
 
 
-##### 1/ Helper functions #####
-
-## Function to  produce a toy simmap on a backbone.
-# Includes three states with several changes along the branches (some branches have several pieces).
-# The RNG state of the session is restored on exit.
-make_toy_simmap <- function (phy, seed = 1, rate = 0.04)
-{
-  had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
-  if (had_seed) old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
-  on.exit({
-    if (had_seed) assign(".Random.seed", old_seed, envir = globalenv())
-    else if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) rm(".Random.seed", envir = globalenv())
-  })
-  set.seed(seed)
-  Q <- matrix(rate, 3, 3, dimnames = list(c("A", "B", "C"), c("A", "B", "C")))
-  diag(Q) <- -2 * rate
-  phytools::sim.history(phy, Q, anc = "A", message = FALSE)
-}
-
-## Function to create abackbone phylogeny and its associated simmaps
-toy_simmap_setup <- function ()
-{
-  phy <- make_toy_phy(n_tips = 20)
-  list(phy = phy, simmap = make_toy_simmap(phy, seed = 1))
-}
-
-
-## Independent computation of the state of the simmap at a given age along the lineage leading to a set of backbone tips
-# (the lineage is the backbone branch leading to the MRCA of the tips, or to the tip if only one)
-# This is used to check that grafted taxa inherited the state of the branch they were grafted on
-state_of_lineage_at_age <- function (simmap, backbone_tips, age)
-{
-  node <- if (length(backbone_tips) == 1) match(backbone_tips, simmap$tip.label) else ape::getMRCA(simmap, backbone_tips)
-  edge_row <- match(node, simmap$edge[, 2])
-  root_age <- max(phytools::nodeHeights(simmap)[, 2])
-  tip_age <- root_age - phytools::nodeHeights(simmap)[edge_row, 2]
-  distance_from_tip <- age - tip_age
-  branch_length <- simmap$edge.length[edge_row]
-  map <- simmap$maps[[edge_row]] # from the rootward node to the tipward node
-  distance_from_root <- branch_length - distance_from_tip
-  ends <- cumsum(map)
-  names(map)[which(distance_from_root <= ends + 1e-9)[1]]
-}
-
-
-##### 2/ Tests simmap-related functions #####
+##### 1/ Tests simmap-related functions #####
 
 test_that("validate_simmap() accepts a matching simmap and returns its states and the matching of branches",
 {
@@ -176,6 +131,72 @@ test_that("start_state_tracking() stops if the nodes of the backbone were not la
   expect_type(start_state_tracking(label_backbone_nodes(phy_support)$phy, s$simmap), "list")
 })
 
+## Test that a branch entirely in allowed states stays a single segment covering exactly the whole branch after grafting (as without simmap)
+test_that("get_allowed_segments_tracked() gives the same whole-branch segments as get_branch_segments() all along the grafting when all the states are allowed",
+{
+  s <- toy_simmap_setup()
+  phy <- label_backbone_nodes(s$phy)$phy
+  tracker <- start_state_tracking(phy, s$simmap)
+  root_age <- max(phytools::nodeHeights(phy)[, 2])
+  set.seed(1)
+  for (i in 1:15)
+  {
+    edge_ages <- root_age - phytools::nodeHeights(phy)
+    nodes <- phy$edge[, 2]
+    segments <- get_allowed_segments_tracked(tracker, phy, nodes, c("A", "B", "C"), edge_ages)
+    expect_identical(segments, get_branch_segments(phy, nodes))
+
+    # Graft on a random point, whatever its state (phytools::bind.tip() rounds the branch lengths, so they differ slightly from the ones of the simmap)
+    drawn <- draw_point_in_segments(segments)
+    new_length <- drawn$position + (root_age - phytools::nodeheight(phy, drawn$node))
+    phy_after <- phytools::bind.tip(phy, tip.label = paste0("X", i), edge.length = new_length, where = drawn$node, position = drawn$position)
+    tracked <- track_graft(tracker, phy, phy_after, drawn$node, drawn$position, paste0("X", i), edge_ages = edge_ages)
+    phy <- tracked$phy
+    tracker <- tracked$tracker
+  }
+})
+
+## Test the resolution of the allowed states of each taxon: taxon-level values replace the global value, and NULL or NA use it
+test_that("resolve_allowed_states() uses the taxon-level states, and the global states for NULL or NA, and validates its inputs",
+{
+  states <- c("A", "B", "C")
+  taxa <- c("X1", "X2", "X3", "X4")
+
+  # Global only
+  resolved <- resolve_allowed_states(allowed_states = c("A", "B"), states = states, taxon_names = taxa)
+  expect_named(resolved, taxa)
+  expect_true(all(vapply(resolved, identical, logical(1), c("A", "B"))))
+
+  # Taxon-level values replace the global ones (no intersection); NULL, NA and empty vectors use the global ones
+  resolved <- resolve_allowed_states(allowed_states_taxa = list(X1 = "C", X2 = NULL, X3 = NA, X4 = character(0)), allowed_states = c("A", "B"),
+                                     states = states, taxon_names = taxa)
+  expect_identical(resolved, list(X1 = "C", X2 = c("A", "B"), X3 = c("A", "B"), X4 = c("A", "B")))
+
+  # Duplicated states are removed
+  expect_identical(resolve_allowed_states(allowed_states = c("A", "A", "B"), states = states, taxon_names = "X1")$X1, c("A", "B"))
+
+  # Only taxon-level values: fine if all the taxa have one
+  resolved <- resolve_allowed_states(allowed_states_taxa = list(X1 = "A", X2 = "B"), states = states, taxon_names = c("X1", "X2"))
+  expect_identical(resolved, list(X1 = "A", X2 = "B"))
+
+  # Taxa without any allowed state: stop, listing them and the states of the simmap
+  expect_error(resolve_allowed_states(states = states, taxon_names = taxa), "4 taxa have none")
+  expect_error(resolve_allowed_states(allowed_states_taxa = list(X1 = "A", X2 = NULL, X3 = "B", X4 = NA), states = states, taxon_names = taxa), "2 taxa have none.*X2.*X4")
+  expect_error(resolve_allowed_states(states = states, taxon_names = taxa), "'A', 'B', 'C'")
+
+  # Unknown states: stop, naming the origin of the value and listing the states of the simmap
+  expect_error(resolve_allowed_states(allowed_states = c("A", "D"), states = states, taxon_names = taxa), "global 'allowed_states' argument.*'D'.*'A', 'B', 'C'")
+  expect_error(resolve_allowed_states(allowed_states_taxa = list(X1 = "red", X2 = NULL, X3 = NULL, X4 = NULL), allowed_states = "A", states = states, taxon_names = taxa),
+               "taxon 'X1'.*'red'")
+  # Exact matching
+  expect_error(resolve_allowed_states(allowed_states = "a", states = states, taxon_names = taxa), "'a'")
+
+  # Invalid types
+  expect_error(resolve_allowed_states(allowed_states = 1, states = states, taxon_names = taxa), "character vector")
+  expect_error(resolve_allowed_states(allowed_states_taxa = c(X1 = "A"), allowed_states = "A", states = states, taxon_names = "X1"), "must be a list")
+  expect_error(resolve_allowed_states(allowed_states_taxa = list(X1 = "A"), allowed_states = "A", states = states, taxon_names = taxa), "same length")
+})
+
 ## Graft taxa at random positions among the allowed segments, following the tracking, and check the tracking against independent computations
 run_random_grafts <- function (n_grafts, allowed_per_graft, seed = 1, support = FALSE)
 {
@@ -290,7 +311,7 @@ test_that("get_state_at_position() solves ties at the limit of two pieces with t
 })
 
 
-##### 3/ Tests of the toy simmap #####
+##### 2/ Tests of the toy simmap #####
 
 ## Test that the toy simmap can be used with the toy backbone, and is balanced as described in its documentation
 test_that("toy_simmap is a valid simmap of toy_backbone with three states of similar importance and a moderate number of transitions",

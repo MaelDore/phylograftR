@@ -40,6 +40,9 @@
 #'     For example, `Excluded_subclades = list(X1 = list(c("t1", "t2"), "t7"), X2 = NULL)` with `exclude_subclades_stem = list(X1 = c(FALSE, TRUE), X2 = NULL)`.
 #'     The excluded subclades of a taxon can also be named (e.g., `list(X1 = list(grp_A = c("t1", "t2"), grp_B = "t7"))`): these optional names are used in messages,
 #'     and must match the names of the values of `exclude_subclades_stem` of the taxon if both are named.
+#'   * `$allowed_states`: (Optional) List (named after `$Taxon_name`) of character vectors. For each taxon, the states of the `simmap` in which it can be grafted.
+#'     It overrides the global argument `allowed_states` for this taxon. `NULL` or `NA` use the global argument.
+#'     Only used with a `simmap`. For example, `allowed_states = list(X1 = c("blue", "green"), X2 = NULL)`.
 #' @param include_target_clade_stem Logical. Whether the stem branch of target clades is available for grafting. This is the default for all taxa:
 #'   taxa with a value in `missing_taxa_list$include_target_clade_stem` use this specific instead.
 #'   If `TRUE`, a taxon can be grafted on the stem branch, and becomes sister to the target clade.
@@ -54,6 +57,20 @@
 #'   If `FALSE`, only the branches within the subclade are excluded, and the taxon can be sister to it.
 #'   For a single-tip excluded subclade, the terminal branch is the only branch of the tip, and it is its stem: the tip excludes nothing if `FALSE`
 #'   (a warning lists these cases). Only used if `use_excluded_subclades = TRUE`. Default is `TRUE`.
+#' @param simmap (Optional) A single stochastic character map of the backbone, of class `"simmap"` (e.g., from `phytools::make.simmap()` or `phytools::sim.history()`),
+#'   mapping a species attribute (e.g., a trait or a range) with discrete states along the branches of `phy`.
+#'   It must have the same tips, topology and branch lengths as `phy`. With a `simmap`, taxa can only be grafted on the parts of the branches
+#'   that are in their allowed states (see `allowed_states`). A list of maps (`"multiSimmap"`) is not accepted.
+#'   See 'Species attributes' in Details section. Currently only available with `method = "uniform"`.
+#'   Default is `NULL` (no restriction for grafting based on states).
+#' @param allowed_states Character vector. The states of `simmap` in which grafting is allowed. This is the default for all taxa:
+#'   taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead. States are matched exactly with the states of the `simmap`.
+#'   The function stops if a `simmap` is provided and some taxa have no allowed states (neither a global nor a taxon-level value),
+#'   if some states are not in the `simmap`, or if `allowed_states` is provided without a `simmap`.
+#'   Default is `NULL` (no restriction for grafting based on states).
+#' @param min_valid_fraction Numeric between 0 and 1. Only used with a `simmap`. Threshold of the fraction of the total length of the available branches
+#'   of a taxon (its target clade, minus the excluded subclades) that is in its allowed states. A warning lists the taxa below the threshold for inspection,
+#'   as their grafting positions are concentrated on a small part of their target clade. The fraction is computed on the backbone, before grafting. Default is `0.1`.
 #' @param method Character string. Method used to draw the divergence times and the branches used for grafting.
 #'   Must be one of `"uniform"` or `"BD_clades"` (default). See Details.
 #' @param min_tips Integer. Only used for `method = "BD_clades"`. Minimum number of tips of the clade used to fit the birth-death model.
@@ -111,7 +128,7 @@
 #' @details
 #' The function stops, before any grafting, if the backbone is not ultrametric, or is not binary (i.e., all nodes have only two descendent lineages).
 #' It also stops if some taxa have no branch available for grafting. The taxa concerned are listed in the error message,
-#' so the constraints (`include_target_clade_stem`, `Excluded_subclades` or `exclude_subclades_stem`) can be adjusted.
+#' so the constraints (`include_target_clade_stem`, `Excluded_subclades`, `exclude_subclades_stem` or, with a `simmap`, the allowed states) can be adjusted.
 #' With `method = "BD_clades"`, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon.
 #'
 #' ### Target clades, stem regions and excluded subclades
@@ -140,6 +157,22 @@
 #' The function stops if an excluded subclade contains the whole target clade, or is identical to it: no branch (or only the stem branch) would be left for grafting.
 #' To graft taxa specifically on the stem branch of a clade or of a single tip, use [`phylograftR::graft_missing_clades()`][graft_missing_clades] instead.
 #' A warning lists the single-tip excluded subclades with a stem that is not excluded, as they exclude nothing.
+#'
+#' ### Species attributes: allowed states of a simmap
+#'
+#' A `simmap` describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
+#' With a `simmap`, each taxon can only be grafted on the pieces of the available branches that are in its allowed states
+#' (`missing_taxa_list$allowed_states` of the taxon if provided, otherwise the global argument `allowed_states`).
+#' This combines with the other constraints: the available branches are those of the target clade, minus the excluded subclades, restricted to the allowed states.
+#'
+#' A grafted taxon is assumed to be in the state of the point of the backbone where it was grafted, along its whole branch,
+#' and so are the taxa grafted on its branch later. Taxa grafted later can therefore be grafted on the branches of taxa grafted earlier,
+#' if their state is allowed. The `simmap` itself is not modified.
+#'
+#' With `method = "uniform"`, the draw is uniform over the available pieces, weighted by their length: every time point in an allowed state has the same chance to be selected.
+#' If all the states are allowed, the result is the same as without `simmap`.
+#' The function stops, before any grafting, if some taxa have no piece of branch in their allowed states (these taxa are listed),
+#' and warns about the taxa with less than `min_valid_fraction` of their available branch length in allowed states.
 #'
 #' ### Enclosing clades
 #'
@@ -216,6 +249,8 @@
 #' @author Maël Doré
 #'
 #' @examples
+#' # --- Prepare data --- #
+#'
 #' # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units
 #' set.seed(1234)
 #' phy <- ape::rcoal(n = 30)
@@ -240,6 +275,8 @@
 #'   # so X1 can be sister to it, but never nested within it.
 #'   exclude_subclades_stem = list(X1 = FALSE, X2 = NULL, X3 = NULL, X4 = NULL))
 #'
+#' # --- Perform grafting --- #
+#'
 #' # Graft with the default method ("BD_clades")
 #' grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
 #'                                   method = "BD_clades", verbose = FALSE, seed = 1234)
@@ -259,6 +296,8 @@
 #' check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
 #'                            missing_taxa_list = missing_taxa_list)
 #'
+#' # --- Account for unsampled species --- #
+#'
 #' # Account for unsampled species with the total richness of the clades.
 #' # All the unique target clades must be listed
 #' # (NA = unknown richness, i.e., no unsampled species beyond nested clades)
@@ -271,12 +310,33 @@
 #' # Sampling fraction of the clades in the grafted phylogeny
 #' grafted_phy_richness$sampling_fraction_df
 #'
+#' # --- Apply attribute-based exclusions --- #
+#'
+#' # Restrict the grafting to some states of a stochastic character map (simmap) of the backbone
+#' # The toy simmap has three states, "blue", "green" and "red"
+#' data(toy_backbone)
+#' data(toy_simmap)
+#' data(toy_missing_taxa_list)
+#'
+#' # Perform grafting informed with the simmap and associated 'allowed_states'
+#' grafted_phy_states <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = toy_missing_taxa_list,
+#'                                          simmap = toy_simmap, allowed_states = c("blue", "green"),
+#'                                          method = "uniform", verbose = FALSE, seed = 1234)
+#'
+#' # Plot output
+#' plot(grafted_phy_states, cex = 0.7,
+#'      edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
+#'      tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
+#'
 
 graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 missing_taxa_list, # List with Taxon_name = c(), and items named after Taxon_name: Target_clade = list(X1 = c(), ...), include_target_clade_stem = c(X1 = TRUE, ...) (optional), Excluded_subclades = list(X1 = list(c(), c()), X2 = NULL, ...), exclude_subclades_stem = list(X1 = c(TRUE, NA), X2 = NULL, ...) (optional)
                                 include_target_clade_stem = TRUE, # Include the stem of the target clades when grafting? Default for all taxa, overridden by missing_taxa_list$include_target_clade_stem
                                 use_excluded_subclades = TRUE, # Avoid grafting within Excluded_subclades?
                                 exclude_subclades_stem = TRUE, # Also exclude the stem of the excluded subclades? Default for all subclades, overridden by missing_taxa_list$exclude_subclades_stem
+                                simmap = NULL, # NULL, or stochastic character map (class "simmap") of the backbone: restricts grafting to the branch segments in allowed states
+                                allowed_states = NULL, # States of the simmap where grafting is allowed. Default for all taxa, overridden by missing_taxa_list$allowed_states
+                                min_valid_fraction = 0.1, # Warn for the taxa with a smaller fraction of their available branch length in allowed states (only with a simmap)
                                 method = "BD_clades", # "uniform" or "BD_clades"
                                 min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model for "BD_clades" (the enclosing clade is used if the focal clade is smaller)
                                 total_richness_per_clades = NULL, # NULL, or list with Target_clade = list(c(), ...) and total_richness = c(...) (NA allowed). Total number of species of the clades
@@ -331,6 +391,31 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       exclude_subclades_stem_taxa = missing_taxa_list$exclude_subclades_stem, exclude_subclades_stem = exclude_subclades_stem,
       excluded_subclades = missing_taxa_list$Excluded_subclades, n_taxa = n_missing,
       taxon_names = missing_taxa_list$Taxon_name)
+
+    ## Species attributes: 'simmap', 'allowed_states' and 'min_valid_fraction'
+    # The states of each taxon are resolved below, once the simmap is validated and the backbone labelled
+    use_states <- !is.null(simmap)
+    if (!is.numeric(min_valid_fraction) || length(min_valid_fraction) != 1 || is.na(min_valid_fraction) || min_valid_fraction < 0 || min_valid_fraction > 1)
+    {
+      stop("'min_valid_fraction' must be a single number between 0 and 1")
+    }
+    if (use_states)
+    {
+      if (inherits(simmap, "multiSimmap"))
+      {
+        stop("'simmap' must be a single stochastic character map (class 'simmap'), not a list of maps (class 'multiSimmap').")
+      }
+      if (method != "uniform")
+      {
+        stop("'simmap' is only available with method = 'uniform' for the moment.")
+      }
+    } else {
+      states_in_list <- any(vapply(missing_taxa_list$allowed_states, function (x) length(x) > 0 && !all(is.na(x)), logical(1)))
+      if (!is.null(allowed_states) || states_in_list)
+      {
+        stop("'allowed_states' (or 'missing_taxa_list$allowed_states') requires a 'simmap', which gives the states of the branches of the backbone.")
+      }
+    }
 
     ## Warn (once) about taxa with a single-tip target clade and 'include_target_clade_stem = FALSE'
     # The terminal branch of the tip is the only branch of a single-tip clade (it is its stem): not including the stem would lead to an error and is ignored.
@@ -464,27 +549,67 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     }
   }
 
-  ## Check upfront that every taxon has at least one branch available for grafting
+  ## Label the internal nodes of the backbone, to identify them in the grafted tree (node IDs change after each graft) and restore the original node labels at the end
+  labelled_backbone <- label_backbone_nodes(phy)
+  phy <- labelled_backbone$phy
+
+  ## With a simmap: validate it, start following the states of the branches through grafting, and resolve the allowed states of each taxon
+  # The resolved list (one character vector per taxon, no NULL) replaces the item in the list, so it follows the taxa when they are reordered
+  tracker <- NULL
+  if (use_states)
+  {
+    tracker <- start_state_tracking(phy = phy, simmap = simmap)
+    missing_taxa_list$allowed_states <- resolve_allowed_states(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
+                                                               states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
+  }
+
+  ## Check upfront that every taxon has at least one branch available for grafting (and, with a simmap, a piece of branch in its allowed states)
   # Better to stop before grafting than in the middle of a long run
   no_branch_taxa <- find_taxa_without_allowed_branch(phy = phy, missing_taxa_list = missing_taxa_list,
                                                      include_target_clade_stem = missing_taxa_list$include_target_clade_stem,
                                                      exclude_subclades_stem = missing_taxa_list$exclude_subclades_stem,
-                                                     use_excluded_subclades = use_excluded_subclades)
-  if (nrow(no_branch_taxa) > 0)
+                                                     use_excluded_subclades = use_excluded_subclades,
+                                                     tracker = tracker, allowed_states = missing_taxa_list$allowed_states)
+  valid_fraction <- attr(no_branch_taxa, "valid_fraction")
+  excluded_taxa <- no_branch_taxa[no_branch_taxa$Cause == "excluded", , drop = FALSE]
+  if (nrow(excluded_taxa) > 0)
   {
-    n_show <- min(nrow(no_branch_taxa), 10)
-    stop(nrow(no_branch_taxa), " taxa have no branch available for grafting: all branches of their target clade are excluded.\n",
-         paste0("  - ", no_branch_taxa$Taxon_name[seq_len(n_show)], " (target clade tips: ", no_branch_taxa$Target_clade[seq_len(n_show)], ")", collapse = "\n"),
-         if (nrow(no_branch_taxa) > n_show) paste0("\n  ... and ", nrow(no_branch_taxa) - n_show, " more") else "",
+    n_show <- min(nrow(excluded_taxa), 10)
+    stop(nrow(excluded_taxa), " taxa have no branch available for grafting: all branches of their target clade are excluded.\n",
+         paste0("  - ", excluded_taxa$Taxon_name[seq_len(n_show)], " (target clade tips: ", excluded_taxa$Target_clade[seq_len(n_show)], ")", collapse = "\n"),
+         if (nrow(excluded_taxa) > n_show) paste0("\n  ... and ", nrow(excluded_taxa) - n_show, " more") else "",
          "\nAdjust 'include_target_clade_stem' (global or in missing_taxa_list), 'missing_taxa_list$Excluded_subclades' or 'exclude_subclades_stem' for these taxa.")
+  }
+  no_state_taxa <- no_branch_taxa[no_branch_taxa$Cause == "allowed_states", , drop = FALSE]
+  if (nrow(no_state_taxa) > 0)
+  {
+    n_show <- min(nrow(no_state_taxa), 10)
+    stop(nrow(no_state_taxa), " taxa have no branch available for grafting in their allowed states: none of the available branches of their target clade has a piece in these states.\n",
+         paste0("  - ", no_state_taxa$Taxon_name[seq_len(n_show)], " (target clade tips: ", no_state_taxa$Target_clade[seq_len(n_show)],
+                "; allowed states: ", vapply(missing_taxa_list$allowed_states[no_state_taxa$Taxon_name[seq_len(n_show)]], paste, character(1), collapse = ", "), ")", collapse = "\n"),
+         if (nrow(no_state_taxa) > n_show) paste0("\n  ... and ", nrow(no_state_taxa) - n_show, " more") else "",
+         "\nAdjust 'allowed_states' (global or in missing_taxa_list), or the constraints on the branches ('include_target_clade_stem', 'Excluded_subclades', 'exclude_subclades_stem') for these taxa.")
+  }
+
+  ## Warn (once) about the taxa with a very small fraction of their available branch length in allowed states
+  if (use_states)
+  {
+    low_fraction <- which(!is.na(valid_fraction) & valid_fraction < min_valid_fraction)
+    if (length(low_fraction) > 0)
+    {
+      n_show <- min(length(low_fraction), 10)
+      low_taxa <- names(valid_fraction)[low_fraction[order(valid_fraction[low_fraction])][seq_len(n_show)]]
+      warning(length(low_fraction), " taxa have less than ", format(100 * min_valid_fraction), "% of the length of their available branches in their allowed states ",
+              "('min_valid_fraction' = ", min_valid_fraction, "): their grafting positions are concentrated on a small part of their target clade.\n",
+              paste0("  - ", low_taxa, " (target clade tips: ", vapply(missing_taxa_list$Target_clade[low_taxa], paste, character(1), collapse = ", "),
+                     "; ", sprintf("%.2f%%", 100 * valid_fraction[low_taxa]), " in allowed states)", collapse = "\n"),
+              if (length(low_fraction) > n_show) paste0("\n  ... and ", length(low_fraction) - n_show, " more") else "",
+              call. = FALSE)
+    }
   }
 
   ## Set seed if provided, for the duration of this function only (the global RNG state is restored on exit)
   set_local_seed(seed)
-
-  ## Label the internal nodes of the backbone, to identify them in the grafted tree (node IDs change after each graft) and restore the original node labels at the end
-  labelled_backbone <- label_backbone_nodes(phy)
-  phy <- labelled_backbone$phy
 
   ## Randomize the order of taxa so it has no influence on the pattern of grafting
   # Taxa of the same target clade are exchangeable: their order is random.
@@ -536,19 +661,24 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
                 " is the whole tree: it has no stem branch, so only branches inside the clade are used")
       }
 
+      # With a simmap: Get ages of the branches of the current tree, to cut them in pieces in the allowed states of the taxon, and follow the states through grafting
+      edge_ages_i <- if (use_states) root_age - phytools::nodeHeights(phy) else NULL
+
       # Select branch for grafting using uniform distribution weighted by branch length to ensure a flat density over any time point along branches
-      # (no diversification model)
+      # (no diversification model). With a simmap, only the segments in allowed states are used
       # The draw returns the selected branch (tipward node) and the position of the graft on it (distance from its tipward node)
       drawn_point <- draw_random_grafting_position_along_available_branch_segments(
          phy = phy, MRCA_node = MRCA_node, include_target_clade_stem = include_target_clade_stem_i,
          excluded_nodes = excluded_nodes,
-         missing_tip_labels = missing_taxa_list$Taxon_name, seed = NULL)
+         missing_tip_labels = missing_taxa_list$Taxon_name, seed = NULL,
+         tracker = tracker, allowed_states = if (use_states) missing_taxa_list$allowed_states[[i]] else NULL, edge_ages = edge_ages_i)
 
       # Stop with an informative message if no branch is available (all branches excluded by the user's constraints)
       if (is.null(drawn_point))
       {
         stop("No branch available to graft '", focal_taxon_name, "'.\n",
-             "All branches of its target clade (tips: ", paste(missing_taxa_list$Target_clade[[i]], collapse = ", "), ") are excluded.\n",
+             "All branches of its target clade (tips: ", paste(missing_taxa_list$Target_clade[[i]], collapse = ", "), ") are excluded",
+             if (use_states) " or not in its allowed states" else "", ".\n",
              "Adjust 'include_target_clade_stem' (global or in missing_taxa_list), 'missing_taxa_list$Excluded_subclades' or 'exclude_subclades_stem' (global or in missing_taxa_list) for this taxon.")
       }
 
@@ -559,8 +689,17 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       # Compute the new branch length to reach present time => make the tree ultrametric
       new_branch_length <- position + (root_age - phytools::nodeheight(tree = phy, node = selected_node_ID))
       # Graft new branch
+      phy_before_graft <- phy
       phy <- phytools::bind.tip(tree = phy, tip.label = focal_taxon_name, edge.length = new_branch_length,
                                 where = selected_node_ID, position = position)
+      # With a simmap: the new taxon takes the state of the point where it was grafted, and the new node is labelled to keep following the branches
+      if (use_states)
+      {
+        tracked <- track_graft(tracker = tracker, phy_before = phy_before_graft, phy_after = phy, node = selected_node_ID, position = position,
+                               tip_label = focal_taxon_name, allowed_states = missing_taxa_list$allowed_states[[i]], edge_ages = edge_ages_i)
+        phy <- tracked$phy
+        tracker <- tracked$tracker
+      }
       # Enforce ultrametricity for the new terminal branch only (backbone branches are left untouched)
       phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = focal_taxon_name, root_age = root_age)
 
@@ -775,8 +914,12 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 #' @param missing_tip_labels Character vector. Labels of all the taxa to graft (grafted or not), used to identify the 'missing-only subtrees' of the stem region
 #'   and include them in the draw if needed. Default is `character(0)`.
 #' @param seed Integer. Optional seed. Default is `NULL` as the internal seed is set by the main grafting function.
+#' @param tracker Optional. Output of `start_state_tracking()` (updated by `track_graft()` after each graft). If provided, only the pieces of the available branches
+#'   in `allowed_states` are used as segments. Default is `NULL` (whole branches).
+#' @param allowed_states Character vector. States in which grafting is allowed. Only used with a `tracker`.
+#' @param edge_ages Numeric matrix. Ages (rootward, tipward) of the branches of `phy`: `root_age - phytools::nodeHeights(phy)`. Only used with a `tracker`.
 #'
-#' @details The two steps drzxing process ensures that this is a uniform draw over all the available segments, weighted by their length, so every time point along any available segment
+#' @details The two steps drawing process ensures that this is a uniform draw over all the available segments, weighted by their length, so every time point along any available segment
 #'   has the same probability to be selected. If the draw were not weighted, a time point along a short segment would have more chances to be used
 #'   for grafting than a time point along a long one.
 #'
@@ -801,7 +944,10 @@ draw_random_grafting_position_along_available_branch_segments <- function (
     include_target_clade_stem = TRUE, # Whether to include the stem branch among the available branch for sampling
     excluded_nodes = NULL, # Tipward nodes of the branches (excluded subclades and their stem if excluded) to exclude from the drawing
     missing_tip_labels = character(0), # Labels of all taxa to graft: used to identify the missing-only subtrees of the stem region and include them in the draw if needed.
-    seed = NULL) # Seed is set by the main function. Default NULL to not alter the global RNG state
+    seed = NULL, # Seed is set by the main function. Default NULL to not alter the global RNG state
+    tracker = NULL, # Output of start_state_tracking(), updated by track_graft(): restricts the draw to the segments in allowed states. NULL: no restriction
+    allowed_states = NULL, # States in which grafting is allowed. Only used with a tracker
+    edge_ages = NULL) # Ages (rootward, tipward) of the branches of phy: root_age - phytools::nodeHeights(phy). Only used with a tracker
 {
   if (!is.null(seed)) { set.seed(seed = seed) }
 
@@ -829,8 +975,15 @@ draw_random_grafting_position_along_available_branch_segments <- function (
     return(NULL)
   }
 
-  # Describe the available branches as segments, then draw a segment weighted by its length and a position within it
-  segments <- get_branch_segments(phy = phy, nodes = descendant_nodes)
+  # Describe the available branches as segments (the pieces in allowed states if there is a simmap),
+  # then draw a segment weighted by its length and a position within it
+  if (is.null(tracker))
+  {
+    segments <- get_branch_segments(phy = phy, nodes = descendant_nodes)
+  } else {
+    segments <- get_allowed_segments_tracked(tracker = tracker, phy = phy, nodes = descendant_nodes, allowed_states = allowed_states, edge_ages = edge_ages)
+    if (nrow(segments) == 0) { return(NULL) }
+  }
   return(draw_point_in_segments(segments))
 }
 

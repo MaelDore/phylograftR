@@ -115,3 +115,50 @@ expect_valid_graft <- function (grafted, phy, missing_taxa_list, ...)
   checks <- suppressWarnings(check_grafting_constraints(grafted, phy, missing_taxa_list, verbose = FALSE, ...))
   expect_true(isTRUE(attr(checks, "all_ok")))
 }
+
+
+## --- Toy simmaps --- ##
+
+# Used to test the grafting restricted to states
+
+## Function to  produce a toy simmap on a backbone.
+# Includes three states with several changes along the branches (some branches have several pieces).
+# The RNG state of the session is restored on exit.
+make_toy_simmap <- function (phy, seed = 1, rate = 0.04)
+{
+  had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+  if (had_seed) old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
+  on.exit({
+    if (had_seed) assign(".Random.seed", old_seed, envir = globalenv())
+    else if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) rm(".Random.seed", envir = globalenv())
+  })
+  set.seed(seed)
+  Q <- matrix(rate, 3, 3, dimnames = list(c("A", "B", "C"), c("A", "B", "C")))
+  diag(Q) <- -2 * rate
+  phytools::sim.history(phy, Q, anc = "A", message = FALSE)
+}
+
+## Function to create a backbone phylogeny and its associated simmaps
+toy_simmap_setup <- function ()
+{
+  phy <- make_toy_phy(n_tips = 20)
+  list(phy = phy, simmap = make_toy_simmap(phy, seed = 1))
+}
+
+
+## Independent computation of the state of the simmap at a given age along the lineage leading to a set of backbone tips
+# (the lineage is the backbone branch leading to the MRCA of the tips, or to the tip if only one)
+# This is used to check that grafted taxa inherited the state of the branch they were grafted on
+state_of_lineage_at_age <- function (simmap, backbone_tips, age)
+{
+  node <- if (length(backbone_tips) == 1) match(backbone_tips, simmap$tip.label) else ape::getMRCA(simmap, backbone_tips)
+  edge_row <- match(node, simmap$edge[, 2])
+  root_age <- max(phytools::nodeHeights(simmap)[, 2])
+  tip_age <- root_age - phytools::nodeHeights(simmap)[edge_row, 2]
+  distance_from_tip <- age - tip_age
+  branch_length <- simmap$edge.length[edge_row]
+  map <- simmap$maps[[edge_row]] # from the rootward node to the tipward node
+  distance_from_root <- branch_length - distance_from_tip
+  ends <- cumsum(map)
+  names(map)[which(distance_from_root <= ends + 1e-9)[1]]
+}

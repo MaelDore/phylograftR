@@ -376,6 +376,45 @@ test_that("find_taxa_without_allowed_branch() uses the stem availability of each
   expect_equal(nrow(find_taxa_without_allowed_branch(toy$phy, tip, exclude_subclades_stem = FALSE)), 0)
 })
 
+## Test that the taxa without any segment in their allowed states are identified, with the fraction of the length of their branches in allowed states
+test_that("find_taxa_without_allowed_branch() flags the taxa without segment in their allowed states, and returns the valid fraction of the others",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  phy <- label_backbone_nodes(toy$phy)$phy
+  tracker <- start_state_tracking(phy, simmap)
+  # The clade B is entirely in state "B", and the tip 's' entirely in state "A"
+  mtl <- list(Taxon_name = c("in_B", "not_in_B", "tip_A", "tip_B", "whole_A"), Target_clade = list(toy$B, toy$B, toy$s, toy$s, toy$A))
+  allowed <- list(in_B = "B", not_in_B = c("A", "C"), tip_A = "A", tip_B = "B", whole_A = c("A", "B", "C"))
+  flagged <- find_taxa_without_allowed_branch(phy, mtl, tracker = tracker, allowed_states = allowed)
+
+  expect_identical(flagged$Taxon_name, c("not_in_B", "tip_B"))
+  expect_identical(flagged$Cause, c("allowed_states", "allowed_states"))
+  valid_fraction <- attr(flagged, "valid_fraction")
+  expect_named(valid_fraction, mtl$Taxon_name)
+  expect_equal(unname(valid_fraction[c("in_B", "tip_A", "whole_A")]), c(1, 1, 1))
+  expect_equal(unname(valid_fraction[c("not_in_B", "tip_B")]), c(0, 0))
+
+  # Fraction of the pool in the allowed states, including the stem of the target clade: independent computation with the table of the states
+  A_pool <- c(get_descendant_nodes(phy, toy$node_A), toy$node_A)
+  state_table <- build_state_table(phy, simmap, validate_simmap(simmap, phy)$edge_map)
+  in_pool <- state_table[state_table$node %in% A_pool, ]
+  mtl_A <- list(Taxon_name = "x", Target_clade = list(toy$A))
+  flagged_A <- find_taxa_without_allowed_branch(phy, mtl_A, tracker = tracker, allowed_states = list(x = "C"))
+  expect_equal(unname(attr(flagged_A, "valid_fraction")["x"]), sum((in_pool$to - in_pool$from)[in_pool$state == "C"]) / sum(in_pool$to - in_pool$from))
+
+  # The branches excluded by the constraints are flagged with their own cause, and have no fraction
+  mtl_excl <- list(Taxon_name = "bad", Target_clade = list(toy$B), Excluded_subclades = list(list(toy$B)))
+  flagged_excl <- find_taxa_without_allowed_branch(phy, mtl_excl, include_target_clade_stem = FALSE, tracker = tracker, allowed_states = list(bad = "B"))
+  expect_identical(flagged_excl$Cause, "excluded")
+  expect_true(is.na(attr(flagged_excl, "valid_fraction")["bad"]))
+
+  # Without tracker: no state, no attribute
+  flagged_none <- find_taxa_without_allowed_branch(toy$phy, mtl)
+  expect_equal(nrow(flagged_none), 0)
+  expect_null(attr(flagged_none, "valid_fraction"))
+})
+
 ## Test the resolution of the stem exclusion of each excluded subclade
 test_that("resolve_exclude_subclades_stem() uses the subclade values, and the global value for NA or NULL, and validates its inputs",
 {

@@ -162,6 +162,72 @@ check_allowed_states <- function (allowed_states, states, who = "'allowed_states
 }
 
 
+#' @title Resolve the allowed states of each taxon
+#'
+#' @description Get the states in which each taxon can be grafted: the states of `missing_taxa_list$allowed_states` for the taxon if provided,
+#'   otherwise the global `allowed_states` argument. A taxon-level value replaces the global one (no intersection).
+#'   Same logic as `resolve_include_target_clade_stem()`.
+#'   `NULL`, an empty vector or `NA` for a taxon use the global argument. The function stops if some states are not in the simmap,
+#'   or if some taxa have no allowed states at all (neither a taxon-level value, nor a global one).
+#'
+#' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of character vectors: `missing_taxa_list$allowed_states`.
+#' @param allowed_states `NULL`, or character vector. The global `allowed_states` argument.
+#' @param states Character vector. States of the simmap.
+#' @param taxon_names Character vector. `missing_taxa_list$Taxon_name`.
+#' @param max_show Integer. Maximum number of taxa listed in the error message.
+#'
+#' @noRd
+#'
+#' @return A list named after `taxon_names`, with the allowed states (character vector, no duplicate) of each taxon.
+#'
+
+resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states = NULL, states, taxon_names, max_show = 10)
+{
+  n_taxa <- length(taxon_names)
+  if (!is.null(allowed_states))
+  {
+    check_allowed_states(allowed_states, states, who = "the global 'allowed_states' argument")
+    allowed_states <- unique(allowed_states)
+  }
+  if (!is.null(allowed_states_taxa) && !is.list(allowed_states_taxa))
+  {
+    stop("'missing_taxa_list$allowed_states' must be a list (named after 'Taxon_name') of character vectors of states.")
+  }
+  if (!is.null(allowed_states_taxa) && length(allowed_states_taxa) != n_taxa)
+  {
+    stop("'missing_taxa_list$allowed_states' must have the same length as 'Taxon_name' (", length(allowed_states_taxa), " vs ", n_taxa, ").")
+  }
+
+  resolved <- vector("list", n_taxa)
+  names(resolved) <- taxon_names
+  for (i in seq_len(n_taxa))
+  {
+    value <- if (is.null(allowed_states_taxa)) NULL else allowed_states_taxa[[i]]
+    use_global <- length(value) == 0 || (length(value) == 1 && is.na(value))
+    if (use_global)
+    {
+      resolved[i] <- list(allowed_states)
+    } else {
+      check_allowed_states(value, states, who = paste0("'missing_taxa_list$allowed_states' of taxon '", taxon_names[i], "'"))
+      resolved[[i]] <- unique(value)
+    }
+  }
+
+  without_states <- which(vapply(resolved, is.null, logical(1)))
+  if (length(without_states) > 0)
+  {
+    n_show <- min(length(without_states), max_show)
+    stop("A 'simmap' was provided, so the states in which grafting is allowed are required for every taxon: either the global 'allowed_states' argument, ",
+         "or 'missing_taxa_list$allowed_states' for the taxon.\n",
+         length(without_states), " taxa have none:\n",
+         paste0("  - ", taxon_names[without_states[seq_len(n_show)]], collapse = "\n"),
+         if (length(without_states) > n_show) paste0("\n  ... and ", length(without_states) - n_show, " more") else "",
+         "\nStates available in the simmap: ", paste0("'", states, "'", collapse = ", "), ".", call. = FALSE)
+  }
+  resolved
+}
+
+
 #' @title Table of the states along the branches of a simmap
 #'
 #' @description Convert the maps of a simmap in a table with one row per piece of branch (segment) in one state.
@@ -367,8 +433,13 @@ get_allowed_segments_tracked <- function (tracker, phy, nodes, allowed_states, e
     cand_rep <- cand_rep[keep]; r <- r[keep]
     lo <- info$distance[cand_rep]
     hi <- lo + branch_length[cand_rep]
-    f <- pmax(tracker$state_table$from[r], lo) - lo
-    t <- pmin(tracker$state_table$to[r], hi) - lo
+    # A piece that reaches an end of the branch ends exactly there (0 or the branch length), without rounding errors from the subtractions,
+    # so a branch entirely in allowed states is a single segment covering exactly the whole branch (as without simmap).
+    # The tolerance is relative: phytools::bind.tip() rounds all the branch lengths to 10 significant digits at each graft,
+    # so the lengths of the current tree differ slightly from the lengths of the simmap (relative differences of the order of 1e-10)
+    eps <- 1e-8 * hi
+    f <- ifelse(tracker$state_table$from[r] <= lo + eps, 0, tracker$state_table$from[r] - lo)
+    t <- ifelse(tracker$state_table$to[r] >= hi - eps, branch_length[cand_rep], tracker$state_table$to[r] - lo)
     keep <- t > f
     cand <- c(cand, cand_rep[keep]); from <- c(from, f[keep]); to <- c(to, t[keep])
   }

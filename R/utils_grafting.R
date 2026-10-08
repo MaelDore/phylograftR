@@ -379,7 +379,7 @@ fit_bd_on_clade <- function (phy, node, min_tips = 5, richness_info = NULL)
 
 validate_missing_taxa_list <- function (missing_taxa_list,
                                         clade_item = c("Target_clade", "Sister_clade"),
-                                        optional_items = c("include_target_clade_stem", "Excluded_subclades", "exclude_subclades_stem"),
+                                        optional_items = c("include_target_clade_stem", "Excluded_subclades", "exclude_subclades_stem", "allowed_states"),
                                         allow_node_ids = FALSE)
 {
   clade_item <- match.arg(clade_item)
@@ -1017,23 +1017,41 @@ check_excluded_subclades_position <- function (phy, missing_taxa_list)
 #' @param use_excluded_subclades Logical. Default is `TRUE`.
 #' @param exclude_subclades_stem Logical, or list with one element per taxon of logical vectors (one value per excluded subclade), as resolved by
 #'   `resolve_exclude_subclades_stem()`. Whether the stem of the excluded subclades is excluded. Default is `TRUE`.
+#' @param tracker `NULL`, or the output of `start_state_tracking()` on `phy`. If provided, the pool of branches of each taxon is restricted to the segments
+#'   in the allowed states of the taxon (see below). Default is `NULL` (no restriction).
+#' @param allowed_states List (one element per taxon) of character vectors, as resolved by `resolve_allowed_states()`. The states in which each taxon can be grafted.
+#'   Only used if `tracker` is provided.
 #'
 #' @importFrom ape getMRCA
 #'
 #' @noRd
 #'
-#' @return A data.frame with two columns summarizing the flagged taxa. It has 0 rows if no taxa were flagged.
+#' @details With a `tracker`, the pool of branches of a taxon (see above) is then restricted to the segments of the backbone in its allowed states:
+#'   the taxon is also flagged if the pool is not empty but has no segment in an allowed state.
+#'   The check is done on the backbone only, which is exact: the taxa grafted before a given taxon take the states of the backbone branches of its pool,
+#'   so they cannot bring any state that is not in the backbone pool already.
+#'
+#' @return A data.frame with three columns summarizing the flagged taxa. It has 0 rows if no taxa were flagged.
 #'   * `Taxon_name` Character string. Name of the missing taxon to graft.
 #'   * `Target_clade` Character string. Tips used to describe the target clade associated with the missing taxon; separated by commas if multiple.
+#'   * `Cause` Character string. `"excluded"` if all the branches of the pool are excluded, `"allowed_states"` if some branches are available but none has a segment in an allowed state.
+#'
+#'   With a `tracker`, the data.frame has an attribute `"valid_fraction"`: numeric vector, named after the taxa (all the taxa, not only the flagged ones),
+#'   with the fraction of the total length of the available branches of the taxon that is in its allowed states (`NA` for the taxa without any available branch).
 #'
 
 find_taxa_without_allowed_branch <- function (phy,
                                               missing_taxa_list,
                                               include_target_clade_stem = TRUE,
                                               use_excluded_subclades = TRUE,
-                                              exclude_subclades_stem = TRUE)
+                                              exclude_subclades_stem = TRUE,
+                                              tracker = NULL,
+                                              allowed_states = NULL)
 {
   n_missing <- length(missing_taxa_list$Taxon_name)
+  use_states <- !is.null(tracker)
+  # Ages (rootward, tipward) of the branches, to cut the segments in allowed states
+  if (use_states) { edge_ages <- max(phytools::nodeHeights(phy)[, 2]) - phytools::nodeHeights(phy) }
   root_node <- setdiff(phy$edge[, 1], phy$edge[, 2])
   # One value per taxon
   include_target_clade_stem_taxa <- rep_len(include_target_clade_stem, n_missing)
@@ -1052,6 +1070,8 @@ find_taxa_without_allowed_branch <- function (phy,
 
   # Initiate vector of flagged
   flagged <- logical(n_missing)
+  no_state <- logical(n_missing) # Flagged because no available segment is in an allowed state
+  valid_fraction <- rep(NA_real_, n_missing)
 
   ## Loop per taxa
   for (i in seq_len(n_missing))
@@ -1091,13 +1111,25 @@ find_taxa_without_allowed_branch <- function (phy,
     }
     # The taxa if flagged only if no valid branches (tipward nodes) remains in the pool
     flagged[i] <- length(allowed_nodes) == 0
+
+    # With states: segments of the available branches in the allowed states of the taxon, and their share of the total length of the available branches
+    if (use_states && !flagged[i])
+    {
+      segments_i <- get_allowed_segments_tracked(tracker = tracker, phy = phy, nodes = allowed_nodes, allowed_states = allowed_states[[i]], edge_ages = edge_ages)
+      pool_length <- sum(phy$edge.length[match(allowed_nodes, phy$edge[, 2])])
+      valid_fraction[i] <- if (pool_length > 0) sum(segments_i$to - segments_i$from) / pool_length else NA_real_
+      no_state[i] <- nrow(segments_i) == 0
+    }
   }
+  flagged_any <- flagged | no_state
 
   # Build data.frame summarizing all taxa that did not pass the check
   # If no taxon is flagged, return an empty df with 0 rows.
   flagged_taxa_df <- data.frame(
-    Taxon_name = missing_taxa_list$Taxon_name[flagged],
-    Target_clade = vapply(missing_taxa_list$Target_clade[flagged], paste, character(1), collapse = ", "), stringsAsFactors = FALSE)
+    Taxon_name = missing_taxa_list$Taxon_name[flagged_any],
+    Target_clade = vapply(missing_taxa_list$Target_clade[flagged_any], paste, character(1), collapse = ", "),
+    Cause = ifelse(no_state[flagged_any], "allowed_states", "excluded"), stringsAsFactors = FALSE)
+  if (use_states) { attr(flagged_taxa_df, "valid_fraction") <- stats::setNames(valid_fraction, missing_taxa_list$Taxon_name) }
 
   # Return df
   return(flagged_taxa_df)
