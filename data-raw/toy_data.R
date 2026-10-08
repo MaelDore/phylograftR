@@ -19,6 +19,29 @@ set.seed(1234)
 toy_backbone <- ape::rcoal(30)
 toy_backbone$edge.length <- toy_backbone$edge.length / max(ape::node.depth.edgelength(toy_backbone)) * 50
 
+# Minimum length of the internal branches -----------------------------------------------------------------
+
+# Coalescent trees nearly always include very short internal branches (here, two of 0.012 and 0.027 for a root age of 50),
+# that look like polytomies on a plot. The package does not handle polytomies, so an example must not suggest it does.
+# The nodes are moved towards the root where needed, so every internal branch is at least 'min_internal_branch' long.
+# The topology (tips, clades and node IDs), the root age and the ultrametry are unchanged.
+min_internal_branch <- 1 # 2% of the root age
+n_tips <- ape::Ntip(toy_backbone)
+node_ages <- max(ape::node.depth.edgelength(toy_backbone)) - ape::node.depth.edgelength(toy_backbone) # Age of every node (tips: 0)
+edges_postorder <- toy_backbone$edge[ape::postorder(toy_backbone), , drop = FALSE] # Branches of the tips towards the root
+for (i in seq_len(nrow(edges_postorder)))
+{
+  parent <- edges_postorder[i, 1]
+  child <- edges_postorder[i, 2]
+  if (child > n_tips) { node_ages[parent] <- max(node_ages[parent], node_ages[child] + min_internal_branch) }
+}
+toy_backbone$edge.length <- node_ages[toy_backbone$edge[, 1]] - node_ages[toy_backbone$edge[, 2]]
+
+# Check that the root age and the ultrametry are unchanged, and that no internal branch is shorter than the minimum
+stopifnot(isTRUE(all.equal(max(ape::node.depth.edgelength(toy_backbone)), 50)),
+          ape::is.ultrametric(toy_backbone),
+          min(toy_backbone$edge.length[toy_backbone$edge[, 2] > n_tips]) >= min_internal_branch - 1e-8)
+
 # Reference clades (node: tips) used below
 # 32: t26 t2 t21 t16 t11 t4 t3 t25 t28 t10 t6 t20 t9 t30 t24 t18 t19  (clade A)
 # 33: t8 t1 t15 t29 t14 t13 t17 t27 t7 t5 t23 t12 t22                 (clade B)
