@@ -644,3 +644,52 @@ test_that("restore_node_labels() gives no labels if the backbone had none, and a
   expect_identical(sum(is.na(restored$node.label)), 1L)
   expect_identical(sum(restored$node.label == "", na.rm = TRUE), 2L)
 })
+
+
+# ---- Check of the backbone ----
+
+## Test that a binary backbone is accepted, and that polytomies are named in the error with the suggested fix
+test_that("check_backbone_binary() accepts a binary backbone and stops on polytomies, naming the nodes and suggesting ape::multi2di()",
+{
+  phy <- make_toy_phy()
+  expect_true(check_backbone_binary(phy))
+
+  # One polytomy: the node, its number of children and its tips are given
+  poly <- make_toy_polytomies(phy, n_collapsed = 1)
+  expect_false(ape::is.binary(poly))
+  node <- which(tabulate(poly$edge[, 1]) > 2)
+  expect_length(node, 1)
+  expect_error(check_backbone_binary(poly), "not binary: 1 internal node\\(s\\)")
+  expect_error(check_backbone_binary(poly), paste0("node ", node, ": 3 children"))
+  expect_error(check_backbone_binary(poly), "ape::multi2di")
+  expect_error(check_backbone_binary(poly), "own risk")
+  descendants <- get_descendant_nodes(poly, node)
+  expect_error(check_backbone_binary(poly), poly$tip.label[min(descendants[descendants <= ape::Ntip(poly)])], fixed = TRUE)
+
+  # The suggested fix gives a backbone that is accepted
+  expect_true(check_backbone_binary(ape::multi2di(poly)))
+})
+
+## Test that the list of nodes is truncated, that node labels are shown and that nodes with a single child are reported
+test_that("check_backbone_binary() truncates long lists of nodes, shows node labels and reports nodes with a single child",
+{
+  phy <- make_toy_phy()
+  poly <- make_toy_polytomies(phy, n_collapsed = 8)
+  n_poly <- sum(tabulate(poly$edge[, 1]) > 2)
+  expect_gt(n_poly, 2)
+  expect_error(check_backbone_binary(poly, max_nodes = 2), paste0("not binary: ", n_poly, " internal node\\(s\\)"))
+  expect_error(check_backbone_binary(poly, max_nodes = 2), paste0("and ", n_poly - 2, " more"))
+  expect_error(check_backbone_binary(poly, max_tips = 2), "\\.\\.\\.\\)")
+
+  # Node labels
+  poly <- make_toy_polytomies(phy, n_collapsed = 1)
+  poly$node.label <- paste0("support", seq_len(poly$Nnode))
+  node <- which(tabulate(poly$edge[, 1]) > 2)
+  expect_error(check_backbone_binary(poly), paste0("node ", node, " 'support", node - ape::Ntip(poly), "'"))
+
+  # Node with a single child
+  single <- phy
+  single$edge <- single$edge[-which(single$edge[, 1] == phy$edge[phy$edge[, 2] > ape::Ntip(phy), 1][1])[1], ]
+  single$edge.length <- single$edge.length[seq_len(nrow(single$edge))]
+  expect_error(check_backbone_binary(single), "1 child")
+})

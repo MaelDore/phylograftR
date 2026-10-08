@@ -34,6 +34,11 @@ test_that("graft_missing_taxa() stops on invalid inputs, before any grafting",
   not_ultra$edge.length[1] <- not_ultra$edge.length[1] * 1.5
   expect_error(graft_missing_taxa(not_ultra, mtl, verbose = FALSE), "not ultrametric")
 
+  # Backbone with polytomies
+  poly <- make_toy_polytomies(phy, n_collapsed = 1)
+  expect_error(graft_missing_taxa(poly, mtl, verbose = FALSE), "not binary")
+  expect_error(graft_missing_taxa(poly, mtl, verbose = FALSE), "ape::multi2di")
+
   # min_tips, and backbone too small for the birth-death model
   expect_error(graft_missing_taxa(phy, mtl, min_tips = 2, verbose = FALSE), "min_tips")
   expect_error(graft_missing_taxa(make_toy_phy(n_tips = 4), list(Taxon_name = "X1", Target_clade = list(X1 = c("t1", "t2"))), verbose = FALSE),

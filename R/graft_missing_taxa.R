@@ -18,7 +18,7 @@
 #'   The backbone is never modified: only new tips are added.
 #'
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which taxa are grafted.
-#'   It must be rooted and ultrametric (i.e., be time-calibrated).
+#'   It must be rooted, binary (no polytomies) and ultrametric (i.e., be time-calibrated).
 #' @param missing_taxa_list A list with the information on the taxa to graft. Every item provided must be named after `$Taxon_name`. Items:
 #'   * `$Taxon_name`: Character vector of the names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
 #'   * `$Target_clade`: List (named after `$Taxon_name`) of character vectors. For each taxon, the tip labels defining its target clade,
@@ -109,8 +109,8 @@
 #'       This can be used to account for clade-specific sampling fraction in downstream analyses.
 #'
 #' @details
-#' The function stops, before any grafting, if the backbone is not ultrametric, or if some taxa have no branch available for grafting
-#' (i.e., all branches of their target clade are excluded). The taxa concerned are listed in the error message,
+#' The function stops, before any grafting, if the backbone is not ultrametric, or is not binary (i.e., all nodes have only two descendent lineages).
+#' It also stops if some taxa have no branch available for grafting. The taxa concerned are listed in the error message,
 #' so the constraints (`include_target_clade_stem`, `Excluded_subclades` or `exclude_subclades_stem`) can be adjusted.
 #' With `method = "BD_clades"`, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon.
 #'
@@ -297,6 +297,9 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 
     ## The backbone must be ultrametric (error otherwise). It is never modified: making it ultrametric is left to the user
     check_backbone_ultrametric(phy = phy, tol = ultrametric_tol)
+
+    ## The backbone must be binary (error otherwise): polytomies are not handled, and resolving them is left to the user
+    check_backbone_binary(phy = phy)
 
     ## Check 'min_tips'
     if (!is.numeric(min_tips) || length(min_tips) != 1 || min_tips < 3)

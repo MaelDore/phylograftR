@@ -1426,3 +1426,52 @@ restore_node_labels <- function (phy, labelled)
   phy$node.label <- restored
   phy
 }
+
+
+#' @title Check that the backbone tree is binary
+#'
+#' @description Check that every internal node of the backbone has exactly two children, and stop with an informative error if not.
+#'   Grafting does not handle polytomies. The message names the nodes concerned (with their tips)
+#'   and suggests `ape::multi2di()` to resolve them, at the user's own risk.
+#'
+#' @param phy Backbone phylogeny of class `"phylo"`.
+#' @param max_nodes Integer. Maximum number of nodes listed in the message.
+#' @param max_tips Integer. Maximum number of tips listed per node in the message.
+#'
+#' @importFrom ape Ntip
+#'
+#' @noRd
+#'
+#' @return Invisible `TRUE`. Stops if some internal nodes do not have exactly two children.
+#'
+
+check_backbone_binary <- function (phy, # Backbone phylogeny
+                                   max_nodes = 5, # Maximum number of nodes listed in the message
+                                   max_tips = 5) # Maximum number of tips listed per node
+{
+  n_tips <- ape::Ntip(phy)
+  n_children <- tabulate(phy$edge[, 1], nbins = n_tips + phy$Nnode)
+  non_binary_nodes <- which(seq_along(n_children) > n_tips & n_children != 2)
+  if (length(non_binary_nodes) == 0) { return(invisible(TRUE)) }
+
+  ## Describe each node: ID (and label if any), number of children and some of its tips
+  describe_node <- function (node)
+  {
+    descendants <- get_descendant_nodes(phy, node)
+    tips <- phy$tip.label[descendants[descendants <= n_tips]]
+    label <- if (!is.null(phy$node.label) && !is.na(phy$node.label[node - n_tips]) && phy$node.label[node - n_tips] != "") paste0(" '", phy$node.label[node - n_tips], "'") else ""
+    paste0("node ", node, label, ": ", n_children[node], if (n_children[node] == 1) " child" else " children", ", ", length(tips), " tips (",
+           paste(utils::head(tips, max_tips), collapse = ", "), if (length(tips) > max_tips) ", ..." else "", ")")
+  }
+  n_show <- min(length(non_binary_nodes), max_nodes)
+  has_polytomy <- any(n_children[non_binary_nodes] > 2)
+
+  stop("The backbone phylogeny is not binary: ", length(non_binary_nodes), " internal node(s) do not have exactly two children",
+       if (has_polytomy) " (polytomies)" else "", ":\n",
+       paste0("  - ", vapply(non_binary_nodes[seq_len(n_show)], describe_node, character(1)), collapse = "\n"),
+       if (length(non_binary_nodes) > n_show) paste0("\n  ... and ", length(non_binary_nodes) - n_show, " more") else "",
+       "\nGrafting does not handle polytomies (the root must also have two children, i.e., the backbone must be rooted). ",
+       "If you accept to resolve them randomly, you can use ape::multi2di(phy) on the backbone BEFORE grafting and provide this binary backbone as input. ",
+       "This is done at your own risk: the new nodes are arbitrary resolutions, connected by zero-length branches, ",
+       "on which no grafting can happen and which do not reflect any biological information.", call. = FALSE)
+}

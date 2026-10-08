@@ -14,7 +14,7 @@
 #'   and the missing clade is grown under the same model, conditioned on its number of taxa and its stem age.
 #'
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which taxa are grafted.
-#'   It must be rooted and ultrametric (i.e., be time-calibrated).
+#'   It must be rooted, binary (no polytomies) and ultrametric (i.e., be time-calibrated).
 #' @param missing_taxa_list A list with the information on the taxa to graft. Items:
 #'   * `$Taxon_name`: Character vector of the names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
 #'   * `$Sister_clade`: List (named after `$Taxon_name`) of character vectors. For each taxon, the tip labels defining the clade of the backbone
@@ -188,6 +188,9 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
   {
     ## The backbone must be ultrametric (error otherwise). It is never modified: making it ultrametric is left to the user
     check_backbone_ultrametric(phy = phy, tol = ultrametric_tol)
+
+    ## The backbone must be binary (error otherwise): polytomies are not handled, and resolving them is left to the user
+    check_backbone_binary(phy = phy)
 
     ## Check 'min_tips'
     if (!is.numeric(min_tips) || length(min_tips) != 1 || min_tips < 3)

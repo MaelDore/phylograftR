@@ -33,6 +33,10 @@ test_that("graft_missing_clades() stops on invalid inputs, before any grafting",
   not_ultra$edge.length[1] <- not_ultra$edge.length[1] * 1.5
   expect_error(graft_missing_clades(not_ultra, mcl, verbose = FALSE), "not ultrametric")
 
+  poly <- make_toy_polytomies(phy, n_collapsed = 1)
+  expect_error(graft_missing_clades(poly, mcl, verbose = FALSE), "not binary")
+  expect_error(graft_missing_clades(poly, mcl, verbose = FALSE), "ape::multi2di")
+
   expect_error(graft_missing_clades(phy, mcl, min_tips = 2, verbose = FALSE), "min_tips")
   expect_error(graft_missing_clades(make_toy_phy(n_tips = 4), list(Taxon_name = "M1", Sister_clade = list(M1 = c("t1", "t2"))), verbose = FALSE),
                "too small to fit a birth-death model")

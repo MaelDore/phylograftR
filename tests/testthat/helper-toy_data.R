@@ -26,6 +26,21 @@ make_toy_phy <- function (n_tips = 20, seed = 1234, root_age = 50)
   phy
 }
 
+## Build a backbone with polytomies by collapsing internal branches (the given number of them, starting from the highest node IDs).
+# The length of a collapsed branch is added to the branches below it, so the backbone stays ultrametric.
+make_toy_polytomies <- function (phy, n_collapsed = 1)
+{
+  internal_edges <- which(phy$edge[, 2] > ape::Ntip(phy))
+  collapsed <- internal_edges[order(phy$edge[internal_edges, 2], decreasing = TRUE)][seq_len(n_collapsed)]
+  for (e in collapsed)
+  {
+    below <- which(phy$edge[, 1] == phy$edge[e, 2])
+    phy$edge.length[below] <- phy$edge.length[below] + phy$edge.length[e]
+    phy$edge.length[e] <- 0
+  }
+  ape::di2multi(phy, tol = 1e-8)
+}
+
 # Two tips whose MRCA is the given node (a clade is defined by a pair of tips)
 pair_for_node <- function (phy, node)
 {
