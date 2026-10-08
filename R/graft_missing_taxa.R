@@ -531,23 +531,23 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 
       # Select branch for grafting using uniform distribution weighted by branch length to ensure a flat density over any time point along branches
       # (no diversification model)
-      selected_node_ID <- draw_random_branch_weighted_per_length(
+      # The draw returns the selected branch (tipward node) and the position of the graft on it (distance from its tipward node)
+      drawn_point <- draw_random_grafting_position_along_available_branch_segments(
          phy = phy, MRCA_node = MRCA_node, include_target_clade_stem = include_target_clade_stem_i,
          excluded_nodes = excluded_nodes,
          missing_tip_labels = missing_taxa_list$Taxon_name, seed = NULL)
 
       # Stop with an informative message if no branch is available (all branches excluded by the user's constraints)
-      if (is.na(selected_node_ID))
+      if (is.null(drawn_point))
       {
         stop("No branch available to graft '", focal_taxon_name, "'.\n",
              "All branches of its target clade (tips: ", paste(missing_taxa_list$Target_clade[[i]], collapse = ", "), ") are excluded.\n",
              "Adjust 'include_target_clade_stem' (global or in missing_taxa_list), 'missing_taxa_list$Excluded_subclades' or 'exclude_subclades_stem' (global or in missing_taxa_list) for this taxon.")
       }
 
-      # Extract branch length
-      selected_branch_length <- phy$edge.length[match(selected_node_ID, phy$edge[, 2])]
-      # Define position from a uniform distribution
-      position <- stats::runif(n = 1, min = 0, max = selected_branch_length)
+      selected_node_ID <- drawn_point$node
+      # Position of the graft: drawn from a uniform distribution along the selected segment
+      position <- drawn_point$position
 
       # Compute the new branch length to reach present time => make the tree ultrametric
       new_branch_length <- position + (root_age - phytools::nodeheight(tree = phy, node = selected_node_ID))
@@ -745,17 +745,20 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 }
 
 
-### 2/ Sub-function to draw randomly a branch within a clade weighted by its length ####
+### 2/ Sub-function to draw the grafting position along the available branch segments of a clade, weighted by segment length ####
 
-#' @title Draw a branch within a clade, weighted by branch length
+#' @title Draw the grafting position along the available branch segments of a clade
 #'
-#' @description The draw is weighted by branch length to ensure the probability to be grafted at any point along any branch in the clade is uniform.
-#'   If not weighted, a time point along shorter branch would have more chances to be used for grafting than a time point along a long branch.
-#'   Returns the selected node ID, or NA if no branch is available (all branches excluded).
+#' @description Draw where a taxon is grafted, i.e., a branch and a position along it, in two combined steps:
+#'   1. The available branches of the clade (target clade, stem region if available, minus excluded subclades) are described as segments
+#'      (see `get_branch_segments()`), and one segment is drawn with a probability proportional to its length.
+#'   2. The position of the graft is drawn uniformly along the selected segment.
+#'
+#'   Together, this is a uniform draw over all the available segments, weighted by their length, so every time point along any available segment
+#'   has the same probability to be selected.
 #'
 #' @param phy Backbone phylogeny of class `"phylo"`.
 #' @param MRCA_node Node ID of the MRCA of the target clade.
-#' @param which_node Character string. Return the `"tipward"` or `"rootward"` node of the selected branch. Default is `"tipward"`.
 #' @param include_target_clade_stem Logical. Whether the stem region of the target clade is available. Ignored for single-tip clades (their tip branch is always available). Default is `TRUE`.
 #' @param excluded_nodes Integer vector. Tipward node IDs of the branches removed from the draw (branches of the excluded subclades, and their stem if excluded),
 #'   see `get_excluded_branch_nodes()`. Default is `NULL`.
@@ -763,18 +766,28 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 #'   and include them in the draw if needed. Default is `character(0)`.
 #' @param seed Integer. Optional seed. Default is `NULL` as the internal seed is set by the main grafting function.
 #'
+#' @details The two steps drzxing process ensures that this is a uniform draw over all the available segments, weighted by their length, so every time point along any available segment
+#'   has the same probability to be selected. If the draw were not weighted, a time point along a short segment would have more chances to be used
+#'   for grafting than a time point along a long one.
+#'
+#'   Both steps are done in one function because the position is drawn within the selected segment, and it is returned relative to the
+#'   branch the segment belongs to (distance from the tipward node of the branch), as required to graft the new tip on this branch.
+#'   This will matter when a branch is split in several available segments (e.g., when only a part of a branch is available).
+#'   Returns `NULL` if no branch is available (all branches excluded).
+#'
 #' @importFrom ape Ntip
 #'
 #' @noRd
 #'
-#' @return The ID of the selected node, or `NA` if no branch is available.
+#' @return `NULL` if no branch is available. Otherwise a list with 2 elements:
+#'  * `node` Integer. Tipward node ID of the selected branch.
+#'  * `position` Numeric. Position of the graft: distance from the tipward node of the selected branch.
 #'
 
 
-draw_random_branch_weighted_per_length <- function (
+draw_random_grafting_position_along_available_branch_segments <- function (
     phy,
     MRCA_node, # MRCA node of the target clade where to draw the branch
-    which_node = "tipward", # Return the "tipward" or "rootward" node of the selected branch
     include_target_clade_stem = TRUE, # Whether to include the stem branch among the available branch for sampling
     excluded_nodes = NULL, # Tipward nodes of the branches (excluded subclades and their stem if excluded) to exclude from the drawing
     missing_tip_labels = character(0), # Labels of all taxa to graft: used to identify the missing-only subtrees of the stem region and include them in the draw if needed.
@@ -799,28 +812,16 @@ draw_random_branch_weighted_per_length <- function (
     descendant_nodes <- setdiff(descendant_nodes, excluded_nodes)
   }
 
-  # Return NA if no valid branch remains for drawing
+  # Return NULL if no valid branch remains for drawing
   # (the calling function stops with a message naming the taxon and its target clade)
   if (length(descendant_nodes) == 0)
   {
-    return(NA)
+    return(NULL)
   }
 
-  # Convert node IDs into subtending branch IDs
-  branches_ID <- match(descendant_nodes, phy$edge[, 2])
-  # Select one branch among the remaining available branches
-  selected_branch_ID <- sample_one(branches_ID, prob = phy$edge.length[branches_ID])
-
-  # Convert back branch ID to tipward/rootward node ID
-  if (which_node == "tipward")
-  {
-    selected_node_ID <- phy$edge[selected_branch_ID, 2]
-  } else {
-    selected_node_ID <- phy$edge[selected_branch_ID, 1]
-  }
-
-  # Export selected node ID
-  return(selected_node_ID)
+  # Describe the available branches as segments, then draw a segment weighted by its length and a position within it
+  segments <- get_branch_segments(phy = phy, nodes = descendant_nodes)
+  return(draw_point_in_segments(segments))
 }
 
 
@@ -873,9 +874,8 @@ graft_from_divergence_age <- function (phy, # Backbone phylogeny
     root_age <- max(phytools::nodeHeights(tree = phy)[, 2])
   }
 
-  # Identify tipward_node_ID of branches crossing the target age (tipward node younger, rootward node older)
+  # Ages (rootward, tipward) of the branches, used to identify the segments crossing the target age (tipward node younger, rootward node older)
   edge_ages <- root_age - phytools::nodeHeights(tree = phy)
-  compatible_tipward_nodes_ID <- phy$edge[(edge_ages[, 1] >= divergence_age) & (edge_ages[, 2] <= divergence_age), 2]
 
   # Identify tipward nodes of the branches available in the target clade: branches within the clade + its stem region if include_target_clade_stem = TRUE.
   # The stem region contains the pieces of the stem split by previous grafts and the 'missing-only subtrees' hanging from it
@@ -885,25 +885,29 @@ graft_from_divergence_age <- function (phy, # Backbone phylogeny
   stem_clade_nodes <- get_available_branch_nodes(phy = phy, MRCA_node = MRCA_node, include_target_clade_stem = include_target_clade_stem,
                                                  missing_tip_labels = missing_tip_labels)
 
-  # Subset valid branches by keeping only the one crossing the target age
-  valid_nodes_ID <- intersect(compatible_tipward_nodes_ID, stem_clade_nodes)
-
   # Remove branches of the excluded subclades: the branches within the subclades, and their stem region if their stem is excluded
   # (single tips exclude their terminal branch only if their stem is excluded)
-  valid_nodes_ID <- setdiff(valid_nodes_ID, get_excluded_branch_nodes(phy = phy, excluded_subclades_tips_list = excluded_subclades_tips_list,
-                                                                      exclude_subclades_stem = exclude_subclades_stem,
-                                                                      missing_tip_labels = missing_tip_labels))
+  available_nodes_ID <- setdiff(stem_clade_nodes, get_excluded_branch_nodes(phy = phy, excluded_subclades_tips_list = excluded_subclades_tips_list,
+                                                                            exclude_subclades_stem = exclude_subclades_stem,
+                                                                            missing_tip_labels = missing_tip_labels))
+  # Keep the order of the branches in the tree (edge order), so the order of the candidates does not depend on how they were listed
+  available_nodes_ID <- available_nodes_ID[order(match(available_nodes_ID, phy$edge[, 2]))]
 
-  # Send informative error if no valid branches remain
-  if (length(valid_nodes_ID) == 0)
+  # Describe the available branches as segments, and keep only the segments crossing the target age
+  valid_segments <- get_segments_crossing_age(phy = phy, segments = get_branch_segments(phy = phy, nodes = available_nodes_ID),
+                                              age = divergence_age, root_age = root_age, edge_ages = edge_ages)
+
+  # Send informative error if no valid segment remains
+  if (nrow(valid_segments) == 0)
   {
     stop("No branch available at age ", signif(divergence_age, 4), " to graft '", tip_label,"'.\n",
          "All branches of its target clade (tips: ", paste(target_clade_tips, collapse = ", "), ") crossing that age are excluded.\n",
          "Adjust 'include_target_clade_stem' (global or in missing_taxa_list), 'missing_taxa_list$Excluded_subclades' or 'exclude_subclades_stem' (global or in missing_taxa_list) for this taxon.")
   }
 
-  # Sample one branch (based on tipward nodes) among the valid branches
-  selected_node_ID <- sample_one(valid_nodes_ID)
+  # Sample one branch (based on tipward nodes) among the branches of the valid segments, uniformly:
+  # at a given age each lineage crossing it has the same chance to receive the new lineage
+  selected_node_ID <- valid_segments$node[sample_one(seq_len(nrow(valid_segments)))]
 
   # Compute the distance from the tipward node of the selected branch up to the divergence age
   # as the position of the graft on the selected branch

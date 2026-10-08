@@ -240,8 +240,8 @@ test_that("with method = 'uniform', include_target_clade_stem overrides the glob
               include_target_clade_stem = c(X1 = TRUE, X2 = FALSE, X3 = NA, X4 = FALSE))
 
   stem_used <- NULL
-  original <- draw_random_branch_weighted_per_length
-  local_mocked_bindings(draw_random_branch_weighted_per_length = function (...) {
+  original <- draw_random_grafting_position_along_available_branch_segments
+  local_mocked_bindings(draw_random_grafting_position_along_available_branch_segments = function (...) {
       stem_used <<- c(stem_used, list(...)$include_target_clade_stem); original(...) })
 
   # Global TRUE: NA means TRUE. Taxa without access to the stem come first within their clade
@@ -425,8 +425,8 @@ test_that("with method = 'uniform', the stem of an excluded subclade is excluded
   toy <- toy_setup()
   desc <- function (node) get_descendant_nodes(toy$phy, node)
   excluded_used <- list()
-  original <- draw_random_branch_weighted_per_length
-  local_mocked_bindings(draw_random_branch_weighted_per_length = function (...) {
+  original <- draw_random_grafting_position_along_available_branch_segments
+  local_mocked_bindings(draw_random_grafting_position_along_available_branch_segments = function (...) {
     excluded_used[[length(excluded_used) + 1]] <<- list(...)$excluded_nodes; original(...) })
 
   mtl <- list(Taxon_name = "X1", Target_clade = list(X1 = toy$A), Excluded_subclades = list(X1 = list(toy$B, toy$C)))
@@ -541,8 +541,8 @@ test_that("with method = 'uniform', taxa are grafted per target clade from the s
 
   # Record the size of the target clade of each taxon, in the order of grafting
   clade_sizes <- numeric()
-  original <- draw_random_branch_weighted_per_length
-  local_mocked_bindings(draw_random_branch_weighted_per_length = function (phy, MRCA_node, ...) {
+  original <- draw_random_grafting_position_along_available_branch_segments
+  local_mocked_bindings(draw_random_grafting_position_along_available_branch_segments = function (phy, MRCA_node, ...) {
     clade_sizes <<- c(clade_sizes, length(get_descendant_nodes(phy, MRCA_node)))
     original(phy = phy, MRCA_node = MRCA_node, ...)
   })
