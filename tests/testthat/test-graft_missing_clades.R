@@ -364,6 +364,13 @@ test_that("graft_missing_clades() stops after 'max_age_redraws' redraws of the d
   mcl <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B, M2 = toy$B))
   expect_error(suppressWarnings(graft_missing_clades(toy$phy, mcl, simmap = simmap, allowed_states = "C", max_age_redraws = 3, verbose = FALSE, seed = 1)),
                "No usable divergence time.*M1, M2.*after 3 redraws.*'max_age_redraws'.*allowed states: C")
+
+  # The message gives the time window of the divergence time (the stem branch of the sister clade) and the share of it in the allowed states
+  crown_age_B <- toy$root_age - phytools::nodeheight(toy$phy, toy$node_B)
+  stem_age_B <- toy$root_age - phytools::nodeheight(toy$phy, toy$phy$edge[match(toy$node_B, toy$phy$edge[, 2]), 1])
+  expect_error(suppressWarnings(graft_missing_clades(toy$phy, mcl, simmap = simmap, allowed_states = "C", max_age_redraws = 3, verbose = FALSE, seed = 1)),
+               paste0("Time window of the divergence time \\(stem branch of the sister clade\\): from age ", signif(crown_age_B, 4), " to age ", signif(stem_age_B, 4),
+                      "\\. Share of this window in the allowed states: 0.00%"))
 })
 
 ## Test the grafting of missing clades after the grafting of nested ones with a simmap (tracking of the states through bind.tree), and the node labels

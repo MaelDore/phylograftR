@@ -7,6 +7,10 @@
 graft_missing_clades(
   phy,
   missing_taxa_list,
+  simmap = NULL,
+  allowed_states = NULL,
+  min_valid_fraction = 0.1,
+  max_age_redraws = 1000,
   min_tips = 5,
   total_richness_per_clades = NULL,
   ultrametric_tol = .Machine$double.eps^0.5,
@@ -29,7 +33,32 @@ that is sister to the missing clade. Taxa with the same sister clade are grafted
 A pair of tips defines the clade as their MRCA node. A single tip defines the "clade" as the terminal branch of this tip.
 Clades, including the excluded subclades (see below), must be defined by tips: node IDs are not accepted (the function stops, and lists some of them).
 Use \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} to convert node IDs into pairs of tips.
+\item \verb{$allowed_states}: (Optional) List (named after \verb{$Taxon_name}) of character vectors. For each taxon, the states of the \code{simmap} in which its missing clade
+can be grafted on the stem branch of its sister clade. It overrides the global argument \code{allowed_states} for this taxon. \code{NULL} or \code{NA} use the global argument.
+Only used with a \code{simmap}. Taxa with the same sister clade are grafted together as one missing clade, so they must have the same allowed states
+(the function stops otherwise, and lists the clades concerned).
 }}
+
+\item{simmap}{(Optional) A single stochastic character map of the backbone, of class \code{"simmap"} (e.g., from \code{phytools::make.simmap()} or \code{phytools::sim.history()}),
+mapping a species attribute (e.g., a trait or a range) with discrete states along the branches of \code{phy}.
+It must have the same tips, topology and branch lengths as \code{phy}. With a \code{simmap}, the missing clades can only be grafted on the parts of the stem branches
+of their sister clades that are in their allowed states (see \code{allowed_states}), and each missing clade inherits the state of the point of the stem branch
+where it is grafted, along all its branches, so the states can be followed alongside the phylogeny.
+
+See 'Species attributes' in Details section. Default is \code{NULL} (no restriction for grafting based on states).}
+
+\item{allowed_states}{Character vector. The states of \code{simmap} in which grafting is allowed. This is the default for all taxa:
+taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. States are matched exactly with the states of the \code{simmap}.
+The function stops if a \code{simmap} is provided and some taxa have no allowed states (neither a global nor a taxon-level value),
+if some states are not in the \code{simmap}, or if \code{allowed_states} is provided without a \code{simmap}.
+Default is \code{NULL} (no restriction for grafting based on states).}
+
+\item{min_valid_fraction}{Numeric between 0 and 1. Only used with a \code{simmap}. Threshold of the fraction of the time window of the divergence time of a missing clade
+(the stem branch of its sister clade) that is in its allowed states. A warning lists the missing clades below the threshold for inspection,
+as their divergence times are concentrated on a small part of the stem branch. The fraction is computed on the backbone, before grafting. Default is \code{0.1}.}
+
+\item{max_age_redraws}{Integer. Only used with a \code{simmap}. Maximum number of times the divergence time of a missing clade can be drawn again when it falls
+in a part of the stem branch that is not in an allowed state. The function stops with an informative message if this limit is reached. Default is \code{1000}.}
 
 \item{min_tips}{Integer. Minimum number of tips of the clade used to fit the birth-death model.
 If the sister clade has fewer tips, the smallest enclosing clade with at least \code{min_tips} tips is used instead. Must be at least 3. Default is \code{5}.}
@@ -99,11 +128,16 @@ This can be used to account for clade-specific sampling fraction in downstream a
 \description{
 This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny as clades sister to clades of the backbone.
 Missing taxa sharing the same sister clade are grafted together as ONE missing clade, on the stem branch of their sister clade.
+
 The divergence time of the missing clade is drawn from a birth-death model fitted on the sister clade,
 and the missing clade is grown under the same model, conditioned on its number of taxa and its stem age.
 }
 \details{
+\subsection{Stop conditions}{
+
 The function stops, before any grafting, if the backbone is not ultrametric, or if a sister clade is the whole tree (it has no stem branch to graft on).
+}
+
 \subsection{Grafting process}{
 
 Groups of missing taxa sharing the same sister clade are ordered by the size of the sister clade, so nested sister clades are processed first.
@@ -116,6 +150,31 @@ between the crown age of the sister clade and its stem age (or between the prese
 \item A single missing taxon is grafted as a new tip at this divergence time. For several taxa, a missing clade is grown with \code{TreeSim::sim.bd.taxa.age()}
 under the fitted model, conditioned on the number of taxa and on its stem age (the drawn divergence time), and grafted on the stem branch of the sister clade.
 }
+}
+
+\subsection{Species attributes: allowed states of a simmap}{
+
+A \code{simmap} describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
+Missing clades are grafted on the stem branch of a clade of the backbone, and the function assumes that the user considers this stem branch a valid place for them.
+Restricting the grafting to some states of the stem branch is therefore only useful when the user has a strong hypothesis about a change of state
+along the stem branch that should affect where the missing clade can be grafted. For most uses, the \code{simmap} is not needed.
+
+For example, in biogeography: a stem fossil is found in range A, and the sister clade is in range A, while the missing clade is in range B.
+If the shift from range B to range A on the stem branch of the sister clade is estimated to have occurred before the age of the fossil,
+the missing clade can be restricted to the part of the stem branch before the shift, with \code{allowed_states = "B"}.
+
+With a \code{simmap}, a missing clade is only grafted on the pieces of the stem branch of its sister clade that are in its allowed states
+(\code{missing_taxa_list$allowed_states} of its taxa if provided, otherwise the global argument \code{allowed_states}).
+The divergence time of the missing clade is drawn with \code{TreeSim::corsim()} as without a \code{simmap}: if it falls in a part of the stem branch that is not in an allowed state,
+it is drawn again, up to \code{max_age_redraws} times.
+
+The \code{simmap} can also be provided so that the states are updated alongside the phylogeny: the whole missing clade (all its taxa and branches)
+inherits the state of the point of the stem branch where it is grafted. The \code{simmap} itself is not modified.
+At the moment, the allowed states are still required with a \code{simmap}. Following the states without restricting the grafting, and returning the updated \code{simmap}, are planned.
+If all the states are allowed, the result is the same as without \code{simmap} (for the same \code{seed}).
+
+The function stops, before any grafting, if the taxa of a same missing clade have different allowed states, or if the stem branch of a sister clade has no piece in the allowed states
+(the clades are listed), and warns about the missing clades with a small share of their stem branch in allowed states (see \code{min_valid_fraction}).
 }
 
 \subsection{Enclosing clades}{
@@ -189,6 +248,30 @@ grafted_phy_richness <- graft_missing_clades(phy = phy, missing_taxa_list = miss
                                              total_richness_per_clades = total_richness_per_clades,
                                              verbose = FALSE, seed = 1234)
 grafted_phy_richness$sampling_fraction_df
+
+# Restrict the grafting to some states of a stochastic character map (simmap) of the backbone
+# The toy simmap has three states, "blue", "green" and "red"
+data(toy_backbone)
+data(toy_simmap)
+
+# List the missing taxa to graft
+missing_clades_list_states <- list(
+   Taxon_name = c("M1", "M2"),
+   Sister_clade = list(M1 = c("t26", "t18"), M2 = "t14"))
+
+# The simmap shows that the targeted stem branches recorded state shifts.
+plot(toy_simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+
+# We can use 'allowed_states' to limit grafting on the "green" portions of the stem branches
+grafted_phy_states <- graft_missing_clades(phy = toy_backbone,
+                                           missing_taxa_list = missing_clades_list_states,
+                                           simmap = toy_simmap, allowed_states = "green",
+                                           verbose = FALSE, seed = 1234)
+
+# Plot the updated simmap, with new grafted taxa branching from "green" segments
+# of the stem branches of their sister clades (To update at Step 6)
+plot(grafted_phy_states)
+# plot(toy_simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 
 }
 \seealso{

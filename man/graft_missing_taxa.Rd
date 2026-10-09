@@ -13,6 +13,7 @@ graft_missing_taxa(
   simmap = NULL,
   allowed_states = NULL,
   min_valid_fraction = 0.1,
+  max_age_redraws = 1000,
   method = "BD_clades",
   min_tips = 5,
   total_richness_per_clades = NULL,
@@ -76,7 +77,7 @@ For a single-tip excluded subclade, the terminal branch is the only branch of th
 mapping a species attribute (e.g., a trait or a range) with discrete states along the branches of \code{phy}.
 It must have the same tips, topology and branch lengths as \code{phy}. With a \code{simmap}, taxa can only be grafted on the parts of the branches
 that are in their allowed states (see \code{allowed_states}). A list of maps (\code{"multiSimmap"}) is not accepted.
-See 'Species attributes' in Details section. Currently only available with \code{method = "uniform"}.
+See 'Species attributes' in Details section.
 Default is \code{NULL} (no restriction for grafting based on states).}
 
 \item{allowed_states}{Character vector. The states of \code{simmap} in which grafting is allowed. This is the default for all taxa:
@@ -85,9 +86,19 @@ The function stops if a \code{simmap} is provided and some taxa have no allowed 
 if some states are not in the \code{simmap}, or if \code{allowed_states} is provided without a \code{simmap}.
 Default is \code{NULL} (no restriction for grafting based on states).}
 
-\item{min_valid_fraction}{Numeric between 0 and 1. Only used with a \code{simmap}. Threshold of the fraction of the total length of the available branches
-of a taxon (its target clade, minus the excluded subclades) that is in its allowed states. A warning lists the taxa below the threshold for inspection,
-as their grafting positions are concentrated on a small part of their target clade. The fraction is computed on the backbone, before grafting. Default is \code{0.1}.}
+\item{min_valid_fraction}{Numeric between 0 and 1. Only used with a \code{simmap}. Threshold below which a warning lists the taxa for inspection,
+as their grafting positions are concentrated on a small part of their target clade. The fraction is computed on the backbone, before grafting:
+\itemize{
+\item With \code{method = "uniform"}, it is the fraction of the total length of the available branches of the taxon (its target clade, minus the excluded subclades)
+that is in its allowed states.
+\item With \code{method = "BD_clades"}, it is the fraction of the time window of the divergence times of the taxon (from the present to the stem age of its target clade,
+or to its crown age if the stem is not available) where at least one available branch is in an allowed state.
+Default is \code{0.1}.
+}}
+
+\item{max_age_redraws}{Integer. Only used with a \code{simmap} and \code{method = "BD_clades"}. Maximum number of times the divergence ages of a group of taxa
+(same target clade, same stem availability and same allowed states) can be redrawn, when some of the ages drawn cannot be used because no available branch
+in an allowed state crosses them. The function stops with an informative message if this limit is reached. See 'Species attributes' in Details section. Default is \code{1000}.}
 
 \item{method}{Character string. Method used to draw the divergence times and the branches used for grafting.
 Must be one of \code{"uniform"} or \code{"BD_clades"} (default). See Details.}
@@ -162,16 +173,23 @@ This can be used to account for clade-specific sampling fraction in downstream a
 \description{
 This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny.
 The position of each taxon is constrained by its taxonomic assignment (the target clade, defined in \code{Target_clade}),
-and optionally by exclusions based on species attributes (the excluded subclades, defined in \code{Excluded_subclades}).
+and optionally by taxonomic exclusions (the excluded subclades, defined in \code{Excluded_subclades}),
+and/or exclusions based on species attributes (the allowed states, defined in \code{allowed_states} based on the \code{simmap}).
+
 The divergence times of the grafted branches are either drawn uniformly along the branches (\code{method = "uniform"}),
 or drawn from a birth-death model fitted on the target clade (\code{method = "BD_clades"}, default).
 The backbone is never modified: only new tips are added.
 }
 \details{
-The function stops, before any grafting, if the backbone is not ultrametric, or is not binary (i.e., all nodes have only two descendent lineages).
+\subsection{Stop conditions}{
+
+The function stops, before any grafting, if the backbone is not ultrametric, or is not binary (i.e., all nodes have only two descendant lineages).
 It also stops if some taxa have no branch available for grafting. The taxa concerned are listed in the error message,
 so the constraints (\code{include_target_clade_stem}, \code{Excluded_subclades}, \code{exclude_subclades_stem} or, with a \code{simmap}, the allowed states) can be adjusted.
-With \code{method = "BD_clades"}, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon.
+With \code{method = "BD_clades"} and no \code{simmap}, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon
+(with a \code{simmap}, such ages are redrawn, see 'Species attributes').
+}
+
 \subsection{Target clades, stem regions and excluded subclades}{
 
 Each taxon is grafted within its target clade. The branches available for grafting are all the branches of the target clade
@@ -200,23 +218,6 @@ To graft taxa specifically on the stem branch of a clade or of a single tip, use
 A warning lists the single-tip excluded subclades with a stem that is not excluded, as they exclude nothing.
 }
 
-\subsection{Species attributes: allowed states of a simmap}{
-
-A \code{simmap} describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
-With a \code{simmap}, each taxon can only be grafted on the pieces of the available branches that are in its allowed states
-(\code{missing_taxa_list$allowed_states} of the taxon if provided, otherwise the global argument \code{allowed_states}).
-This combines with the other constraints: the available branches are those of the target clade, minus the excluded subclades, restricted to the allowed states.
-
-A grafted taxon is assumed to be in the state of the point of the backbone where it was grafted, along its whole branch,
-and so are the taxa grafted on its branch later. Taxa grafted later can therefore be grafted on the branches of taxa grafted earlier,
-if their state is allowed. The \code{simmap} itself is not modified.
-
-With \code{method = "uniform"}, the draw is uniform over the available pieces, weighted by their length: every time point in an allowed state has the same chance to be selected.
-If all the states are allowed, the result is the same as without \code{simmap}.
-The function stops, before any grafting, if some taxa have no piece of branch in their allowed states (these taxa are listed),
-and warns about the taxa with less than \code{min_valid_fraction} of their available branch length in allowed states.
-}
-
 \subsection{Enclosing clades}{
 
 Under the \code{"BD_clades"} method, when a target clade contains fewer tips than \code{min_tips}, an alternative higher clade is selected to fit the birth-death model.
@@ -239,10 +240,10 @@ The sampling fraction accounts for the number of missing taxa provided for graft
 The divergence times of all taxa missing in the target clade are then jointly drawn with \code{TreeSim::corsim()}, between the present and the stem age of the clade
 (or its crown age if the stem is not available for these taxa).
 Taxa are grafted from the oldest to the youngest divergence time. Each taxon is grafted on a branch drawn uniformly among the available branches that cross its divergence age.
-Younger taxa can therefore be grafted on the branches of older missing taxa. This is the recommended method, but it can be time consuming for large phylogenies.
-Taxa of the same target clade with different stem availability are drawn in separate groups, and the birth-death model is fitted only once per target clade.
-The group of taxa without access to the stem is grafted first, so these taxa are present when drawing the divergence times of the taxa that can also use the stem
-(this is the same logic as for nested clades).
+Younger taxa can therefore be grafted on the branches of older missing taxa.
+Taxa of the same target clade with different stem availability (or, with a \code{simmap}, different allowed states) are drawn in separate groups,
+and the birth-death model is fitted only once per target clade.
+\code{"BD_clades"} is the recommended method, but it can be time consuming for large phylogenies.
 }
 
 With both methods, nested clades are processed first, so the taxa of a larger clade are grafted on a tree that already
@@ -250,7 +251,30 @@ includes the taxa of the clades nested within it, and can be grafted on their br
 For taxa of the same clade, those without access to the stem come first.
 For \code{"BD_clades"}, it also ensures that the divergence times of nested clades are accounted for when drawing the divergence times of the larger clade.
 Taxa of the same target clade are grafted in random order, so they are exchangeable.
-Clades that are not nested do not interact, so the order in which they are processed has no influence.
+}
+
+\subsection{Species attributes: allowed states of a simmap}{
+
+A \code{simmap} describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
+With a \code{simmap}, each taxon can only be grafted on the pieces of the available branches that are in its allowed states
+(\code{missing_taxa_list$allowed_states} of the taxon if provided, otherwise the global argument \code{allowed_states}).
+This combines with the other constraints: the available branches are those of the target clade, minus the excluded subclades, restricted to the allowed states.
+
+A grafted taxon is assumed to be in the state of the point of the backbone where it was grafted, along its whole branch,
+and so are the taxa grafted on its branch later. Taxa grafted later can therefore be grafted on the branches of taxa grafted earlier,
+if their state is allowed. The \code{simmap} itself is not modified.
+
+With \code{method = "uniform"}, the draw is uniform over the available pieces, weighted by their length: every time point in an allowed state has the same chance to be selected.
+
+With \code{method = "BD_clades"}, the divergence ages of the taxa of a group (same target clade, same stem availability and same allowed states) are drawn jointly
+with \code{TreeSim::corsim()}, as without a \code{simmap}: the diversification model is not modified by the states.
+An age can only be used if an available branch in an allowed state crosses it. The ages are used from the oldest to the youngest, each for one taxon of the group:
+\enumerate{
+\item A taxon is grafted at its age if an available branch in an allowed state crosses this age in the current tree.
+\item The ages for which no such valid branch piece exists are discarded.
+\item The ages of the taxa left are drawn again jointly, and grafted or discarded in the same way.
+This is repeated until all the taxa of the group are grafted, up to \code{max_age_redraws} times.
+}
 }
 
 \subsection{Sampling fraction and unsampled species}{
@@ -347,10 +371,12 @@ data(toy_simmap)
 data(toy_missing_taxa_list)
 
 # Perform grafting informed with the simmap and associated 'allowed_states'
+# With the default method ("BD_clades"), the divergence ages are drawn from a birth-death model
+# and redrawn if they cannot be used because of the states
 grafted_phy_states <- graft_missing_taxa(phy = toy_backbone,
                                          missing_taxa_list = toy_missing_taxa_list,
                                          simmap = toy_simmap, allowed_states = c("blue", "green"),
-                                         method = "uniform", verbose = FALSE, seed = 1234)
+                                         method = "BD_clades", verbose = FALSE, seed = 1234)
 
 # Plot output
 plot(grafted_phy_states, cex = 0.7,

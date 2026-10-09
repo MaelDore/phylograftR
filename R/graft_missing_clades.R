@@ -524,7 +524,9 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
         stop("No usable divergence time was found for the missing clade (taxa: ", paste(utils::head(missing_taxa_list_i$Taxon_name, 10), collapse = ", "),
              if (nb_missing_taxa > 10) ", ..." else "", ") on the stem branch of its sister clade (tips: ", paste(sister_clade_tips_i, collapse = ", "),
              ") after ", max_age_redraws, " redraws ('max_age_redraws').\n",
-             "Its allowed states: ", paste(allowed_states_i, collapse = ", "), ". ",
+             "Its allowed states: ", paste(allowed_states_i, collapse = ", "), ".\n",
+             "Time window of the divergence time (stem branch of the sister clade): from age ", signif(lower_age_i, 4), " to age ", signif(upper_age_i, 4), ". ",
+             "Share of this window in the allowed states: ", sprintf("%.2f%%", 100 * sum(stem_segments_i$to - stem_segments_i$from) / stem_branch_length_i), ".\n",
              "The parts of the stem branch in these states are too small compared to the time window of the divergence time.\n",
              "Increase 'max_age_redraws', or extend the allowed states.")
       }

@@ -1116,6 +1116,49 @@ test_that("graft_missing_taxa() with method = 'BD_clades' stops after 'max_age_r
   mtl <- list(Taxon_name = taxa, Target_clade = setNames(rep(list(toy$A), 3), taxa))
   expect_error(suppressWarnings(graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = "B", method = "BD_clades", max_age_redraws = 3, verbose = FALSE, seed = 1)),
                "No usable divergence age.*after 3 redraws.*'max_age_redraws'.*Y1.*allowed states: B")
+
+  # The message gives the time window of the divergence ages (here, up to the stem age of A) and the share of it crossed by available branches in allowed states
+  stem_age_A <- toy$root_age - phytools::nodeheight(toy$phy, toy$phy$edge[match(toy$node_A, toy$phy$edge[, 2]), 1])
+  expect_error(suppressWarnings(graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = "B", method = "BD_clades", max_age_redraws = 3, verbose = FALSE, seed = 1)),
+               paste0("Time window of the divergence ages: from age 0 to age ", signif(stem_age_A, 4), " \\(stem age of the target clade\\)\\.\\n",
+                      "Share of this window crossed by the available branches in the allowed states \\(current tree\\):\\n  - Y1: 0.00% \\(allowed states: B\\)"))
+})
+
+## Test that the ages with no usable branch are also redrawn without simmap, e.g., ages where all the branches are excluded
+test_that("graft_missing_taxa() with method = 'BD_clades' redraws the ages with no available branch without simmap, and stops with the time window and its share covered",
+{
+  toy <- toy_setup()
+  # The two child clades of A are excluded with their stem: only the stem region of A remains, so the ages below the crown age of A cannot be used
+  children <- toy$phy$edge[toy$phy$edge[, 1] == toy$node_A, 2]
+  child_tips <- lapply(children, function (node) if (node <= ape::Ntip(toy$phy)) toy$phy$tip.label[node] else pair_for_node(toy$phy, node))
+  crown_age_A <- toy$root_age - phytools::nodeheight(toy$phy, toy$node_A)
+  stem_age_A <- toy$root_age - phytools::nodeheight(toy$phy, toy$phy$edge[match(toy$node_A, toy$phy$edge[, 2]), 1])
+  taxa <- paste0("Y", 1:3)
+  mtl <- list(Taxon_name = taxa, Target_clade = setNames(rep(list(toy$A), 3), taxa),
+              Excluded_subclades = setNames(rep(list(child_tips), 3), taxa))
+
+  n_unusable <- 0
+  original_graft <- graft_from_divergence_age
+  local_mocked_bindings(graft_from_divergence_age = function (...) {
+    out <- original_graft(...)
+    if (is.null(out)) { n_unusable <<- n_unusable + 1 }
+    out })
+
+  for (seed in 1:5)
+  {
+    grafted <- graft_missing_taxa(toy$phy, mtl, method = "BD_clades", verbose = FALSE, seed = seed)
+    expect_valid_graft(grafted, toy$phy, mtl)
+  }
+  expect_gt(n_unusable, 0)
+
+  # Without any usable age: stop after 'max_age_redraws', with the window and the share of it crossed by the stem of A, now in the tree
+  # (mocked draws of TreeSim::corsim() with ages that are too young)
+  original_corsim <- TreeSim::corsim
+  local_mocked_bindings(corsim = function (x, ..., missing) c(x, rep(0.001, missing)), .package = "TreeSim")
+  expect_error(graft_missing_taxa(toy$phy, mtl, method = "BD_clades", max_age_redraws = 2, verbose = FALSE, seed = 1),
+               paste0("No usable divergence age.*after 2 redraws.*Time window of the divergence ages: from age 0 to age ", signif(stem_age_A, 4), " \\(stem age of the target clade\\)\\.\\n",
+                      "Share of this window crossed by the available branches \\(current tree\\):\\n  - Y1: ", sprintf("%.2f%%", 100 * (stem_age_A - crown_age_A) / stem_age_A),
+                      ".*adjust the excluded subclades or the stem availability"))
 })
 
 ## Test the warning on the share of the time window in allowed states, with the BD method

@@ -123,3 +123,27 @@ get_union_length <- function (from, to)
   covered_until <- c(-Inf, cummax(to)[-length(to)])
   sum(pmax(0, to - pmax(from, covered_until)))
 }
+
+
+#' @title Share of a time window covered by segments
+#'
+#' @description Fraction of the time window from the present (age 0) to `upper_age` that is covered by at least one of the segments (parts of overlapping segments count once).
+#'
+#' @param phy Phylogeny of class `"phylo"`.
+#' @param segments Segments, as returned by `get_branch_segments()` or `get_allowed_segments_tracked()`.
+#' @param edge_ages Numeric matrix. Ages (rootward, tipward) of the branches of `phy` in the order of `phy$edge`: `root_age - phytools::nodeHeights(phy)`.
+#' @param upper_age Numeric. Upper end of the time window (age).
+#'
+#' @noRd
+#'
+#' @return Numeric between 0 and 1 (`NA` if `upper_age` is not positive).
+#'
+
+get_time_coverage <- function (phy, segments, edge_ages, upper_age)
+{
+  if (!(upper_age > 0)) { return(NA_real_) }
+  edge_row <- match(segments$node, phy$edge[, 2])
+  age_tipward <- edge_ages[edge_row, 2] + segments$from
+  age_rootward <- edge_ages[edge_row, 1] - (phy$edge.length[edge_row] - segments$to)
+  get_union_length(from = pmax(0, age_tipward), to = pmin(upper_age, age_rootward)) / upper_age
+}

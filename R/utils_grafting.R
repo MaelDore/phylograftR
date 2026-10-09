@@ -1142,13 +1142,7 @@ find_taxa_without_allowed_branch <- function (phy,
       edge_row <- match(MRCA_node_i, phy$edge[, 2])
       crown_age <- if (is.na(edge_row)) root_age else edge_ages[edge_row, 2]
       upper_age <- if (stem_available) edge_ages[edge_row, 1] else crown_age
-      if (upper_age > 0)
-      {
-        seg_row <- match(segments_i$node, phy$edge[, 2])
-        seg_age_tipward <- edge_ages[seg_row, 2] + segments_i$from
-        seg_age_rootward <- edge_ages[seg_row, 1] - (phy$edge.length[seg_row] - segments_i$to)
-        time_coverage[i] <- get_union_length(from = pmax(0, seg_age_tipward), to = pmin(upper_age, seg_age_rootward)) / upper_age
-      }
+      time_coverage[i] <- get_time_coverage(phy = phy, segments = segments_i, edge_ages = edge_ages, upper_age = upper_age)
     }
   }
   flagged_any <- flagged | no_state
