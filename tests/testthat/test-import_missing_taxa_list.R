@@ -157,6 +157,63 @@ test_that("build_missing_taxa_list() accepts the sister clades and yields a list
   expect_true(all(c("X1", "X2") %in% grafted$tip.label))
 })
 
+test_that("build_missing_taxa_list() parses the allowed_states column into a list of states, with NULL for blank cells",
+{
+  d <- toy_table()
+  d$allowed_states <- c("blue,green", NA, " red ,  green ")
+  l <- build_quiet(d)
+  expect_identical(l$allowed_states, list(X1 = c("blue", "green"), X2 = NULL, X3 = c("red", "green")))
+  expect_identical(names(l$allowed_states), c("X1", "X2", "X3"))
+  expect_null(l$allowed_states$X2)
+  # The other items are unchanged
+  expect_identical(l[setdiff(names(l), "allowed_states")], build_quiet(toy_table()))
+  # A single state, and blank or "NA" cells
+  d$allowed_states <- c("blue", "", "NA")
+  l <- build_quiet(d)
+  expect_identical(l$allowed_states, list(X1 = "blue", X2 = NULL, X3 = NULL))
+  # States are kept as written (case and digits): they are matched exactly with the states of the simmap when grafting
+  d$allowed_states <- c("Blue", "1, 2", NA)
+  expect_identical(build_quiet(d)$allowed_states, list(X1 = "Blue", X2 = c("1", "2"), X3 = NULL))
+})
+
+test_that("build_missing_taxa_list() accepts the allowed_states column with sister clades, and without the other optional columns",
+{
+  d <- data.frame(Taxon_name = c("X1", "X2"), Sister_clade = c("t8,t22", "t5"), allowed_states = c("A, B", NA), stringsAsFactors = FALSE)
+  expect_no_warning(l <- build_missing_taxa_list(d, phylograftR::toy_backbone))
+  expect_identical(names(l), c("Taxon_name", "Sister_clade", "allowed_states"))
+  expect_identical(l$allowed_states, list(X1 = c("A", "B"), X2 = NULL))
+  d <- data.frame(Taxon_name = c("X1", "X2"), Target_clade = c("t8,t22", "t5"), allowed_states = c(NA, "B"), stringsAsFactors = FALSE)
+  l <- build_quiet(d)
+  expect_identical(l$allowed_states, list(X1 = NULL, X2 = "B"))
+  # A column with only blank cells gives a list of NULL
+  d$allowed_states <- NA
+  expect_identical(build_quiet(d)$allowed_states, list(X1 = NULL, X2 = NULL))
+})
+
+test_that("a missing_taxa_list built with allowed_states grafts with a simmap, and the taxon-level states override the global ones",
+{
+  phy <- phylograftR::toy_backbone
+  simmap <- make_young_state_simmap(phy, age = 2)
+  d <- data.frame(Taxon_name = c("X1", "X2"), Target_clade = c("t26,t18", "t8,t22"), allowed_states = c("A", NA), stringsAsFactors = FALSE)
+  l <- build_quiet(d)
+  # X1 is only grafted in "A" (taxon-level), X2 in the global "B"
+  for (seed in 1:3)
+  {
+    grafted <- quiet_graft(graft_missing_taxa, phy, l, simmap = simmap, allowed_states = "B", method = "uniform", seed = seed)
+    expect_true(all(c("X1", "X2") %in% grafted$tip.label))
+    expect_gt(graft_age(grafted, "X1"), 2)
+    expect_lte(graft_age(grafted, "X2"), 2 + 1e-6)
+  }
+  # The states are validated against the simmap by the grafting function
+  d$allowed_states[1] <- "A, C"
+  expect_error(graft_missing_taxa(phy, build_quiet(d), simmap = simmap, allowed_states = "B", method = "uniform", verbose = FALSE),
+               "not in the simmap.*'C'")
+  # The same list works with graft_missing_clades()
+  dc <- data.frame(Taxon_name = c("X1", "X2"), Sister_clade = c("t26,t18", "t8,t22"), allowed_states = c("A", "A, B"), stringsAsFactors = FALSE)
+  grafted <- quiet_graft(graft_missing_clades, phy, build_quiet(dc), simmap = simmap, seed = 1)
+  expect_true(all(c("X1", "X2") %in% grafted$tip.label))
+})
+
 test_that("the list with the optional label columns grafts like the list without them",
 {
   l <- build_quiet(toy_table())
@@ -239,6 +296,23 @@ test_that("build_missing_taxa_list() checks the logical columns",
   expect_error(build_missing_taxa_list(d, phy), "TRUE, FALSE or NA")
   d <- toy_table(); d$exclude_subclades_stem[3] <- "TRUE"
   expect_warning(build_missing_taxa_list(d, phy), "without excluded subclades.*X3")
+})
+
+test_that("build_missing_taxa_list() checks the allowed_states column like the tips: empty and repeated states are errors",
+{
+  phy <- phylograftR::toy_backbone
+  d <- toy_table(); d$allowed_states <- c("blue,,green", NA, NA)
+  expect_error(build_missing_taxa_list(d, phy), "'allowed_states' of 'X1' \\(row 1\\) has an empty state.*','")
+  # A trailing comma is ignored, as for the tips
+  d$allowed_states <- c("blue,", NA, NA)
+  expect_identical(build_quiet(d)$allowed_states$X1, "blue")
+  d$allowed_states <- c(",blue", NA, NA)
+  expect_error(build_missing_taxa_list(d, phy), "empty state")
+  d$allowed_states <- c(NA, "blue, blue", NA)
+  expect_error(build_missing_taxa_list(d, phy), "'allowed_states' of 'X2' \\(row 2\\) has repeated states \\(blue\\)")
+  # Semicolons are not separators: the cell is one state, kept as written
+  d$allowed_states <- c("blue; green", NA, NA)
+  expect_identical(build_quiet(d)$allowed_states$X1, "blue; green")
 })
 
 test_that("build_missing_taxa_list() checks the names of the excluded subclades of a taxon",
@@ -331,6 +405,19 @@ test_that("import_missing_taxa_list() reads .csv, .tsv, .txt and files with a gi
   # Upper-case extension, and a .csv whose cells are quoted
   file.copy(file.path(dir, "t.csv"), file.path(dir, "T2.CSV"))
   expect_identical(suppressWarnings(import_missing_taxa_list(file.path(dir, "T2.CSV"), phy)), expected)
+})
+
+test_that("import_missing_taxa_list() reads the allowed_states column, with commas inside quoted cells",
+{
+  phy <- phylograftR::toy_backbone
+  d <- toy_table(); d$allowed_states <- c("blue, green", NA, "red")
+  path <- file.path(temp_dir(), "t.csv")
+  utils::write.csv(d, path, row.names = FALSE, na = "")
+  # The file keeps the commas of the states inside quotes
+  expect_match(paste(readLines(path), collapse = "\n"), "\"blue, green\"")
+  l <- suppressWarnings(import_missing_taxa_list(path, phy))
+  expect_identical(l$allowed_states, list(X1 = c("blue", "green"), X2 = NULL, X3 = "red"))
+  expect_identical(l, build_quiet(d))
 })
 
 test_that("import_missing_taxa_list() reads Excel files",

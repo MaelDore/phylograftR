@@ -211,6 +211,7 @@
 #' With a `simmap`, each taxon can only be grafted on the pieces of the available branches that are in its allowed states
 #' (`missing_taxa_list$allowed_states` of the taxon if provided, otherwise the global argument `allowed_states`).
 #' This combines with the other constraints: the available branches are those of the target clade, minus the excluded subclades, restricted to the allowed states.
+#' If all states are listed in `allowed_states`, this is equivalent to ignoring the `simmap`, and constraints are only based on target clades and excluded subclades.
 #'
 #' A grafted taxon is assumed to be in the state of the point of the backbone where it was grafted, along its whole branch,
 #' and so are the taxa grafted on its branch later. Taxa grafted later can therefore be grafted on the branches of taxa grafted earlier,

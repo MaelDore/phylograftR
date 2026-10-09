@@ -59,6 +59,11 @@
 #'   with one value per subclade of `Excluded_subclades` separated by semicolons, or a single value used for all of them.
 #'   Ex: `"FALSE; TRUE; TRUE"`.
 #'   `NA` values and blank cells use the global `exclude_subclades_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
+#' * `allowed_states`: (Optional) For each taxon, the states of a `simmap` in which it can be grafted (see the `simmap` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
+#'   or [`phylograftR::graft_missing_clades()`][graft_missing_clades]), separated by commas. It is accepted with both `Target_clade` and `Sister_clade`.
+#'   Ex: `"blue, green"`. Blank cells and `NA` have no taxon-level value, so the global `allowed_states` argument of the grafting function is used for the taxon.
+#'   States are matched exactly with the states of the `simmap` (e.g., case matters) when grafting, and so cannot contain commas.
+#'   The names of the states are not checked here as the `simmap` is not provided: the grafting function checks them.
 #'
 #' Optional columns that do not match items in `missing_taxa_list` can be used to provide names of clades:
 #'
@@ -96,6 +101,7 @@
 #'  * `$Excluded_subclades` Only if the column was provided. List (one element per taxon) of lists of character vectors of tips. `NULL` for taxa with no excluded subclades.
 #'    The subclades are named after their labels if `Excluded_subclades_names` was provided.
 #'  * `$exclude_subclades_stem` Only if the column was provided. List (one element per taxon) of logical vectors (one value per excluded subclade), or `NULL`.
+#'  * `$allowed_states` Only if the column was provided. List (one element per taxon) of character vectors of states, or `NULL` for taxa without a taxon-level value (the global `allowed_states` argument is used).
 #'
 #'  Every item is named after the taxa (`$Taxon_name`), in the same order.
 #'
@@ -227,6 +233,11 @@ import_missing_taxa_list <- function (file, # Path to the table
 #'    with one value per subclade of `Excluded_subclades` separated by semicolons, or a single value used for all of them.
 #'    Ex: `"FALSE; TRUE; TRUE"`.
 #'    `NA` values and blank cells use the global `exclude_subclades_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
+#'  * `allowed_states`: (Optional) For each taxon, the states of a `simmap` in which it can be grafted (see the `simmap` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
+#'    or [`phylograftR::graft_missing_clades()`][graft_missing_clades]), separated by commas. It is accepted with both `Target_clade` and `Sister_clade`.
+#'    Ex: `"blue, green"`. Blank cells and `NA` have no taxon-level value, so the global `allowed_states` argument of the grafting function is used for the taxon.
+#'    States are matched exactly with the states of the `simmap` (e.g., case matters) when grafting, and so cannot contain commas.
+#'    The names of the states are not checked here as the `simmap` is not provided: the grafting function checks them.
 #'
 #' Optional columns that do not match items in `missing_taxa_list` can be used to provide names of clades:
 #'  * `Target_clade_name` or `Sister_clade_name` (Optional): Label of the target (or sister) clade.
@@ -270,6 +281,7 @@ import_missing_taxa_list <- function (file, # Path to the table
 #'  * A clade has no tips, or tips are repeated, or are absent from `phy`.
 #'  * The number of values in `exclude_subclades_stem`, or of labels in `Excluded_subclades_names`, does not match the number of excluded subclades.
 #'  * Labels are inconsistent (see above).
+#'  * A cell of `allowed_states` has an empty state (check the commas) or repeated states.
 #'  * An excluded subclade is identical to, or contains, the target clade of its taxon (no branch would remain).
 #'    A warning is issued if it is outside of the target clade (the exclusion has no effect).
 #'
@@ -283,6 +295,7 @@ import_missing_taxa_list <- function (file, # Path to the table
 #'  * `$Excluded_subclades` Only if the column was provided. List (one element per taxon) of lists of character vectors of tips. `NULL` for taxa with no excluded subclades.
 #'    The subclades are named after their labels if `Excluded_subclades_names` was provided.
 #'  * `$exclude_subclades_stem` Only if the column was provided. List (one element per taxon) of logical vectors (one value per excluded subclade), or `NULL`.
+#'  * `$allowed_states` Only if the column was provided. List (one element per taxon) of character vectors of states, or `NULL` for taxa without a taxon-level value (the global `allowed_states` argument is used).
 #'
 #'  Every item is named after the taxa (`$Taxon_name`), in the same order.
 #'
@@ -339,8 +352,8 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
 
   # Columns recognized with each type of clade column. 'Target_clade' goes with the items of graft_missing_taxa(), 'Sister_clade' with those of graft_missing_clades()
   columns_taxa <- c("Taxon_name", "Target_clade", "Target_clade_name", "include_target_clade_stem",
-                    "Excluded_subclades", "Excluded_subclades_names", "exclude_subclades_stem")
-  columns_clades <- c("Taxon_name", "Sister_clade", "Sister_clade_name")
+                    "Excluded_subclades", "Excluded_subclades_names", "exclude_subclades_stem", "allowed_states")
+  columns_clades <- c("Taxon_name", "Sister_clade", "Sister_clade_name", "allowed_states")
   all_columns <- unique(c(columns_taxa, columns_clades))
 
   # Clean the table: names of the columns without extra spaces, and every cell as trimmed text. Blank cells and "NA" are missing values (NA)
@@ -614,17 +627,32 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
     }
   }
 
-  ## 2.6/ Build the list, with all the items named after the taxa ####
+  ## 2.6/ Allowed states ####
+
+  # 'allowed_states' will be a list with one element per taxon: a vector of states, or NULL for a taxon without taxon-level value (the global argument is then used).
+  # The names of the states cannot be checked here (the simmap is not provided): the grafting functions check them.
+  allowed_states <- NULL
+  if ("allowed_states" %in% names(data))
+  {
+    allowed_states <- vector("list", n_taxa)
+    for (i in which(!is.na(data$allowed_states)))
+    {
+      allowed_states[[i]] <- parse_states(data$allowed_states[i], label_taxon(i), "allowed_states")
+    }
+  }
+
+  ## 2.7/ Build the list, with all the items named after the taxa ####
 
   # Every item is named after the taxa (same names, same order), as required by the grafting functions.
   # Items absent from the table are not added. Items that may contain NULL (excluded subclades and their stem) are assigned with 'list()'
-  # so the NULL elements (taxa without excluded subclades) are kept in the list.
+  # so the NULL elements (taxa without excluded subclades, or without allowed states) are kept in the list.
   missing_taxa_list <- list(Taxon_name = taxon_name)
   missing_taxa_list[[clade_item]] <- stats::setNames(clade_tips, taxon_name)
   if (!is.null(clade_labels)) { missing_taxa_list[[label_item]] <- stats::setNames(clade_labels, taxon_name) }
   if (!is.null(include_stem)) { missing_taxa_list$include_target_clade_stem <- stats::setNames(include_stem, taxon_name) }
   if (!is.null(excluded)) { missing_taxa_list["Excluded_subclades"] <- list(stats::setNames(excluded, taxon_name)) }
   if (!is.null(exclude_stem)) { missing_taxa_list["exclude_subclades_stem"] <- list(stats::setNames(exclude_stem, taxon_name)) }
+  if (!is.null(allowed_states)) { missing_taxa_list["allowed_states"] <- list(stats::setNames(allowed_states, taxon_name)) }
 
   # Final check of the structure, as done by the grafting functions
   validate_missing_taxa_list(missing_taxa_list, clade_item = clade_item)
@@ -660,6 +688,34 @@ parse_tips <- function (cell, taxon_label, column)
     stop("'", column, "' of ", taxon_label, " has repeated tips (", paste(unique(tips[duplicated(tips)]), collapse = ", "), "): ", cell)
   }
   return(tips)
+}
+
+
+#' @title Split the states of a cell
+#'
+#' @description Split a text with states separated by commas, remove the spaces around them, and check that there is at least one state and no repeated state.
+#'
+#' @param cell Character string. States separated by commas.
+#' @param taxon_label Character string. Taxon, for the messages.
+#' @param column Character string. Name of the column, for the messages.
+#'
+#' @noRd
+#'
+#' @return Character vector of states.
+#'
+
+parse_states <- function (cell, taxon_label, column)
+{
+  states <- trimws(strsplit(cell, ",", fixed = TRUE)[[1]])
+  if (length(states) == 0 || any(states == ""))
+  {
+    stop("'", column, "' of ", taxon_label, " has an empty state (check the ',' separators): ", cell)
+  }
+  if (anyDuplicated(states))
+  {
+    stop("'", column, "' of ", taxon_label, " has repeated states (", paste(unique(states[duplicated(states)]), collapse = ", "), "): ", cell)
+  }
+  return(states)
 }
 
 
