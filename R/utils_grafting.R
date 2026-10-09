@@ -9,6 +9,8 @@
 ## Utility functions used internally by grafting functions
 
 
+# ---- Tree navigation ----
+
 #' @title Get all descendant nodes of a node
 #'
 #' @description Fast, non-recursive search for descendants nodes.
@@ -92,6 +94,8 @@ get_parent_node <- function (phy, node)
   return(parent_node)
 }
 
+
+# ---- Stem region and available branches ----
 
 #' @title Identify the branches of the stem region of a clade
 #'
@@ -223,466 +227,7 @@ get_available_branch_nodes <- function (phy, MRCA_node, include_target_clade_ste
 }
 
 
-#' @title Sample randomly one element from a vector
-#'
-#' @description Sample randomly one element from a vector in a safe fashion that
-#'   handles vector of length 0 or 1. Return an error if the vector is empty.
-#'
-#' @param x Vector to sample from.
-#' @param prob Numeric vector. Optional sampling probabilities. Default is `NULL`.
-#'
-#' @noRd
-#'
-#' @return One element of `x`. Stops if `x` is empty.
-#'
-
-sample_one <- function (x, prob = NULL)
-{
-  if (length(x) == 0) stop("No valid option to sample from")
-  if (length(x) == 1) return(x)
-  x[sample.int(length(x), size = 1, prob = prob)]
-}
-
-
-#' @title Fit a birth-death model on a clade enforcing a minimum number of tips
-#'
-#' @description Fit a birth-death model on a clade enforcing a minimum number of tips.
-#'   If the clade has fewer tips than `min_tips`, climb towards the root until it has enough (stops at the root in any case).
-#'   This ensures the enclosing clade chosen has enough divergence times to be able to fit a relevant BD model,
-#'   while retaining close relationship with the initial focal clade.
-#'
-#' @param phy Phylogeny of class `"phylo"`.
-#' @param node Integer. Node ID of the clade.
-#' @param min_tips Integer. Minimum number of tips for the fit. Default is `5`.
-#' @param richness_info `NULL`, or the output of `build_richness_info()`. If provided, the sampling fraction of the clade used for the fit is
-#'   `n_present / (n_present + n_pending + n_unsampled)`, with:
-#'   * `n_present`: number of tips of the clade in the current tree, i.e., backbone tips plus taxa already grafted (they are not 'missing' anymore).
-#'   * `n_pending`: number of taxa still to graft that belong to the clade.
-#'   * `n_unsampled`: number of unsampled species of the clade, derived from `total_richness_per_clades`.
-#'   Default is `NULL`: no taxa to graft and no unsampled species are accounted for, so the sampling fraction is 1.
-#'   The birth-death model is always fitted on the crown group of the selected clade, with a sampling fraction describing this same crown group.
-#'
-#' @details The goal is to use the fitted rates to simulate divergence ages of missing taxa using `TreeSim::corsim()`.
-#'   Because no new divergence times can be drawn from a negative net diversification process,
-#'   the function ensures that the net diversification rate is always positive by capping the death rate to 99% of the birth rate.
-#'   A death rate that is not finite or negative is set to zero.
-#'
-#' @importFrom ape Ntip extract.clade
-#'
-#' @importFrom phytools fit.bd
-#'
-#' @noRd
-#'
-#' @return A list with 7 elements:
-#'  * `b` Numeric. Birth rate = speciation rate in events per time per lineage.
-#'  * `d` Numeric. Death rate = extinction rate in events per time per lineage.
-#'  * `n_tips` Integer. Number of tips in the enclosing clade used for fitting.
-#'  * `node` Integer. MRCA node ID of the selected enclosing clade.
-#'  * `n_pending` Numeric. Number of taxa still to graft in the selected clade, used for the sampling fraction (0 if `richness_info = NULL`).
-#'  * `n_unsampled` Numeric. Number of unsampled species used for the sampling fraction.
-#'  * `rho` Numeric. Sampling fraction used for the fit.
-#'
-
-fit_bd_on_clade <- function (phy, node, min_tips = 5, richness_info = NULL)
-{
-  clade_node <- node
-
-  ## Case with node as a tip
-  # extract.clade() does not accept tips: start from the parent node instead
-  if (clade_node <= ape::Ntip(phy))
-  {
-    clade_node <- get_parent_node(phy, clade_node)
-  }
-
-  ## Search rootward for an enclosing clade with at least 'min_tips' tips
-  # Ensure that the BD model is fit on a clade with at least 'min_tips' tips
-  repeat
-  {
-    # Extract current target clade
-    clade_tree <- ape::extract.clade(phy = phy, node = clade_node)
-
-    # Stop once the current clade has enough tips
-    if (ape::Ntip(clade_tree) >= min_tips) break
-    # If not, move rootward to the next enclosing parent clade
-    parent_node <- get_parent_node(phy, clade_node)
-    # If reaching the root (i.e., parent = NA), stop.
-    if (is.na(parent_node)) break
-    # Replace current target clade by its next enclosing clade / parent clade
-    clade_node <- parent_node
-  }
-
-  # Extract final nb of tips in the selected enclosing clade
-  n_tips <- ape::Ntip(clade_tree)
-
-  # Stop if no clade can cover 'min_tips'
-  if (n_tips < min_tips)
-  {
-    stop("Backbone phylogeny is too small to fit a birth-death model (< ",min_tips," tips)")
-  }
-
-  ## Fit BD with sampling fraction accounting for missing tips (the tips we are aiming to graft) and unsampled species (listed neither in the backbone nor in missing species)
-  # Numbers of taxa still to graft and of unsampled species in the selected clade (none by default)
-  n_pending <- 0
-  n_unsampled <- 0
-  if (!is.null(richness_info))
-  {
-    # Locate the selected clade in the backbone: its backbone tips (grafted taxa removed) define the same clade in the original backbone
-    backbone_tips <- setdiff(clade_tree$tip.label, richness_info$taxa_names)
-    node_in_backbone <- get_clade_node(richness_info$phy_backbone, backbone_tips)
-    # Missing taxa still to graft that belong to this clade. Taxa already grafted are in the tree: they are in 'n_tips', not missing anymore
-    still_to_graft <- !(richness_info$taxa_names %in% phy$tip.label)
-    in_clade <- vapply(richness_info$taxon_sets, function (s) node_in_backbone %in% s, logical(1))
-    n_pending <- sum(still_to_graft & in_clade)
-    # Unsampled species of the clade, derived from the total richness
-    n_unsampled <- richness_info$unsampled_by_node[node_in_backbone]
-  }
-  # Sampling fraction of the crown group of the selected clade (1 if nothing is pending nor unsampled in it)
-  rho <- n_tips / (n_tips + n_pending + n_unsampled)
-  clade_tree <- ensure_ultrametry(clade_tree) # Ensure the selected clade is ultrametric
-  fit <- phytools::fit.bd(tree = clade_tree, rho = rho)
-
-  ## Extract rates
-  b <- unname(fit$b); d <- unname(fit$d)
-
-  ## Keep rates usable by TreeSim (mu < lambda)
-  # If death rate is infinite or negative, fix it to zero
-  if (!is.finite(d) || d < 0) d <- 0
-  d <- min(d, 0.99 * b) # Limit death rate to 99% of birth rate to ensure the net diversification is never negative
-  # No divergence times can be drawn from a negative net diversification process
-
-  # Record rates, nb of tips in selected enclosing clade, and MRCA node of the selected clade
-  BD_output <- list(b = b, d = d, n_tips = n_tips, node = clade_node, n_pending = n_pending, n_unsampled = n_unsampled, rho = rho)
-
-  # Export output
-  return(BD_output)
-}
-
-
-#' @title Validate the structure of `missing_taxa_list`
-#'
-#' @description Check that `missing_taxa_list` has a valid `Taxon_name` item, the item defining the clades (`Target_clade` or `Sister_clade`),
-#'   and that every other item provided is consistent with `Taxon_name`: same length and names identical to `Taxon_name`
-#'   (same names, same order). Items that are `NULL` or absent are not checked, except the item defining the target/sister clades, which is required.
-#'
-#' @param missing_taxa_list List with the items `Taxon_name`, `Target_clade` (or `Sister_clade`), and optionally
-#'   `include_target_clade_stem`, `Excluded_subclades` and `exclude_subclades_stem`.
-#' @param clade_item Character string. `"Target_clade"` (for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::check_grafting_constraints()`][check_grafting_constraints]) or `"Sister_clade"` (for [`phylograftR::graft_missing_clades()`][graft_missing_clades]).
-#' @param optional_items Character vector. Other items validated if they are provided.
-#' @param allow_node_ids Logical. Whether clades defined by node IDs are accepted. If `FALSE` (default), the function stops if a clade
-#'   (target or sister clade, or excluded subclade) is defined by a node ID, and points to [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips].
-#'   `TRUE` is used by [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] itself.
-#'
-#' @noRd
-#'
-#' @return Invisibly, the character vector of the taxon names. The function stops if the list is not valid.
-#'
-
-validate_missing_taxa_list <- function (missing_taxa_list,
-                                        clade_item = c("Target_clade", "Sister_clade"),
-                                        optional_items = c("include_target_clade_stem", "Excluded_subclades", "exclude_subclades_stem", "allowed_states"),
-                                        allow_node_ids = FALSE)
-{
-  clade_item <- match.arg(clade_item)
-  if (!is.list(missing_taxa_list)) { stop("'missing_taxa_list' must be a list") }
-
-  ## Taxon_name: a non-empty character vector of unique and non-missing names
-  taxon_name <- missing_taxa_list$Taxon_name
-  if (is.null(taxon_name) || length(taxon_name) == 0) { stop("'missing_taxa_list$Taxon_name' is missing or empty") }
-  if (!is.character(taxon_name) || anyNA(taxon_name) || any(taxon_name == ""))
-  {
-    stop("'missing_taxa_list$Taxon_name' must be a character vector without missing values or empty strings")
-  }
-  if (anyDuplicated(taxon_name))
-  {
-    stop("'missing_taxa_list$Taxon_name' must contain unique names. Duplicated: ", paste(unique(taxon_name[duplicated(taxon_name)]), collapse = ", "))
-  }
-  n_taxa <- length(taxon_name)
-
-  ## Required item (clades) and optional items
-  if (is.null(missing_taxa_list[[clade_item]])) { stop("'missing_taxa_list$", clade_item, "' is missing") }
-  for (item in c(clade_item, optional_items))
-  {
-    value <- missing_taxa_list[[item]]
-    if (is.null(value)) { next }
-
-    if (length(value) != n_taxa)
-    {
-      stop("'missing_taxa_list$", item, "' must have the same length as 'Taxon_name' (", length(value), " vs ", n_taxa, ")")
-    }
-    item_names <- names(value)
-    if (is.null(item_names))
-    {
-      stop("'missing_taxa_list$", item, "' must be named after 'Taxon_name' (same names, same order), but it has no names.\n",
-           "Use e.g. names(missing_taxa_list$", item, ") <- missing_taxa_list$Taxon_name")
-    }
-    if (!identical(unname(item_names), taxon_name))
-    {
-      differ <- which(is.na(item_names) | item_names != taxon_name)
-      n_show <- min(length(differ), 5)
-      reason <- if (setequal(item_names, taxon_name)) "the names are the same but not in the same order" else "the names do not match"
-      stop("The names of 'missing_taxa_list$", item, "' must match 'Taxon_name' (same names, same order): ", reason, ".\n",
-           paste0("  - position ", differ[seq_len(n_show)], ": '", item_names[differ[seq_len(n_show)]], "' in '", item, "' vs '", taxon_name[differ[seq_len(n_show)]], "' in 'Taxon_name'", collapse = "\n"),
-           if (length(differ) > n_show) paste0("\n  ... and ", length(differ) - n_show, " more") else "")
-    }
-  }
-
-  ## Clades must be defined by tips: node IDs have to be converted first
-  if (!allow_node_ids) { check_no_node_ids(missing_taxa_list, clade_item = clade_item) }
-
-  invisible(taxon_name)
-}
-
-
-#' @title Detect a clade defined by a node ID
-#'
-#' @description A clade defined by a node ID is a number, or a text made only of digits (tip labels must include at least one other character).
-#'
-#' @param x A clade: character vector of tips, or node ID.
-#'
-#' @noRd
-#'
-#' @return Logical. `TRUE` if the clade seems defined by a node ID.
-#'
-
-is_node_id_clade <- function (x)
-{
-  if (is.factor(x)) { x <- as.character(x) }
-  if (is.numeric(x)) { return(length(x) > 0) }
-  if (is.character(x)) { return(length(x) > 0 && any(!is.na(x) & grepl("^[[:space:]]*[0-9]+[[:space:]]*$", x))) }
-  FALSE
-}
-
-
-#' @title Stop if clades are defined by node IDs
-#'
-#' @description Check the clades of `missing_taxa_list` (`Target_clade` or `Sister_clade`, and `Excluded_subclades`), and stop with a message
-#'   that lists some of the node IDs and points to [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] if some are found.
-#'
-#' @param missing_taxa_list List of missing taxa.
-#' @param clade_item Character string. `"Target_clade"` or `"Sister_clade"`.
-#' @param max_show Integer. Maximum number of node IDs listed in the message.
-#'
-#' @noRd
-#'
-#' @return Nothing. Stops if a clade is defined by a node ID.
-#'
-
-check_no_node_ids <- function (missing_taxa_list, clade_item, max_show = 5)
-{
-  found <- character(0)
-  taxon_name <- missing_taxa_list$Taxon_name
-  show_value <- function (x) paste0(if (length(x) > 1) "c(" else "", paste(if (is.character(x)) paste0("\"", x, "\"") else x, collapse = ", "), if (length(x) > 1) ")" else "")
-
-  clades <- missing_taxa_list[[clade_item]]
-  if (is.list(clades))
-  {
-    for (i in seq_along(clades))
-    {
-      if (is_node_id_clade(clades[[i]])) { found <- c(found, paste0("'", clade_item, "' of '", taxon_name[i], "': ", show_value(clades[[i]]))) }
-    }
-  }
-  excluded <- missing_taxa_list$Excluded_subclades
-  if (is.list(excluded))
-  {
-    for (i in seq_along(excluded))
-    {
-      subclades <- excluded[[i]]
-      if (!is.list(subclades)) { next }
-      for (k in seq_along(subclades))
-      {
-        if (is_node_id_clade(subclades[[k]]))
-        {
-          label <- if (!is.null(names(subclades)) && !is.na(names(subclades)[k]) && names(subclades)[k] != "") paste0("'", names(subclades)[k], "'") else paste0("#", k)
-          found <- c(found, paste0("'Excluded_subclades' of '", taxon_name[i], "' (subclade ", label, "): ", show_value(subclades[[k]])))
-        }
-      }
-    }
-  }
-
-  if (length(found) > 0)
-  {
-    n_show <- min(length(found), max_show)
-    stop(length(found), " clade(s) of 'missing_taxa_list' are defined by node IDs, but tips are required:\n",
-         paste0("  - ", found[seq_len(n_show)], collapse = "\n"),
-         if (length(found) > n_show) paste0("\n  ... and ", length(found) - n_show, " more") else "",
-         "\nUse phylograftR::convert_nodes_to_tips(missing_taxa_list, phy) to convert the node IDs into pairs of tips (the conversions are printed), ",
-         "and pass the converted list.", call. = FALSE)
-  }
-  invisible(NULL)
-}
-
-
-#' @title Format labels of excluded subclades of a taxon
-#'
-#' @description Format the excluded subclades of a taxon for messages: the name of the subclade followed by its tips
-#'   if the subclades are named (names inside `missing_taxa_list$Excluded_subclades[[i]]`), otherwise only the tips.
-#'
-#' @param excluded_subclades_i List of character vectors. The excluded subclades of one taxon (`missing_taxa_list$Excluded_subclades[[i]]`).
-#' @param max_tips Integer. Maximum number of tips printed per subclade.
-#'
-#' @noRd
-#'
-#' @return A character vector with one label per excluded subclade.
-#'
-
-label_excluded_subclades <- function (excluded_subclades_i, max_tips = 5)
-{
-  if (length(excluded_subclades_i) == 0) { return(character(0)) }
-  tips_label <- vapply(excluded_subclades_i, function (tips)
-  {
-    paste0(paste(utils::head(tips, max_tips), collapse = ", "), if (length(tips) > max_tips) paste0(", ... (", length(tips), " tips)") else "")
-  }, character(1))
-  nm <- names(excluded_subclades_i)
-  has_name <- if (is.null(nm)) rep(FALSE, length(tips_label)) else (!is.na(nm) & nm != "")
-  unname(ifelse(has_name, paste0("'", nm, "' (", tips_label, ")"), tips_label))
-}
-
-
-#' @title Resolve whether the stem of the target clade is available for each taxon
-#'
-#' @description Combine the taxon-level values `$include_target_clade_stem` (from `missing_taxa_list`) with the global `include_target_clade_stem` argument:
-#'   taxa with `NA` (or all taxa if it is `NULL`) use the global value.
-#'
-#' @param include_target_clade_stem_taxa `NULL`, or a logical vector (`TRUE`, `FALSE` or `NA`) with one value per taxon.
-#' @param include_target_clade_stem Logical. Global value (single `TRUE` or `FALSE`).
-#' @param n_taxa Integer. Number of taxa.
-#' @param taxon_names `NULL`, or the character vector of the taxon names, used to name the output.
-#'
-#' @noRd
-#'
-#' @return A logical vector without `NA`, with one value per taxon (named after the taxa if `taxon_names` is provided).
-#'
-
-resolve_include_target_clade_stem <- function (include_target_clade_stem_taxa = NULL, include_target_clade_stem = TRUE, n_taxa, taxon_names = NULL)
-{
-  if (!is.logical(include_target_clade_stem) || length(include_target_clade_stem) != 1 || is.na(include_target_clade_stem))
-  {
-    stop("the global 'include_target_clade_stem' must be a single logical value (TRUE or FALSE)")
-  }
-  # Default: the global argument applies to all taxa
-  if (is.null(include_target_clade_stem_taxa)) { return(stats::setNames(rep(include_target_clade_stem, n_taxa), taxon_names)) }
-
-  if (length(include_target_clade_stem_taxa) != n_taxa)
-  {
-    stop("'include_target_clade_stem' must have the same length as 'Taxon_name'")
-  }
-  # A vector with only NA of another type (e.g., NA_integer_) is accepted as logical
-  if (!is.logical(include_target_clade_stem_taxa))
-  {
-    if (!all(is.na(include_target_clade_stem_taxa)))
-    {
-      stop("'include_target_clade_stem' must be a logical vector (TRUE, FALSE or NA)")
-    }
-    include_target_clade_stem_taxa <- as.logical(include_target_clade_stem_taxa)
-  }
-  # NA: use the global argument
-  include_target_clade_stem_taxa[is.na(include_target_clade_stem_taxa)] <- include_target_clade_stem
-
-  # Return the output as a logical vector named after the taxa (without names if the taxon names are not provided)
-  return(stats::setNames(unname(include_target_clade_stem_taxa), taxon_names))
-}
-
-
-#' @title Resolve whether the stem of each excluded subclade is excluded
-#'
-#' @description Combine the subclade-level values `exclude_subclades_stem` (from `missing_taxa_list`) with the global `exclude_subclades_stem` argument:
-#'   subclades with `NA` (or all subclades if the item is `NULL`) use the global value.
-#'
-#' @param exclude_subclades_stem_taxa `NULL`, a logical vector with one value per taxon (recycled over the excluded subclades of the taxon),
-#'   or a list with one element per taxon. Each element is `NULL` (global value), a single value (recycled), or a logical vector with one value per excluded subclade of the taxon.
-#'   `NA` values use the global value.
-#' @param exclude_subclades_stem Logical. Global value (single `TRUE` or `FALSE`).
-#' @param excluded_subclades `NULL`, or the list with one element per taxon of lists of tips defining the excluded subclades (`missing_taxa_list$Excluded_subclades`).
-#' @param n_taxa Integer. Number of taxa.
-#' @param taxon_names `NULL`, or the character vector of the taxon names, used to name the output and in error messages.
-#'
-#' @noRd
-#'
-#' @return A list with one element per taxon (named after the taxa if `taxon_names` is provided): a logical vector without `NA`, with one value per excluded subclade of the taxon (`logical(0)` if none),
-#'   named after the excluded subclades if they are named.
-#'
-
-resolve_exclude_subclades_stem <- function (exclude_subclades_stem_taxa = NULL, exclude_subclades_stem = TRUE, excluded_subclades = NULL, n_taxa, taxon_names = NULL)
-{
-  if (!is.logical(exclude_subclades_stem) || length(exclude_subclades_stem) != 1 || is.na(exclude_subclades_stem))
-  {
-    stop("'exclude_subclades_stem' must be a single logical value (TRUE or FALSE)")
-  }
-  # Number of excluded subclades of each taxon
-  n_subclades <- if (is.null(excluded_subclades)) rep(0L, n_taxa) else vapply(excluded_subclades, length, integer(1))
-
-  # Default: the global argument applies to all subclades
-  if (is.null(exclude_subclades_stem_taxa))
-  {
-    resolved <- lapply(seq_len(n_taxa), function (i) stats::setNames(rep(exclude_subclades_stem, n_subclades[i]), names(excluded_subclades[[i]])))
-    return(stats::setNames(resolved, taxon_names))
-  }
-
-  # A vector with one value per taxon is recycled over the excluded subclades of each taxon
-  if (!is.list(exclude_subclades_stem_taxa)) { exclude_subclades_stem_taxa <- as.list(exclude_subclades_stem_taxa) }
-  if (length(exclude_subclades_stem_taxa) != n_taxa)
-  {
-    stop("'missing_taxa_list$exclude_subclades_stem' must have the same length as 'Taxon_name'")
-  }
-  # Label of the taxon in messages
-  taxon_label <- function (i) if (is.null(taxon_names)) paste0("element ", i) else paste0("taxon '", taxon_names[i], "'")
-
-  resolved <- vector("list", n_taxa)
-  for (i in seq_len(n_taxa))
-  {
-    value <- exclude_subclades_stem_taxa[[i]]
-    # No excluded subclade for this taxon: nothing to set
-    if (n_subclades[i] == 0) { resolved[[i]] <- logical(0); next }
-    # No value for this taxon: global value
-    if (is.null(value)) { resolved[[i]] <- stats::setNames(rep(exclude_subclades_stem, n_subclades[i]), names(excluded_subclades[[i]])); next }
-
-    # A vector with only NA of another type (e.g., NA_integer_) is accepted as logical
-    if (!is.logical(value))
-    {
-      if (!all(is.na(value))) { stop("'missing_taxa_list$exclude_subclades_stem' must contain logical values (TRUE, FALSE or NA), see ", taxon_label(i)) }
-      value <- as.logical(value)
-    }
-    if (!(length(value) %in% c(1L, n_subclades[i])))
-    {
-      stop("'missing_taxa_list$exclude_subclades_stem': ", taxon_label(i), " has ", length(value), " values, but this taxon has ", n_subclades[i],
-           " excluded subclades.\nProvide one value per excluded subclade, or a single value for all of them.")
-    }
-    # If both the values and the excluded subclades are named, the names must match (same names, same order)
-    subclade_names <- names(excluded_subclades[[i]])
-    if (length(value) > 1 && !is.null(names(value)) && !is.null(subclade_names) && !identical(names(value), subclade_names))
-    {
-      stop("'missing_taxa_list$exclude_subclades_stem': the names of the values of ", taxon_label(i), " (", paste(names(value), collapse = ", "),
-           ") must match the names of its excluded subclades (", paste(subclade_names, collapse = ", "), "), in the same order.")
-    }
-    value <- rep_len(unname(value), n_subclades[i])
-    value[is.na(value)] <- exclude_subclades_stem
-    resolved[[i]] <- stats::setNames(value, subclade_names)
-  }
-  return(stats::setNames(resolved, taxon_names))
-}
-
-
-#' @title Get the values of exclude_subclades_stem of one taxon
-#'
-#' @description Extract the stem exclusion values of the excluded subclades of one taxon, from the list resolved by `resolve_exclude_subclades_stem()`,
-#'   or from a single logical value recycled over the excluded subclades.
-#'
-#' @param exclude_subclades_stem List with one element per taxon, or a single logical value.
-#' @param taxon_index Integer. Index of the taxon.
-#' @param n_subclades Integer. Number of excluded subclades of the taxon.
-#'
-#' @noRd
-#'
-#' @return A logical vector of length `n_subclades`.
-#'
-
-get_exclude_stem_flags <- function (exclude_subclades_stem, taxon_index, n_subclades)
-{
-  value <- if (is.list(exclude_subclades_stem)) exclude_subclades_stem[[taxon_index]] else exclude_subclades_stem
-  if (n_subclades == 0) { return(logical(0)) }
-  return(rep_len(value, n_subclades))
-}
-
+# ---- Excluded subclades ----
 
 #' @title Identify the branches of the excluded subclades
 #'
@@ -729,172 +274,6 @@ get_excluded_branch_nodes <- function (phy, excluded_subclades_tips_list, exclud
     }
   }
   return(unique(excluded_nodes))
-}
-
-
-#' @title Group missing taxa by clade and order the clades by nestedness
-#'
-#' @description Group missing taxa by the node of their MRCA, by the availability of the stem of their target clade and,
-#'   with a simmap, by their allowed states. Then order groups by size so nested ones come first
-#'   (a clade always has strictly more descendants than any clade nested within it,
-#'   thus sorting on clade size is enough to list nested clades first).
-#'   The rationale is to graft taxa in nested clades first, so they are accounted for when grafting missing taxa in higher clades
-#'   comprising those nested clades.
-#'
-#'   Taxa with the same target clade but different `include_target_clade_stem` values form different groups, because the time window available
-#'   for their divergence times differs (stem age or crown age). The groups of a same clade are consecutive, with `include_target_clade_stem = FALSE` first
-#'   (taxa restricted to the crown are grafted first, so they are present when drawing the taxa that can also use the stem).
-#'
-#'   With a simmap, taxa with different allowed states also form different groups (the same set of states in any order is the same group),
-#'   as the branches that can be used for the divergence ages of the group are not the same.
-#'
-#'   Use tips as inputs to define the associated clades:
-#'     * One tip defines a terminal branch.
-#'     * Two or more tips define a clade based on their MRCA.
-#'
-#' @param phy Phylogeny of class `"phylo"`.
-#' @param clade_tips List of character vectors defining the clade of each taxon.
-#' @param include_target_clade_stem Logical vector with one value per taxon (no `NA`), or `NULL` (all `TRUE`).
-#'   Whether the stem of the target clade is available for each taxon. It is always `TRUE` for single-tip clades (their only branch is their stem).
-#' @param allowed_states `NULL`, or list with one character vector per taxon (as resolved by `resolve_allowed_states()`). The states in which each taxon can be grafted.
-#'
-#' @noRd
-#'
-#' @return A list with 7 elements.
-#'
-#'  The first two are taxon-level elements (one value per taxon):
-#'  * `group_ID` Integer vector. ID of the group (i.e., unique clade and `include_target_clade_stem` value) the taxon belongs to.
-#'  * `taxa_order` Integer vector. Indices of the taxa ordered by group, so the taxa of nested clades come first.
-#'     Used to graft taxa one by one while processing nested clades first.
-#'
-#'  The last five elements are group-level elements (one value per group):
-#'  * `group_clade_tips` List with one element per group. Character vector of the tips used to identify the associated clade.
-#'  * `group_clade_ID` Integer vector. ID of the unique clade of the group. Groups of the same clade share it.
-#'  * `group_include_target_clade_stem` Logical vector. Whether the stem of the target clade is available for the taxa of the group.
-#'  * `group_allowed_states` List of character vectors, with the allowed states of the taxa of each group. `NULL` if `allowed_states` is `NULL`.
-#'  * `group_order` Integer vector with one value per group. Group IDs ranked by clade size, so nested clades come first.
-#'
-
-group_and_order_clades <- function (phy, clade_tips, include_target_clade_stem = NULL, allowed_states = NULL)
-{
-  n_taxa <- length(clade_tips)
-  # Extract (MRCA) nodes associated to clades
-  nodes <- vapply(clade_tips, function (tips) get_clade_node(phy, tips), numeric(1))
-  # ID of the unique clades, based on similarity of (MRCA) nodes
-  clade_ID <- match(nodes, unique(nodes))
-
-  # Availability of the stem. Single-tip clades always use their stem
-  if (is.null(include_target_clade_stem)) { include_target_clade_stem <- rep(TRUE, n_taxa) }
-  include_target_clade_stem <- include_target_clade_stem | (nodes <= ape::Ntip(phy))
-
-  # Group taxa by clade, stem availability and, with a simmap, allowed states (the same set of states, whatever the order)
-  key <- paste(clade_ID, include_target_clade_stem, sep = "_")
-  if (!is.null(allowed_states))
-  {
-    states_key <- vapply(allowed_states, function (x) paste(sort(unique(x)), collapse = "|"), character(1))
-    key <- paste(key, states_key, sep = "_")
-  }
-  group <- match(key, unique(key))
-  # Record first appearance of each group in the list
-  first <- match(seq_along(unique(key)), group)
-  group_clade_ID <- clade_ID[first]
-  group_include_target_clade_stem <- include_target_clade_stem[first]
-
-  # Compute number of descendants of each clade, and record it per group
-  n_desc_clade <- vapply(unique(nodes), function (n) length(get_descendant_nodes(phy, n)), numeric(1))
-  n_desc <- n_desc_clade[group_clade_ID]
-
-  # Order of the groups: smallest clades first. Groups of the same clade stay together, with 'include_target_clade_stem = FALSE' first
-  group_order <- order(n_desc, group_clade_ID, group_include_target_clade_stem)
-  # Rank of each group: 1 for the first group to graft
-  rank_of_group <- match(seq_along(group_order), group_order)
-
-  # Record information: taxon-level elements (one value per taxon), then group-level elements (one value per group)
-  groups_per_taxa <- list(group_ID = group, # Group ID of each taxon
-                          taxa_order = order(rank_of_group[group]), # Order of the taxa by group, nested clades first.
-                          group_clade_tips = clade_tips[first], # Tips defining the clade of each group
-                          group_clade_ID = group_clade_ID, # ID of the unique clade of each group
-                          group_include_target_clade_stem = group_include_target_clade_stem, # Stem availability of each group
-                          group_allowed_states = if (is.null(allowed_states)) NULL else lapply(allowed_states[first], unique), # Allowed states of each group (NULL without simmap)
-                          group_order = group_order) # Order of the groups to use in the loop
-
-  # Export output
-  return(groups_per_taxa)
-}
-
-
-#' @title Extract the new divergence times returned by `TreeSim::corsim()`
-#'
-#' @description Extract the new divergence times returned by `TreeSim::corsim()`.
-#'   `TreeSim::corsim()` function returns the input times `x` plus `missing` new times associated to the missing taxa, sorted in decreasing order.
-#'   This function ensure a safe comparison between the input times and output times to extract the new divergence times associated with missing taxa,
-#'   by removing ONE instance of each input time from the output.
-#'   Contrary to `setdiff()`, this is robust to a new time being numerically identical to an existing one, and to duplicated input times.
-#'
-#' @param all_times Numeric vector. Output of `TreeSim::corsim()`.
-#' @param old_times Numeric vector. Input times given to `TreeSim::corsim()` as `x`.
-#'
-#' @noRd
-#'
-#' @return Numeric vector of the new times.
-#'
-
-extract_new_divergence_times <- function (all_times, # Output of TreeSim::corsim()
-                                          old_times) # Input times 'x' given to TreeSim::corsim()
-{
-  all_times <- unname(all_times)
-  old_times <- unname(old_times)
-  remaining <- all_times
-
-  # Remove one instance of each old time
-  for (t in old_times)
-  {
-    idx <- match(t, remaining)
-    remaining <- remaining[-idx]
-  }
-
-  new_times <- sort(remaining, decreasing = TRUE)
-
-  return(new_times)
-}
-
-
-#' @title Set a seed for the duration of the calling function only
-#'
-#' @description Set a seed used internally by the function, without altering the global `.Random.seed` of the R session.
-#'   Restore the global `.Random.seed` when the calling function exits or yields an error.
-#'   Does nothing if seed is `NULL`.
-#'
-#' @param seed Integer. Seed. Nothing is done if `NULL`.
-#' @param envir Environment of the calling function. Default is `parent.frame()`.
-#'
-#' @noRd
-#'
-#' @return Invisible `NULL`.
-#'
-
-set_local_seed <- function (seed, envir = parent.frame())
-{
-  if (is.null(seed)) return(invisible(NULL))
-
-  global_env <- globalenv()
-  had_seed <- exists(".Random.seed", envir = global_env, inherits = FALSE)
-  old_seed <- if (had_seed) get(".Random.seed", envir = global_env, inherits = FALSE) else NULL
-
-  restore_seed <- function ()
-  {
-    if (is.null(old_seed))
-    {
-      if (exists(".Random.seed", envir = global_env, inherits = FALSE)) rm(".Random.seed", envir = global_env)
-    } else {
-      assign(".Random.seed", old_seed, envir = global_env)
-    }
-  }
-  # Register the restoration on exit of the calling function
-  do.call(base::on.exit, list(as.call(list(restore_seed)), TRUE), envir = envir)
-
-  set.seed(seed = seed)
-  invisible(NULL)
 }
 
 
@@ -1002,6 +381,34 @@ check_excluded_subclades_position <- function (phy, missing_taxa_list)
   return(do.call(rbind, out))
 }
 
+
+#' @title Format labels of excluded subclades of a taxon
+#'
+#' @description Format the excluded subclades of a taxon for messages: the name of the subclade followed by its tips
+#'   if the subclades are named (names inside `missing_taxa_list$Excluded_subclades[[i]]`), otherwise only the tips.
+#'
+#' @param excluded_subclades_i List of character vectors. The excluded subclades of one taxon (`missing_taxa_list$Excluded_subclades[[i]]`).
+#' @param max_tips Integer. Maximum number of tips printed per subclade.
+#'
+#' @noRd
+#'
+#' @return A character vector with one label per excluded subclade.
+#'
+
+label_excluded_subclades <- function (excluded_subclades_i, max_tips = 5)
+{
+  if (length(excluded_subclades_i) == 0) { return(character(0)) }
+  tips_label <- vapply(excluded_subclades_i, function (tips)
+  {
+    paste0(paste(utils::head(tips, max_tips), collapse = ", "), if (length(tips) > max_tips) paste0(", ... (", length(tips), " tips)") else "")
+  }, character(1))
+  nm <- names(excluded_subclades_i)
+  has_name <- if (is.null(nm)) rep(FALSE, length(tips_label)) else (!is.na(nm) & nm != "")
+  unname(ifelse(has_name, paste0("'", nm, "' (", tips_label, ")"), tips_label))
+}
+
+
+# ---- Taxa without available branch ----
 
 #' @title Find taxa with no branch available for grafting according to constraints
 #'
@@ -1164,51 +571,404 @@ find_taxa_without_allowed_branch <- function (phy,
 }
 
 
-#' @title Check the path used for temporary saves
+# ---- missing_taxa_list: structure and names ----
+
+#' @title Validate the structure of `missing_taxa_list`
 #'
-#' @description Check that `temp_file_path` is valid, and stops with an informative error if not.
-#'   Nothing is checked if `temp_file_path` is `NULL`, as the default path is in the working directory.
-#'   The path must be a single character string that:
-#'   * Ends with `.rds`.
-#'   * Is located in an existing directory.
-#'   * Is located in a writable directory.
+#' @description Check that `missing_taxa_list` has a valid `Taxon_name` item, the item defining the clades (`Target_clade` or `Sister_clade`),
+#'   and that every other item provided is consistent with `Taxon_name`: same length and names identical to `Taxon_name`
+#'   (same names, same order). Items that are `NULL` or absent are not checked, except the item defining the target/sister clades, which is required.
 #'
-#' @param temp_file_path Character string or `NULL`. Path of the `.rds` file used for temporary saves.
+#' @param missing_taxa_list List with the items `Taxon_name`, `Target_clade` (or `Sister_clade`), and optionally
+#'   `include_target_clade_stem`, `Excluded_subclades` and `exclude_subclades_stem`.
+#' @param clade_item Character string. `"Target_clade"` (for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::check_grafting_constraints()`][check_grafting_constraints]) or `"Sister_clade"` (for [`phylograftR::graft_missing_clades()`][graft_missing_clades]).
+#' @param optional_items Character vector. Other items validated if they are provided.
+#' @param allow_node_ids Logical. Whether clades defined by node IDs are accepted. If `FALSE` (default), the function stops if a clade
+#'   (target or sister clade, or excluded subclade) is defined by a node ID, and points to [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips].
+#'   `TRUE` is used by [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] itself.
 #'
 #' @noRd
 #'
-#' @return Invisible `TRUE`. Stops if the path is not valid.
+#' @return Invisibly, the character vector of the taxon names. The function stops if the list is not valid.
 #'
 
-check_temp_file_path <- function (temp_file_path)
+validate_missing_taxa_list <- function (missing_taxa_list,
+                                        clade_item = c("Target_clade", "Sister_clade"),
+                                        optional_items = c("include_target_clade_stem", "Excluded_subclades", "exclude_subclades_stem", "allowed_states"),
+                                        allow_node_ids = FALSE)
 {
-  if (is.null(temp_file_path)) return(invisible(TRUE))
+  clade_item <- match.arg(clade_item)
+  if (!is.list(missing_taxa_list)) { stop("'missing_taxa_list' must be a list") }
 
-  # Must be a single path
-  if (!is.character(temp_file_path) || length(temp_file_path) != 1 || is.na(temp_file_path))
+  ## Taxon_name: a non-empty character vector of unique and non-missing names
+  taxon_name <- missing_taxa_list$Taxon_name
+  if (is.null(taxon_name) || length(taxon_name) == 0) { stop("'missing_taxa_list$Taxon_name' is missing or empty") }
+  if (!is.character(taxon_name) || anyNA(taxon_name) || any(taxon_name == ""))
   {
-    stop("'temp_file_path' must be a single character string")
+    stop("'missing_taxa_list$Taxon_name' must be a character vector without missing values or empty strings")
   }
-  # Must end with ".rds"
-  if (!grepl(pattern = "\\.rds$", x = temp_file_path))
+  if (anyDuplicated(taxon_name))
   {
-    stop("'temp_file_path' must end with '.rds'")
+    stop("'missing_taxa_list$Taxon_name' must contain unique names. Duplicated: ", paste(unique(taxon_name[duplicated(taxon_name)]), collapse = ", "))
   }
-  # Directory must exist
-  temp_dir <- dirname(temp_file_path)
-  if (!dir.exists(temp_dir))
+  n_taxa <- length(taxon_name)
+
+  ## Required item (clades) and optional items
+  if (is.null(missing_taxa_list[[clade_item]])) { stop("'missing_taxa_list$", clade_item, "' is missing") }
+  for (item in c(clade_item, optional_items))
   {
-    stop("The directory of 'temp_file_path' does not exist: ", temp_dir)
-  }
-  # Directory must be writable
-  if (file.access(names = temp_dir, mode = 2) != 0)
-  {
-    stop("The directory of 'temp_file_path' is not writable: ", temp_dir)
+    value <- missing_taxa_list[[item]]
+    if (is.null(value)) { next }
+
+    if (length(value) != n_taxa)
+    {
+      stop("'missing_taxa_list$", item, "' must have the same length as 'Taxon_name' (", length(value), " vs ", n_taxa, ")")
+    }
+    item_names <- names(value)
+    if (is.null(item_names))
+    {
+      stop("'missing_taxa_list$", item, "' must be named after 'Taxon_name' (same names, same order), but it has no names.\n",
+           "Use e.g. names(missing_taxa_list$", item, ") <- missing_taxa_list$Taxon_name")
+    }
+    if (!identical(unname(item_names), taxon_name))
+    {
+      differ <- which(is.na(item_names) | item_names != taxon_name)
+      n_show <- min(length(differ), 5)
+      reason <- if (setequal(item_names, taxon_name)) "the names are the same but not in the same order" else "the names do not match"
+      stop("The names of 'missing_taxa_list$", item, "' must match 'Taxon_name' (same names, same order): ", reason, ".\n",
+           paste0("  - position ", differ[seq_len(n_show)], ": '", item_names[differ[seq_len(n_show)]], "' in '", item, "' vs '", taxon_name[differ[seq_len(n_show)]], "' in 'Taxon_name'", collapse = "\n"),
+           if (length(differ) > n_show) paste0("\n  ... and ", length(differ) - n_show, " more") else "")
+    }
   }
 
-  invisible(TRUE)
+  ## Clades must be defined by tips: node IDs have to be converted first
+  if (!allow_node_ids) { check_no_node_ids(missing_taxa_list, clade_item = clade_item) }
+
+  invisible(taxon_name)
 }
 
+
+#' @title Detect a clade defined by a node ID
+#'
+#' @description A clade defined by a node ID is a number, or a text made only of digits (tip labels must include at least one other character).
+#'
+#' @param x A clade: character vector of tips, or node ID.
+#'
+#' @noRd
+#'
+#' @return Logical. `TRUE` if the clade seems defined by a node ID.
+#'
+
+is_node_id_clade <- function (x)
+{
+  if (is.factor(x)) { x <- as.character(x) }
+  if (is.numeric(x)) { return(length(x) > 0) }
+  if (is.character(x)) { return(length(x) > 0 && any(!is.na(x) & grepl("^[[:space:]]*[0-9]+[[:space:]]*$", x))) }
+  FALSE
+}
+
+
+#' @title Stop if clades are defined by node IDs
+#'
+#' @description Check the clades of `missing_taxa_list` (`Target_clade` or `Sister_clade`, and `Excluded_subclades`), and stop with a message
+#'   that lists some of the node IDs and points to [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] if some are found.
+#'
+#' @param missing_taxa_list List of missing taxa.
+#' @param clade_item Character string. `"Target_clade"` or `"Sister_clade"`.
+#' @param max_show Integer. Maximum number of node IDs listed in the message.
+#'
+#' @noRd
+#'
+#' @return Nothing. Stops if a clade is defined by a node ID.
+#'
+
+check_no_node_ids <- function (missing_taxa_list, clade_item, max_show = 5)
+{
+  found <- character(0)
+  taxon_name <- missing_taxa_list$Taxon_name
+  show_value <- function (x) paste0(if (length(x) > 1) "c(" else "", paste(if (is.character(x)) paste0("\"", x, "\"") else x, collapse = ", "), if (length(x) > 1) ")" else "")
+
+  clades <- missing_taxa_list[[clade_item]]
+  if (is.list(clades))
+  {
+    for (i in seq_along(clades))
+    {
+      if (is_node_id_clade(clades[[i]])) { found <- c(found, paste0("'", clade_item, "' of '", taxon_name[i], "': ", show_value(clades[[i]]))) }
+    }
+  }
+  excluded <- missing_taxa_list$Excluded_subclades
+  if (is.list(excluded))
+  {
+    for (i in seq_along(excluded))
+    {
+      subclades <- excluded[[i]]
+      if (!is.list(subclades)) { next }
+      for (k in seq_along(subclades))
+      {
+        if (is_node_id_clade(subclades[[k]]))
+        {
+          label <- if (!is.null(names(subclades)) && !is.na(names(subclades)[k]) && names(subclades)[k] != "") paste0("'", names(subclades)[k], "'") else paste0("#", k)
+          found <- c(found, paste0("'Excluded_subclades' of '", taxon_name[i], "' (subclade ", label, "): ", show_value(subclades[[k]])))
+        }
+      }
+    }
+  }
+
+  if (length(found) > 0)
+  {
+    n_show <- min(length(found), max_show)
+    stop(length(found), " clade(s) of 'missing_taxa_list' are defined by node IDs, but tips are required:\n",
+         paste0("  - ", found[seq_len(n_show)], collapse = "\n"),
+         if (length(found) > n_show) paste0("\n  ... and ", length(found) - n_show, " more") else "",
+         "\nUse phylograftR::convert_nodes_to_tips(missing_taxa_list, phy) to convert the node IDs into pairs of tips (the conversions are printed), ",
+         "and pass the converted list.", call. = FALSE)
+  }
+  invisible(NULL)
+}
+
+
+# ---- Stem settings of each taxon ----
+
+#' @title Resolve whether the stem of the target clade is available for each taxon
+#'
+#' @description Combine the taxon-level values `$include_target_clade_stem` (from `missing_taxa_list`) with the global `include_target_clade_stem` argument:
+#'   taxa with `NA` (or all taxa if it is `NULL`) use the global value.
+#'
+#' @param include_target_clade_stem_taxa `NULL`, or a logical vector (`TRUE`, `FALSE` or `NA`) with one value per taxon.
+#' @param include_target_clade_stem Logical. Global value (single `TRUE` or `FALSE`).
+#' @param n_taxa Integer. Number of taxa.
+#' @param taxon_names `NULL`, or the character vector of the taxon names, used to name the output.
+#'
+#' @noRd
+#'
+#' @return A logical vector without `NA`, with one value per taxon (named after the taxa if `taxon_names` is provided).
+#'
+
+resolve_include_target_clade_stem <- function (include_target_clade_stem_taxa = NULL, include_target_clade_stem = TRUE, n_taxa, taxon_names = NULL)
+{
+  if (!is.logical(include_target_clade_stem) || length(include_target_clade_stem) != 1 || is.na(include_target_clade_stem))
+  {
+    stop("the global 'include_target_clade_stem' must be a single logical value (TRUE or FALSE)")
+  }
+  # Default: the global argument applies to all taxa
+  if (is.null(include_target_clade_stem_taxa)) { return(stats::setNames(rep(include_target_clade_stem, n_taxa), taxon_names)) }
+
+  if (length(include_target_clade_stem_taxa) != n_taxa)
+  {
+    stop("'include_target_clade_stem' must have the same length as 'Taxon_name'")
+  }
+  # A vector with only NA of another type (e.g., NA_integer_) is accepted as logical
+  if (!is.logical(include_target_clade_stem_taxa))
+  {
+    if (!all(is.na(include_target_clade_stem_taxa)))
+    {
+      stop("'include_target_clade_stem' must be a logical vector (TRUE, FALSE or NA)")
+    }
+    include_target_clade_stem_taxa <- as.logical(include_target_clade_stem_taxa)
+  }
+  # NA: use the global argument
+  include_target_clade_stem_taxa[is.na(include_target_clade_stem_taxa)] <- include_target_clade_stem
+
+  # Return the output as a logical vector named after the taxa (without names if the taxon names are not provided)
+  return(stats::setNames(unname(include_target_clade_stem_taxa), taxon_names))
+}
+
+
+#' @title Resolve whether the stem of each excluded subclade is excluded
+#'
+#' @description Combine the subclade-level values `exclude_subclades_stem` (from `missing_taxa_list`) with the global `exclude_subclades_stem` argument:
+#'   subclades with `NA` (or all subclades if the item is `NULL`) use the global value.
+#'
+#' @param exclude_subclades_stem_taxa `NULL`, a logical vector with one value per taxon (recycled over the excluded subclades of the taxon),
+#'   or a list with one element per taxon. Each element is `NULL` (global value), a single value (recycled), or a logical vector with one value per excluded subclade of the taxon.
+#'   `NA` values use the global value.
+#' @param exclude_subclades_stem Logical. Global value (single `TRUE` or `FALSE`).
+#' @param excluded_subclades `NULL`, or the list with one element per taxon of lists of tips defining the excluded subclades (`missing_taxa_list$Excluded_subclades`).
+#' @param n_taxa Integer. Number of taxa.
+#' @param taxon_names `NULL`, or the character vector of the taxon names, used to name the output and in error messages.
+#'
+#' @noRd
+#'
+#' @return A list with one element per taxon (named after the taxa if `taxon_names` is provided): a logical vector without `NA`, with one value per excluded subclade of the taxon (`logical(0)` if none),
+#'   named after the excluded subclades if they are named.
+#'
+
+resolve_exclude_subclades_stem <- function (exclude_subclades_stem_taxa = NULL, exclude_subclades_stem = TRUE, excluded_subclades = NULL, n_taxa, taxon_names = NULL)
+{
+  if (!is.logical(exclude_subclades_stem) || length(exclude_subclades_stem) != 1 || is.na(exclude_subclades_stem))
+  {
+    stop("'exclude_subclades_stem' must be a single logical value (TRUE or FALSE)")
+  }
+  # Number of excluded subclades of each taxon
+  n_subclades <- if (is.null(excluded_subclades)) rep(0L, n_taxa) else vapply(excluded_subclades, length, integer(1))
+
+  # Default: the global argument applies to all subclades
+  if (is.null(exclude_subclades_stem_taxa))
+  {
+    resolved <- lapply(seq_len(n_taxa), function (i) stats::setNames(rep(exclude_subclades_stem, n_subclades[i]), names(excluded_subclades[[i]])))
+    return(stats::setNames(resolved, taxon_names))
+  }
+
+  # A vector with one value per taxon is recycled over the excluded subclades of each taxon
+  if (!is.list(exclude_subclades_stem_taxa)) { exclude_subclades_stem_taxa <- as.list(exclude_subclades_stem_taxa) }
+  if (length(exclude_subclades_stem_taxa) != n_taxa)
+  {
+    stop("'missing_taxa_list$exclude_subclades_stem' must have the same length as 'Taxon_name'")
+  }
+  # Label of the taxon in messages
+  taxon_label <- function (i) if (is.null(taxon_names)) paste0("element ", i) else paste0("taxon '", taxon_names[i], "'")
+
+  resolved <- vector("list", n_taxa)
+  for (i in seq_len(n_taxa))
+  {
+    value <- exclude_subclades_stem_taxa[[i]]
+    # No excluded subclade for this taxon: nothing to set
+    if (n_subclades[i] == 0) { resolved[[i]] <- logical(0); next }
+    # No value for this taxon: global value
+    if (is.null(value)) { resolved[[i]] <- stats::setNames(rep(exclude_subclades_stem, n_subclades[i]), names(excluded_subclades[[i]])); next }
+
+    # A vector with only NA of another type (e.g., NA_integer_) is accepted as logical
+    if (!is.logical(value))
+    {
+      if (!all(is.na(value))) { stop("'missing_taxa_list$exclude_subclades_stem' must contain logical values (TRUE, FALSE or NA), see ", taxon_label(i)) }
+      value <- as.logical(value)
+    }
+    if (!(length(value) %in% c(1L, n_subclades[i])))
+    {
+      stop("'missing_taxa_list$exclude_subclades_stem': ", taxon_label(i), " has ", length(value), " values, but this taxon has ", n_subclades[i],
+           " excluded subclades.\nProvide one value per excluded subclade, or a single value for all of them.")
+    }
+    # If both the values and the excluded subclades are named, the names must match (same names, same order)
+    subclade_names <- names(excluded_subclades[[i]])
+    if (length(value) > 1 && !is.null(names(value)) && !is.null(subclade_names) && !identical(names(value), subclade_names))
+    {
+      stop("'missing_taxa_list$exclude_subclades_stem': the names of the values of ", taxon_label(i), " (", paste(names(value), collapse = ", "),
+           ") must match the names of its excluded subclades (", paste(subclade_names, collapse = ", "), "), in the same order.")
+    }
+    value <- rep_len(unname(value), n_subclades[i])
+    value[is.na(value)] <- exclude_subclades_stem
+    resolved[[i]] <- stats::setNames(value, subclade_names)
+  }
+  return(stats::setNames(resolved, taxon_names))
+}
+
+
+#' @title Get the values of exclude_subclades_stem of one taxon
+#'
+#' @description Extract the stem exclusion values of the excluded subclades of one taxon, from the list resolved by `resolve_exclude_subclades_stem()`,
+#'   or from a single logical value recycled over the excluded subclades.
+#'
+#' @param exclude_subclades_stem List with one element per taxon, or a single logical value.
+#' @param taxon_index Integer. Index of the taxon.
+#' @param n_subclades Integer. Number of excluded subclades of the taxon.
+#'
+#' @noRd
+#'
+#' @return A logical vector of length `n_subclades`.
+#'
+
+get_exclude_stem_flags <- function (exclude_subclades_stem, taxon_index, n_subclades)
+{
+  value <- if (is.list(exclude_subclades_stem)) exclude_subclades_stem[[taxon_index]] else exclude_subclades_stem
+  if (n_subclades == 0) { return(logical(0)) }
+  return(rep_len(value, n_subclades))
+}
+
+
+# ---- Clade grouping and order ----
+
+#' @title Group missing taxa by clade and order the clades by nestedness
+#'
+#' @description Group missing taxa by the node of their MRCA, by the availability of the stem of their target clade and,
+#'   with a simmap, by their allowed states. Then order groups by size so nested ones come first
+#'   (a clade always has strictly more descendants than any clade nested within it,
+#'   thus sorting on clade size is enough to list nested clades first).
+#'   The rationale is to graft taxa in nested clades first, so they are accounted for when grafting missing taxa in higher clades
+#'   comprising those nested clades.
+#'
+#'   Taxa with the same target clade but different `include_target_clade_stem` values form different groups, because the time window available
+#'   for their divergence times differs (stem age or crown age). The groups of a same clade are consecutive, with `include_target_clade_stem = FALSE` first
+#'   (taxa restricted to the crown are grafted first, so they are present when drawing the taxa that can also use the stem).
+#'
+#'   With a simmap, taxa with different allowed states also form different groups (the same set of states in any order is the same group),
+#'   as the branches that can be used for the divergence ages of the group are not the same.
+#'
+#'   Use tips as inputs to define the associated clades:
+#'     * One tip defines a terminal branch.
+#'     * Two or more tips define a clade based on their MRCA.
+#'
+#' @param phy Phylogeny of class `"phylo"`.
+#' @param clade_tips List of character vectors defining the clade of each taxon.
+#' @param include_target_clade_stem Logical vector with one value per taxon (no `NA`), or `NULL` (all `TRUE`).
+#'   Whether the stem of the target clade is available for each taxon. It is always `TRUE` for single-tip clades (their only branch is their stem).
+#' @param allowed_states `NULL`, or list with one character vector per taxon (as resolved by `resolve_allowed_states()`). The states in which each taxon can be grafted.
+#'
+#' @noRd
+#'
+#' @return A list with 7 elements.
+#'
+#'  The first two are taxon-level elements (one value per taxon):
+#'  * `group_ID` Integer vector. ID of the group (i.e., unique clade and `include_target_clade_stem` value) the taxon belongs to.
+#'  * `taxa_order` Integer vector. Indices of the taxa ordered by group, so the taxa of nested clades come first.
+#'     Used to graft taxa one by one while processing nested clades first.
+#'
+#'  The last five elements are group-level elements (one value per group):
+#'  * `group_clade_tips` List with one element per group. Character vector of the tips used to identify the associated clade.
+#'  * `group_clade_ID` Integer vector. ID of the unique clade of the group. Groups of the same clade share it.
+#'  * `group_include_target_clade_stem` Logical vector. Whether the stem of the target clade is available for the taxa of the group.
+#'  * `group_allowed_states` List of character vectors, with the allowed states of the taxa of each group. `NULL` if `allowed_states` is `NULL`.
+#'  * `group_order` Integer vector with one value per group. Group IDs ranked by clade size, so nested clades come first.
+#'
+
+group_and_order_clades <- function (phy, clade_tips, include_target_clade_stem = NULL, allowed_states = NULL)
+{
+  n_taxa <- length(clade_tips)
+  # Extract (MRCA) nodes associated to clades
+  nodes <- vapply(clade_tips, function (tips) get_clade_node(phy, tips), numeric(1))
+  # ID of the unique clades, based on similarity of (MRCA) nodes
+  clade_ID <- match(nodes, unique(nodes))
+
+  # Availability of the stem. Single-tip clades always use their stem
+  if (is.null(include_target_clade_stem)) { include_target_clade_stem <- rep(TRUE, n_taxa) }
+  include_target_clade_stem <- include_target_clade_stem | (nodes <= ape::Ntip(phy))
+
+  # Group taxa by clade, stem availability and, with a simmap, allowed states (the same set of states, whatever the order)
+  key <- paste(clade_ID, include_target_clade_stem, sep = "_")
+  if (!is.null(allowed_states))
+  {
+    states_key <- vapply(allowed_states, function (x) paste(sort(unique(x)), collapse = "|"), character(1))
+    key <- paste(key, states_key, sep = "_")
+  }
+  group <- match(key, unique(key))
+  # Record first appearance of each group in the list
+  first <- match(seq_along(unique(key)), group)
+  group_clade_ID <- clade_ID[first]
+  group_include_target_clade_stem <- include_target_clade_stem[first]
+
+  # Compute number of descendants of each clade, and record it per group
+  n_desc_clade <- vapply(unique(nodes), function (n) length(get_descendant_nodes(phy, n)), numeric(1))
+  n_desc <- n_desc_clade[group_clade_ID]
+
+  # Order of the groups: smallest clades first. Groups of the same clade stay together, with 'include_target_clade_stem = FALSE' first
+  group_order <- order(n_desc, group_clade_ID, group_include_target_clade_stem)
+  # Rank of each group: 1 for the first group to graft
+  rank_of_group <- match(seq_along(group_order), group_order)
+
+  # Record information: taxon-level elements (one value per taxon), then group-level elements (one value per group)
+  groups_per_taxa <- list(group_ID = group, # Group ID of each taxon
+                          taxa_order = order(rank_of_group[group]), # Order of the taxa by group, nested clades first.
+                          group_clade_tips = clade_tips[first], # Tips defining the clade of each group
+                          group_clade_ID = group_clade_ID, # ID of the unique clade of each group
+                          group_include_target_clade_stem = group_include_target_clade_stem, # Stem availability of each group
+                          group_allowed_states = if (is.null(allowed_states)) NULL else lapply(allowed_states[first], unique), # Allowed states of each group (NULL without simmap)
+                          group_order = group_order) # Order of the groups to use in the loop
+
+  # Export output
+  return(groups_per_taxa)
+}
+
+
+# ---- Richness information ----
 
 #' @title Build the richness information used for the sampling fractions
 #'
@@ -1431,6 +1191,222 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
 }
 
 
+# ---- Birth-death fit and divergence times ----
+
+#' @title Fit a birth-death model on a clade enforcing a minimum number of tips
+#'
+#' @description Fit a birth-death model on a clade enforcing a minimum number of tips.
+#'   If the clade has fewer tips than `min_tips`, climb towards the root until it has enough (stops at the root in any case).
+#'   This ensures the enclosing clade chosen has enough divergence times to be able to fit a relevant BD model,
+#'   while retaining close relationship with the initial focal clade.
+#'
+#' @param phy Phylogeny of class `"phylo"`.
+#' @param node Integer. Node ID of the clade.
+#' @param min_tips Integer. Minimum number of tips for the fit. Default is `5`.
+#' @param richness_info `NULL`, or the output of `build_richness_info()`. If provided, the sampling fraction of the clade used for the fit is
+#'   `n_present / (n_present + n_pending + n_unsampled)`, with:
+#'   * `n_present`: number of tips of the clade in the current tree, i.e., backbone tips plus taxa already grafted (they are not 'missing' anymore).
+#'   * `n_pending`: number of taxa still to graft that belong to the clade.
+#'   * `n_unsampled`: number of unsampled species of the clade, derived from `total_richness_per_clades`.
+#'   Default is `NULL`: no taxa to graft and no unsampled species are accounted for, so the sampling fraction is 1.
+#'   The birth-death model is always fitted on the crown group of the selected clade, with a sampling fraction describing this same crown group.
+#'
+#' @details The goal is to use the fitted rates to simulate divergence ages of missing taxa using `TreeSim::corsim()`.
+#'   Because no new divergence times can be drawn from a negative net diversification process,
+#'   the function ensures that the net diversification rate is always positive by capping the death rate to 99% of the birth rate.
+#'   A death rate that is not finite or negative is set to zero.
+#'
+#' @importFrom ape Ntip extract.clade
+#'
+#' @importFrom phytools fit.bd
+#'
+#' @noRd
+#'
+#' @return A list with 7 elements:
+#'  * `b` Numeric. Birth rate = speciation rate in events per time per lineage.
+#'  * `d` Numeric. Death rate = extinction rate in events per time per lineage.
+#'  * `n_tips` Integer. Number of tips in the enclosing clade used for fitting.
+#'  * `node` Integer. MRCA node ID of the selected enclosing clade.
+#'  * `n_pending` Numeric. Number of taxa still to graft in the selected clade, used for the sampling fraction (0 if `richness_info = NULL`).
+#'  * `n_unsampled` Numeric. Number of unsampled species used for the sampling fraction.
+#'  * `rho` Numeric. Sampling fraction used for the fit.
+#'
+
+fit_bd_on_clade <- function (phy, node, min_tips = 5, richness_info = NULL)
+{
+  clade_node <- node
+
+  ## Case with node as a tip
+  # extract.clade() does not accept tips: start from the parent node instead
+  if (clade_node <= ape::Ntip(phy))
+  {
+    clade_node <- get_parent_node(phy, clade_node)
+  }
+
+  ## Search rootward for an enclosing clade with at least 'min_tips' tips
+  # Ensure that the BD model is fit on a clade with at least 'min_tips' tips
+  repeat
+  {
+    # Extract current target clade
+    clade_tree <- ape::extract.clade(phy = phy, node = clade_node)
+
+    # Stop once the current clade has enough tips
+    if (ape::Ntip(clade_tree) >= min_tips) break
+    # If not, move rootward to the next enclosing parent clade
+    parent_node <- get_parent_node(phy, clade_node)
+    # If reaching the root (i.e., parent = NA), stop.
+    if (is.na(parent_node)) break
+    # Replace current target clade by its next enclosing clade / parent clade
+    clade_node <- parent_node
+  }
+
+  # Extract final nb of tips in the selected enclosing clade
+  n_tips <- ape::Ntip(clade_tree)
+
+  # Stop if no clade can cover 'min_tips'
+  if (n_tips < min_tips)
+  {
+    stop("Backbone phylogeny is too small to fit a birth-death model (< ",min_tips," tips)")
+  }
+
+  ## Fit BD with sampling fraction accounting for missing tips (the tips we are aiming to graft) and unsampled species (listed neither in the backbone nor in missing species)
+  # Numbers of taxa still to graft and of unsampled species in the selected clade (none by default)
+  n_pending <- 0
+  n_unsampled <- 0
+  if (!is.null(richness_info))
+  {
+    # Locate the selected clade in the backbone: its backbone tips (grafted taxa removed) define the same clade in the original backbone
+    backbone_tips <- setdiff(clade_tree$tip.label, richness_info$taxa_names)
+    node_in_backbone <- get_clade_node(richness_info$phy_backbone, backbone_tips)
+    # Missing taxa still to graft that belong to this clade. Taxa already grafted are in the tree: they are in 'n_tips', not missing anymore
+    still_to_graft <- !(richness_info$taxa_names %in% phy$tip.label)
+    in_clade <- vapply(richness_info$taxon_sets, function (s) node_in_backbone %in% s, logical(1))
+    n_pending <- sum(still_to_graft & in_clade)
+    # Unsampled species of the clade, derived from the total richness
+    n_unsampled <- richness_info$unsampled_by_node[node_in_backbone]
+  }
+  # Sampling fraction of the crown group of the selected clade (1 if nothing is pending nor unsampled in it)
+  rho <- n_tips / (n_tips + n_pending + n_unsampled)
+  clade_tree <- ensure_ultrametry(clade_tree) # Ensure the selected clade is ultrametric
+  fit <- phytools::fit.bd(tree = clade_tree, rho = rho)
+
+  ## Extract rates
+  b <- unname(fit$b); d <- unname(fit$d)
+
+  ## Keep rates usable by TreeSim (mu < lambda)
+  # If death rate is infinite or negative, fix it to zero
+  if (!is.finite(d) || d < 0) d <- 0
+  d <- min(d, 0.99 * b) # Limit death rate to 99% of birth rate to ensure the net diversification is never negative
+  # No divergence times can be drawn from a negative net diversification process
+
+  # Record rates, nb of tips in selected enclosing clade, and MRCA node of the selected clade
+  BD_output <- list(b = b, d = d, n_tips = n_tips, node = clade_node, n_pending = n_pending, n_unsampled = n_unsampled, rho = rho)
+
+  # Export output
+  return(BD_output)
+}
+
+
+#' @title Extract the new divergence times returned by `TreeSim::corsim()`
+#'
+#' @description Extract the new divergence times returned by `TreeSim::corsim()`.
+#'   `TreeSim::corsim()` function returns the input times `x` plus `missing` new times associated to the missing taxa, sorted in decreasing order.
+#'   This function ensure a safe comparison between the input times and output times to extract the new divergence times associated with missing taxa,
+#'   by removing ONE instance of each input time from the output.
+#'   Contrary to `setdiff()`, this is robust to a new time being numerically identical to an existing one, and to duplicated input times.
+#'
+#' @param all_times Numeric vector. Output of `TreeSim::corsim()`.
+#' @param old_times Numeric vector. Input times given to `TreeSim::corsim()` as `x`.
+#'
+#' @noRd
+#'
+#' @return Numeric vector of the new times.
+#'
+
+extract_new_divergence_times <- function (all_times, # Output of TreeSim::corsim()
+                                          old_times) # Input times 'x' given to TreeSim::corsim()
+{
+  all_times <- unname(all_times)
+  old_times <- unname(old_times)
+  remaining <- all_times
+
+  # Remove one instance of each old time
+  for (t in old_times)
+  {
+    idx <- match(t, remaining)
+    remaining <- remaining[-idx]
+  }
+
+  new_times <- sort(remaining, decreasing = TRUE)
+
+  return(new_times)
+}
+
+
+# ---- Sampling and seeds ----
+
+#' @title Sample randomly one element from a vector
+#'
+#' @description Sample randomly one element from a vector in a safe fashion that
+#'   handles vector of length 0 or 1. Return an error if the vector is empty.
+#'
+#' @param x Vector to sample from.
+#' @param prob Numeric vector. Optional sampling probabilities. Default is `NULL`.
+#'
+#' @noRd
+#'
+#' @return One element of `x`. Stops if `x` is empty.
+#'
+
+sample_one <- function (x, prob = NULL)
+{
+  if (length(x) == 0) stop("No valid option to sample from")
+  if (length(x) == 1) return(x)
+  x[sample.int(length(x), size = 1, prob = prob)]
+}
+
+
+#' @title Set a seed for the duration of the calling function only
+#'
+#' @description Set a seed used internally by the function, without altering the global `.Random.seed` of the R session.
+#'   Restore the global `.Random.seed` when the calling function exits or yields an error.
+#'   Does nothing if seed is `NULL`.
+#'
+#' @param seed Integer. Seed. Nothing is done if `NULL`.
+#' @param envir Environment of the calling function. Default is `parent.frame()`.
+#'
+#' @noRd
+#'
+#' @return Invisible `NULL`.
+#'
+
+set_local_seed <- function (seed, envir = parent.frame())
+{
+  if (is.null(seed)) return(invisible(NULL))
+
+  global_env <- globalenv()
+  had_seed <- exists(".Random.seed", envir = global_env, inherits = FALSE)
+  old_seed <- if (had_seed) get(".Random.seed", envir = global_env, inherits = FALSE) else NULL
+
+  restore_seed <- function ()
+  {
+    if (is.null(old_seed))
+    {
+      if (exists(".Random.seed", envir = global_env, inherits = FALSE)) rm(".Random.seed", envir = global_env)
+    } else {
+      assign(".Random.seed", old_seed, envir = global_env)
+    }
+  }
+  # Register the restoration on exit of the calling function
+  do.call(base::on.exit, list(as.call(list(restore_seed)), TRUE), envir = envir)
+
+  set.seed(seed = seed)
+  invisible(NULL)
+}
+
+
+# ---- Node labels of the backbone ----
+
 #' @title Label the internal nodes of the backbone to follow them during grafting
 #'
 #' @description Node IDs are renumbered each time a tip is grafted, but node labels are kept by `phytools::bind.tip()` and `ape::bind.tree()`.
@@ -1488,6 +1464,8 @@ restore_node_labels <- function (phy, labelled)
 }
 
 
+# ---- Checks of the inputs ----
+
 #' @title Check that the backbone tree is binary
 #'
 #' @description Check that every internal node of the backbone has exactly two children, and stop with an informative error if not.
@@ -1534,4 +1512,50 @@ check_backbone_binary <- function (phy, # Backbone phylogeny
        "If you accept to resolve them randomly, you can use ape::multi2di(phy) on the backbone BEFORE grafting and provide this binary backbone as input. ",
        "This is done at your own risk: the new nodes are arbitrary resolutions, connected by zero-length branches, ",
        "on which no grafting can happen and which do not reflect any biological information.", call. = FALSE)
+}
+
+
+#' @title Check the path used for temporary saves
+#'
+#' @description Check that `temp_file_path` is valid, and stops with an informative error if not.
+#'   Nothing is checked if `temp_file_path` is `NULL`, as the default path is in the working directory.
+#'   The path must be a single character string that:
+#'   * Ends with `.rds`.
+#'   * Is located in an existing directory.
+#'   * Is located in a writable directory.
+#'
+#' @param temp_file_path Character string or `NULL`. Path of the `.rds` file used for temporary saves.
+#'
+#' @noRd
+#'
+#' @return Invisible `TRUE`. Stops if the path is not valid.
+#'
+
+check_temp_file_path <- function (temp_file_path)
+{
+  if (is.null(temp_file_path)) return(invisible(TRUE))
+
+  # Must be a single path
+  if (!is.character(temp_file_path) || length(temp_file_path) != 1 || is.na(temp_file_path))
+  {
+    stop("'temp_file_path' must be a single character string")
+  }
+  # Must end with ".rds"
+  if (!grepl(pattern = "\\.rds$", x = temp_file_path))
+  {
+    stop("'temp_file_path' must end with '.rds'")
+  }
+  # Directory must exist
+  temp_dir <- dirname(temp_file_path)
+  if (!dir.exists(temp_dir))
+  {
+    stop("The directory of 'temp_file_path' does not exist: ", temp_dir)
+  }
+  # Directory must be writable
+  if (file.access(names = temp_dir, mode = 2) != 0)
+  {
+    stop("The directory of 'temp_file_path' is not writable: ", temp_dir)
+  }
+
+  invisible(TRUE)
 }
