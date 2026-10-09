@@ -179,10 +179,10 @@ test_that("resolve_allowed_states() uses the taxon-level states, and the global 
   resolved <- resolve_allowed_states(allowed_states_taxa = list(X1 = "A", X2 = "B"), states = states, taxon_names = c("X1", "X2"))
   expect_identical(resolved, list(X1 = "A", X2 = "B"))
 
-  # Taxa without any allowed state: stop, listing them and the states of the simmap
-  expect_error(resolve_allowed_states(states = states, taxon_names = taxa), "4 taxa have none")
-  expect_error(resolve_allowed_states(allowed_states_taxa = list(X1 = "A", X2 = NULL, X3 = "B", X4 = NA), states = states, taxon_names = taxa), "2 taxa have none.*X2.*X4")
-  expect_error(resolve_allowed_states(states = states, taxon_names = taxa), "'A', 'B', 'C'")
+  # Taxa without any allowed state (neither taxon-level nor global): all the states of the simmap are allowed
+  expect_identical(resolve_allowed_states(states = states, taxon_names = taxa), stats::setNames(rep(list(states), 4), taxa))
+  resolved <- resolve_allowed_states(allowed_states_taxa = list(X1 = "A", X2 = NULL, X3 = "B", X4 = NA), states = states, taxon_names = taxa)
+  expect_identical(resolved, list(X1 = "A", X2 = states, X3 = "B", X4 = states))
 
   # Unknown states: stop, naming the origin of the value and listing the states of the simmap
   expect_error(resolve_allowed_states(allowed_states = c("A", "D"), states = states, taxon_names = taxa), "global 'allowed_states' argument.*'D'.*'A', 'B', 'C'")

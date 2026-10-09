@@ -26,6 +26,10 @@
 #' @param exclude_subclades_stem Logical. Same as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]: whether the stem of the excluded subclades is also excluded
 #'   (a taxon sister to an excluded subclade is then a violation). Excluded subclades with a value in `missing_taxa_list$exclude_subclades_stem` use it instead
 #'   (`NA` or no item: this global value is used). Default is `TRUE`.
+#' @param allowed_states Character vector. Same as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]: the states in which grafting is allowed. This is the default for all taxa:
+#'   taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead. Only used if `phy_grafted` has a `$simmap` item
+#'   (the updated simmap returned by [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] with a `simmap`), otherwise ignored with a warning if provided.
+#'   The function stops if some states are not in the `simmap`. Default is `NULL` (all states allowed for the taxa without a taxon-level value).
 #' @param check_backbone Logical. Whether to check that the topology and branch lengths of the backbone are preserved once the grafted taxa are pruned. Default is `TRUE`.
 #' @param tolerance Numeric. Tolerance for the maximum deviation in backbone branch lengths, relative to the depth (root age) of the backbone.
 #'   Default is `1e-6`.
@@ -43,7 +47,10 @@
 #' * `$excluded_ok`: Logical. Whether the taxon is outside all its excluded subclades (and not on their stem, for the subclades with an excluded stem).
 #' * `$n_excluded_violated`: Integer. Number of excluded subclades violated.
 #' * `$excluded_violated`: Character string. Names of the excluded subclades violated (or their indices if the subclades are not named), separated by commas (`NA` if none).
-#' * `$ok`: Logical. Whether the taxon respects both its target clade and its excluded subclades.
+#' * `$states_ok`: Logical. Only checked if `phy_grafted` has a `$simmap` item: whether the taxon was grafted in one of its allowed states
+#'      (`missing_taxa_list$allowed_states` of the taxon if provided, otherwise the global `allowed_states` argument; all the states if neither is provided).
+#'      `NA` if `phy_grafted` has no `$simmap`.
+#' * `$ok`: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states (if checked).
 #'
 #' The data.frame has the following attributes:
 #'
@@ -65,6 +72,10 @@
 #' The 'stem' position is not restricted to a taxon being directly sister to the target clade: taxa grafted on the stem can receive further grafts,
 #' so several missing taxa can form together a group sister to the target clade (i.e, a missing-only subtree grafted on the the stem).
 #' Only backbone tips are considered when checking the position of a taxon (missing taxa are ignored), so such configurations are valid.
+#'
+#' If `phy_grafted` has a `$simmap` item (the updated `simmap` returned by the grafting functions when a `simmap` is provided), the states are also checked:
+#' a grafted taxon is in the state of the point where it was grafted, along its whole terminal branch, so the states of its terminal branch in the `simmap` must be allowed.
+#' The `simmap` item is used as it is: it is not compared to the backbone.
 #'
 #' A taxon respects its excluded subclades if it is not nested within any of them.
 #' If the stem of an excluded subclade is excluded (`exclude_subclades_stem = TRUE`, the default), the taxon must also not be on its stem, i.e., sister to the subclade
@@ -117,6 +128,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                                         include_target_clade_stem = TRUE, # Same as in graft_missing_taxa(): accept grafting on the stem branch of the target clade?
                                         use_excluded_subclades = TRUE, # Same as in graft_missing_taxa(): check the excluded subclades?
                                         exclude_subclades_stem = TRUE, # Same as in graft_missing_taxa(): is the stem of the excluded subclades also excluded?
+                                        allowed_states = NULL, # Same as in graft_missing_taxa(): states where grafting is allowed. Only checked if phy_grafted has a $simmap item
                                         check_backbone = TRUE, # Check that the backbone topology and branch lengths are preserved after pruning the grafted taxa
                                         tolerance = 1e-6, # Tolerance for the max deviation in backbone branch lengths, relative to the depth (root age) of the backbone
                                         stop_on_failure = FALSE, # Stop with an error if any constraint is violated
@@ -146,6 +158,25 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                                                       exclude_subclades_stem = exclude_subclades_stem,
                                                       excluded_subclades = if (use_excluded_subclades) excluded_list else NULL, n_taxa = n_taxa,
                                                       taxon_names = taxa_names)
+
+  # States: only checked if the grafted phylogeny has the updated simmap. The states of each taxon are resolved as in the grafting functions
+  simmap_grafted <- phy_grafted$simmap
+  check_states <- !is.null(simmap_grafted)
+  allowed_states_taxa <- NULL
+  if (check_states)
+  {
+    if (!inherits(simmap_grafted, "simmap") || is.null(simmap_grafted$maps) || length(simmap_grafted$maps) != nrow(phy_grafted$edge))
+    {
+      stop("'phy_grafted$simmap' must be a stochastic character map (class 'simmap') of the grafted phylogeny, with one map per branch.")
+    }
+    states_simmap <- colnames(simmap_grafted$mapped.edge)
+    if (is.null(states_simmap)) { states_simmap <- sort(unique(unlist(lapply(simmap_grafted$maps, names)))) }
+    allowed_states_taxa <- resolve_allowed_states(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
+                                                  states = states_simmap, taxon_names = taxa_names)
+  } else if (!is.null(allowed_states))
+  {
+    warning("'allowed_states' ignored: 'phy_grafted' has no '$simmap' item, so the states are not checked.")
+  }
 
   # Check tips used to define the clades are in the backbone
   defining_tips <- unique(unlist(c(missing_taxa_list$Target_clade, if (use_excluded_subclades) excluded_list)))
@@ -201,6 +232,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                     excluded_ok = NA,
                     n_excluded_violated = NA,
                     excluded_violated = NA, # Indices of the violated excluded subclades
+                    states_ok = NA, # Only checked with a simmap in phy_grafted
                     ok = FALSE,
                     stringsAsFactors = FALSE)
 
@@ -290,8 +322,15 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
       res$n_excluded_violated[i] <- 0L
     }
 
-    # Overall, a taxon is okay if both rules for target clade and excluded subclades are respected
-    res$ok[i] <- res$target_ok[i] & res$excluded_ok[i]
+    ## States of the terminal branch of the taxon (the whole branch is in the state of the graft point)
+    if (check_states)
+    {
+      tip_edge <- match(taxon_idx, phy_grafted$edge[, 2])
+      res$states_ok[i] <- all(names(simmap_grafted$maps[[tip_edge]]) %in% allowed_states_taxa[[i]])
+    }
+
+    # Overall, a taxon is okay if the rules for target clade and excluded subclades are respected, and the states are allowed (if checked)
+    res$ok[i] <- res$target_ok[i] & res$excluded_ok[i] & !isFALSE(res$states_ok[i])
   }
 
   ## 1.3/ Check the backbone is preserved ####
@@ -368,7 +407,9 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
     {
       if (!res$in_tree[i]) { return("missing from the grafted tree") }
       paste(c(if (isFALSE(res$target_ok[i])) paste0("outside its target clade (position: ", res$target_position[i], ")"),
-              if (isFALSE(res$excluded_ok[i])) paste0("within or on the stem of excluded subclade(s): ", res$excluded_violated[i])), collapse = "; ")
+              if (isFALSE(res$excluded_ok[i])) paste0("within or on the stem of excluded subclade(s): ", res$excluded_violated[i]),
+              if (isFALSE(res$states_ok[i])) paste0("grafted in a state that is not allowed (", paste(names(simmap_grafted$maps[[match(match(taxa_names[i], phy_grafted$tip.label), phy_grafted$edge[, 2])]]), collapse = ", "),
+                                                    "; allowed: ", paste(allowed_states_taxa[[i]], collapse = ", "), ")")), collapse = "; ")
     }, character(1))
     paste0("\n  Failed taxa:\n", paste0("    - ", taxa_names[failed[seq_len(n_show)]], ": ", reason, collapse = "\n"),
            if (length(failed) > n_show) paste0("\n    ... and ", length(failed) - n_show, " more") else "")
@@ -387,6 +428,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                "  - Missing from the grafted tree: ", sum(!res$in_tree), "\n",
                "  - Target clade violated:          ", sum(res$target_ok %in% FALSE), "\n",
                "  - Excluded subclade violated:     ", sum(res$excluded_ok %in% FALSE), "\n",
+               if (check_states) paste0("  - Allowed states violated:        ", sum(res$states_ok %in% FALSE), "\n") else "",
                "  - Backbone: ", backbone_msg, if (!all(res$ok)) paste0(describe_failures(), "\n") else "", "\n",
                "  => ", ifelse(all_ok, "All constraints respected\n", "Some constraints NOT respected (see returned data.frame and attributes)\n")))
   }

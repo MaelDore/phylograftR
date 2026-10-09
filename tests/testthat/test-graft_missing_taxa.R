@@ -770,16 +770,16 @@ test_that("graft_missing_taxa() with all the states allowed gives the same phylo
 
   # Global states
   with_all <- graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B", "C"), method = "uniform", verbose = FALSE, seed = 5)
-  expect_identical(with_all, without)
+  expect_identical(drop_simmap(with_all), without)
 
   # Taxon-level states, in a different order, with the global states for some taxa
   mtl$allowed_states <- list(X1 = c("C", "A", "B"), X2 = NULL, X3 = c("B", "A", "C"), X4 = NA, X5 = NULL)
   with_taxa <- graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B", "C"), method = "uniform", verbose = FALSE, seed = 5)
-  expect_identical(with_taxa, without)
+  expect_identical(drop_simmap(with_taxa), without)
 
   # The simmap does not need to have the same order of tips and branches as the backbone, and does not change the result
-  expect_identical(graft_missing_taxa(toy$phy, toy_missing_taxa(toy), simmap = simmap, allowed_states = c("A", "B", "C"), method = "uniform",
-                                      verbose = FALSE, seed = 5), without)
+  expect_identical(drop_simmap(graft_missing_taxa(toy$phy, toy_missing_taxa(toy), simmap = simmap, allowed_states = c("A", "B", "C"), method = "uniform",
+                                                  verbose = FALSE, seed = 5)), without)
 })
 
 ## Test that taxa are only grafted on pieces of branches in their allowed states, with global and taxon-level states, and that the constraints are still respected
@@ -857,12 +857,11 @@ test_that("graft_missing_taxa() stops or warns on invalid 'simmap', 'allowed_sta
   mtl <- toy_missing_taxa(toy)
   graft <- function (...) graft_missing_taxa(toy$phy, mtl, method = "uniform", verbose = FALSE, ...)
 
-  # A simmap requires allowed states
-  expect_error(graft(simmap = simmap), "states in which grafting is allowed are required.*5 taxa have none")
-  expect_error(graft(simmap = simmap), "'A', 'B', 'C'")
+  # A simmap does not require allowed states (all the states are allowed), also for the taxa without a taxon-level value
+  expect_no_error(graft(simmap = simmap))
   mtl_some <- mtl
   mtl_some$allowed_states <- list(X1 = "A", X2 = "A", X3 = NULL, X4 = "B", X5 = NA)
-  expect_error(graft_missing_taxa(toy$phy, mtl_some, simmap = simmap, method = "uniform", verbose = FALSE), "2 taxa have none.*X3.*X5")
+  expect_no_error(graft_missing_taxa(toy$phy, mtl_some, simmap = simmap, method = "uniform", verbose = FALSE))
 
   # Unknown states: global or taxon-level, listing the states of the simmap
   expect_error(graft(simmap = simmap, allowed_states = c("A", "red")), "global 'allowed_states' argument.*'red'.*'A', 'B', 'C'")
@@ -966,13 +965,13 @@ test_that("graft_missing_taxa() with method = 'BD_clades' and all the states all
 
     # Global states
     with_all <- graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B", "C"), method = "BD_clades", verbose = FALSE, seed = seed)
-    expect_identical(with_all, without)
+    expect_identical(drop_simmap(with_all), without)
 
     # Taxon-level states, in a different order, with the global states for some taxa: the taxa are in the same groups
     mtl_taxa <- mtl
     mtl_taxa$allowed_states <- list(X1 = c("C", "A", "B"), X2 = NULL, X3 = c("B", "A", "C"), X4 = NA, X5 = NULL)
     with_taxa <- graft_missing_taxa(toy$phy, mtl_taxa, simmap = simmap, allowed_states = c("A", "B", "C"), method = "BD_clades", verbose = FALSE, seed = seed)
-    expect_identical(with_taxa, without)
+    expect_identical(drop_simmap(with_taxa), without)
   }
 })
 
@@ -1198,4 +1197,124 @@ test_that("graft_missing_taxa() with a simmap and method = 'BD_clades' gives the
   expect_length(grafted$node.label, grafted$Nnode)
   expect_equal(sum(grafted$node.label == ""), length(mtl$Taxon_name))
   expect_setequal(grafted$node.label[grafted$node.label != ""], phy_support$node.label)
+})
+
+## Test that a simmap without allowed states does not restrict grafting (same phylogeny as without simmap) but the states are followed and returned
+test_that("graft_missing_taxa() with a simmap and no allowed states does not restrict the grafting, and returns the updated simmap",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mtl <- toy_missing_taxa(toy)
+
+  for (method in c("uniform", "BD_clades"))
+  {
+    for (seed in 1:2)
+    {
+      without <- suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = method, verbose = FALSE, seed = seed))
+      with_simmap <- suppressWarnings(graft_missing_taxa(toy$phy, mtl, simmap = simmap, method = method, verbose = FALSE, seed = seed))
+      expect_identical(drop_simmap(with_simmap), without)
+      expect_s3_class(with_simmap$simmap, "simmap")
+    }
+  }
+
+  # Taxa without a taxon-level value use all the states when no global states are given, the others are restricted
+  mtl$allowed_states <- list(X1 = "A", X2 = NULL, X3 = NULL, X4 = NULL, X5 = NULL)
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, method = "uniform", seed = 1)
+  expect_s3_class(grafted$simmap, "simmap")
+})
+
+## Test the updated simmap returned with the grafted phylogeny
+test_that("the updated simmap matches the grafted phylogeny, keeps the states of the backbone, and gives the state of the graft point to the grafted taxa",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  taxa <- c(paste0("X", 1:8), "Y1", "Y2", "Y3")
+  mtl <- list(Taxon_name = taxa,
+              Target_clade = c(rep(list(toy$A), 8), rep(list(toy$C), 3)),
+              Excluded_subclades = c(rep(list(list(toy$B)), 8), rep(list(NULL), 3)),
+              allowed_states = c(rep(list(NULL), 8), rep(list("C"), 3)))
+  names(mtl$Target_clade) <- names(mtl$Excluded_subclades) <- names(mtl$allowed_states) <- taxa
+
+  n_checked <- 0
+  for (method in c("uniform", "BD_clades"))
+  {
+    for (seed in 1:3)
+    {
+      grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = method, seed = seed)
+      sm <- grafted$simmap
+      info <- paste(method, "seed", seed)
+
+      # The updated simmap is a simmap of the grafted phylogeny: same tips, branches and branch lengths, in the same order
+      expect_s3_class(sm, "simmap")
+      expect_s3_class(sm, "phylo")
+      expect_identical(sm$edge, grafted$edge)
+      expect_identical(sm$tip.label, grafted$tip.label)
+      expect_identical(sm$edge.length, grafted$edge.length)
+      expect_no_error(validate_simmap(sm, grafted))
+      expect_equal(vapply(sm$maps, sum, numeric(1)), grafted$edge.length, info = info)
+      expect_equal(unname(rowSums(sm$mapped.edge)), grafted$edge.length, info = info)
+      expect_identical(colnames(sm$mapped.edge), c("A", "B", "C"))
+      expect_identical(rownames(sm$mapped.edge), paste(grafted$edge[, 1], grafted$edge[, 2], sep = ","))
+
+      # Every grafted branch is in a single state, and the terminal branch of each taxon is in the state of its graft point
+      expect_true(all(lengths(sm$maps[grafted$grafted_edges]) == 1), info = info)
+      for (taxon in taxa)
+      {
+        tip_edge <- match(match(taxon, grafted$tip.label), grafted$edge[, 2])
+        expect_length(sm$maps[[tip_edge]], 1)
+        expect_true(names(sm$maps[[tip_edge]]) %in% (if (taxon %in% c("Y1", "Y2", "Y3")) "C" else c("A", "B")), info = paste(taxon, info))
+        state <- state_at_graft(grafted, simmap, taxon, taxa)
+        if (is.na(state)) { next }
+        n_checked <- n_checked + 1
+        expect_identical(names(sm$maps[[tip_edge]]), state)
+      }
+
+      # Pruning the grafted taxa gives back the time of the backbone in each state
+      pruned <- phytools::drop.tip.simmap(sm, taxa)
+      expect_equal(colSums(pruned$mapped.edge)[colnames(simmap$mapped.edge)], colSums(simmap$mapped.edge))
+      expect_false("simmap" %in% names(simmap))
+    }
+  }
+  expect_gt(n_checked, 20)
+})
+
+## Test the argument return_simmap
+test_that("graft_missing_taxa() returns the updated simmap only with a simmap and return_simmap = TRUE, which does not change the phylogeny", 
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mtl <- toy_missing_taxa(toy)
+
+  with_simmap <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "uniform", seed = 3)
+  expect_s3_class(with_simmap$simmap, "simmap")
+  # The default is TRUE
+  expect_identical(quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "uniform", seed = 3, return_simmap = TRUE), with_simmap)
+  # FALSE removes the item only
+  no_simmap_item <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "uniform", seed = 3, return_simmap = FALSE)
+  expect_null(no_simmap_item$simmap)
+  expect_identical(no_simmap_item, drop_simmap(with_simmap))
+  # Without a simmap, return_simmap is silently ignored
+  without <- graft_missing_taxa(toy$phy, mtl, method = "uniform", verbose = FALSE, seed = 3)
+  expect_no_warning(ignored <- graft_missing_taxa(toy$phy, mtl, method = "uniform", verbose = FALSE, seed = 3, return_simmap = TRUE))
+  expect_identical(ignored, without)
+  expect_null(without$simmap)
+  # Invalid values
+  expect_error(graft_missing_taxa(toy$phy, mtl, simmap = simmap, return_simmap = "yes", verbose = FALSE), "'return_simmap' must be TRUE or FALSE")
+  expect_error(graft_missing_taxa(toy$phy, mtl, return_simmap = NA, verbose = FALSE), "'return_simmap' must be TRUE or FALSE")
+  expect_error(graft_missing_taxa(toy$phy, mtl, return_simmap = c(TRUE, FALSE), verbose = FALSE), "'return_simmap' must be TRUE or FALSE")
+})
+
+## Test the updated simmap when the backbone has node labels (they must be restored in the simmap too)
+test_that("the updated simmap has the same node labels as the grafted phylogeny",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  phy_support <- toy$phy
+  phy_support$node.label <- paste0("support", seq_len(phy_support$Nnode))
+  simmap_support <- simmap
+  simmap_support$node.label <- phy_support$node.label
+  mtl <- toy_missing_taxa(toy)
+  grafted <- quiet_graft(graft_missing_taxa, phy_support, mtl, simmap = simmap_support, allowed_states = c("A", "B"), method = "uniform", seed = 1)
+  expect_identical(grafted$simmap$node.label, grafted$node.label)
+  expect_false(any(grepl("^(bb|gr|ms)[0-9]", grafted$simmap$node.label)))
 })

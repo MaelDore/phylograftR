@@ -107,6 +107,9 @@ graft_tip_on_branch <- function (phy, label, node, frac = 0.5)
 ## Run a grafting call and return the result with its warnings silenced
 quiet_graft <- function (fun, ...) { suppressWarnings(fun(..., verbose = FALSE)) }
 
+## Remove the updated simmap from a grafted tree, to compare it with a tree grafted without simmap
+drop_simmap <- function (phy) { phy$simmap <- NULL; phy }
+
 ## Expect a grafted tree to be valid: ultrametric, backbone preserved and constraints respected
 expect_valid_graft <- function (grafted, phy, missing_taxa_list, ...)
 {

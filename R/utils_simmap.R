@@ -167,21 +167,20 @@ check_allowed_states <- function (allowed_states, states, who = "'allowed_states
 #' @description Get the states in which each taxon can be grafted: the states of `missing_taxa_list$allowed_states` for the taxon if provided,
 #'   otherwise the global `allowed_states` argument. A taxon-level value replaces the global one (no intersection).
 #'   Same logic as `resolve_include_target_clade_stem()`.
-#'   `NULL`, an empty vector or `NA` for a taxon use the global argument. The function stops if some states are not in the simmap,
-#'   or if some taxa have no allowed states at all (neither a taxon-level value, nor a global one).
+#'   `NULL`, an empty vector or `NA` for a taxon use the global argument. A taxon with neither a taxon-level value nor a global one has all the states
+#'   of the simmap allowed (the states are then only followed, and grafting is not restricted). The function stops if some states are not in the simmap.
 #'
 #' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of character vectors: `missing_taxa_list$allowed_states`.
 #' @param allowed_states `NULL`, or character vector. The global `allowed_states` argument.
 #' @param states Character vector. States of the simmap.
 #' @param taxon_names Character vector. `missing_taxa_list$Taxon_name`.
-#' @param max_show Integer. Maximum number of taxa listed in the error message.
 #'
 #' @noRd
 #'
 #' @return A list named after `taxon_names`, with the allowed states (character vector, no duplicate) of each taxon.
 #'
 
-resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states = NULL, states, taxon_names, max_show = 10)
+resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states = NULL, states, taxon_names)
 {
   n_taxa <- length(taxon_names)
   if (!is.null(allowed_states))
@@ -213,17 +212,9 @@ resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states =
     }
   }
 
+  # No states provided (neither taxon-level nor global): all the states are allowed
   without_states <- which(vapply(resolved, is.null, logical(1)))
-  if (length(without_states) > 0)
-  {
-    n_show <- min(length(without_states), max_show)
-    stop("A 'simmap' was provided, so the states in which grafting is allowed are required for every taxon: either the global 'allowed_states' argument, ",
-         "or 'missing_taxa_list$allowed_states' for the taxon.\n",
-         length(without_states), " taxa have none:\n",
-         paste0("  - ", taxon_names[without_states[seq_len(n_show)]], collapse = "\n"),
-         if (length(without_states) > n_show) paste0("\n  ... and ", length(without_states) - n_show, " more") else "",
-         "\nStates available in the simmap: ", paste0("'", states, "'", collapse = ", "), ".", call. = FALSE)
-  }
+  for (i in without_states) { resolved[[i]] <- states }
   resolved
 }
 
@@ -584,4 +575,83 @@ track_graft_subtree <- function (tracker, phy_before, phy_after, node, position,
 
   tracker$missing_state[tip_labels] <- state
   list(phy = phy_after, tracker = tracker)
+}
+
+
+#' @title Build the updated simmap of the grafted tree
+#'
+#' @description At the end of grafting, convert the states followed by the tracker into a stochastic character map (class `"simmap"`) of the grafted tree:
+#'   the pieces of the backbone branches (cut by the grafts) keep their states, and every grafted branch is entirely in the state of the point where it was grafted.
+#'
+#' @param tracker Output of `start_state_tracking()`, updated by `track_graft()` and `track_graft_subtree()` during grafting.
+#' @param phy_tracked Final phylogeny of class `"phylo"`, with the nodes labelled by the tracking functions (before the original node labels are restored).
+#' @param phy Same phylogeny (same branches in the same order), with the final node labels. The simmap is built on this tree.
+#'
+#' @noRd
+#'
+#' @return An object of class `c("simmap", "phylo")`: `phy` with the elements `maps` (list with one named vector per branch, in the order of `phy$edge`,
+#'   giving the lengths of the pieces in each state from the rootward to the tipward node) and `mapped.edge` (matrix of the total time in each state per branch).
+#'
+
+build_updated_simmap <- function (tracker, phy_tracked, phy)
+{
+  n_edges <- nrow(phy_tracked$edge)
+  edge_length <- phy_tracked$edge.length
+  root_age <- max(phytools::nodeHeights(phy_tracked)[, 2])
+  edge_ages <- root_age - phytools::nodeHeights(phy_tracked)
+  info <- get_lineage_info(tracker = tracker, phy = phy_tracked, nodes = phy_tracked$edge[, 2], edge_ages = edge_ages)
+
+  ## Pieces of each branch: edge index, state, distance from the tipward node of the end of the piece (to order them), and duration
+  # Branches of a missing-only subtree: a single piece in the state of the subtree
+  is_missing <- is.na(info$backbone_node)
+  idx_missing <- which(is_missing)
+  piece_edge <- idx_missing
+  piece_state <- info$state[idx_missing]
+  piece_from <- rep(0, length(idx_missing))
+  piece_duration <- edge_length[idx_missing]
+
+  # Branches of the backbone lineages: pieces of the backbone branch that overlap the extent of the branch
+  idx <- which(!is_missing)
+  if (length(idx) > 0)
+  {
+    rows <- tracker$rows_per_node[info$backbone_node[idx]]
+    cand <- rep(idx, lengths(rows))
+    r <- unlist(rows, use.names = FALSE)
+    lo <- info$distance[cand]
+    hi <- lo + edge_length[cand]
+    # Ends of the pieces are snapped to the extent of the branch, with a relative tolerance (bind.tip() rounds the branch lengths to 10 significant digits)
+    eps <- 1e-8 * hi
+    f <- ifelse(tracker$state_table$from[r] <= lo + eps, lo, tracker$state_table$from[r])
+    t <- ifelse(tracker$state_table$to[r] >= hi - eps, hi, tracker$state_table$to[r])
+    f <- pmax(f, lo); t <- pmin(t, hi)
+    keep <- (t - f) > eps
+    piece_edge <- c(piece_edge, cand[keep])
+    piece_state <- c(piece_state, tracker$state_table$state[r][keep])
+    piece_from <- c(piece_from, f[keep] - lo[keep])
+    piece_duration <- c(piece_duration, (t - f)[keep])
+  }
+
+  ## Maps: pieces from the rootward to the tipward node of each branch, rescaled to sum exactly to the branch length
+  ord <- order(piece_edge, -piece_from)
+  piece_edge <- piece_edge[ord]; piece_state <- piece_state[ord]; piece_duration <- piece_duration[ord]
+  if (!identical(sort(unique(piece_edge)), seq_len(n_edges)))
+  {
+    stop("Internal error: some branches of the grafted tree have no state.")
+  }
+  durations <- split(stats::setNames(piece_duration, piece_state), factor(piece_edge, levels = seq_len(n_edges)))
+  maps <- lapply(seq_len(n_edges), function (e) { d <- durations[[e]]; d * edge_length[e] / sum(d) })
+  names(maps) <- NULL
+
+  ## Total time in each state per branch
+  states <- tracker$states
+  mapped_edge <- matrix(0, nrow = n_edges, ncol = length(states), dimnames = list(paste(phy$edge[, 1], phy$edge[, 2], sep = ","), states))
+  cell <- (match(unlist(lapply(maps, names), use.names = FALSE), states) - 1) * n_edges + rep(seq_len(n_edges), lengths(maps))
+  total <- tapply(unlist(maps, use.names = FALSE), cell, sum)
+  mapped_edge[as.integer(names(total))] <- total
+
+  simmap <- phy
+  simmap$maps <- maps
+  simmap$mapped.edge <- mapped_edge
+  class(simmap) <- c("simmap", "phylo")
+  simmap
 }

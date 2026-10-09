@@ -224,3 +224,59 @@ test_that("check_grafting_constraints() requires named items, and reports the fa
   # Nothing is listed if all the taxa respect their constraints
   expect_no_match(capture.output(check_grafting_constraints(grafted, toy$phy, mtl, verbose = TRUE)), "Failed taxa")
 })
+
+## Test the check of the allowed states with the updated simmap of the grafted phylogeny
+test_that("check_grafting_constraints() checks the allowed states if the grafted phylogeny has the updated simmap",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  taxa <- paste0("X", 1:6)
+  mtl <- list(Taxon_name = taxa, Target_clade = stats::setNames(rep(list(toy$A), 6), taxa), Excluded_subclades = stats::setNames(rep(list(NULL), 6), taxa))
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "uniform", seed = 1)
+  taxon_states <- vapply(taxa, function (taxon) names(grafted$simmap$maps[[match(match(taxon, grafted$tip.label), grafted$edge[, 2])]]), character(1))
+
+  # The allowed states used for grafting are respected
+  checks <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = c("A", "B"), verbose = FALSE)
+  expect_true(all(checks$states_ok))
+  expect_true(all(checks$ok))
+  expect_true(attr(checks, "all_ok"))
+  # Without allowed states, all the states are allowed
+  checks_all <- check_grafting_constraints(grafted, toy$phy, mtl, verbose = FALSE)
+  expect_true(all(checks_all$states_ok))
+
+  # Other states: the taxa grafted in a state that is not allowed are flagged
+  other <- setdiff(c("A", "B", "C"), unique(taxon_states))
+  forbidden <- unique(taxon_states)[1]
+  allowed_other <- setdiff(c("A", "B", "C"), forbidden)
+  checks_other <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = allowed_other, verbose = FALSE)
+  expect_identical(unname(checks_other$states_ok), unname(taxon_states != forbidden))
+  expect_identical(unname(checks_other$ok), unname(taxon_states != forbidden))
+  expect_false(attr(checks_other, "all_ok"))
+  expect_match(paste(capture.output(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = allowed_other, verbose = TRUE)), collapse = "\n"),
+               "Allowed states violated: +[1-9].*not allowed \\(")
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = allowed_other, stop_on_failure = TRUE, verbose = FALSE), "not allowed")
+
+  # The taxon-level states replace the global ones
+  mtl_taxon <- mtl
+  mtl_taxon$allowed_states <- stats::setNames(rep(list(NULL), 6), taxa)
+  mtl_taxon$allowed_states[[taxa[1]]] <- setdiff(c("A", "B", "C"), taxon_states[1])
+  checks_taxon <- check_grafting_constraints(grafted, toy$phy, mtl_taxon, allowed_states = c("A", "B", "C"), verbose = FALSE)
+  expect_false(checks_taxon$states_ok[1])
+  expect_true(all(checks_taxon$states_ok[-1]))
+
+  # Unknown states are listed with the states of the simmap
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "red", verbose = FALSE), "'red'.*'A', 'B', 'C'")
+
+  # Without the updated simmap, the states are not checked: NA, with a warning if allowed states are provided
+  without_simmap <- drop_simmap(grafted)
+  expect_warning(checks_ns <- check_grafting_constraints(without_simmap, toy$phy, mtl, allowed_states = "A", verbose = FALSE), "'allowed_states' ignored")
+  expect_true(all(is.na(checks_ns$states_ok)))
+  expect_true(all(checks_ns$ok))
+  expect_no_warning(check_grafting_constraints(without_simmap, toy$phy, mtl, verbose = FALSE))
+  expect_false(grepl("Allowed states violated", paste(capture.output(check_grafting_constraints(without_simmap, toy$phy, mtl, verbose = TRUE)), collapse = "\n")))
+
+  # An invalid simmap item
+  bad <- grafted
+  bad$simmap <- list(1)
+  expect_error(check_grafting_constraints(bad, toy$phy, mtl, verbose = FALSE), "must be a stochastic character map")
+})

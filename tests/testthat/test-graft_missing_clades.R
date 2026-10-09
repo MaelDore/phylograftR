@@ -243,13 +243,13 @@ test_that("graft_missing_clades() with all the states allowed gives the same phy
 
     # Global states
     with_all <- graft_missing_clades(toy$phy, mcl, simmap = simmap, allowed_states = c("A", "B", "C"), verbose = FALSE, seed = seed)
-    expect_identical(with_all, without)
+    expect_identical(drop_simmap(with_all), without)
 
     # Taxon-level states, in a different order, with the global states for some taxa (the taxa of a missing clade share the same states)
     mcl_taxa <- mcl
     mcl_taxa$allowed_states <- list(M1 = c("C", "A", "B"), M2 = c("B", "C", "A"), M3 = NULL, M4 = NA)
     with_taxa <- graft_missing_clades(toy$phy, mcl_taxa, simmap = simmap, allowed_states = c("A", "B", "C"), verbose = FALSE, seed = seed)
-    expect_identical(with_taxa, without)
+    expect_identical(drop_simmap(with_taxa), without)
   }
 })
 
@@ -313,8 +313,8 @@ test_that("graft_missing_clades() stops or warns before grafting on invalid or p
   mcl <- toy_missing_clades(toy)
   graft <- function (...) graft_missing_clades(toy$phy, mcl, verbose = FALSE, ...)
 
-  # A simmap requires allowed states, which must be in the simmap
-  expect_error(graft(simmap = simmap), "states in which grafting is allowed are required.*4 taxa have none")
+  # Allowed states must be in the simmap (a simmap without allowed states is valid: all the states are allowed)
+  expect_no_error(graft(simmap = simmap))
   expect_error(graft(simmap = simmap, allowed_states = c("A", "red")), "global 'allowed_states' argument.*'red'.*'A', 'B', 'C'")
   # Allowed states without simmap
   expect_error(graft(allowed_states = "A"), "requires a 'simmap'")
@@ -385,7 +385,7 @@ test_that("graft_missing_clades() with a simmap handles nested sister clades, se
   {
     without <- graft_missing_clades(toy$phy, mcl, verbose = FALSE, seed = seed)
     with_all <- graft_missing_clades(toy$phy, mcl, simmap = simmap, allowed_states = c("A", "B", "C"), verbose = FALSE, seed = seed)
-    expect_identical(with_all, without)
+    expect_identical(drop_simmap(with_all), without)
   }
 
   phy_support <- toy$phy
@@ -397,4 +397,48 @@ test_that("graft_missing_clades() with a simmap handles nested sister clades, se
   expect_equal(sum(grafted$node.label == ""), grafted$Nnode - phy_support$Nnode)
   grafted_no_labels <- graft_missing_clades(toy$phy, mcl, simmap = simmap, allowed_states = c("A", "B"), verbose = FALSE, seed = 1)
   expect_null(grafted_no_labels$node.label)
+})
+
+## Test that a simmap without allowed states does not restrict grafting, and the updated simmap returned: each missing clade is in the state of its graft point
+test_that("graft_missing_clades() with a simmap returns the updated simmap, also without allowed states, where each missing clade is in the state of its graft point",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  # B and A are nested sister clades, each with a missing clade of several taxa
+  mcl <- list(Taxon_name = c("M1", "M2", "M3", "M4", "M5"), Sister_clade = list(M1 = toy$B, M2 = toy$B, M3 = toy$B, M4 = toy$A, M5 = toy$A))
+
+  for (seed in 1:3)
+  {
+    without <- graft_missing_clades(toy$phy, mcl, verbose = FALSE, seed = seed)
+    # No allowed states: all the states are allowed, same phylogeny as without simmap
+    followed <- graft_missing_clades(toy$phy, mcl, simmap = simmap, verbose = FALSE, seed = seed)
+    expect_identical(drop_simmap(followed), without)
+    sm <- followed$simmap
+    expect_s3_class(sm, "simmap")
+    expect_identical(sm$edge, followed$edge)
+    expect_no_error(validate_simmap(sm, followed))
+    expect_equal(vapply(sm$maps, sum, numeric(1)), followed$edge.length)
+    # All the grafted branches (of the whole missing clades) are in one state, and the taxa of a missing clade share it
+    expect_true(all(lengths(sm$maps[followed$grafted_edges]) == 1))
+    tip_state <- function (taxon) names(sm$maps[[match(match(taxon, followed$tip.label), followed$edge[, 2])]])
+    expect_identical(tip_state("M1"), tip_state("M2"))
+    expect_identical(tip_state("M1"), tip_state("M3"))
+    expect_identical(tip_state("M4"), tip_state("M5"))
+    # Pruning the grafted taxa gives back the time of the backbone in each state
+    pruned <- phytools::drop.tip.simmap(sm, mcl$Taxon_name)
+    expect_equal(colSums(pruned$mapped.edge)[colnames(simmap$mapped.edge)], colSums(simmap$mapped.edge))
+
+    # With allowed states, the missing clades are in allowed states
+    restricted <- graft_missing_clades(toy$phy, mcl, simmap = simmap, allowed_states = c("A", "B"), verbose = FALSE, seed = seed)
+    tip_state_r <- function (taxon) names(restricted$simmap$maps[[match(match(taxon, restricted$tip.label), restricted$edge[, 2])]])
+    expect_true(all(vapply(mcl$Taxon_name, tip_state_r, character(1)) %in% c("A", "B")))
+  }
+
+  # return_simmap
+  expect_null(graft_missing_clades(toy$phy, mcl, simmap = simmap, return_simmap = FALSE, verbose = FALSE, seed = 1)$simmap)
+  expect_identical(graft_missing_clades(toy$phy, mcl, simmap = simmap, return_simmap = FALSE, verbose = FALSE, seed = 1),
+                   drop_simmap(graft_missing_clades(toy$phy, mcl, simmap = simmap, verbose = FALSE, seed = 1)))
+  expect_no_warning(graft_missing_clades(toy$phy, mcl, return_simmap = TRUE, verbose = FALSE, seed = 1))
+  expect_null(graft_missing_clades(toy$phy, mcl, return_simmap = TRUE, verbose = FALSE, seed = 1)$simmap)
+  expect_error(graft_missing_clades(toy$phy, mcl, simmap = simmap, return_simmap = NA, verbose = FALSE), "'return_simmap' must be TRUE or FALSE")
 })

@@ -36,9 +36,11 @@
 #'   See 'Species attributes' in Details section. Default is `NULL` (no restriction for grafting based on states).
 #' @param allowed_states Character vector. The states of `simmap` in which grafting is allowed. This is the default for all taxa:
 #'   taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead. States are matched exactly with the states of the `simmap`.
-#'   The function stops if a `simmap` is provided and some taxa have no allowed states (neither a global nor a taxon-level value),
-#'   if some states are not in the `simmap`, or if `allowed_states` is provided without a `simmap`.
-#'   Default is `NULL` (no restriction for grafting based on states).
+#'   Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the `simmap`.
+#'   The function stops if some states are not in the `simmap`, or if `allowed_states` is provided without a `simmap`.
+#'   Default is `NULL` (all states allowed).
+#' @param return_simmap Logical. Only used with a `simmap`, and silently ignored without it. Whether to add the updated `simmap` to the output, in `$simmap` (see 'Value').
+#'   Default is `TRUE`.
 #' @param min_valid_fraction Numeric between 0 and 1. Only used with a `simmap`. Threshold of the fraction of the time window of the divergence time of a missing clade
 #'   (the stem branch of its sister clade) that is in its allowed states. A warning lists the missing clades below the threshold for inspection,
 #'   as their divergence times are concentrated on a small part of the stem branch. The fraction is computed on the backbone, before grafting. Default is `0.1`.
@@ -83,6 +85,8 @@
 #'   These elements are not updated by functions that modify the phylogeny (e.g., `ape::drop.tip()`, which removes tips but keeps the other elements as they are,
 #'   and `ape::write.tree()`, which removes them). Use [`phylograftR::identify_grafted()`][identify_grafted] to recompute `grafted_tips` and `grafted_edges` on a manipulated phylogeny.
 #'
+#'   Optional elements can be added to the output based on what optional argument was provided:
+#'
 #'   * `sampling_fraction_df` Only if `total_richness_per_clades` is provided (a list with only `NA` values also returns it, assuming no unsampled species).
 #'     Data frame with one row per clade of `total_richness_per_clades`:
 #'     * `Clade_tips` Character string. Tips used to identify the clade.
@@ -93,6 +97,10 @@
 #'     * `nb_unsampled_species` Integer. Number of species that are neither on the backbone, nor grafted as missing. Derived from `total_richness`.
 #'     * `sampling_fraction` Numeric. Fraction of the clade richness present in the grafted phylogeny as `(nb_backbone_species + nb_missing_species) / total_richness`.
 #'       This can be used to account for clade-specific sampling fraction in downstream analyses.
+#'   * `simmap` Only if a `simmap` is provided and `return_simmap = TRUE`. The updated stochastic character map of the grafted phylogeny (class `"simmap"`):
+#'     the pieces of the branches of the backbone keep their states (cut where taxa were grafted), and every grafted clades is entirely in the state of the point where it was grafted.
+#'     This element can be plotted as any `simmap`, e.g., `plot(grafted_phy$simmap)`, or used to extract the states of the tips with `phytools::getStates(grafted_phy$simmap, type = "tips")`.
+#'     It has the same exact topology and branch lengths as the grafted phylogeny.
 #'
 #' @details
 #' ### Stop conditions
@@ -127,9 +135,9 @@
 #' it is drawn again, up to `max_age_redraws` times.
 #'
 #' The `simmap` can also be provided so that the states are updated alongside the phylogeny: the whole missing clade (all its taxa and branches)
-#' inherits the state of the point of the stem branch where it is grafted. The `simmap` itself is not modified.
-#' At the moment, the allowed states are still required with a `simmap`. Following the states without restricting the grafting, and returning the updated `simmap`, are planned.
-#' If all the states are allowed, the result is the same as without `simmap` (for the same `seed`).
+#' inherits the state of the point of the stem branch where it is grafted. The updated `simmap` is returned in `$simmap`, if `return_simmap = TRUE`).
+#' The allowed states are not required: without any allowed states, all the states are allowed, grafting is not restricted by the states,
+#' but the simmap will be updated, assuming grafted clades inherit the state of the point where they are grafted.
 #'
 #' The function stops, before any grafting, if the taxa of a same missing clade have different allowed states, or if the stem branch of a sister clade has no piece in the allowed states
 #' (the clades are listed), and warns about the missing clades with a small share of their stem branch in allowed states (see `min_valid_fraction`).
@@ -187,6 +195,8 @@
 #' @author Maël Doré
 #'
 #' @examples
+#' # --- Prepare data --- #
+#'
 #' # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units
 #' set.seed(1234)
 #' phy <- ape::rcoal(n = 30)
@@ -199,6 +209,8 @@
 #'   # M1 and M2 share the same sister clade: they are grafted together as one missing clade
 #'   Sister_clade = list(M1 = c("t8", "t22"), M2 = c("t8", "t22"), M3 = c("t26", "t18"), M4 = "t5"))
 #'
+#' # --- Perform grafting --- #
+#'
 #' # Graft the missing clades
 #' grafted_phy <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
 #'                                     verbose = FALSE, seed = 1234)
@@ -208,6 +220,8 @@
 #' plot(grafted_phy, cex = 0.7,
 #'      edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
 #'      tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+#'
+#' # --- Account for unsampled species --- #
 #'
 #' # Account for unsampled species with the total richness of the sister clades.
 #' # All the unique sister clades must be listed (NA = unknown richness)
@@ -219,6 +233,8 @@
 #'                                              verbose = FALSE, seed = 1234)
 #' grafted_phy_richness$sampling_fraction_df
 #'
+#' # --- Apply attribute-based exclusions --- #
+#'
 #' # Restrict the grafting to some states of a stochastic character map (simmap) of the backbone
 #' # The toy simmap has three states, "blue", "green" and "red"
 #' data(toy_backbone)
@@ -226,8 +242,9 @@
 #'
 #' # List the missing taxa to graft
 #' missing_clades_list_states <- list(
-#'    Taxon_name = c("M1", "M2"),
-#'    Sister_clade = list(M1 = c("t26", "t18"), M2 = "t14"))
+#'    Taxon_name = c("M1", "M2", "M3", "M4", "M5"),
+#'    Sister_clade = list(M1 = c("t26", "t18"), M2 = c("t26", "t18"), M3 = c("t26", "t18"),
+#'                        M4 = "t14", M5 = "t14"))
 #'
 #' # The simmap shows that the targeted stem branches recorded state shifts.
 #' plot(toy_simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
@@ -238,17 +255,23 @@
 #'                                            simmap = toy_simmap, allowed_states = "green",
 #'                                            verbose = FALSE, seed = 1234)
 #'
-#' # Plot the updated simmap, with new grafted taxa branching from "green" segments
-#' # of the stem branches of their sister clades (To update at Step 6)
-#' plot(grafted_phy_states)
-#' # plot(toy_simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+#' # Plot output
+#' plot(grafted_phy_states, cex = 0.7,
+#'      edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
+#'      tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
+#'
+#' # The updated simmap is in the output: the new grafted clades branch from "green" segments
+#' # of the stem branches of their sister clades, and each newly grafted clade is entirely "green"
+#' plot(grafted_phy_states$simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+#'
 #'
 
 
 graft_missing_clades <- function (phy, # Backbone phylogeny
                                   missing_taxa_list, # List with Taxon_name = c(), and items named after Taxon_name: Sister_clade = list(X1 = c(), ...), allowed_states = list(X1 = c(), ...) (optional)
                                   simmap = NULL, # NULL, or stochastic character map (class "simmap") of the backbone: restricts grafting to the parts of the stem branches in allowed states
-                                  allowed_states = NULL, # States of the simmap where grafting is allowed. Default for all taxa, overridden by missing_taxa_list$allowed_states
+                                  allowed_states = NULL, # States of the simmap where grafting is allowed. Default for all taxa, overridden by missing_taxa_list$allowed_states. NULL: all states
+                                  return_simmap = TRUE, # Add the updated simmap to the output ($simmap)? Only with a simmap
                                   min_valid_fraction = 0.1, # Warn for the clades with a smaller fraction of their stem branch in allowed states (only with a simmap)
                                   max_age_redraws = 1000, # Maximum number of redraws of the divergence time of a missing clade when it falls outside the allowed states (only with a simmap)
                                   min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model (the enclosing clade is used if the sister clade is smaller)
@@ -289,6 +312,10 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     if (!is.numeric(min_valid_fraction) || length(min_valid_fraction) != 1 || is.na(min_valid_fraction) || min_valid_fraction < 0 || min_valid_fraction > 1)
     {
       stop("'min_valid_fraction' must be a single number between 0 and 1")
+    }
+    if (!is.logical(return_simmap) || length(return_simmap) != 1 || is.na(return_simmap))
+    {
+      stop("'return_simmap' must be TRUE or FALSE")
     }
     if (!is.numeric(max_age_redraws) || length(max_age_redraws) != 1 || is.na(max_age_redraws) || max_age_redraws < 1 || max_age_redraws != round(max_age_redraws))
     {
@@ -613,11 +640,17 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
   }
 
   # Restore the original node labels (none if the backbone had none, and an empty string for the nodes created by grafting otherwise)
-  phy <- restore_node_labels(phy = phy, labelled = labelled_backbone)
+  phy_tracked <- phy # Save the tracked phylogeny to use to build the updated simmap below
+  phy <- restore_node_labels(phy = phy_tracked, labelled = labelled_backbone)
+
+  # With a simmap: the updated simmap of the grafted tree, built from the states followed during grafting (before the grafted elements are added)
+  updated_simmap <- NULL
+  if (use_states && return_simmap) { updated_simmap <- build_updated_simmap(tracker = tracker, phy_tracked = phy_tracked, phy = phy) }
 
   # Add the elements identifying the grafted tips and branches, and the sampling fraction table of the clades if 'total_richness_per_clades' was provided
   phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxon_name)
   if (!is.null(richness_info$table)) phy$sampling_fraction_df <- richness_info$table
+  if (!is.null(updated_simmap)) phy$simmap <- updated_simmap
 
   return(phy)
 }
