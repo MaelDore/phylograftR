@@ -335,3 +335,48 @@ test_that("toy_simmap is a valid simmap of toy_backbone with three states of sim
   # Each state is found in several tips
   expect_true(all(table(toy_simmap$states) >= 7))
 })
+
+test_that("track_graft_subtree() gives the state of the graft point to all the taxa of a grafted clade, and labels the new nodes",
+{
+  s <- toy_simmap_setup()
+  labelled <- label_backbone_nodes(s$phy)
+  phy <- labelled$phy
+  tracker <- start_state_tracking(phy, s$simmap)
+  root_age <- max(phytools::nodeHeights(phy)[, 2])
+  edge_ages <- root_age - phytools::nodeHeights(phy)
+
+  # Graft a clade of three taxa on a branch with several states, in the middle of its second piece (from the tipward end)
+  table_states <- tracker$state_table
+  node <- as.integer(names(which(table(table_states$node) >= 2))[1])
+  pieces <- table_states[table_states$node == node, ]
+  position <- mean(c(pieces$from[2], pieces$to[2]))
+  expected_state <- pieces$state[2]
+  subtree <- ape::rcoal(3, tip.label = c("M1", "M2", "M3"))
+  subtree$edge.length <- subtree$edge.length / max(ape::node.depth.edgelength(subtree)) * 2
+  subtree$root.edge <- 1
+  phy_after <- ape::bind.tree(phy, subtree, where = node, position = position)
+
+  tracked <- track_graft_subtree(tracker, phy, phy_after, node, position, c("M1", "M2", "M3"), allowed_states = unique(table_states$state), edge_ages = edge_ages)
+  expect_identical(unname(tracked$tracker$missing_state[c("M1", "M2", "M3")]), rep(expected_state, 3))
+
+  # The new nodes are labelled: the attachment node on the backbone branch, and the nodes within the clade (all the labels exist)
+  new_labels <- tracked$phy$node.label[!tracked$phy$node.label %in% phy$node.label]
+  expect_false(anyNA(tracked$phy$node.label))
+  expect_equal(sum(grepl("^gr", new_labels)), 1)
+  expect_equal(sum(grepl("^ms", new_labels)), 2) # the two internal nodes of a clade of three taxa
+  expect_identical(unique(new_labels[grepl("^ms", new_labels)]), paste0("ms", match(expected_state, tracker$states)))
+  expect_identical(new_labels[grepl("^gr", new_labels)], paste0("gr", node))
+
+  # All the branches of the tree are tracked, and the branches of the clade are entirely in the state of the graft point
+  edge_ages_after <- root_age - phytools::nodeHeights(tracked$phy)
+  clade_nodes <- c(match(c("M1", "M2", "M3"), tracked$phy$tip.label), setdiff(phytools::getDescendants(tracked$phy, ape::getMRCA(tracked$phy, c("M1", "M2", "M3"))), 1:ape::Ntip(tracked$phy)))
+  clade_nodes <- c(clade_nodes, ape::getMRCA(tracked$phy, c("M1", "M2", "M3")))
+  segments <- get_allowed_segments_tracked(tracked$tracker, tracked$phy, clade_nodes, expected_state, edge_ages_after)
+  expect_equal(nrow(segments), length(unique(clade_nodes)))
+  expect_equal(segments$to - segments$from, tracked$phy$edge.length[match(segments$node, tracked$phy$edge[, 2])])
+  expect_equal(nrow(get_allowed_segments_tracked(tracked$tracker, tracked$phy, clade_nodes, setdiff(tracker$states, expected_state), edge_ages_after)), 0)
+
+  # The two pieces of the branch of the backbone keep their states
+  info <- get_lineage_info(tracked$tracker, tracked$phy, tracked$phy$edge[, 2], edge_ages_after)
+  expect_false(any(is.na(info$backbone_node) & is.na(info$state)))
+})

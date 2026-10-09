@@ -162,3 +162,57 @@ state_of_lineage_at_age <- function (simmap, backbone_tips, age)
   ends <- cumsum(map)
   names(map)[which(distance_from_root <= ends + 1e-9)[1]]
 }
+
+
+## Independent computation of the state of the simmap at the point where a taxon was grafted:
+# the lineage is identified by the backbone tips below the sister branch of the taxon in the grafted tree, at the age of the node of the graft.
+# NA if the taxon was grafted on a branch of other grafted taxa (no backbone tip below it)
+state_at_graft <- function (grafted, simmap, taxon, missing_taxa)
+{
+  n_tips <- ape::Ntip(grafted)
+  tip <- match(taxon, grafted$tip.label)
+  parent <- grafted$edge[match(tip, grafted$edge[, 2]), 1]
+  sister <- setdiff(grafted$edge[grafted$edge[, 1] == parent, 2], tip)
+  below <- if (sister <= n_tips) sister else phytools::getDescendants(grafted, sister)
+  backbone_tips <- setdiff(grafted$tip.label[below[below <= n_tips]], missing_taxa)
+  if (length(backbone_tips) == 0) { return(NA_character_) }
+  age <- max(phytools::nodeHeights(grafted)[, 2]) - phytools::nodeheight(grafted, parent)
+  state_of_lineage_at_age(simmap, backbone_tips, age)
+}
+
+## Age of the node where a grafted taxon (or the root of a grafted clade) is attached to the rest of the tree
+graft_age <- function (grafted, taxa)
+{
+  node <- if (length(taxa) == 1) match(taxa, grafted$tip.label) else ape::getMRCA(grafted, taxa)
+  parent <- grafted$edge[match(node, grafted$edge[, 2]), 1]
+  max(phytools::nodeHeights(grafted)[, 2]) - phytools::nodeheight(grafted, parent)
+}
+
+## Change the states of a branch of a toy simmap: the branch leading to the MRCA of the tips (or to the tip),
+# cut in pieces of the given proportions of the branch length, from the rootward end to the tipward end
+set_branch_states <- function (simmap, tips, states, proportions)
+{
+  node <- if (length(tips) == 1) match(tips, simmap$tip.label) else ape::getMRCA(simmap, tips)
+  edge_row <- match(node, simmap$edge[, 2])
+  branch_length <- simmap$edge.length[edge_row]
+  simmap$maps[[edge_row]] <- stats::setNames(branch_length * proportions / sum(proportions), states)
+  simmap
+}
+
+## Build a toy simmap with the state "B" in the youngest part of the tree only (ages below 'age'), and the state "A" before
+# All the branches crossing the age are cut in two pieces. Used to test narrow and young windows of allowed states.
+make_young_state_simmap <- function (phy, age)
+{
+  root_age <- max(phytools::nodeHeights(phy)[, 2])
+  ages <- root_age - phytools::nodeHeights(phy) # rootward, tipward
+  maps <- lapply(seq_len(nrow(phy$edge)), function (e)
+  {
+    if (ages[e, 2] >= age) { return(stats::setNames(phy$edge.length[e], "A")) }
+    if (ages[e, 1] <= age) { return(stats::setNames(phy$edge.length[e], "B")) }
+    stats::setNames(c(ages[e, 1] - age, age - ages[e, 2]), c("A", "B"))
+  })
+  simmap <- phy
+  simmap$maps <- maps
+  class(simmap) <- c("simmap", "phylo")
+  simmap
+}

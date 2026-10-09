@@ -415,6 +415,68 @@ test_that("find_taxa_without_allowed_branch() flags the taxa without segment in 
   expect_null(attr(flagged_none, "valid_fraction"))
 })
 
+## Test the grouping of taxa with different allowed states
+test_that("group_and_order_clades() splits the taxa of a clade by allowed states (the same set in any order is the same group)",
+{
+  toy <- toy_setup()
+  clades <- list(toy$A, toy$A, toy$B, toy$A, toy$A)
+  allowed <- list(c("A", "B"), "C", c("A", "B"), c("B", "A"), c("C", "C"))
+  groups <- group_and_order_clades(toy$phy, clades, allowed_states = allowed)
+
+  expect_equal(groups$group_ID, c(1, 2, 3, 1, 2))
+  expect_equal(groups$group_clade_ID, c(1, 1, 2))
+  expect_equal(groups$group_allowed_states, list(c("A", "B"), "C", c("A", "B")))
+  # B (nested) first, then the groups of A
+  expect_equal(groups$group_order, c(3, 1, 2))
+  expect_equal(groups$taxa_order, c(3, 1, 4, 2, 5))
+
+  # Combined with the stem availability, and without states: the same groups as before, and no allowed states in the output
+  with_stem <- group_and_order_clades(toy$phy, clades, include_target_clade_stem = c(TRUE, TRUE, TRUE, FALSE, TRUE), allowed_states = allowed)
+  expect_equal(with_stem$group_ID, c(1, 2, 3, 4, 2))
+  expect_null(group_and_order_clades(toy$phy, clades)$group_allowed_states)
+  expect_equal(group_and_order_clades(toy$phy, clades)$group_ID, c(1, 1, 2, 1, 1))
+})
+
+## Test the share of the time window of the divergence ages covered by branches in allowed states
+test_that("find_taxa_without_allowed_branch() returns the time coverage: share of the time window of the divergence ages covered by available branches in allowed states",
+{
+  toy <- toy_setup()
+  simmap <- make_young_state_simmap(toy$phy, 4)
+  phy <- label_backbone_nodes(toy$phy)$phy
+  tracker <- start_state_tracking(phy, simmap)
+  crown_age_A <- toy$root_age - phytools::nodeheight(phy, toy$node_A)
+  mtl <- list(Taxon_name = c("with_stem", "crown_only", "tip", "whole"), Target_clade = list(toy$A, toy$A, toy$s, toy$A))
+  allowed <- list(with_stem = "B", crown_only = "B", tip = "B", whole = c("A", "B"))
+  flagged <- find_taxa_without_allowed_branch(phy, mtl, include_target_clade_stem = c(TRUE, FALSE, TRUE, TRUE), tracker = tracker, allowed_states = allowed)
+  coverage <- attr(flagged, "time_coverage")
+  expect_named(coverage, mtl$Taxon_name)
+
+  # The state "B" is found below the age 4 only: the time window goes up to the stem age of A with the stem, to its crown age without, and to the stem age of the tip
+  stem_age_A <- toy$root_age - phytools::nodeheight(phy, phy$edge[match(toy$node_A, phy$edge[, 2]), 1])
+  expect_equal(unname(coverage["with_stem"]), 4 / stem_age_A)
+  expect_equal(unname(coverage["crown_only"]), 4 / crown_age_A)
+  stem_age_tip <- toy$root_age - phytools::nodeheight(phy, phy$edge[match(match(toy$s, phy$tip.label), phy$edge[, 2]), 1])
+  expect_equal(unname(coverage["tip"]), min(4, stem_age_tip) / stem_age_tip)
+  # All the states allowed: the whole window is covered
+  expect_equal(unname(coverage["whole"]), 1)
+
+  # Independent computation on a grid of ages, with the segments of the branches of the pool
+  pool <- c(get_descendant_nodes(phy, toy$node_A), toy$node_A)
+  edge_ages <- toy$root_age - phytools::nodeHeights(phy)
+  table_states <- tracker$state_table
+  grid <- seq(0, stem_age_A, length.out = 5001)[-1] - stem_age_A / 10000
+  covered <- vapply(grid, function (age)
+  {
+    any(vapply(pool, function (node)
+    {
+      row <- match(node, phy$edge[, 2])
+      pieces <- table_states[table_states$node == node & table_states$state == "B", ]
+      any(age >= edge_ages[row, 2] + pieces$from & age <= edge_ages[row, 2] + pieces$to)
+    }, logical(1)))
+  }, logical(1))
+  expect_equal(unname(coverage["with_stem"]), mean(covered), tolerance = 2e-3)
+})
+
 ## Test the resolution of the stem exclusion of each excluded subclade
 test_that("resolve_exclude_subclades_stem() uses the subclade values, and the global value for NA or NULL, and validates its inputs",
 {

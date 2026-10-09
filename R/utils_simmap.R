@@ -540,3 +540,48 @@ track_graft <- function (tracker, phy_before, phy_after, node, position, tip_lab
   tracker$missing_state[tip_label] <- state
   list(phy = phy_after, tracker = tracker)
 }
+
+
+#' @title Update the tracking after the graft of a subtree
+#'
+#' @description Same as `track_graft()`, for a clade of several taxa grafted with `ape::bind.tree()` (e.g., a missing clade grafted on the stem branch of its sister clade).
+#'   The state of the whole subtree is the state of the point of the backbone where it was grafted.
+#'   The nodes created by the graft are labelled: the node where the subtree is attached to the branch, and the nodes within the subtree.
+#'
+#' @param tracker Output of `start_state_tracking()`, updated by `track_graft()` and `track_graft_subtree()`.
+#' @param phy_before Phylogeny before the graft, with the nodes labelled by the tracking functions.
+#' @param phy_after Phylogeny after the graft (output of `ape::bind.tree()`).
+#' @param node Integer. Tipward node ID, in `phy_before`, of the branch the subtree was grafted on.
+#' @param position Numeric. Position of the graft on this branch: distance from its tipward node.
+#' @param tip_labels Character vector. Labels of the taxa of the grafted subtree (at least 2).
+#' @param allowed_states Character vector. States in which grafting was allowed (used to solve ties at the limit of two pieces). Default is `NULL` (all states).
+#' @param edge_ages Numeric matrix. Ages (rootward, tipward) of the branches of `phy_before`.
+#'
+#' @importFrom ape getMRCA Ntip
+#'
+#' @noRd
+#'
+#' @return A list with 2 elements: the updated `phy` (`phy_after` with the new nodes labelled) and the updated `tracker`.
+#'
+
+track_graft_subtree <- function (tracker, phy_before, phy_after, node, position, tip_labels, allowed_states = NULL, edge_ages)
+{
+  info <- get_lineage_info(tracker = tracker, phy = phy_before, nodes = node, edge_ages = edge_ages)
+  state <- get_state_at_position(tracker = tracker, phy = phy_before, node = node, position = position, allowed_states = allowed_states, edge_ages = edge_ages)
+  missing_label <- paste0("ms", match(state, tracker$states))
+
+  # Root of the subtree and node where it is attached to the branch (its parent)
+  n_tips <- ape::Ntip(phy_after)
+  subtree_root <- ape::getMRCA(phy_after, tip_labels)
+  attach_node <- phy_after$edge[match(subtree_root, phy_after$edge[, 2]), 1]
+  subtree_nodes <- phytools::getDescendants(phy_after, subtree_root)
+  subtree_nodes <- c(subtree_root, subtree_nodes[subtree_nodes > n_tips])
+
+  # The attachment node belongs to the lineage of the branch (backbone lineage or missing-only subtree), and the nodes of the subtree to a missing-only subtree
+  attach_label <- if (!is.na(info$backbone_node)) paste0("gr", info$backbone_node) else missing_label
+  phy_after$node.label[attach_node - n_tips] <- attach_label
+  phy_after$node.label[subtree_nodes - n_tips] <- missing_label
+
+  tracker$missing_state[tip_labels] <- state
+  list(phy = phy_after, tracker = tracker)
+}

@@ -226,3 +226,168 @@ test_that("graft_missing_clades() keeps the node labels of the backbone and give
   expect_equal(sum(grafted_labelled$node.label != ""), phy_labelled$Nnode)
   expect_false(anyNA(grafted_labelled$node.label))
 })
+
+
+# ---- Species attributes: allowed states of a simmap ----
+
+## Test that all the states allowed gives exactly the same phylogeny as without simmap, with global or taxon-level states
+test_that("graft_missing_clades() with all the states allowed gives the same phylogeny as without simmap",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mcl <- toy_missing_clades(toy)
+
+  for (seed in 1:3)
+  {
+    without <- graft_missing_clades(toy$phy, mcl, verbose = FALSE, seed = seed)
+
+    # Global states
+    with_all <- graft_missing_clades(toy$phy, mcl, simmap = simmap, allowed_states = c("A", "B", "C"), verbose = FALSE, seed = seed)
+    expect_identical(with_all, without)
+
+    # Taxon-level states, in a different order, with the global states for some taxa (the taxa of a missing clade share the same states)
+    mcl_taxa <- mcl
+    mcl_taxa$allowed_states <- list(M1 = c("C", "A", "B"), M2 = c("B", "C", "A"), M3 = NULL, M4 = NA)
+    with_taxa <- graft_missing_clades(toy$phy, mcl_taxa, simmap = simmap, allowed_states = c("A", "B", "C"), verbose = FALSE, seed = seed)
+    expect_identical(with_taxa, without)
+  }
+})
+
+## Test that the missing clades are only grafted on the pieces of the stem branch in their allowed states
+test_that("graft_missing_clades() grafts the missing clades on the parts of the stem branches in their allowed states, and redraws the divergence times otherwise",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  # The stem branch of B: state "A" in its rootward half, state "C" in its tipward half. The terminal branch of the tip 's': "B" then "A" (from the root to the tip)
+  simmap <- set_branch_states(simmap, toy$B, c("A", "C"), c(1, 1))
+  simmap <- set_branch_states(simmap, toy$s, c("B", "A"), c(1, 1))
+  mcl <- toy_missing_clades(toy)
+  mcl$allowed_states <- list(M1 = "C", M2 = "C", M3 = NULL, M4 = "A")
+
+  crown_age_B <- toy$root_age - phytools::nodeheight(toy$phy, toy$node_B)
+  stem_B <- toy$phy$edge.length[match(toy$node_B, toy$phy$edge[, 2])]
+  tip_s <- toy$phy$edge.length[match(match(toy$s, toy$phy$tip.label), toy$phy$edge[, 2])]
+
+  ages_B <- ages_s <- numeric(0)
+  for (seed in 1:15)
+  {
+    grafted <- quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = simmap, allowed_states = c("A", "B", "C"), seed = seed)
+    expect_true(ape::is.ultrametric(grafted))
+    expect_backbone_preserved(grafted, toy$phy, mcl$Taxon_name)
+
+    # M1 and M2 (state "C") are grafted on the tipward half of the stem of B, and M4 (state "A") on the tipward half of the terminal branch of 's'
+    ages_B <- c(ages_B, graft_age(grafted, c("M1", "M2")))
+    ages_s <- c(ages_s, graft_age(grafted, "M4"))
+    expect_identical(state_of_lineage_at_age(simmap, toy$B, tail(ages_B, 1)), "C")
+    expect_identical(state_of_lineage_at_age(simmap, toy$s, tail(ages_s, 1)), "A")
+  }
+  expect_true(all(ages_B >= crown_age_B - 1e-6 & ages_B <= crown_age_B + stem_B / 2 + 1e-6))
+  expect_true(all(ages_s >= 0 & ages_s <= tip_s / 2 + 1e-6))
+
+  # The ages are not all the same: they are spread over the allowed half
+  expect_gt(length(unique(round(ages_B, 6))), 5)
+})
+
+## Test that the divergence times are redrawn (a truncated draw), by counting the draws of TreeSim::corsim()
+test_that("graft_missing_clades() draws the divergence time again until it is in an allowed state",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  simmap <- set_branch_states(simmap, toy$B, c("A", "C"), c(1, 1))
+  mcl <- list(Taxon_name = "M1", Sister_clade = list(M1 = toy$B), allowed_states = list(M1 = "C"))
+
+  n_draws <- 0
+  original_corsim <- TreeSim::corsim
+  local_mocked_bindings(corsim = function (...) { n_draws <<- n_draws + 1; original_corsim(...) }, .package = "TreeSim")
+  for (seed in 1:20) { quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = simmap, seed = seed) }
+  # Without restriction, one draw per run. Here a part of the draws falls in the rootward half and is drawn again
+  expect_gt(n_draws, 20)
+})
+
+## Test the stops and warning before grafting
+test_that("graft_missing_clades() stops or warns before grafting on invalid or problematic 'simmap' and 'allowed_states'",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  simmap <- set_branch_states(simmap, toy$B, c("A", "C"), c(1, 1))
+  mcl <- toy_missing_clades(toy)
+  graft <- function (...) graft_missing_clades(toy$phy, mcl, verbose = FALSE, ...)
+
+  # A simmap requires allowed states, which must be in the simmap
+  expect_error(graft(simmap = simmap), "states in which grafting is allowed are required.*4 taxa have none")
+  expect_error(graft(simmap = simmap, allowed_states = c("A", "red")), "global 'allowed_states' argument.*'red'.*'A', 'B', 'C'")
+  # Allowed states without simmap
+  expect_error(graft(allowed_states = "A"), "requires a 'simmap'")
+  mcl_states <- mcl
+  mcl_states$allowed_states <- list(M1 = "A", M2 = "A", M3 = "A", M4 = "A")
+  expect_error(graft_missing_clades(toy$phy, mcl_states, verbose = FALSE), "requires a 'simmap'")
+  # Several maps
+  expect_error(graft(simmap = structure(list(simmap, simmap), class = c("multiSimmap", "multiPhylo")), allowed_states = "A"), "multiSimmap")
+  # Other arguments
+  for (value in list(-0.1, 1.5, NA, "0.1", c(0.1, 0.2)))
+  {
+    expect_error(graft(simmap = simmap, allowed_states = "A", min_valid_fraction = value), "'min_valid_fraction' must be a single number between 0 and 1")
+  }
+  for (value in list(0, -1, 1.5, NA, "10", c(10, 20)))
+  {
+    expect_error(graft(simmap = simmap, allowed_states = "A", max_age_redraws = value), "'max_age_redraws' must be a single positive integer")
+  }
+
+  # Taxa of the same missing clade (M1 and M2, same sister clade) with different allowed states
+  mcl_inconsistent <- mcl
+  mcl_inconsistent$allowed_states <- list(M1 = "A", M2 = c("A", "C"), M3 = NULL, M4 = NULL)
+  expect_error(graft_missing_clades(toy$phy, mcl_inconsistent, simmap = simmap, allowed_states = "A", verbose = FALSE),
+               "1 missing clade\\(s\\) have taxa with different allowed states.*sister clade tips: .*M1 \\(A\\), M2 \\(A, C\\)")
+  # The same set of states in a different order is not a difference
+  mcl_inconsistent$allowed_states <- list(M1 = c("A", "C"), M2 = c("C", "A"), M3 = NULL, M4 = NULL)
+  expect_no_error(graft_missing_clades(toy$phy, mcl_inconsistent, simmap = simmap, allowed_states = c("A", "B", "C"), verbose = FALSE))
+
+  # A stem branch without any piece in the allowed states: the entire stem of the tip 's' is in state "A"
+  mcl_none <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$s, M2 = toy$B), allowed_states = list(M1 = "B", M2 = c("A", "C")))
+  expect_error(graft_missing_clades(toy$phy, mcl_none, simmap = simmap, verbose = FALSE),
+               "1 missing clade\\(s\\) have no piece of the stem branch of their sister clade in their allowed states.*sister clade tips: .*allowed states: B")
+
+  # A small share of the stem branch in the allowed states: warning listing the clades. The stem of B is half in state "C"
+  mcl_B <- list(Taxon_name = "M1", Sister_clade = list(M1 = toy$B))
+  expect_warning(graft_missing_clades(toy$phy, mcl_B, simmap = simmap, allowed_states = "C", min_valid_fraction = 0.6, verbose = FALSE),
+                 "1 missing clade\\(s\\) have less than 60% of the stem branch of their sister clade in their allowed states.*50.00% in allowed states")
+  expect_no_warning(graft_missing_clades(toy$phy, mcl_B, simmap = simmap, allowed_states = "C", min_valid_fraction = 0.4, verbose = FALSE))
+})
+
+## Test the stop when no usable divergence time is found
+test_that("graft_missing_clades() stops after 'max_age_redraws' redraws of the divergence time, with an informative message",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  # Only a tiny piece of the stem branch of B (at its tipward end) is in state "C"
+  simmap <- set_branch_states(simmap, toy$B, c("A", "C"), c(1, 1e-7))
+  mcl <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B, M2 = toy$B))
+  expect_error(suppressWarnings(graft_missing_clades(toy$phy, mcl, simmap = simmap, allowed_states = "C", max_age_redraws = 3, verbose = FALSE, seed = 1)),
+               "No usable divergence time.*M1, M2.*after 3 redraws.*'max_age_redraws'.*allowed states: C")
+})
+
+## Test the grafting of missing clades after the grafting of nested ones with a simmap (tracking of the states through bind.tree), and the node labels
+test_that("graft_missing_clades() with a simmap handles nested sister clades, several taxa per missing clade and node labels",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  # B and A are nested sister clades, each with a missing clade of several taxa
+  mcl <- list(Taxon_name = c("M1", "M2", "M3", "M4", "M5"), Sister_clade = list(M1 = toy$B, M2 = toy$B, M3 = toy$B, M4 = toy$A, M5 = toy$A))
+
+  for (seed in 1:3)
+  {
+    without <- graft_missing_clades(toy$phy, mcl, verbose = FALSE, seed = seed)
+    with_all <- graft_missing_clades(toy$phy, mcl, simmap = simmap, allowed_states = c("A", "B", "C"), verbose = FALSE, seed = seed)
+    expect_identical(with_all, without)
+  }
+
+  phy_support <- toy$phy
+  phy_support$node.label <- paste0("support", seq_len(phy_support$Nnode))
+  grafted <- graft_missing_clades(phy_support, mcl, simmap = simmap, allowed_states = c("A", "B"), verbose = FALSE, seed = 1)
+  expect_length(grafted$node.label, grafted$Nnode)
+  expect_setequal(grafted$node.label[grafted$node.label != ""], phy_support$node.label)
+  expect_false(anyNA(grafted$node.label))
+  expect_equal(sum(grafted$node.label == ""), grafted$Nnode - phy_support$Nnode)
+  grafted_no_labels <- graft_missing_clades(toy$phy, mcl, simmap = simmap, allowed_states = c("A", "B"), verbose = FALSE, seed = 1)
+  expect_null(grafted_no_labels$node.label)
+})

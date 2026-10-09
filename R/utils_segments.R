@@ -98,3 +98,28 @@ draw_point_in_segments <- function (segments)
   list(node = segments$node[selected],
        position = stats::runif(n = 1, min = segments$from[selected], max = segments$to[selected]))
 }
+
+
+#' @title Length of the union of intervals
+#'
+#' @description Total length covered by a set of intervals, counting the parts covered by several intervals only once.
+#'   This is used to evaluate the proportion of a time-window that is available for grafting based on
+#'   the time interval covered by the union of the valid segments.
+#'
+#' @param from Numeric vector. Start of the intervals.
+#' @param to Numeric vector. End of the intervals (same length as `from`).
+#'
+#' @noRd
+#'
+#' @return Numeric. The length of the union of the intervals (0 if there is none).
+#'
+
+get_union_length <- function (from, to)
+{
+  if (length(from) == 0) { return(0) }
+  ord <- order(from)
+  from <- from[ord]; to <- to[ord]
+  # Each interval adds the part of it that is beyond the end of all the intervals starting before it
+  covered_until <- c(-Inf, cummax(to)[-length(to)])
+  sum(pmax(0, to - pmax(from, covered_until)))
+}

@@ -74,3 +74,21 @@ test_that("draw_point_in_segments() draws segments proportionally to their lengt
   nodes <- vapply(seq_len(4000), function (i) draw_point_in_segments(seg)$node, integer(1))
   expect_equal(mean(nodes == 7L), 0.75, tolerance = 0.05)
 })
+
+test_that("get_union_length() counts the parts covered by several intervals only once",
+{
+  expect_equal(get_union_length(numeric(0), numeric(0)), 0)
+  expect_equal(get_union_length(1, 4), 3)
+  # Disjoint, overlapping, nested and touching intervals, in any order
+  expect_equal(get_union_length(c(0, 5, 8), c(2, 6, 9)), 4)
+  expect_equal(get_union_length(c(0, 1), c(3, 5)), 5)
+  expect_equal(get_union_length(c(0, 1), c(10, 4)), 10)
+  expect_equal(get_union_length(c(6, 0, 3), c(8, 3, 6)), 8)
+  expect_equal(get_union_length(c(5, 0, 8), c(6, 2, 9)), get_union_length(c(0, 5, 8), c(2, 6, 9)))
+  # Same result as a brute-force computation on a fine grid
+  set.seed(1)
+  from <- runif(8, 0, 10); to <- from + runif(8, 0, 3)
+  grid <- seq(0, 13, length.out = 130001)[-1] - 0.5 * 13 / 130000
+  covered <- vapply(grid, function (x) any(x >= from & x <= to), logical(1))
+  expect_equal(get_union_length(from, to), mean(covered) * 13, tolerance = 1e-3)
+})

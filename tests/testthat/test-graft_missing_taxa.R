@@ -760,22 +760,6 @@ test_that("graft_missing_taxa() saves temporary phylogenies with the original no
 
 # ---- Species attributes: allowed states of a simmap ----
 
-## Independent computation of the state of the simmap at the point where a taxon was grafted:
-# the lineage is identified by the backbone tips below the sister branch of the taxon in the grafted tree, at the age of the node of the graft.
-# NA if the taxon was grafted on a branch of other grafted taxa (no backbone tip below it)
-state_at_graft <- function (grafted, simmap, taxon, missing_taxa)
-{
-  n_tips <- ape::Ntip(grafted)
-  tip <- match(taxon, grafted$tip.label)
-  parent <- grafted$edge[match(tip, grafted$edge[, 2]), 1]
-  sister <- setdiff(grafted$edge[grafted$edge[, 1] == parent, 2], tip)
-  below <- if (sister <= n_tips) sister else phytools::getDescendants(grafted, sister)
-  backbone_tips <- setdiff(grafted$tip.label[below[below <= n_tips]], missing_taxa)
-  if (length(backbone_tips) == 0) { return(NA_character_) }
-  age <- max(phytools::nodeHeights(grafted)[, 2]) - phytools::nodeheight(grafted, parent)
-  state_of_lineage_at_age(simmap, backbone_tips, age)
-}
-
 ## Test that all the states allowed gives exactly the same phylogeny as without simmap, with global or taxon-level states
 test_that("graft_missing_taxa() with all the states allowed gives the same phylogeny as without simmap",
 {
@@ -899,11 +883,16 @@ test_that("graft_missing_taxa() stops or warns on invalid 'simmap', 'allowed_sta
   names(mtl_unnamed$allowed_states) <- NULL
   expect_error(graft_missing_taxa(toy$phy, mtl_unnamed, simmap = simmap, method = "uniform", verbose = FALSE), "must be named after 'Taxon_name'")
 
-  # Several maps, a simmap of another tree, and the BD_clades method (not available yet)
+  # Several maps, and a simmap of another tree
   expect_error(graft(simmap = structure(list(simmap, simmap), class = c("multiSimmap", "multiPhylo")), allowed_states = "A"), "multiSimmap")
   other <- make_toy_simmap(make_toy_phy(n_tips = 20, seed = 99))
   expect_error(graft(simmap = other, allowed_states = "A"), "tips|topology|branch lengths")
-  expect_error(graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = "A", method = "BD_clades", verbose = FALSE), "only available with method = 'uniform'")
+
+  # max_age_redraws
+  for (value in list(0, -1, 1.5, NA, "10", c(10, 20)))
+  {
+    expect_error(graft(simmap = simmap, allowed_states = "A", max_age_redraws = value), "'max_age_redraws' must be a single positive integer")
+  }
 
   # min_valid_fraction
   for (value in list(-0.1, 1.5, NA, "0.1", c(0.1, 0.2)))
@@ -954,6 +943,215 @@ test_that("graft_missing_taxa() with a simmap gives the same node labels as with
   phy_support <- toy$phy
   phy_support$node.label <- paste0("support", seq_len(phy_support$Nnode))
   grafted <- graft_missing_taxa(phy_support, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "uniform", verbose = FALSE, seed = 1)
+  expect_length(grafted$node.label, grafted$Nnode)
+  expect_equal(sum(grafted$node.label == ""), length(mtl$Taxon_name))
+  expect_setequal(grafted$node.label[grafted$node.label != ""], phy_support$node.label)
+})
+
+
+# ---- Species attributes with method = "BD_clades" ----
+
+## Test that all the states allowed gives exactly the same phylogeny as without simmap, with the BD method
+test_that("graft_missing_taxa() with method = 'BD_clades' and all the states allowed gives the same phylogeny as without simmap",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mtl <- toy_missing_taxa(toy)
+  # Taxa without access to the stem, and several groups in the same clade
+  mtl$include_target_clade_stem <- c(X1 = TRUE, X2 = FALSE, X3 = NA, X4 = NA, X5 = TRUE)
+
+  for (seed in 1:3)
+  {
+    without <- graft_missing_taxa(toy$phy, mtl, method = "BD_clades", verbose = FALSE, seed = seed)
+
+    # Global states
+    with_all <- graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B", "C"), method = "BD_clades", verbose = FALSE, seed = seed)
+    expect_identical(with_all, without)
+
+    # Taxon-level states, in a different order, with the global states for some taxa: the taxa are in the same groups
+    mtl_taxa <- mtl
+    mtl_taxa$allowed_states <- list(X1 = c("C", "A", "B"), X2 = NULL, X3 = c("B", "A", "C"), X4 = NA, X5 = NULL)
+    with_taxa <- graft_missing_taxa(toy$phy, mtl_taxa, simmap = simmap, allowed_states = c("A", "B", "C"), method = "BD_clades", verbose = FALSE, seed = seed)
+    expect_identical(with_taxa, without)
+  }
+})
+
+## Test that taxa are only grafted on pieces of branches in their allowed states with the BD method, and that the constraints are still respected
+test_that("graft_missing_taxa() with method = 'BD_clades' grafts the taxa in their allowed states only, global or taxon-level, and respects the other constraints",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  taxa <- c(paste0("X", 1:8), "Y1", "Y2", "Y3")
+  mtl <- list(Taxon_name = taxa,
+              Target_clade = c(rep(list(toy$A), 8), rep(list(toy$C), 3)),
+              Excluded_subclades = c(rep(list(list(toy$B)), 8), rep(list(NULL), 3)),
+              allowed_states = c(rep(list(NULL), 8), rep(list("C"), 3)))
+  names(mtl$Target_clade) <- names(mtl$Excluded_subclades) <- names(mtl$allowed_states) <- taxa
+
+  n_checked <- 0
+  for (seed in 1:4)
+  {
+    grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "BD_clades", seed = seed)
+    expect_valid_graft(grafted, toy$phy, mtl)
+    for (taxon in taxa)
+    {
+      state <- state_at_graft(grafted, simmap, taxon, taxa)
+      if (is.na(state)) { next }
+      n_checked <- n_checked + 1
+      expect_true(state %in% (if (taxon %in% c("Y1", "Y2", "Y3")) "C" else c("A", "B")), info = paste(taxon, "seed", seed))
+    }
+  }
+  # The states of many taxa could be checked independently (the others were grafted on the branches of other grafted taxa)
+  expect_gt(n_checked, 10)
+
+  # Restricting the states changes the result, and the same seed gives the same result
+  unrestricted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B", "C"), method = "BD_clades", seed = 1)
+  expect_false(identical(unrestricted$edge.length, grafted$edge.length))
+  again <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "BD_clades", seed = 4)
+  expect_identical(again, grafted)
+})
+
+## Test that grafted taxa have the state of the point where they were grafted, so taxa with other allowed states cannot be grafted on their branches (BD method)
+test_that("graft_missing_taxa() with method = 'BD_clades' does not graft taxa on the branches of grafted taxa in other states",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  # The terminal branch of the tip 's' is entirely in state "A": the taxa grafted there are in state "A"
+  expect_identical(names(simmap$maps[[match(match(toy$s, toy$phy$tip.label), toy$phy$edge[, 2])]]), "A")
+  tip_taxa <- paste0("S", 1:5)
+  clade_taxa <- paste0("Y", 1:10)
+  taxa <- c(tip_taxa, clade_taxa)
+  mtl <- list(Taxon_name = taxa,
+              Target_clade = c(rep(list(toy$s), 5), rep(list(toy$A), 10)),
+              allowed_states = c(rep(list("A"), 5), rep(list("B"), 10)))
+  names(mtl$Target_clade) <- names(mtl$allowed_states) <- taxa
+
+  for (seed in 1:5)
+  {
+    grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, method = "BD_clades", seed = seed)
+    s_subtree <- phytools::getDescendants(grafted, ape::getMRCA(grafted, c(toy$s, tip_taxa)))
+    s_subtree_tips <- grafted$tip.label[s_subtree[s_subtree <= ape::Ntip(grafted)]]
+    expect_true(all(tip_taxa %in% s_subtree_tips))
+    # The Y taxa (state "B" only) are never grafted in this subtree, which is entirely in state "A"
+    expect_false(any(clade_taxa %in% s_subtree_tips), info = paste("seed", seed))
+    # When they are grafted on a branch of the backbone, it is in state "B"
+    states <- vapply(clade_taxa, function (taxon) state_at_graft(grafted, simmap, taxon, taxa), character(1))
+    expect_true(all(states[!is.na(states)] == "B"), info = paste("seed", seed))
+  }
+})
+
+## Test the groups of taxa with the BD method: taxa of the same clade with different allowed states are drawn in separate groups, with one fit per clade
+test_that("with method = 'BD_clades' and a simmap, taxa of a clade are grouped by allowed states, with one BD fit per clade",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  # X1-X4 target A: two sets of allowed states, in alternating order (and the same set in a different order); X5 targets B, nested in A
+  mtl <- list(Taxon_name = c("X1", "X2", "X3", "X4", "X5"), Target_clade = list(X1 = toy$A, X2 = toy$A, X3 = toy$A, X4 = toy$A, X5 = toy$B),
+              allowed_states = list(X1 = c("A", "B"), X2 = "C", X3 = c("B", "A"), X4 = "C", X5 = c("A", "B", "C")))
+
+  n_fits <- 0
+  grafts <- list()
+  original_fit <- fit_bd_on_clade
+  original_graft <- graft_from_divergence_age
+  local_mocked_bindings(
+    fit_bd_on_clade = function (...) { n_fits <<- n_fits + 1; original_fit(...) },
+    graft_from_divergence_age = function (...) {
+      args <- list(...)
+      grafts[[length(grafts) + 1]] <<- data.frame(taxon = args$tip_label, states = paste(sort(args$allowed_states), collapse = "|"))
+      original_graft(...) })
+
+  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "BD_clades", simmap = simmap, seed = 1)
+  grafts <- do.call(rbind, grafts)
+
+  # One fit for B, one for A (although the taxa of A form two groups)
+  expect_equal(n_fits, 2)
+  # B first (nested), then the taxa of A grouped by states: each set of states is in one block
+  expect_equal(grafts$taxon[1], "X5")
+  states_A <- grafts$states[grafts$taxon != "X5"]
+  expect_equal(length(rle(states_A)$lengths), 2)
+  expect_setequal(grafts$taxon[grafts$states == "A|B" & grafts$taxon != "X5"], c("X1", "X3"))
+  expect_setequal(grafts$taxon[grafts$states == "C"], c("X2", "X4"))
+})
+
+## Test the grafting in a narrow and young window of allowed states: the ages drawn that no branch crosses are redrawn, and the taxa cluster in the window
+test_that("graft_missing_taxa() with method = 'BD_clades' redraws the ages that no branch in an allowed state crosses, and grafts all the taxa in a narrow young window",
+{
+  toy <- toy_setup()
+  window_age <- 4 # The state "B" is only found below this age (the root age is 50)
+  simmap <- make_young_state_simmap(toy$phy, window_age)
+  taxa <- paste0("Y", 1:8)
+  mtl <- list(Taxon_name = taxa, Target_clade = setNames(rep(list(toy$A), 8), taxa))
+
+  n_unusable <- 0
+  original_graft <- graft_from_divergence_age
+  local_mocked_bindings(graft_from_divergence_age = function (...) {
+    out <- original_graft(...)
+    if (is.null(out)) { n_unusable <<- n_unusable + 1 }
+    out })
+
+  for (seed in 1:4)
+  {
+    grafted <- suppressWarnings(graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = "B", method = "BD_clades", verbose = FALSE, seed = seed))
+    expect_valid_graft(grafted, toy$phy, mtl)
+    # All the taxa are in state "B": the nodes created by the grafts are all younger than the window, the first ones on the backbone and the others on the lineages grafted before
+    node_ages <- vapply(taxa, function (taxon) graft_age(grafted, taxon), numeric(1))
+    expect_true(all(node_ages <= window_age + 1e-6), info = paste("seed", seed))
+  }
+  # Many ages drawn could not be used, and were redrawn (the clade A has a crown age of about 13 and the window is below 4)
+  expect_gt(n_unusable, 0)
+
+  # Without redraw, with the same simmap but all the states allowed, nothing is redrawn
+  n_unusable <- 0
+  suppressWarnings(graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "BD_clades", verbose = FALSE, seed = 1))
+  expect_equal(n_unusable, 0)
+})
+
+## Test the stop when no usable age is found
+test_that("graft_missing_taxa() with method = 'BD_clades' stops after 'max_age_redraws' redraws of the ages, with an informative message",
+{
+  toy <- toy_setup()
+  # The state "B" only exists in a tiny window: no age drawn can be used, except by (very unlikely) chance
+  simmap <- make_young_state_simmap(toy$phy, 1e-4)
+  taxa <- paste0("Y", 1:3)
+  mtl <- list(Taxon_name = taxa, Target_clade = setNames(rep(list(toy$A), 3), taxa))
+  expect_error(suppressWarnings(graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = "B", method = "BD_clades", max_age_redraws = 3, verbose = FALSE, seed = 1)),
+               "No usable divergence age.*after 3 redraws.*'max_age_redraws'.*Y1.*allowed states: B")
+})
+
+## Test the warning on the share of the time window in allowed states, with the BD method
+test_that("graft_missing_taxa() with method = 'BD_clades' warns about the taxa with a small share of the time window of their divergence ages in allowed states",
+{
+  toy <- toy_setup()
+  simmap <- make_young_state_simmap(toy$phy, 4)
+  taxa <- paste0("Y", 1:3)
+  mtl <- list(Taxon_name = taxa, Target_clade = setNames(rep(list(toy$A), 3), taxa))
+
+  # The window of the state "B" covers 4 / 50 = 8% of the time window of the taxa (from the present to the stem age of A, which is the root)
+  expect_warning(graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = "B", method = "BD_clades", verbose = FALSE),
+                 "3 taxa have less than 10% of the time window of their divergence ages covered by available branches in their allowed states.*Y1 .*8.00% in allowed states")
+  expect_no_warning(graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = "B", min_valid_fraction = 0.05, method = "BD_clades", verbose = FALSE))
+  expect_no_warning(graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "BD_clades", verbose = FALSE))
+  # Without the stem, the time window is shorter (up to the crown age of A, 12.8): a larger share is covered
+  mtl_crown <- c(mtl, list(include_target_clade_stem = setNames(rep(FALSE, 3), taxa)))
+  expect_no_warning(graft_missing_taxa(toy$phy, mtl_crown, simmap = simmap, allowed_states = "B", min_valid_fraction = 0.2, method = "BD_clades", verbose = FALSE))
+  # The warning with the uniform method is based on the length of the branches
+  expect_warning(graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = "B", min_valid_fraction = 0.5, method = "uniform", verbose = FALSE),
+                 "of the length of their available branches in their allowed states")
+})
+
+## Test the node labels of the grafted phylogeny with a simmap and the BD method
+test_that("graft_missing_taxa() with a simmap and method = 'BD_clades' gives the same node labels as without",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mtl <- toy_missing_taxa(toy)
+
+  grafted <- graft_missing_taxa(toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "BD_clades", verbose = FALSE, seed = 1)
+  expect_null(grafted$node.label)
+
+  phy_support <- toy$phy
+  phy_support$node.label <- paste0("support", seq_len(phy_support$Nnode))
+  grafted <- graft_missing_taxa(phy_support, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "BD_clades", verbose = FALSE, seed = 1)
   expect_length(grafted$node.label, grafted$Nnode)
   expect_equal(sum(grafted$node.label == ""), length(mtl$Taxon_name))
   expect_setequal(grafted$node.label[grafted$node.label != ""], phy_support$node.label)

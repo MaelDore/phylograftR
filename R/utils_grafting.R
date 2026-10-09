@@ -734,8 +734,8 @@ get_excluded_branch_nodes <- function (phy, excluded_subclades_tips_list, exclud
 
 #' @title Group missing taxa by clade and order the clades by nestedness
 #'
-#' @description Group missing taxa by the node of their MRCA and by the availability of the stem of their target clade,
-#'   then order groups by size so nested ones come first
+#' @description Group missing taxa by the node of their MRCA, by the availability of the stem of their target clade and,
+#'   with a simmap, by their allowed states. Then order groups by size so nested ones come first
 #'   (a clade always has strictly more descendants than any clade nested within it,
 #'   thus sorting on clade size is enough to list nested clades first).
 #'   The rationale is to graft taxa in nested clades first, so they are accounted for when grafting missing taxa in higher clades
@@ -745,6 +745,9 @@ get_excluded_branch_nodes <- function (phy, excluded_subclades_tips_list, exclud
 #'   for their divergence times differs (stem age or crown age). The groups of a same clade are consecutive, with `include_target_clade_stem = FALSE` first
 #'   (taxa restricted to the crown are grafted first, so they are present when drawing the taxa that can also use the stem).
 #'
+#'   With a simmap, taxa with different allowed states also form different groups (the same set of states in any order is the same group),
+#'   as the branches that can be used for the divergence ages of the group are not the same.
+#'
 #'   Use tips as inputs to define the associated clades:
 #'     * One tip defines a terminal branch.
 #'     * Two or more tips define a clade based on their MRCA.
@@ -753,24 +756,26 @@ get_excluded_branch_nodes <- function (phy, excluded_subclades_tips_list, exclud
 #' @param clade_tips List of character vectors defining the clade of each taxon.
 #' @param include_target_clade_stem Logical vector with one value per taxon (no `NA`), or `NULL` (all `TRUE`).
 #'   Whether the stem of the target clade is available for each taxon. It is always `TRUE` for single-tip clades (their only branch is their stem).
+#' @param allowed_states `NULL`, or list with one character vector per taxon (as resolved by `resolve_allowed_states()`). The states in which each taxon can be grafted.
 #'
 #' @noRd
 #'
-#' @return A list with 6 elements.
+#' @return A list with 7 elements.
 #'
 #'  The first two are taxon-level elements (one value per taxon):
 #'  * `group_ID` Integer vector. ID of the group (i.e., unique clade and `include_target_clade_stem` value) the taxon belongs to.
 #'  * `taxa_order` Integer vector. Indices of the taxa ordered by group, so the taxa of nested clades come first.
 #'     Used to graft taxa one by one while processing nested clades first.
 #'
-#'  The last four elements are group-level elements (one value per group):
+#'  The last five elements are group-level elements (one value per group):
 #'  * `group_clade_tips` List with one element per group. Character vector of the tips used to identify the associated clade.
 #'  * `group_clade_ID` Integer vector. ID of the unique clade of the group. Groups of the same clade share it.
 #'  * `group_include_target_clade_stem` Logical vector. Whether the stem of the target clade is available for the taxa of the group.
+#'  * `group_allowed_states` List of character vectors, with the allowed states of the taxa of each group. `NULL` if `allowed_states` is `NULL`.
 #'  * `group_order` Integer vector with one value per group. Group IDs ranked by clade size, so nested clades come first.
 #'
 
-group_and_order_clades <- function (phy, clade_tips, include_target_clade_stem = NULL)
+group_and_order_clades <- function (phy, clade_tips, include_target_clade_stem = NULL, allowed_states = NULL)
 {
   n_taxa <- length(clade_tips)
   # Extract (MRCA) nodes associated to clades
@@ -782,8 +787,13 @@ group_and_order_clades <- function (phy, clade_tips, include_target_clade_stem =
   if (is.null(include_target_clade_stem)) { include_target_clade_stem <- rep(TRUE, n_taxa) }
   include_target_clade_stem <- include_target_clade_stem | (nodes <= ape::Ntip(phy))
 
-  # Group taxa by clade and stem availability
+  # Group taxa by clade, stem availability and, with a simmap, allowed states (the same set of states, whatever the order)
   key <- paste(clade_ID, include_target_clade_stem, sep = "_")
+  if (!is.null(allowed_states))
+  {
+    states_key <- vapply(allowed_states, function (x) paste(sort(unique(x)), collapse = "|"), character(1))
+    key <- paste(key, states_key, sep = "_")
+  }
   group <- match(key, unique(key))
   # Record first appearance of each group in the list
   first <- match(seq_along(unique(key)), group)
@@ -805,6 +815,7 @@ group_and_order_clades <- function (phy, clade_tips, include_target_clade_stem =
                           group_clade_tips = clade_tips[first], # Tips defining the clade of each group
                           group_clade_ID = group_clade_ID, # ID of the unique clade of each group
                           group_include_target_clade_stem = group_include_target_clade_stem, # Stem availability of each group
+                          group_allowed_states = if (is.null(allowed_states)) NULL else lapply(allowed_states[first], unique), # Allowed states of each group (NULL without simmap)
                           group_order = group_order) # Order of the groups to use in the loop
 
   # Export output
@@ -1036,8 +1047,10 @@ check_excluded_subclades_position <- function (phy, missing_taxa_list)
 #'   * `Target_clade` Character string. Tips used to describe the target clade associated with the missing taxon; separated by commas if multiple.
 #'   * `Cause` Character string. `"excluded"` if all the branches of the pool are excluded, `"allowed_states"` if some branches are available but none has a segment in an allowed state.
 #'
-#'   With a `tracker`, the data.frame has an attribute `"valid_fraction"`: numeric vector, named after the taxa (all the taxa, not only the flagged ones),
-#'   with the fraction of the total length of the available branches of the taxon that is in its allowed states (`NA` for the taxa without any available branch).
+#'   With a `tracker`, the data.frame has two attributes, numeric vectors named after the taxa (all the taxa, not only the flagged ones, `NA` for the taxa without any available branch):
+#'   * `"valid_fraction"` The fraction of the total length of the available branches of the taxon that is in its allowed states.
+#'   * `"time_coverage"` The fraction of the time window of the divergence ages of the taxon (from the present to the stem age of its target clade,
+#'     or to its crown age if the stem is not available) where at least one available branch is in an allowed state.
 #'
 
 find_taxa_without_allowed_branch <- function (phy,
@@ -1051,7 +1064,11 @@ find_taxa_without_allowed_branch <- function (phy,
   n_missing <- length(missing_taxa_list$Taxon_name)
   use_states <- !is.null(tracker)
   # Ages (rootward, tipward) of the branches, to cut the segments in allowed states
-  if (use_states) { edge_ages <- max(phytools::nodeHeights(phy)[, 2]) - phytools::nodeHeights(phy) }
+  if (use_states)
+  {
+    root_age <- max(phytools::nodeHeights(phy)[, 2])
+    edge_ages <- root_age - phytools::nodeHeights(phy)
+  }
   root_node <- setdiff(phy$edge[, 1], phy$edge[, 2])
   # One value per taxon
   include_target_clade_stem_taxa <- rep_len(include_target_clade_stem, n_missing)
@@ -1072,6 +1089,7 @@ find_taxa_without_allowed_branch <- function (phy,
   flagged <- logical(n_missing)
   no_state <- logical(n_missing) # Flagged because no available segment is in an allowed state
   valid_fraction <- rep(NA_real_, n_missing)
+  time_coverage <- rep(NA_real_, n_missing)
 
   ## Loop per taxa
   for (i in seq_len(n_missing))
@@ -1119,6 +1137,18 @@ find_taxa_without_allowed_branch <- function (phy,
       pool_length <- sum(phy$edge.length[match(allowed_nodes, phy$edge[, 2])])
       valid_fraction[i] <- if (pool_length > 0) sum(segments_i$to - segments_i$from) / pool_length else NA_real_
       no_state[i] <- nrow(segments_i) == 0
+
+      # Share of the time window of the divergence ages (from the present to the stem age, or to the crown age without the stem) covered by the segments in allowed states
+      edge_row <- match(MRCA_node_i, phy$edge[, 2])
+      crown_age <- if (is.na(edge_row)) root_age else edge_ages[edge_row, 2]
+      upper_age <- if (stem_available) edge_ages[edge_row, 1] else crown_age
+      if (upper_age > 0)
+      {
+        seg_row <- match(segments_i$node, phy$edge[, 2])
+        seg_age_tipward <- edge_ages[seg_row, 2] + segments_i$from
+        seg_age_rootward <- edge_ages[seg_row, 1] - (phy$edge.length[seg_row] - segments_i$to)
+        time_coverage[i] <- get_union_length(from = pmax(0, seg_age_tipward), to = pmin(upper_age, seg_age_rootward)) / upper_age
+      }
     }
   }
   flagged_any <- flagged | no_state
@@ -1129,7 +1159,11 @@ find_taxa_without_allowed_branch <- function (phy,
     Taxon_name = missing_taxa_list$Taxon_name[flagged_any],
     Target_clade = vapply(missing_taxa_list$Target_clade[flagged_any], paste, character(1), collapse = ", "),
     Cause = ifelse(no_state[flagged_any], "allowed_states", "excluded"), stringsAsFactors = FALSE)
-  if (use_states) { attr(flagged_taxa_df, "valid_fraction") <- stats::setNames(valid_fraction, missing_taxa_list$Taxon_name) }
+  if (use_states)
+  {
+    attr(flagged_taxa_df, "valid_fraction") <- stats::setNames(valid_fraction, missing_taxa_list$Taxon_name)
+    attr(flagged_taxa_df, "time_coverage") <- stats::setNames(time_coverage, missing_taxa_list$Taxon_name)
+  }
 
   # Return df
   return(flagged_taxa_df)

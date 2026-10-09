@@ -12,7 +12,9 @@
 #'
 #' @description This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny.
 #'   The position of each taxon is constrained by its taxonomic assignment (the target clade, defined in `Target_clade`),
-#'   and optionally by exclusions based on species attributes (the excluded subclades, defined in `Excluded_subclades`).
+#'   and optionally by taxonomic exclusions (the excluded subclades, defined in `Excluded_subclades`),
+#'   and/or exclusions based on species attributes (the allowed states, defined in `allowed_states` based on the `simmap`).
+#'
 #'   The divergence times of the grafted branches are either drawn uniformly along the branches (`method = "uniform"`),
 #'   or drawn from a birth-death model fitted on the target clade (`method = "BD_clades"`, default).
 #'   The backbone is never modified: only new tips are added.
@@ -61,16 +63,23 @@
 #'   mapping a species attribute (e.g., a trait or a range) with discrete states along the branches of `phy`.
 #'   It must have the same tips, topology and branch lengths as `phy`. With a `simmap`, taxa can only be grafted on the parts of the branches
 #'   that are in their allowed states (see `allowed_states`). A list of maps (`"multiSimmap"`) is not accepted.
-#'   See 'Species attributes' in Details section. Currently only available with `method = "uniform"`.
+#'   See 'Species attributes' in Details section.
 #'   Default is `NULL` (no restriction for grafting based on states).
 #' @param allowed_states Character vector. The states of `simmap` in which grafting is allowed. This is the default for all taxa:
 #'   taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead. States are matched exactly with the states of the `simmap`.
 #'   The function stops if a `simmap` is provided and some taxa have no allowed states (neither a global nor a taxon-level value),
 #'   if some states are not in the `simmap`, or if `allowed_states` is provided without a `simmap`.
 #'   Default is `NULL` (no restriction for grafting based on states).
-#' @param min_valid_fraction Numeric between 0 and 1. Only used with a `simmap`. Threshold of the fraction of the total length of the available branches
-#'   of a taxon (its target clade, minus the excluded subclades) that is in its allowed states. A warning lists the taxa below the threshold for inspection,
-#'   as their grafting positions are concentrated on a small part of their target clade. The fraction is computed on the backbone, before grafting. Default is `0.1`.
+#' @param min_valid_fraction Numeric between 0 and 1. Only used with a `simmap`. Threshold below which a warning lists the taxa for inspection,
+#'   as their grafting positions are concentrated on a small part of their target clade. The fraction is computed on the backbone, before grafting:
+#'   * With `method = "uniform"`, it is the fraction of the total length of the available branches of the taxon (its target clade, minus the excluded subclades)
+#'     that is in its allowed states.
+#'   * With `method = "BD_clades"`, it is the fraction of the time window of the divergence times of the taxon (from the present to the stem age of its target clade,
+#'     or to its crown age if the stem is not available) where at least one available branch is in an allowed state.
+#'   Default is `0.1`.
+#' @param max_age_redraws Integer. Only used with a `simmap` and `method = "BD_clades"`. Maximum number of times the divergence ages of a group of taxa
+#'   (same target clade, same stem availability and same allowed states) can be redrawn, when some of the ages drawn cannot be used because no available branch
+#'   in an allowed state crosses them. The function stops with an informative message if this limit is reached. See 'Species attributes' in Details section. Default is `1000`.
 #' @param method Character string. Method used to draw the divergence times and the branches used for grafting.
 #'   Must be one of `"uniform"` or `"BD_clades"` (default). See Details.
 #' @param min_tips Integer. Only used for `method = "BD_clades"`. Minimum number of tips of the clade used to fit the birth-death model.
@@ -126,10 +135,13 @@
 #'       This can be used to account for clade-specific sampling fraction in downstream analyses.
 #'
 #' @details
-#' The function stops, before any grafting, if the backbone is not ultrametric, or is not binary (i.e., all nodes have only two descendent lineages).
+#' ### Stop conditions
+#'
+#' The function stops, before any grafting, if the backbone is not ultrametric, or is not binary (i.e., all nodes have only two descendant lineages).
 #' It also stops if some taxa have no branch available for grafting. The taxa concerned are listed in the error message,
 #' so the constraints (`include_target_clade_stem`, `Excluded_subclades`, `exclude_subclades_stem` or, with a `simmap`, the allowed states) can be adjusted.
-#' With `method = "BD_clades"`, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon.
+#' With `method = "BD_clades"` and no `simmap`, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon
+#' (with a `simmap`, such ages are redrawn, see 'Species attributes').
 #'
 #' ### Target clades, stem regions and excluded subclades
 #'
@@ -158,22 +170,6 @@
 #' To graft taxa specifically on the stem branch of a clade or of a single tip, use [`phylograftR::graft_missing_clades()`][graft_missing_clades] instead.
 #' A warning lists the single-tip excluded subclades with a stem that is not excluded, as they exclude nothing.
 #'
-#' ### Species attributes: allowed states of a simmap
-#'
-#' A `simmap` describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
-#' With a `simmap`, each taxon can only be grafted on the pieces of the available branches that are in its allowed states
-#' (`missing_taxa_list$allowed_states` of the taxon if provided, otherwise the global argument `allowed_states`).
-#' This combines with the other constraints: the available branches are those of the target clade, minus the excluded subclades, restricted to the allowed states.
-#'
-#' A grafted taxon is assumed to be in the state of the point of the backbone where it was grafted, along its whole branch,
-#' and so are the taxa grafted on its branch later. Taxa grafted later can therefore be grafted on the branches of taxa grafted earlier,
-#' if their state is allowed. The `simmap` itself is not modified.
-#'
-#' With `method = "uniform"`, the draw is uniform over the available pieces, weighted by their length: every time point in an allowed state has the same chance to be selected.
-#' If all the states are allowed, the result is the same as without `simmap`.
-#' The function stops, before any grafting, if some taxa have no piece of branch in their allowed states (these taxa are listed),
-#' and warns about the taxa with less than `min_valid_fraction` of their available branch length in allowed states.
-#'
 #' ### Enclosing clades
 #'
 #' Under the `"BD_clades"` method, when a target clade contains fewer tips than `min_tips`, an alternative higher clade is selected to fit the birth-death model.
@@ -196,17 +192,37 @@
 #'   The divergence times of all taxa missing in the target clade are then jointly drawn with `TreeSim::corsim()`, between the present and the stem age of the clade
 #'   (or its crown age if the stem is not available for these taxa).
 #'   Taxa are grafted from the oldest to the youngest divergence time. Each taxon is grafted on a branch drawn uniformly among the available branches that cross its divergence age.
-#'   Younger taxa can therefore be grafted on the branches of older missing taxa. This is the recommended method, but it can be time consuming for large phylogenies.
-#'   Taxa of the same target clade with different stem availability are drawn in separate groups, and the birth-death model is fitted only once per target clade.
-#'   The group of taxa without access to the stem is grafted first, so these taxa are present when drawing the divergence times of the taxa that can also use the stem
-#'   (this is the same logic as for nested clades).
+#'   Younger taxa can therefore be grafted on the branches of older missing taxa.
+#'   Taxa of the same target clade with different stem availability (or, with a `simmap`, different allowed states) are drawn in separate groups,
+#'   and the birth-death model is fitted only once per target clade.
+#'   `"BD_clades"` is the recommended method, but it can be time consuming for large phylogenies.
 #'
 #' With both methods, nested clades are processed first, so the taxa of a larger clade are grafted on a tree that already
 #' includes the taxa of the clades nested within it, and can be grafted on their branches.
 #' For taxa of the same clade, those without access to the stem come first.
 #' For `"BD_clades"`, it also ensures that the divergence times of nested clades are accounted for when drawing the divergence times of the larger clade.
 #' Taxa of the same target clade are grafted in random order, so they are exchangeable.
-#' Clades that are not nested do not interact, so the order in which they are processed has no influence.
+#'
+#' ### Species attributes: allowed states of a simmap
+#'
+#' A `simmap` describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
+#' With a `simmap`, each taxon can only be grafted on the pieces of the available branches that are in its allowed states
+#' (`missing_taxa_list$allowed_states` of the taxon if provided, otherwise the global argument `allowed_states`).
+#' This combines with the other constraints: the available branches are those of the target clade, minus the excluded subclades, restricted to the allowed states.
+#'
+#' A grafted taxon is assumed to be in the state of the point of the backbone where it was grafted, along its whole branch,
+#' and so are the taxa grafted on its branch later. Taxa grafted later can therefore be grafted on the branches of taxa grafted earlier,
+#' if their state is allowed. The `simmap` itself is not modified.
+#'
+#' With `method = "uniform"`, the draw is uniform over the available pieces, weighted by their length: every time point in an allowed state has the same chance to be selected.
+#'
+#' With `method = "BD_clades"`, the divergence ages of the taxa of a group (same target clade, same stem availability and same allowed states) are drawn jointly
+#' with `TreeSim::corsim()`, as without a `simmap`: the diversification model is not modified by the states.
+#' An age can only be used if an available branch in an allowed state crosses it. The ages are used from the oldest to the youngest, each for one taxon of the group:
+#' 1. A taxon is grafted at its age if an available branch in an allowed state crosses this age in the current tree.
+#' 2. The ages for which no such valid branch piece exists are discarded.
+#' 3. The ages of the taxa left are drawn again jointly, and grafted or discarded in the same way.
+#'    This is repeated until all the taxa of the group are grafted, up to `max_age_redraws` times.
 #'
 #' ### Sampling fraction and unsampled species
 #'
@@ -319,10 +335,12 @@
 #' data(toy_missing_taxa_list)
 #'
 #' # Perform grafting informed with the simmap and associated 'allowed_states'
+#' # With the default method ("BD_clades"), the divergence ages are drawn from a birth-death model
+#' # and redrawn if they cannot be used because of the states
 #' grafted_phy_states <- graft_missing_taxa(phy = toy_backbone,
 #'                                          missing_taxa_list = toy_missing_taxa_list,
 #'                                          simmap = toy_simmap, allowed_states = c("blue", "green"),
-#'                                          method = "uniform", verbose = FALSE, seed = 1234)
+#'                                          method = "BD_clades", verbose = FALSE, seed = 1234)
 #'
 #' # Plot output
 #' plot(grafted_phy_states, cex = 0.7,
@@ -337,7 +355,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 exclude_subclades_stem = TRUE, # Also exclude the stem of the excluded subclades? Default for all subclades, overridden by missing_taxa_list$exclude_subclades_stem
                                 simmap = NULL, # NULL, or stochastic character map (class "simmap") of the backbone: restricts grafting to the branch segments in allowed states
                                 allowed_states = NULL, # States of the simmap where grafting is allowed. Default for all taxa, overridden by missing_taxa_list$allowed_states
-                                min_valid_fraction = 0.1, # Warn for the taxa with a smaller fraction of their available branch length in allowed states (only with a simmap)
+                                min_valid_fraction = 0.1, # Warn for the taxa with a smaller share of valid branches in allowed states: fraction of their available branch length ('uniform') or of their time window ('BD_clades') (only with a simmap)
+                                max_age_redraws = 1000, # Maximum number of redraws of the divergence ages of a group of taxa when some ages cannot be used because of the states (only with a simmap and 'BD_clades')
                                 method = "BD_clades", # "uniform" or "BD_clades"
                                 min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model for "BD_clades" (the enclosing clade is used if the focal clade is smaller)
                                 total_richness_per_clades = NULL, # NULL, or list with Target_clade = list(c(), ...) and total_richness = c(...) (NA allowed). Total number of species of the clades
@@ -400,15 +419,15 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     {
       stop("'min_valid_fraction' must be a single number between 0 and 1")
     }
+    if (!is.numeric(max_age_redraws) || length(max_age_redraws) != 1 || is.na(max_age_redraws) || max_age_redraws < 1 || max_age_redraws != round(max_age_redraws))
+    {
+      stop("'max_age_redraws' must be a single positive integer")
+    }
     if (use_states)
     {
       if (inherits(simmap, "multiSimmap"))
       {
         stop("'simmap' must be a single stochastic character map (class 'simmap'), not a list of maps (class 'multiSimmap').")
-      }
-      if (method != "uniform")
-      {
-        stop("'simmap' is only available with method = 'uniform' for the moment.")
       }
     } else {
       states_in_list <- any(vapply(missing_taxa_list$allowed_states, function (x) length(x) > 0 && !all(is.na(x)), logical(1)))
@@ -592,18 +611,22 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
          "\nAdjust 'allowed_states' (global or in missing_taxa_list), or the constraints on the branches ('include_target_clade_stem', 'Excluded_subclades', 'exclude_subclades_stem') for these taxa.")
   }
 
-  ## Warn (once) about the taxa with a very small fraction of their available branch length in allowed states
+  ## Warn (once) about the taxa with a very small share of valid branches in their allowed states
+  # 'uniform': fraction of the length of the available branches in allowed states. 'BD_clades': fraction of the time window of the divergence ages with a branch in allowed states
   if (use_states)
   {
-    low_fraction <- which(!is.na(valid_fraction) & valid_fraction < min_valid_fraction)
+    share_in_states <- if (method == "uniform") valid_fraction else attr(no_branch_taxa, "time_coverage")
+    low_fraction <- which(!is.na(share_in_states) & share_in_states < min_valid_fraction)
     if (length(low_fraction) > 0)
     {
       n_show <- min(length(low_fraction), 10)
-      low_taxa <- names(valid_fraction)[low_fraction[order(valid_fraction[low_fraction])][seq_len(n_show)]]
-      warning(length(low_fraction), " taxa have less than ", format(100 * min_valid_fraction), "% of the length of their available branches in their allowed states ",
-              "('min_valid_fraction' = ", min_valid_fraction, "): their grafting positions are concentrated on a small part of their target clade.\n",
+      low_taxa <- names(share_in_states)[low_fraction[order(share_in_states[low_fraction])][seq_len(n_show)]]
+      what_share <- if (method == "uniform") "of the length of their available branches in their allowed states" else "of the time window of their divergence ages covered by available branches in their allowed states"
+      what_effect <- if (method == "uniform") "their grafting positions are concentrated on a small part of their target clade" else "their divergence ages will be concentrated on a narrow time window, or many ages will need to be redrawn"
+      warning(length(low_fraction), " taxa have less than ", format(100 * min_valid_fraction), "% ", what_share, " ",
+              "('min_valid_fraction' = ", min_valid_fraction, "): ", what_effect, ".\n",
               paste0("  - ", low_taxa, " (target clade tips: ", vapply(missing_taxa_list$Target_clade[low_taxa], paste, character(1), collapse = ", "),
-                     "; ", sprintf("%.2f%%", 100 * valid_fraction[low_taxa]), " in allowed states)", collapse = "\n"),
+                     "; ", sprintf("%.2f%%", 100 * share_in_states[low_taxa]), " in allowed states)", collapse = "\n"),
               if (length(low_fraction) > n_show) paste0("\n  ... and ", length(low_fraction) - n_show, " more") else "",
               call. = FALSE)
     }
@@ -728,10 +751,11 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   {
     if (verbose) cat(paste0(Sys.time(), " - Start identification and ordering of target clades\n"))
 
-    # Identify groups of taxa (target clade and availability of its stem) and order them by clade size
+    # Identify groups of taxa (target clade, availability of its stem and, with a simmap, allowed states) and order them by clade size
     # Since nested clades are always smaller than their higher parents, this is equivalent to order by nesting scheme
     # Groups of the same clade are consecutive, with the taxa without access to the stem first
-    groups <- group_and_order_clades(phy, missing_taxa_list$Target_clade, include_target_clade_stem = missing_taxa_list$include_target_clade_stem)
+    groups <- group_and_order_clades(phy, missing_taxa_list$Target_clade, include_target_clade_stem = missing_taxa_list$include_target_clade_stem,
+                                     allowed_states = if (use_states) missing_taxa_list$allowed_states else NULL)
     n_groups <- length(groups$group_clade_tips)
 
     # Cache of the BD models: the model is fitted once per target clade, before grafting its first group of taxa,
@@ -822,34 +846,77 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       }
       BD_i <- BD_cache[[clade_key_i]]
 
-      ## Simulate missing divergence times with TreeSim::corsim
-      new_divergence_times_i <- TreeSim::corsim(x = divergence_times_i, lambda = BD_i$b, mu = BD_i$d,
-                                                missing = ntips_missing, told = upper_age_i)
-      # Extract the divergence times for the missing taxa
-      divergence_times_missing_taxa_i <- extract_new_divergence_times(all_times = new_divergence_times_i, old_times = divergence_times_i)
-
-      # Graft missing taxa from oldest to youngest, so younger taxa can be grafted on branches of older missing taxa
-      divergence_times_missing_taxa_i <- sort(divergence_times_missing_taxa_i, decreasing = TRUE)
-      for (j in seq_len(ntips_missing))
+      ## Draw the divergence ages with TreeSim::corsim and graft the taxa of the group, from the oldest to the youngest age
+      # Without a simmap: all the ages are drawn once. With a simmap, an age can only be used if an available branch in an allowed state crosses it in the current tree:
+      # the taxa that could not be grafted are left pending and their ages are drawn again (see below)
+      pending <- seq_len(ntips_missing) # Taxa of the group still to graft (indices within the group)
+      n_redraws <- 0
+      repeat
       {
-        if (use_excluded_subclades)
+        ## Simulate missing divergence times with TreeSim::corsim (for the pending taxa only)
+        new_divergence_times_i <- TreeSim::corsim(x = divergence_times_i, lambda = BD_i$b, mu = BD_i$d,
+                                                  missing = length(pending), told = upper_age_i)
+        # Extract the divergence times for the missing taxa
+        divergence_times_missing_taxa_i <- extract_new_divergence_times(all_times = new_divergence_times_i, old_times = divergence_times_i)
+
+        # Graft missing taxa from oldest to youngest, so younger taxa can be grafted on branches of older missing taxa
+        # (extract_new_divergence_times() sorts the ages in decreasing order)
+        not_grafted <- integer(0)
+        for (k in seq_along(pending))
         {
-          excluded_subclades_tips_list_i <- missing_taxa_list_i$Excluded_subclades[[j]]
-        } else {
-          excluded_subclades_tips_list_i <- NULL
+          j <- pending[k]
+          if (use_excluded_subclades)
+          {
+            excluded_subclades_tips_list_i <- missing_taxa_list_i$Excluded_subclades[[j]]
+          } else {
+            excluded_subclades_tips_list_i <- NULL
+          }
+
+          grafted_j <- graft_from_divergence_age(
+              phy = phy,
+              divergence_age = divergence_times_missing_taxa_i[k],
+              tip_label = missing_taxa_list_i$Taxon_name[j],
+              target_clade_tips = missing_taxa_list_i$Target_clade[[j]],
+              excluded_subclades_tips_list = excluded_subclades_tips_list_i,
+              exclude_subclades_stem = missing_taxa_list_i$exclude_subclades_stem[[j]],
+              include_target_clade_stem = include_target_clade_stem_i,
+              missing_tip_labels = missing_taxa_list$Taxon_name,
+              root_age = root_age,
+              seed = NULL,
+              tracker = tracker,
+              allowed_states = if (use_states) missing_taxa_list_i$allowed_states[[j]] else NULL)
+
+          if (use_states)
+          {
+            # With a simmap, a NULL output means that no available branch in an allowed state crosses the age: the age is discarded and the taxon stays pending.
+            # The ages older than the oldest usable age are the ones that fail: every younger age crosses the lineage grafted at the oldest usable age
+            if (is.null(grafted_j))
+            {
+              not_grafted <- c(not_grafted, j)
+            } else {
+              phy <- grafted_j$phy
+              tracker <- grafted_j$tracker
+            }
+          } else {
+            phy <- grafted_j
+          }
         }
 
-        phy <- graft_from_divergence_age(
-            phy = phy,
-            divergence_age = divergence_times_missing_taxa_i[j],
-            tip_label = missing_taxa_list_i$Taxon_name[j],
-            target_clade_tips = missing_taxa_list_i$Target_clade[[j]],
-            excluded_subclades_tips_list = excluded_subclades_tips_list_i,
-            exclude_subclades_stem = missing_taxa_list_i$exclude_subclades_stem[[j]],
-            include_target_clade_stem = include_target_clade_stem_i,
-            missing_tip_labels = missing_taxa_list$Taxon_name,
-            root_age = root_age,
-            seed = NULL)
+        pending <- not_grafted
+        if (length(pending) == 0) { break }
+
+        # Draw again the ages of the taxa left. The ages are drawn from the same clade and not conditioned on the lineages grafted so far:
+        # the ages of TreeSim::corsim() are independent draws, and the lineages grafted are accounted for by the branches that cross the ages.
+        n_redraws <- n_redraws + 1
+        if (n_redraws > max_age_redraws)
+        {
+          stop("No usable divergence age was found for ", length(pending), " taxa of the target clade defined by ", paste(target_clade_tips_i, collapse = ", "),
+               " after ", max_age_redraws, " redraws of their divergence ages ('max_age_redraws').\n",
+               "Taxa: ", paste(utils::head(missing_taxa_list_i$Taxon_name[pending], 10), collapse = ", "), if (length(pending) > 10) ", ..." else "", ".\n",
+               "Their allowed states: ", paste(missing_taxa_list_i$allowed_states[[pending[1]]], collapse = ", "), ". ",
+               "No branch in these states crosses the ages drawn: the time window where the allowed states are present is too narrow or too far from the ages expected from the diversification model.\n",
+               "Increase 'max_age_redraws', extend the allowed states, or use method = 'uniform'.")
+        }
       }
 
       # Update counts of grafted taxa and grafted clades
@@ -1007,6 +1074,9 @@ draw_random_grafting_position_along_available_branch_segments <- function (
 #'   Default is `character(0)`.
 #' @param root_age Numeric. Optional root age, to avoid recomputing node heights. Default is `NULL`.
 #' @param seed Integer. Optional seed. Default is `NULL` as the internal seed is set by the main grafting function.
+#' @param tracker Optional. Output of `start_state_tracking()` (updated by `track_graft()` after each graft). If provided, only the pieces of the available branches
+#'   in `allowed_states` that cross the age are used. Default is `NULL` (whole branches).
+#' @param allowed_states Character vector. States in which grafting is allowed. Only used with a `tracker`.
 #'
 #' @importFrom ape getMRCA
 #'
@@ -1014,7 +1084,9 @@ draw_random_grafting_position_along_available_branch_segments <- function (
 #'
 #' @noRd
 #'
-#' @return The phylogeny with the new grafted tip.
+#' @return Without `tracker`, the phylogeny with the new grafted tip (the function stops if no branch crosses the age).
+#'   With a `tracker`, `NULL` if no available branch in an allowed state crosses the age (the caller draws another age),
+#'   otherwise a list with 2 elements: the phylogeny with the new grafted tip (`phy`) and the updated `tracker`.
 #'
 
 
@@ -1027,7 +1099,9 @@ graft_from_divergence_age <- function (phy, # Backbone phylogeny
                                        include_target_clade_stem = TRUE, # Is the stem region of the target clade available?
                                        missing_tip_labels = character(0), # Labels of all taxa to graft: used to identify the missing-only subtrees of the stem region
                                        root_age = NULL, # Pass it to avoid recomputing node heights every time
-                                       seed = NULL) # Seed is set by the main function. Default NULL to not alter the global RNG state
+                                       seed = NULL, # Seed is set by the main function. Default NULL to not alter the global RNG state
+                                       tracker = NULL, # Output of start_state_tracking(), updated by track_graft(): restricts the grafting to the segments in allowed states
+                                       allowed_states = NULL) # States in which grafting is allowed. Only used with a tracker
 {
   # Set the seed if provided
   if (!is.null(seed)) { set.seed(seed = seed) }
@@ -1057,9 +1131,13 @@ graft_from_divergence_age <- function (phy, # Backbone phylogeny
   # Keep the order of the branches in the tree (edge order), so the order of the candidates does not depend on how they were listed
   available_nodes_ID <- available_nodes_ID[order(match(available_nodes_ID, phy$edge[, 2]))]
 
-  # Describe the available branches as segments, and keep only the segments crossing the target age
-  valid_segments <- get_segments_crossing_age(phy = phy, segments = get_branch_segments(phy = phy, nodes = available_nodes_ID),
-                                              age = divergence_age, root_age = root_age, edge_ages = edge_ages)
+  # Describe the available branches as segments (the pieces in allowed states if there is a simmap), and keep only the segments crossing the target age
+  all_segments <- if (is.null(tracker)) get_branch_segments(phy = phy, nodes = available_nodes_ID) else
+                    get_allowed_segments_tracked(tracker = tracker, phy = phy, nodes = available_nodes_ID, allowed_states = allowed_states, edge_ages = edge_ages)
+  valid_segments <- get_segments_crossing_age(phy = phy, segments = all_segments, age = divergence_age, root_age = root_age, edge_ages = edge_ages)
+
+  # With a simmap, no valid segment means that this age cannot be used: the caller draws another one
+  if (nrow(valid_segments) == 0 && !is.null(tracker)) { return(NULL) }
 
   # Send informative error if no valid segment remains
   if (nrow(valid_segments) == 0)
@@ -1080,9 +1158,21 @@ graft_from_divergence_age <- function (phy, # Backbone phylogeny
   position <- min(max(0, position), selected_branch_length) # Ensure that the position is within the branch length
 
   # Graft the missing taxa on the selected branch at the target age
+  phy_before_graft <- phy
   phy <- phytools::bind.tip(tree = phy, tip.label = tip_label, edge.length = divergence_age,
                             where = selected_node_ID, position = position)
 
+  # With a simmap: the new taxon takes the state of the point where it was grafted, and the new node is labelled to keep following the branches
+  if (!is.null(tracker))
+  {
+    tracked <- track_graft(tracker = tracker, phy_before = phy_before_graft, phy_after = phy, node = selected_node_ID, position = position,
+                           tip_label = tip_label, allowed_states = allowed_states, edge_ages = edge_ages)
+    phy <- tracked$phy
+    tracker <- tracked$tracker
+  }
+
   # Enforce ultrametricity for the new terminal branch only (backbone branches are left untouched)
-  enforce_ultrametry_new_tips(phy = phy, tip_labels = tip_label, root_age = root_age)
+  phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = tip_label, root_age = root_age)
+  if (is.null(tracker)) { return(phy) }
+  list(phy = phy, tracker = tracker)
 }
