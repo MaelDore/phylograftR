@@ -349,22 +349,25 @@
 #' data(toy_simmap)
 #' data(toy_missing_taxa_list)
 #'
-#' # Perform grafting informed with the simmap and associated 'allowed_states'
-#' # With the default method ("BD_clades"), the divergence ages are drawn from a birth-death model
-#' # and redrawn if they cannot be used because of the states
+#' # Perform grafting informed with the simmap and associated 'allowed_states'.
+#' # Here we allow only grafting to occur on "blue" or "green" sections of the branches
 #' grafted_phy_states <- graft_missing_taxa(phy = toy_backbone,
 #'                                          missing_taxa_list = toy_missing_taxa_list,
 #'                                          simmap = toy_simmap, allowed_states = c("blue", "green"),
 #'                                          method = "BD_clades", verbose = FALSE, seed = 1234)
 #'
-#' # Plot output
+#' # Plot output phylogeny with colored grafts
 #' plot(grafted_phy_states, cex = 0.7,
 #'      edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
 #'      tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
 #'
 #' # The updated simmap is in the output: the grafted taxa are in the state of the point where they were grafted
+#' # No grafted taxa was grafted on a "red" backbone branch
 #' plot(grafted_phy_states$simmap, fsize = 0.5, ftype = "i",
 #'      colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+#'
+#' # No grafted taxa inherited a "red" state
+#' table(phytools::getStates(grafted_phy_states$simmap, type = "tips")[missing_taxa_list$Taxon_name])
 #'
 #'
 

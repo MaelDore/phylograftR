@@ -250,18 +250,20 @@
 #' plot(toy_simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 #'
 #' # We can use 'allowed_states' to limit grafting on the "green" portions of the stem branches
+#'    # The stem branch from the "bottom" clade shifts from "green" to "red"
+#'    # The terminal (stem) branch of "t14" shift from "green" to "red" too
 #' grafted_phy_states <- graft_missing_clades(phy = toy_backbone,
 #'                                            missing_taxa_list = missing_clades_list_states,
 #'                                            simmap = toy_simmap, allowed_states = "green",
 #'                                            verbose = FALSE, seed = 1234)
 #'
-#' # Plot output
+#' # Plot output phylogeny with colored grafts
 #' plot(grafted_phy_states, cex = 0.7,
 #'      edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
 #'      tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
 #'
-#' # The updated simmap is in the output: the new grafted clades branch from "green" segments
-#' # of the stem branches of their sister clades, and each newly grafted clade is entirely "green"
+#' # The updated simmap is in the output: the new grafted clades branch from the "green" segments
+#' # of the stem branches of their sister clades, and each newly grafted clades are entirely "green"
 #' plot(grafted_phy_states$simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 #'
 #'
