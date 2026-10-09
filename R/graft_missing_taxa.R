@@ -347,12 +347,17 @@
 #' # The toy simmap has three states, "blue", "green" and "red"
 #' data(toy_backbone)
 #' data(toy_simmap)
-#' data(toy_missing_taxa_list)
+#' data(toy_missing_taxa_list_with_allowed_states)
+#'
+#' # This missing_taxa_list has the item 'allowed_states', with the states where each taxon can be grafted
+#' # (NULL for the taxa without a specific value).
+#' toy_missing_taxa_list_with_allowed_states$allowed_states
 #'
 #' # Perform grafting informed with the simmap and associated 'allowed_states'.
-#' # Here we allow only grafting to occur on "blue" or "green" sections of the branches
+#' # The taxa without taxon-level states use the global 'allowed_states' argument:
+#' # here they can only be grafted on "blue" or "green" sections of the branches
 #' grafted_phy_states <- graft_missing_taxa(phy = toy_backbone,
-#'                                          missing_taxa_list = toy_missing_taxa_list,
+#'                                          missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
 #'                                          simmap = toy_simmap, allowed_states = c("blue", "green"),
 #'                                          method = "BD_clades", verbose = FALSE, seed = 1234)
 #'
@@ -362,12 +367,12 @@
 #'      tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
 #'
 #' # The updated simmap is in the output: the grafted taxa are in the state of the point where they were grafted
-#' # No grafted taxa was grafted on a "red" backbone branch
 #' plot(grafted_phy_states$simmap, fsize = 0.5, ftype = "i",
 #'      colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 #'
-#' # No grafted taxa inherited a "red" state
-#' table(phytools::getStates(grafted_phy_states$simmap, type = "tips")[missing_taxa_list$Taxon_name])
+#' # States of the grafted taxa: "Genus_a_sp1" and "Genus_c_sp2" can be "red" thanks to their taxon-level states,
+#' # but the taxa using the global states cannot
+#' phytools::getStates(grafted_phy_states$simmap, type = "tips")[toy_missing_taxa_list_with_allowed_states$Taxon_name]
 #'
 #'
 

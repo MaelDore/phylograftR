@@ -92,6 +92,71 @@ test_that("the backbone dataset is an ultrametric tree with the expected size",
 })
 
 
+## Test the toy dataset with allowed states, built from the same table as toy_missing_taxa_list plus the column allowed_states
+test_that("import_missing_taxa_list() transforms the .csv with allowed states into the expected dataset, which is toy_missing_taxa_list with the extra item allowed_states",
+{
+  path <- system.file("extdata", "toy_missing_taxa_with_allowed_states.csv", package = "phylograftR")
+  expect_true(file.exists(path))
+  imported <- import_missing_taxa_list(path, phy = phylograftR::toy_backbone)
+  expect_identical(imported, phylograftR::toy_missing_taxa_list_with_allowed_states)
+
+  # Same table as the one of toy_missing_taxa_list, with the extra column
+  tab <- utils::read.csv(path, stringsAsFactors = FALSE, na.strings = "")
+  base <- utils::read.csv(csv_path(), stringsAsFactors = FALSE, na.strings = "")
+  expect_identical(names(tab), c(names(base), "allowed_states"))
+  expect_identical(tab[, names(base)], base)
+
+  # Same list as toy_missing_taxa_list, with the extra item
+  l <- phylograftR::toy_missing_taxa_list_with_allowed_states
+  expect_identical(l[names(phylograftR::toy_missing_taxa_list)], phylograftR::toy_missing_taxa_list)
+  expect_identical(names(l), c(names(phylograftR::toy_missing_taxa_list), "allowed_states"))
+  expect_identical(names(l$allowed_states), l$Taxon_name)
+  expect_identical(l$allowed_states$Genus_a_sp1, "red")
+  expect_identical(l$allowed_states$Genus_b_sp1, c("blue", "green"))
+  expect_identical(l$allowed_states$Genus_b_sp2, "green")
+  expect_identical(l$allowed_states$Genus_c_sp2, c("blue", "red"))
+  expect_null(l$allowed_states$Genus_a_sp2)
+  expect_null(l$allowed_states$Genus_a_sp3)
+  expect_null(l$allowed_states$Genus_c_sp1)
+  expect_silent(phylograftR:::validate_missing_taxa_list(l, clade_item = "Target_clade"))
+  # The states are states of the toy simmap
+  expect_true(all(unlist(l$allowed_states) %in% colnames(phylograftR::toy_simmap$mapped.edge)))
+})
+
+## Test that the toy datasets can be used with the toy simmap, with and without taxon-level states
+test_that("the toy list with allowed states grafts with the toy simmap with both methods, without warnings, and the states are respected",
+{
+  phy <- phylograftR::toy_backbone
+  simmap <- phylograftR::toy_simmap
+  l <- phylograftR::toy_missing_taxa_list_with_allowed_states
+  for (method in c("uniform", "BD_clades"))
+  {
+    for (seed in 1:3)
+    {
+      info <- paste(method, "seed", seed)
+      # Taxa without taxon-level states use the global states: no warning on the share of valid branches
+      expect_no_warning(grafted <- graft_missing_taxa(phy, l, simmap = simmap, allowed_states = c("blue", "green"), method = method, verbose = FALSE, seed = seed))
+      expect_true(all(l$Taxon_name %in% grafted$tip.label), info = info)
+      res <- check_grafting_constraints(grafted, phy, l, allowed_states = c("blue", "green"), verbose = FALSE)
+      expect_true(all(res$ok), info = info)
+      expect_true(all(res$states_ok), info = info)
+      # The taxa grafted on the backbone have the expected states
+      taxon_state <- function (taxon) names(grafted$simmap$maps[[match(match(taxon, grafted$tip.label), grafted$edge[, 2])]])
+      expect_true(taxon_state("Genus_a_sp1") == "red", info = info)
+      expect_true(taxon_state("Genus_b_sp2") == "green", info = info)
+      expect_true(taxon_state("Genus_c_sp2") %in% c("blue", "red"), info = info)
+      expect_true(all(vapply(c("Genus_a_sp2", "Genus_a_sp3", "Genus_c_sp1"), taxon_state, character(1)) %in% c("blue", "green")), info = info)
+    }
+  }
+  # Without global states, the taxa without taxon-level states can be grafted in any state
+  expect_no_error(graft_missing_taxa(phy, l, simmap = simmap, verbose = FALSE, seed = 1))
+  # Without simmap, the list with allowed states cannot be used, but the list without can
+  expect_error(graft_missing_taxa(phy, l, verbose = FALSE), "requires a 'simmap'")
+  expect_no_error(graft_missing_taxa(phy, phylograftR::toy_missing_taxa_list, verbose = FALSE))
+  # The list without taxon-level states also grafts with the simmap and global states
+  expect_no_warning(graft_missing_taxa(phy, phylograftR::toy_missing_taxa_list, simmap = simmap, allowed_states = c("blue", "green"), verbose = FALSE, seed = 1))
+})
+
 ### 2/ build_missing_taxa_list(): output ####
 
 test_that("build_missing_taxa_list() splits the tips and the subclades, and names every item after the taxa",

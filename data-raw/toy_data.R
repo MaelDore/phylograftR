@@ -7,8 +7,8 @@
 
 # Run from the root of the package, after loading it (devtools::load_all() or devtools::install()).
 # Produces:
-#  * data/toy_backbone.rda, data/toy_missing_taxa_list.rda, data/toy_total_richness_per_clades.rda, data/toy_simmap.rda
-#  * inst/extdata/toy_missing_taxa.csv, inst/extdata/toy_total_richness.csv
+#  * data/toy_backbone.rda, data/toy_missing_taxa_list.rda, data/toy_total_richness_per_clades.rda, data/toy_simmap.rda, data/toy_missing_taxa_list_with_allowed_states.rda
+#  * inst/extdata/toy_missing_taxa.csv, inst/extdata/toy_total_richness.csv, inst/extdata/toy_missing_taxa_with_allowed_states.csv
 
 
 ##### 1/ Create backbone phylogeny #####
@@ -135,10 +135,32 @@ sum(lengths(toy_simmap$maps) - 1) # Number of changes of state along the branche
 table(toy_simmap$states) # States of the tips
 
 
-##### 6/ Save objects #####
+##### 6/ Create a version of the table of missing taxa with allowed states #####
+
+# Same table as in 2/, with the extra column 'allowed_states': the states of 'toy_simmap' where each taxon can be grafted, separated by commas.
+# Blank cells (NA) use the global 'allowed_states' argument of the grafting functions.
+# It is a separate dataset because a list with 'allowed_states' requires a 'simmap' to graft.
+# The states give 4 taxa with a taxon-level value (one or several states) and 3 taxa using the global argument. On 'toy_simmap',
+# the share of the available branch length (and of the time window of the divergence ages) in the states of each taxon is above 10%:
+#   Genus_a_sp1 "red": 57% (63%) ; Genus_b_sp1 "blue, green": 96% (100%) ; Genus_b_sp2 "green": 79% (100%) ; Genus_c_sp2 "blue, red": 100% (100%)
+# The other taxa have between 31% and 52% (37% to 100%) of their available branches in the states c("blue", "green"), used as global states in the examples.
+toy_missing_taxa_with_allowed_states_table <- toy_missing_taxa_table
+toy_missing_taxa_with_allowed_states_table$allowed_states <- c("red", NA, NA, "blue, green", "green", NA, "blue, red")
+
+utils::write.csv(toy_missing_taxa_with_allowed_states_table, file = "inst/extdata/toy_missing_taxa_with_allowed_states.csv", row.names = FALSE, na = "")
+
+toy_missing_taxa_list_with_allowed_states <- phylograftR::import_missing_taxa_list(
+  file = "inst/extdata/toy_missing_taxa_with_allowed_states.csv", phy = toy_backbone)
+
+# The states are valid for the toy simmap
+stopifnot(all(unlist(toy_missing_taxa_list_with_allowed_states$allowed_states) %in% toy_simmap_states))
+
+
+##### 7/ Save objects #####
 
 dir.create("data", showWarnings = FALSE)
 save(toy_backbone, file = "data/toy_backbone.rda", compress = "gzip", version = 2)
 save(toy_missing_taxa_list, file = "data/toy_missing_taxa_list.rda", compress = "gzip", version = 2)
 save(toy_total_richness_per_clades, file = "data/toy_total_richness_per_clades.rda", compress = "gzip", version = 2)
 save(toy_simmap, file = "data/toy_simmap.rda", compress = "gzip", version = 2)
+save(toy_missing_taxa_list_with_allowed_states, file = "data/toy_missing_taxa_list_with_allowed_states.rda", compress = "gzip", version = 2)

@@ -8,7 +8,7 @@
 
 # Includes:
 #  - A backbone phylogeny for grafting
-#  - A list of missing taxa to be grafted
+#  - A list of missing taxa to be grafted, with and without allowed_states
 #  - A table of total richness per clades to inform sampling fractions with unsampled species
 #  - A stochastic character map (simmap) of the backbone phylogeny, mapping a trait or range with three states
 
@@ -72,6 +72,51 @@
 #' system.file("extdata", "toy_missing_taxa.csv", package = "phylograftR")
 #'
 "toy_missing_taxa_list"
+
+
+##### 2b/ Toy missing taxa list with allowed states #####
+
+#' @title Toy list of missing taxa, with allowed states
+#'
+#' @description Same as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], with the extra item `$allowed_states`: the states of
+#'   [`phylograftR::toy_simmap`][toy_simmap] in which each taxon can be grafted. It is used to showcase the attribute-based exclusion
+#'   of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] (see its examples).
+#'
+#'   It is the output of [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] applied to the table
+#'   `system.file("extdata", "toy_missing_taxa_with_allowed_states.csv", package = "phylograftR")`.
+#'   Four taxa have a taxon-level value (one or several states) for `$allowed_states` and three have none (`NULL`),
+#'   so they use the global `allowed_states` argument of the grafting function.
+#'   Such a list requires a `simmap` to graft: use [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list] to graft without a `simmap` instead.
+#'
+#' @usage data(toy_missing_taxa_list_with_allowed_states)
+#' @format A named list with the same 7 taxa and items as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], and the extra item:
+#'  * `$allowed_states` List (one element per taxon, named after the taxa) of character vectors of states of [`phylograftR::toy_simmap`][toy_simmap]
+#'    in which the taxon can be grafted, or `NULL` to use the global `allowed_states` argument. `"Genus_a_sp1"`: `"red"`;
+#'    `"Genus_b_sp1"`: `"blue"` and `"green"`; `"Genus_b_sp2"`: `"green"`; `"Genus_c_sp2"`: `"blue"` and `"red"`; the others: `NULL`.
+#'
+#' @seealso [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], [`phylograftR::toy_simmap`][toy_simmap],
+#'   [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list]
+#'
+#' @examples
+#' # Import the list
+#' data(toy_missing_taxa_list_with_allowed_states)
+#' toy_missing_taxa_list_with_allowed_states$allowed_states
+#'
+#' # Compare to the initial '.csv' file
+#' system.file("extdata", "toy_missing_taxa_with_allowed_states.csv", package = "phylograftR")
+#'
+#' # Graft with the toy simmap
+#' # Taxa with taxon-level states follow their specific constraints.
+#' # Taxa without taxon-level states follow the global argument and can only be grafted on "blue" or "green" branches
+#' data(toy_backbone)
+#' data(toy_simmap)
+#'
+#' grafted_phy <- graft_missing_taxa(phy = toy_backbone,
+#'                                   missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
+#'                                   simmap = toy_simmap, allowed_states = c("blue", "green"),
+#'                                   verbose = FALSE, seed = 1234)
+#'
+"toy_missing_taxa_list_with_allowed_states"
 
 
 ##### 3/ Toy total richness data #####
