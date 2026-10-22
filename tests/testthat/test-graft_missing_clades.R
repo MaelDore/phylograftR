@@ -435,10 +435,124 @@ test_that("graft_missing_clades() with a simmap returns the updated simmap, also
   }
 
   # return_simmap
-  expect_null(graft_missing_clades(toy$phy, mcl, simmap = simmap, return_simmap = FALSE, verbose = FALSE, seed = 1)$simmap)
-  expect_identical(graft_missing_clades(toy$phy, mcl, simmap = simmap, return_simmap = FALSE, verbose = FALSE, seed = 1),
+  # (without allowed states and without the returned simmap, the simmap has no effect: warning, silenced here)
+  expect_null(quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = simmap, return_simmap = FALSE, seed = 1)$simmap)
+  expect_identical(quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = simmap, return_simmap = FALSE, seed = 1),
                    drop_simmap(graft_missing_clades(toy$phy, mcl, simmap = simmap, verbose = FALSE, seed = 1)))
   expect_no_warning(graft_missing_clades(toy$phy, mcl, return_simmap = TRUE, verbose = FALSE, seed = 1))
   expect_null(graft_missing_clades(toy$phy, mcl, return_simmap = TRUE, verbose = FALSE, seed = 1)$simmap)
   expect_error(graft_missing_clades(toy$phy, mcl, simmap = simmap, return_simmap = NA, verbose = FALSE), "'return_simmap' must be TRUE or FALSE")
+})
+
+
+# ---- Biogeographic ranges as states (treat_states_as_ranges) ----
+
+## Test that the argument is checked, and requires a simmap
+test_that("graft_missing_clades() checks treat_states_as_ranges and requires a simmap with TRUE",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mcl <- toy_missing_clades(toy)
+  graft <- function (...) graft_missing_clades(toy$phy, mcl, verbose = FALSE, ...)
+
+  expect_error(graft(simmap = simmap, treat_states_as_ranges = "yes"), "'treat_states_as_ranges' must be TRUE or FALSE")
+  expect_error(graft(simmap = simmap, treat_states_as_ranges = NA), "'treat_states_as_ranges' must be TRUE or FALSE")
+  expect_error(graft(simmap = simmap, treat_states_as_ranges = c(TRUE, FALSE)), "'treat_states_as_ranges' must be TRUE or FALSE")
+  expect_error(graft(treat_states_as_ranges = TRUE), "'treat_states_as_ranges = TRUE' requires a 'simmap'")
+  expect_error(graft(treat_states_as_ranges = TRUE, allowed_states = "A"), "requires a 'simmap'")
+  expect_no_error(graft(treat_states_as_ranges = FALSE))
+})
+
+## Test that single-area states give the same phylogeny and simmap as the exact matching of the states
+test_that("graft_missing_clades() with treat_states_as_ranges = TRUE gives the same result as FALSE for single-area states",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mcl <- toy_missing_clades(toy)
+  {
+    for (seed in 1:2)
+    {
+      exact <- quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = simmap, allowed_states = c("A", "B"), seed = seed)
+      areas <- quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = simmap, allowed_states = c("A", "B"), treat_states_as_ranges = TRUE, seed = seed)
+      expect_identical(areas, exact)
+    }
+  }
+  # Without allowed states
+  expect_identical(quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = simmap, treat_states_as_ranges = TRUE, seed = 4),
+                   quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = simmap, seed = 4))
+})
+
+## Test that allowed ranges restrict grafting to the pieces of branches in the states containing them
+test_that("graft_missing_clades() with treat_states_as_ranges = TRUE grafts on the states containing the allowed ranges, without warning",
+{
+  toy <- toy_setup()
+  # States of the simmap: A, AB and BC (the toy states A, B and C)
+  range_simmap <- make_toy_range_simmap(toy$phy)
+  mcl <- toy_missing_clades(toy)
+  tip_state <- function (grafted, taxon) names(grafted$simmap$maps[[match(match(taxon, grafted$tip.label), grafted$edge[, 2])]])
+
+  # Range "A" matches the states A and AB
+  expect_no_warning(grafted <- graft_missing_clades(toy$phy, mcl, simmap = range_simmap, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE, seed = 3))
+  expect_true(all(vapply(mcl$Taxon_name, function (taxon) tip_state(grafted, taxon), character(1)) %in% c("A", "AB")))
+
+  # A multi-area range alone only matches the states containing it: "AB" matches AB only here
+  # (missing clades on the stem branch of the clade B, which is entirely in the state AB)
+  mcl_b <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B, M2 = toy$B))
+  grafted_ab <- quiet_graft(graft_missing_clades, toy$phy, mcl_b, simmap = range_simmap, allowed_states = "AB", treat_states_as_ranges = TRUE, seed = 3)
+  expect_true(all(vapply(mcl_b$Taxon_name, function (taxon) tip_state(grafted_ab, taxon), character(1)) == "AB"))
+
+  # The exact matching of the same simmap: "A" only matches the state A, where some taxa have no branch
+  expect_error(graft_missing_clades(toy$phy, mcl, simmap = range_simmap, allowed_states = "A", verbose = FALSE, seed = 3), "no piece of the stem branch of their sister clade in their allowed states")
+})
+
+## Test that the states and the allowed ranges are strictly checked with TRUE only
+test_that("graft_missing_clades() with treat_states_as_ranges = TRUE stops if the states or the allowed ranges are not coded as in BioGeoBEARS",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  range_simmap <- make_toy_range_simmap(toy$phy)
+  mcl <- toy_missing_clades(toy)
+  graft <- function (...) graft_missing_clades(toy$phy, mcl, verbose = FALSE, ...)
+
+  # Incorrect states in the simmap: named in the message, and accepted with the exact matching
+  bad_simmap <- relabel_simmap(simmap, c(A = "A", B = "red", C = "CB"))
+  expect_error(graft(simmap = bad_simmap, allowed_states = "A", treat_states_as_ranges = TRUE),
+               "the states in the simmap must be biogeographic ranges.*'CB' \\(areas not in alphabetical order \\(expected 'BC'\\)\\).*'red' \\(lowercase letters")
+  expect_no_error(graft(simmap = bad_simmap, allowed_states = c("A", "red", "CB"), treat_states_as_ranges = FALSE))
+
+  # Incorrect allowed ranges, global and taxon-level
+  expect_error(graft(simmap = range_simmap, allowed_states = "ba", treat_states_as_ranges = TRUE), "the global 'allowed_states' argument.*'ba' \\(lowercase letters")
+  mcl_bad <- mcl
+  mcl_bad$allowed_states <- list(M1 = "AB", M2 = "BA", M3 = NULL, M4 = NULL)
+  expect_error(graft_missing_clades(toy$phy, mcl_bad, simmap = range_simmap, treat_states_as_ranges = TRUE, verbose = FALSE),
+               "taxon 'M2'.*'BA' \\(areas not in alphabetical order")
+
+  # An allowed area absent from the simmap: the areas available are listed
+  expect_error(graft(simmap = range_simmap, allowed_states = c("A", "D"), treat_states_as_ranges = TRUE), "not in the simmap: 'D'.*Areas available in the simmap: 'A', 'B', 'C'")
+  # A range contained in no state of the simmap
+  expect_error(graft(simmap = range_simmap, allowed_states = "AC", treat_states_as_ranges = TRUE), "No state of the simmap contains the allowed range")
+})
+
+
+# ---- Species attributes: simmap without effect ----
+
+## Test that a simmap that is neither restricting grafting nor returned sends a warning
+test_that("graft_missing_clades() warns if the simmap has no effect: no allowed states and return_simmap = FALSE",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mcl <- toy_missing_clades(toy)
+  graft <- function (...) graft_missing_clades(toy$phy, mcl, verbose = FALSE, ...)
+  has_warning <- function (expr) any(grepl("no effect", testthat::capture_warnings(expr)))
+
+  expect_warning(graft(simmap = simmap, return_simmap = FALSE), "without any allowed states.*'return_simmap = FALSE'.*no effect")
+  expect_warning(graft(simmap = simmap, return_simmap = FALSE, treat_states_as_ranges = TRUE), "no effect")
+  # The simmap is returned (tracking only), or restricts grafting (global or taxon-level allowed states)
+  expect_false(has_warning(graft(simmap = simmap, return_simmap = TRUE)))
+  expect_false(has_warning(graft(simmap = simmap, allowed_states = c("A", "B"), return_simmap = FALSE)))
+  mcl_states <- mcl
+  mcl_states$allowed_states <- list(M1 = c("A", "B"), M2 = c("A", "B"), M3 = NULL, M4 = NULL)
+  expect_false(has_warning(graft_missing_clades(toy$phy, mcl_states, simmap = simmap, return_simmap = FALSE, verbose = FALSE)))
+  # Without simmap, return_simmap is silently ignored
+  expect_false(has_warning(graft(return_simmap = FALSE)))
 })

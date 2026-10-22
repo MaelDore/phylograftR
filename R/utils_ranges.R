@@ -12,7 +12,7 @@
 # Rationale
 #   The states of a simmap can be biogeographic ranges, coded as in BioGeoBEARS: one CAPITAL letter per area, and a multi-area range is
 #   the string of the letters of its areas, each area once, in alphabetical order (e.g., "A", "AB", "ABC").
-#   With 'treat_states_as_areas = TRUE', a range is a SET of areas: an allowed range R matches a state S of the simmap if R is contained in S
+#   With 'treat_states_as_ranges = TRUE', a range is a SET of areas: an allowed range R matches a state S of the simmap if R is contained in S
 #   (e.g., "A" matches "A", "AB" and "ABC"; "AB" matches "AB" and "ABC", but not "A").
 #   The helpers below only deal with the coding and the matching of ranges. They do not use phylogenies or simmaps.
 
@@ -81,7 +81,7 @@ check_range_coding <- function (ranges)
 
 #' @title Stop if ranges are not coded as in BioGeoBEARS
 #'
-#' @description Strict validation used with `treat_states_as_areas = TRUE`: stops with an informative message listing each incorrect range
+#' @description Strict validation used with `treat_states_as_ranges = TRUE`: stops with an informative message listing each incorrect range
 #'   and the reason why it is not correctly coded (see `check_range_coding()`).
 #'
 #' @param ranges Character vector. Ranges (or states) to validate.
@@ -102,7 +102,7 @@ validate_range_coding <- function (ranges, who = "the simmap")
   incorrect <- checked[!checked$valid, , drop = FALSE]
   if (nrow(incorrect) > 0)
   {
-    stop("With 'treat_states_as_areas = TRUE', the states in ", who, " must be biogeographic ranges coded as in BioGeoBEARS: ",
+    stop("With 'treat_states_as_ranges = TRUE', the states in ", who, " must be biogeographic ranges coded as in BioGeoBEARS: ",
          "one capital letter per area, each area once, and the areas of a multi-area range in alphabetical order (e.g., 'A', 'AB', 'ABC').\n",
          "Incorrect states: ", paste0("'", incorrect$range, "' (", incorrect$reason, ")", collapse = "; "), ".")
   }

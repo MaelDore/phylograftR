@@ -248,15 +248,47 @@ resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states =
 
 #' @title Resolve the allowed ranges of each taxon (states treated as biogeographic ranges)
 #'
-#' @description Same as `resolve_allowed_states()` with `treat_states_as_areas = TRUE`: the states of the simmap and the allowed states
+#' @description Same as `resolve_allowed_states()` with `treat_states_as_ranges = TRUE`: the states of the simmap and the allowed states
 #'   are biogeographic ranges (see utils_ranges.R). An allowed range R matches a state S of the simmap if R is contained in S.
+#'
 #'   The states of the simmap and the allowed ranges must be correctly coded (stops otherwise, naming the incorrect states and why),
 #'   and the areas of the allowed ranges must be in the simmap (stops otherwise, with the areas available).
-#'   The allowed ranges of each taxon are then resolved into the acceptable states (the states of the simmap that contain at least one of them)
-#'   and, for each acceptable state, the allowed ranges that a lineage grafted in this state can inherit.
+#'
+#'   The allowed ranges of each taxon are then resolved into the acceptable states (the states of the simmap that contain at least one of them) and,
+#'   for each acceptable state, the allowed ranges that a lineage grafted in this state can inherit.
 #'   A taxon without allowed states (neither taxon-level nor global) can be grafted in all the states and inherits the whole state.
 #'   The function stops if no state of the simmap contains any of the allowed ranges of a taxon, and warns if some allowed ranges are contained in no state (they are ignored).
-#'   It also warns that grafting a lineage in a smaller range than the branch (e.g., 'A' on 'AB') creates subset sympatry events.
+#'
+#' @details
+#' Ranges are coded as in BioGeoBEARS: one capital letter per area, and the letters of a multi-area range in alphabetical order (e.g., "A", "AB", "ABC").
+#' An allowed range matches a state of the simmap if it is contained in it, i.e., if all its areas are in the state.
+#' Acceptable states are the states of the simmap on which the taxa can be grafted because at least one of its allowed range is contained in them.
+#' Candidate ranges are the allowed ranged that can be inherited when grafted on an edge in each of the acceptable states.
+#'
+#' The states of the simmap below are `c("A", "B", "AB", "BC")`:
+#' * Allowed range "A" matches the states "A" and "AB". The acceptable states are `c("A", "AB")`, and a lineage grafted in either of them inherits "A".
+#'   On a branch in "AB", this is a subset sympatry event, (AB) -> (AB), (A).
+#' * Allowed range "B" matches "B", "AB" and "BC". The acceptable states are `c("B", "AB", "BC")`, and the lineage inherits "B" in each of them.
+#' * Allowed range "AB" alone matches only the states that contain both areas: "AB". The lineage inherits "AB", never "A" or "B" alone.
+#' * Allowed ranges `c("A", "B")` match all the states. In "AB" both are candidates, and the range inherited is drawn among them when grafting,
+#'   whereas "A" is the only candidate in "A", and "B" the only one in "B" and in "BC".
+#' * Allowed ranges `c("A", "AC")`: "AC" is made of areas of the simmap but is contained in no state, so it is ignored with a warning, and "A" is used alone.
+#'   If it was the only allowed range, the function would stop.
+#' * No taxa-level allowed states provided: all the states are acceptable and each state is its own only candidate, so the lineage inherits the whole state of the branch it is grafted on.
+#'
+#' With single-area states ("A", "B", "C"), an allowed range only matches the identical state: the result is the same as `resolve_allowed_states()`
+#' (the acceptable states are the allowed states and each one is its own candidate).
+#'
+#' A taxon-level value of `missing_taxa_list$allowed_states` replaces the global `allowed_states` for this taxon (no intersection), as in `resolve_allowed_states()`.
+#' Incorrect codings (e.g., "ab", "BA", "A1", "AA") stop the function, naming the incorrect states and why, and so does an allowed area absent from the simmap
+#' (with the areas available). For example, with the states above, `allowed_states = "D"` stops and lists the areas available: "A", "B" and "C".
+#'
+#' Examples of outputs, with the states `c("A", "B", "AB", "BC")` present in the `simmap` and one taxon "X1":
+#'
+#' * `allowed_states = "B"` gives `$allowed_states$X1` = `c("B", "AB", "BC")` and `$range_candidates$X1` = `list(B = "B", AB = "B", BC = "B")`.
+#' * `allowed_states = c("A", "B")` gives `$allowed_states$X1` = `c("A", "B", "AB", "BC")` and `$range_candidates$X1` = `list(A = "A", B = "B", AB = c("A", "B"), BC = "B")`.
+#' * `allowed_states = "AB"` gives `$allowed_states$X1` = `"AB"` and `$range_candidates$X1` = `list(AB = "AB")`.
+#' * No allowed states gives `$allowed_states$X1` = `c("A", "B", "AB", "BC")` and `$range_candidates$X1` = `list(A = "A", B = "B", AB = "AB", BC = "BC")`.
 #'
 #' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of character vectors: `missing_taxa_list$allowed_states`.
 #' @param allowed_states `NULL`, or character vector. The global `allowed_states` argument.
@@ -310,22 +342,9 @@ resolve_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_states =
   if (length(unmatched) > 0)
   {
     describe <- function (range) { paste0("'", range, "' (taxa: ", paste(utils::head(unmatched[[range]], 5), collapse = ", "), if (length(unmatched[[range]]) > 5) ", ..." else "", ")") }
-    warning("With 'treat_states_as_areas = TRUE', some allowed ranges are not contained in any state of the simmap, so they are ignored: ",
+    warning("With 'treat_states_as_ranges = TRUE', some allowed ranges are not contained in any state of the simmap, so they are ignored: ",
             paste(vapply(names(unmatched), describe, character(1)), collapse = "; "), ".\n",
             "States available in the simmap: ", paste0("'", states, "'", collapse = ", "), ".", call. = FALSE)
-  }
-
-  # Grafting a lineage in a smaller range than the branch creates a change of range at the node: subset sympatry
-  pairs <- unique(do.call(rbind, lapply(candidates, function (x) data.frame(state = rep(names(x), lengths(x)), range = unlist(x, use.names = FALSE), stringsAsFactors = FALSE))))
-  pairs <- pairs[pairs$state != pairs$range, , drop = FALSE]
-  if (nrow(pairs) > 0)
-  {
-    n_show <- min(nrow(pairs), 5)
-    warning("With 'treat_states_as_areas = TRUE', a lineage can be grafted in a smaller range than the branch it is grafted on: ",
-            paste0("range '", pairs$range[seq_len(n_show)], "' on a branch in range '", pairs$state[seq_len(n_show)], "'", collapse = "; "),
-            if (nrow(pairs) > n_show) paste0("; ... (", nrow(pairs) - n_show, " more)") else "", ".\n",
-            "These grafts create subset sympatry events, (AB) -> (AB), (A), where the new lineage inherits a range included in the range of the branch ",
-            "(not jump dispersal nor vicariance): the state of the new lineage differs from the state of the branch at the node.", call. = FALSE)
   }
 
   list(allowed_states = acceptable, range_candidates = candidates)

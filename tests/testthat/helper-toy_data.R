@@ -141,6 +141,20 @@ make_toy_simmap <- function (phy, seed = 1, rate = 0.04)
   phytools::sim.history(phy, Q, anc = "A", message = FALSE)
 }
 
+## Relabel the states of a simmap (named vector: old state = new state), e.g., to turn the toy states into biogeographic ranges
+relabel_simmap <- function (simmap, mapping)
+{
+  simmap$maps <- lapply(simmap$maps, function (x) { names(x) <- unname(mapping[names(x)]); x })
+  colnames(simmap$mapped.edge) <- unname(mapping[colnames(simmap$mapped.edge)])
+  simmap
+}
+
+## Toy simmap with biogeographic ranges: states A, AB and BC (the toy states A, B and C relabelled)
+make_toy_range_simmap <- function (phy, seed = 1, rate = 0.04)
+{
+  relabel_simmap(make_toy_simmap(phy, seed = seed, rate = rate), c(A = "A", B = "AB", C = "BC"))
+}
+
 ## Function to create a backbone phylogeny and its associated simmaps
 toy_simmap_setup <- function ()
 {

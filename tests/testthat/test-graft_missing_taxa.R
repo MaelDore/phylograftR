@@ -948,6 +948,120 @@ test_that("graft_missing_taxa() with a simmap gives the same node labels as with
 })
 
 
+# ---- Biogeographic ranges as states (treat_states_as_ranges) ----
+
+## Test that the argument is checked, and requires a simmap
+test_that("graft_missing_taxa() checks treat_states_as_ranges and requires a simmap with TRUE",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mtl <- toy_missing_taxa(toy)
+  graft <- function (...) graft_missing_taxa(toy$phy, mtl, method = "uniform", verbose = FALSE, ...)
+
+  expect_error(graft(simmap = simmap, treat_states_as_ranges = "yes"), "'treat_states_as_ranges' must be TRUE or FALSE")
+  expect_error(graft(simmap = simmap, treat_states_as_ranges = NA), "'treat_states_as_ranges' must be TRUE or FALSE")
+  expect_error(graft(simmap = simmap, treat_states_as_ranges = c(TRUE, FALSE)), "'treat_states_as_ranges' must be TRUE or FALSE")
+  expect_error(graft(treat_states_as_ranges = TRUE), "'treat_states_as_ranges = TRUE' requires a 'simmap'")
+  expect_error(graft(treat_states_as_ranges = TRUE, allowed_states = "A"), "requires a 'simmap'")
+  expect_no_error(graft(treat_states_as_ranges = FALSE))
+})
+
+## Test that single-area states give the same phylogeny and simmap as the exact matching of the states
+test_that("graft_missing_taxa() with treat_states_as_ranges = TRUE gives the same result as FALSE for single-area states",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mtl <- toy_missing_taxa(toy)
+  for (method in c("uniform", "BD_clades"))
+  {
+    for (seed in 1:2)
+    {
+      exact <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = method, seed = seed)
+      areas <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), treat_states_as_ranges = TRUE, method = method, seed = seed)
+      expect_identical(areas, exact)
+    }
+  }
+  # Without allowed states
+  expect_identical(quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, treat_states_as_ranges = TRUE, method = "uniform", seed = 4),
+                   quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, method = "uniform", seed = 4))
+})
+
+## Test that allowed ranges restrict grafting to the pieces of branches in the states containing them
+test_that("graft_missing_taxa() with treat_states_as_ranges = TRUE grafts on the states containing the allowed ranges, without warning",
+{
+  toy <- toy_setup()
+  # States of the simmap: A, AB and BC (the toy states A, B and C)
+  range_simmap <- make_toy_range_simmap(toy$phy)
+  mtl <- toy_missing_taxa(toy)
+  tip_state <- function (grafted, taxon) names(grafted$simmap$maps[[match(match(taxon, grafted$tip.label), grafted$edge[, 2])]])
+
+  # Range "A" matches the states A and AB
+  expect_no_warning(grafted <- graft_missing_taxa(toy$phy, mtl, simmap = range_simmap, allowed_states = "A", treat_states_as_ranges = TRUE, method = "uniform", verbose = FALSE, seed = 3))
+  expect_true(all(vapply(mtl$Taxon_name, function (taxon) tip_state(grafted, taxon), character(1)) %in% c("A", "AB")))
+
+  # A multi-area range alone only matches the states containing it: "AB" matches AB only here
+  # (taxa of the clade B, which is entirely in the state AB)
+  mtl_b <- list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$B, X2 = toy$B))
+  grafted_ab <- quiet_graft(graft_missing_taxa, toy$phy, mtl_b, simmap = range_simmap, allowed_states = "AB", treat_states_as_ranges = TRUE, method = "uniform", seed = 3)
+  expect_true(all(vapply(mtl_b$Taxon_name, function (taxon) tip_state(grafted_ab, taxon), character(1)) == "AB"))
+
+  # The exact matching of the same simmap: "A" only matches the state A, where some taxa have no branch
+  expect_error(graft_missing_taxa(toy$phy, mtl, simmap = range_simmap, allowed_states = "A", method = "uniform", verbose = FALSE, seed = 3), "no branch available for grafting in their allowed states")
+})
+
+## Test that the states and the allowed ranges are strictly checked with TRUE only
+test_that("graft_missing_taxa() with treat_states_as_ranges = TRUE stops if the states or the allowed ranges are not coded as in BioGeoBEARS",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  range_simmap <- make_toy_range_simmap(toy$phy)
+  mtl <- toy_missing_taxa(toy)
+  graft <- function (...) graft_missing_taxa(toy$phy, mtl, method = "uniform", verbose = FALSE, ...)
+
+  # Incorrect states in the simmap: named in the message, and accepted with the exact matching
+  bad_simmap <- relabel_simmap(simmap, c(A = "A", B = "red", C = "CB"))
+  expect_error(graft(simmap = bad_simmap, allowed_states = "A", treat_states_as_ranges = TRUE),
+               "the states in the simmap must be biogeographic ranges.*'CB' \\(areas not in alphabetical order \\(expected 'BC'\\)\\).*'red' \\(lowercase letters")
+  expect_no_error(graft(simmap = bad_simmap, allowed_states = c("A", "red", "CB"), treat_states_as_ranges = FALSE))
+
+  # Incorrect allowed ranges, global and taxon-level
+  expect_error(graft(simmap = range_simmap, allowed_states = "ba", treat_states_as_ranges = TRUE), "the global 'allowed_states' argument.*'ba' \\(lowercase letters")
+  mtl_bad <- mtl
+  mtl_bad$allowed_states <- list(X1 = "AB", X2 = "BA", X3 = NULL, X4 = NULL, X5 = NULL)
+  expect_error(graft_missing_taxa(toy$phy, mtl_bad, simmap = range_simmap, treat_states_as_ranges = TRUE, method = "uniform", verbose = FALSE),
+               "taxon 'X2'.*'BA' \\(areas not in alphabetical order")
+
+  # An allowed area absent from the simmap: the areas available are listed
+  expect_error(graft(simmap = range_simmap, allowed_states = c("A", "D"), treat_states_as_ranges = TRUE), "not in the simmap: 'D'.*Areas available in the simmap: 'A', 'B', 'C'")
+  # A range contained in no state of the simmap
+  expect_error(graft(simmap = range_simmap, allowed_states = "AC", treat_states_as_ranges = TRUE), "No state of the simmap contains the allowed range")
+})
+
+
+# ---- Species attributes: simmap without effect ----
+
+## Test that a simmap that is neither restricting grafting nor returned sends a warning
+test_that("graft_missing_taxa() warns if the simmap has no effect: no allowed states and return_simmap = FALSE",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  mtl <- toy_missing_taxa(toy)
+  graft <- function (...) graft_missing_taxa(toy$phy, mtl, method = "uniform", verbose = FALSE, ...)
+  has_warning <- function (expr) any(grepl("no effect", testthat::capture_warnings(expr)))
+
+  expect_warning(graft(simmap = simmap, return_simmap = FALSE), "without any allowed states.*'return_simmap = FALSE'.*no effect")
+  expect_warning(graft(simmap = simmap, return_simmap = FALSE, treat_states_as_ranges = TRUE), "no effect")
+  # The simmap is returned (tracking only), or restricts grafting (global or taxon-level allowed states)
+  expect_false(has_warning(graft(simmap = simmap, return_simmap = TRUE)))
+  expect_false(has_warning(graft(simmap = simmap, allowed_states = c("A", "B"), return_simmap = FALSE)))
+  mtl_states <- mtl
+  mtl_states$allowed_states <- list(X1 = c("A", "B"), X2 = NULL, X3 = NULL, X4 = NULL, X5 = NULL)
+  expect_false(has_warning(graft_missing_taxa(toy$phy, mtl_states, simmap = simmap, return_simmap = FALSE, method = "uniform", verbose = FALSE)))
+  # Without simmap, return_simmap is silently ignored
+  expect_false(has_warning(graft(return_simmap = FALSE)))
+})
+
+
 # ---- Species attributes with method = "BD_clades" ----
 
 ## Test that all the states allowed gives exactly the same phylogeny as without simmap, with the BD method

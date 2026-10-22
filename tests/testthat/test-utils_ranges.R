@@ -68,7 +68,7 @@ test_that("validate_range_coding() returns the ranges invisibly if correct, and 
   expect_invisible(validate_range_coding(c("A", "AB", "B")))
   expect_identical(validate_range_coding(c("A", "AB", "B")), c("A", "AB", "B"))
   expect_error(validate_range_coding(c("A", "ba", "BA", "C"), who = "the simmap"),
-               "With 'treat_states_as_areas = TRUE', the states in the simmap must be biogeographic ranges coded as in BioGeoBEARS.*Incorrect states: 'ba' \\(lowercase letters \\(b, a\\)\\); 'BA' \\(areas not in alphabetical order \\(expected 'AB'\\)\\)")
+               "With 'treat_states_as_ranges = TRUE', the states in the simmap must be biogeographic ranges coded as in BioGeoBEARS.*Incorrect states: 'ba' \\(lowercase letters \\(b, a\\)\\); 'BA' \\(areas not in alphabetical order \\(expected 'AB'\\)\\)")
   expect_error(validate_range_coding("red", who = "the global 'allowed_states' argument"), "the global 'allowed_states' argument.*'red'")
   expect_error(validate_range_coding(character(0)), "non-empty character vector")
   expect_error(validate_range_coding(1:2), "non-empty character vector")

@@ -39,7 +39,7 @@
 #'   Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the `simmap`.
 #'   The function stops if some states are not in the `simmap`, or if `allowed_states` is provided without a `simmap`.
 #'   Default is `NULL` (all states allowed).
-#' @param treat_states_as_areas Logical. Only used with a `simmap`. Whether the states of the `simmap` are biogeographic ranges to be treated as sets of areas, rather than as unrelated states.
+#' @param treat_states_as_ranges Logical. Only used with a `simmap`. Whether the states of the `simmap` are biogeographic ranges to be treated as sets of areas, rather than as unrelated states.
 #'   Ranges must be coded as in `BioGeoBEARS`: one capital letter per area, and the letters of a multi-area range in alphabetical order (e.g., `"A"`, `"AB"`, `"ABC"`).
 #'   If `TRUE`, an allowed range enables grafting on branch pieces in any range that contains it: `"A"` can be grafted on `"A"`, `"AB"` and `"ABC"`,
 #'   whereas `"AB"` can be grafted on `"AB"` and `"ABC"` but not `"A"`.
@@ -150,7 +150,7 @@
 #'
 #' ### Biogeographic ranges as states
 #'
-#' With `treat_states_as_areas = TRUE`, the states of the `simmap` are biogeographic ranges, coded as in `BioGeoBEARS`
+#' With `treat_states_as_ranges = TRUE`, the states of the `simmap` are biogeographic ranges, coded as in `BioGeoBEARS`
 #' (one capital letter per area, and the letters of a multi-area range in alphabetical order, e.g., `"AB"`),
 #' and the allowed states are the ranges a missing clade can have.
 #'
@@ -291,7 +291,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
                                   missing_taxa_list, # List with Taxon_name = c(), and items named after Taxon_name: Sister_clade = list(X1 = c(), ...), allowed_states = list(X1 = c(), ...) (optional)
                                   simmap = NULL, # NULL, or stochastic character map (class "simmap") of the backbone: restricts grafting to the parts of the stem branches in allowed states
                                   allowed_states = NULL, # States of the simmap where grafting is allowed. Default for all taxa, overridden by missing_taxa_list$allowed_states. NULL: all states
-                                  treat_states_as_areas = FALSE, # Are the states of the simmap biogeographic ranges to be treated as sets of areas? An allowed range matches the states that contain it. (only with a simmap)
+                                  treat_states_as_ranges = FALSE, # Are the states of the simmap biogeographic ranges to be treated as sets of areas? An allowed range matches the states that contain it. (only with a simmap)
                                   return_simmap = TRUE, # Add the updated simmap to the output ($simmap)? Only with a simmap
                                   min_valid_fraction = 0.1, # Warn for the clades with a smaller fraction of their stem branch in allowed states (only with a simmap)
                                   max_age_redraws = 1000, # Maximum number of redraws of the divergence time of a missing clade when it falls outside the allowed states (only with a simmap)
@@ -338,9 +338,9 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     {
       stop("'return_simmap' must be TRUE or FALSE")
     }
-    if (!is.logical(treat_states_as_areas) || length(treat_states_as_areas) != 1 || is.na(treat_states_as_areas))
+    if (!is.logical(treat_states_as_ranges) || length(treat_states_as_ranges) != 1 || is.na(treat_states_as_ranges))
     {
-      stop("'treat_states_as_areas' must be TRUE or FALSE")
+      stop("'treat_states_as_ranges' must be TRUE or FALSE")
     }
     if (!is.numeric(max_age_redraws) || length(max_age_redraws) != 1 || is.na(max_age_redraws) || max_age_redraws < 1 || max_age_redraws != round(max_age_redraws))
     {
@@ -354,9 +354,9 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
       }
       warn_if_simmap_unused(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states, return_simmap = return_simmap)
     } else {
-      if (treat_states_as_areas)
+      if (treat_states_as_ranges)
       {
-        stop("'treat_states_as_areas = TRUE' requires a 'simmap', whose states are the biogeographic ranges of the branches of the backbone.")
+        stop("'treat_states_as_ranges = TRUE' requires a 'simmap', whose states are the biogeographic ranges of the branches of the backbone.")
       }
       states_in_list <- any(vapply(missing_taxa_list$allowed_states, function (x) length(x) > 0 && !all(is.na(x)), logical(1)))
       if (!is.null(allowed_states) || states_in_list)
@@ -403,12 +403,12 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
   if (use_states)
   {
     tracker <- start_state_tracking(phy = phy, simmap = simmap)
-    if (treat_states_as_areas)
+    if (treat_states_as_ranges)
     {
       # Allowed ranges are resolved into the acceptable states (the states containing an allowed range), used to restrict grafting, and the candidate ranges of each state
       resolved <- resolve_allowed_ranges(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
                                          states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
-      missing_taxa_list$allowed_states <- resolved$allowed_states # Allowed states filtered to the ones observed in the simmap
+      missing_taxa_list$allowed_states <- resolved$allowed_states # Allowed states adjusted to the ones observed in the simmap
       missing_taxa_list$range_candidates <- resolved$range_candidates # List of ranges that can be inherited by the taxa, based on which allowed state it is grafted on
     } else {
       missing_taxa_list$allowed_states <- resolve_allowed_states(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,

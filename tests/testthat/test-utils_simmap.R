@@ -311,6 +311,134 @@ test_that("get_state_at_position() solves ties at the limit of two pieces with t
 })
 
 
+# ---- Allowed ranges (states treated as biogeographic ranges) ----
+
+## Test that resolve_allowed_ranges() resolves the allowed ranges into acceptable states and candidate ranges, with the global or taxon-level values
+test_that("resolve_allowed_ranges() gives the acceptable states and the candidate ranges of each taxon, taxon-level values replacing the global one",
+{
+  states <- c("A", "AB", "BC")
+  taxa <- c("X1", "X2", "X3", "X4")
+  # Global "A" matches A and AB; the taxon-level values replace it (NULL and NA use the global value)
+  resolved <- suppressWarnings(resolve_allowed_ranges(allowed_states_taxa = list(X1 = NULL, X2 = "BC", X3 = c("A", "B"), X4 = NA), allowed_states = "A",
+                                                      states = states, taxon_names = taxa))
+  expect_identical(names(resolved), c("allowed_states", "range_candidates"))
+  expect_identical(names(resolved$allowed_states), taxa)
+  expect_identical(names(resolved$range_candidates), taxa)
+  expect_identical(resolved$allowed_states$X1, c("A", "AB"))
+  expect_identical(resolved$range_candidates$X1, list(A = "A", AB = "A"))
+  expect_identical(resolved$allowed_states$X2, "BC")
+  expect_identical(resolved$range_candidates$X2, list(BC = "BC"))
+  expect_identical(resolved$allowed_states$X3, c("A", "AB", "BC"))
+  expect_identical(resolved$range_candidates$X3, list(A = "A", AB = c("A", "B"), BC = "B"))
+  expect_identical(resolved$allowed_states$X4, c("A", "AB"))
+})
+
+## Test that without allowed states all the states are acceptable and each state is its own candidate (the whole state is inherited), without warning
+test_that("resolve_allowed_ranges() without allowed states allows all the states, each inherited as such, without warning",
+{
+  states <- c("A", "AB", "BC")
+  expect_no_warning(resolved <- resolve_allowed_ranges(states = states, taxon_names = c("X1", "X2")))
+  expect_identical(resolved$allowed_states, list(X1 = states, X2 = states))
+  expect_identical(resolved$range_candidates$X1, list(A = "A", AB = "AB", BC = "BC"))
+  expect_identical(resolved$range_candidates$X2, resolved$range_candidates$X1)
+})
+
+## Test that single-area states give the same acceptable states as the exact matching, without warning
+test_that("resolve_allowed_ranges() with single-area states is the same as the exact matching of resolve_allowed_states(), without warning",
+{
+  states <- c("A", "B", "C")
+  taxa <- c("X1", "X2", "X3")
+  allowed_taxa <- list(X1 = c("C", "A"), X2 = NULL, X3 = "B")
+  expect_no_warning(ranges <- resolve_allowed_ranges(allowed_states_taxa = allowed_taxa, allowed_states = "A", states = states, taxon_names = taxa))
+  exact <- resolve_allowed_states(allowed_states_taxa = allowed_taxa, allowed_states = "A", states = states, taxon_names = taxa)
+  # The acceptable states are in the order of the states of the simmap (the exact matching keeps the order of the allowed states)
+  expect_identical(lapply(ranges$allowed_states, sort), lapply(exact, sort))
+  expect_true(all(lengths(unlist(ranges$range_candidates, recursive = FALSE)) == 1))
+  expect_identical(ranges$range_candidates$X1, list(A = "A", C = "C"))
+})
+
+## Test that no warning is sent when a candidate range is smaller than the state (subset sympatry events are expected with ranges)
+test_that("resolve_allowed_ranges() does not warn when a candidate range is smaller than the state",
+{
+  states <- c("A", "AB", "BC")
+  expect_no_warning(resolved <- resolve_allowed_ranges(allowed_states = "A", states = states, taxon_names = "X1"))
+  expect_identical(resolved$range_candidates$X1, list(A = "A", AB = "A"))
+  expect_no_warning(resolve_allowed_ranges(allowed_states = c("AB", "BC"), states = states, taxon_names = "X1"))
+  expect_no_warning(resolved <- resolve_allowed_ranges(allowed_states = "BC", states = c("A", "AB", "BC", "ABC"), taxon_names = "X1"))
+  expect_identical(resolved$range_candidates$X1, list(BC = "BC", ABC = "BC"))
+})
+
+## Test the examples given in the documentation of resolve_allowed_ranges()
+test_that("resolve_allowed_ranges() gives the outputs described in its documentation",
+{
+  states <- c("A", "B", "AB", "BC")
+  resolve <- function (...) resolve_allowed_ranges(states = states, taxon_names = "X1", ...)
+  expect_identical(resolve(allowed_states = "B")$allowed_states$X1, c("B", "AB", "BC"))
+  expect_identical(resolve(allowed_states = "B")$range_candidates$X1, list(B = "B", AB = "B", BC = "B"))
+  expect_identical(resolve(allowed_states = c("A", "B"))$allowed_states$X1, c("A", "B", "AB", "BC"))
+  expect_identical(resolve(allowed_states = c("A", "B"))$range_candidates$X1, list(A = "A", B = "B", AB = c("A", "B"), BC = "B"))
+  expect_identical(resolve(allowed_states = "AB")$allowed_states$X1, "AB")
+  expect_identical(resolve(allowed_states = "AB")$range_candidates$X1, list(AB = "AB"))
+  expect_identical(resolve()$allowed_states$X1, states)
+  expect_identical(resolve()$range_candidates$X1, list(A = "A", B = "B", AB = "AB", BC = "BC"))
+  expect_error(resolve(allowed_states = "D"), "Areas available in the simmap: 'A', 'B', 'C'")
+})
+
+## Test that allowed ranges contained in no state are ignored with a warning, and that the function stops if none is contained in a state
+test_that("resolve_allowed_ranges() warns about allowed ranges contained in no state, and stops if a taxon has no state containing its allowed ranges",
+{
+  states <- c("A", "B", "AB", "BC")
+  # "AC" is made of areas of the simmap but no state contains it: X2 has no acceptable state
+  message <- tryCatch(suppressWarnings(resolve_allowed_ranges(allowed_states_taxa = list(X1 = c("A", "AC"), X2 = "AC", X3 = NULL), allowed_states = "B",
+                                                              states = states, taxon_names = c("X1", "X2", "X3"))),
+                      error = function (e) conditionMessage(e))
+  expect_match(message, "No state of the simmap contains the allowed range\\(s\\) of taxon 'X2': 'AC'.*States available in the simmap: 'A', 'B', 'AB', 'BC'")
+
+  # Only some ranges are contained in no state: they are ignored
+  warnings <- testthat::capture_warnings(resolved <- resolve_allowed_ranges(allowed_states_taxa = list(X1 = c("A", "AC")), states = states, taxon_names = "X1"))
+  expect_true(any(grepl("not contained in any state of the simmap, so they are ignored: 'AC' \\(taxa: X1\\)", warnings)))
+  expect_identical(resolved$allowed_states$X1, c("A", "AB"))
+  expect_identical(resolved$range_candidates$X1, list(A = "A", AB = "A"))
+})
+
+## Test that the states of the simmap and the allowed ranges are strictly checked, naming the incorrect states
+test_that("resolve_allowed_ranges() stops if the states or the allowed ranges are not coded as in BioGeoBEARS, or if an allowed area is not in the simmap",
+{
+  states <- c("A", "AB", "BC")
+  # States of the simmap
+  expect_error(resolve_allowed_ranges(states = c("A", "red", "BA"), taxon_names = "X1"),
+               "the states in the simmap must be biogeographic ranges.*'red' \\(lowercase letters \\(r, e, d\\)\\); 'BA' \\(areas not in alphabetical order \\(expected 'AB'\\)\\)")
+  # Global and taxon-level allowed ranges
+  expect_error(resolve_allowed_ranges(allowed_states = c("A", "ba"), states = states, taxon_names = "X1"),
+               "the global 'allowed_states' argument.*'ba' \\(lowercase letters")
+  expect_error(resolve_allowed_ranges(allowed_states_taxa = list(X1 = "BA"), states = states, taxon_names = "X1"),
+               "'missing_taxa_list\\$allowed_states' of taxon 'X1'.*'BA' \\(areas not in alphabetical order")
+  # Area not in the simmap
+  expect_error(resolve_allowed_ranges(allowed_states = c("A", "D"), states = states, taxon_names = "X1"),
+               "the global 'allowed_states' argument are not in the simmap: 'D'.*Areas available in the simmap: 'A', 'B', 'C'")
+  # Same checks of the list as with the exact matching
+  expect_error(resolve_allowed_ranges(allowed_states_taxa = list(X1 = "A"), states = states, taxon_names = c("X1", "X2")), "same length as 'Taxon_name'")
+  expect_error(resolve_allowed_ranges(allowed_states_taxa = c(X1 = "A"), states = states, taxon_names = "X1"), "must be a list")
+})
+
+
+# ---- Simmap without effect ----
+
+## Test that the warning is only sent if no allowed states are provided anywhere and the simmap is not returned
+test_that("warn_if_simmap_unused() warns only without any allowed states and with return_simmap = FALSE",
+{
+  expect_warning(warn_if_simmap_unused(return_simmap = FALSE), "no effect.*'return_simmap = TRUE'")
+  expect_warning(warn_if_simmap_unused(allowed_states_taxa = list(X1 = NULL, X2 = NA, X3 = character(0)), return_simmap = FALSE), "no effect")
+  # The simmap is returned: it only follows the states, which is a documented use
+  expect_no_warning(warn_if_simmap_unused(return_simmap = TRUE))
+  expect_no_warning(warn_if_simmap_unused(allowed_states_taxa = list(X1 = NULL, X2 = NA), return_simmap = TRUE))
+  # Allowed states, global or taxon-level
+  expect_no_warning(warn_if_simmap_unused(allowed_states = "A", return_simmap = FALSE))
+  expect_no_warning(warn_if_simmap_unused(allowed_states_taxa = list(X1 = NULL, X2 = "B"), return_simmap = FALSE))
+  expect_null(suppressWarnings(warn_if_simmap_unused(return_simmap = FALSE)))
+})
+
+
 ##### 2/ Tests of the toy simmap #####
 
 ## Test that the toy simmap can be used with the toy backbone, and is balanced as described in its documentation
