@@ -162,30 +162,30 @@ check_allowed_states <- function (allowed_states, states, who = "'allowed_states
 }
 
 
-#' @title Resolve the allowed states of each taxon
+#' @title Resolve the allowed values of each taxon
 #'
-#' @description Get the states in which each taxon can be grafted: the states of `missing_taxa_list$allowed_states` for the taxon if provided,
+#' @description Common part of `resolve_allowed_states()` and `resolve_allowed_ranges()`: get, for each taxon, the values of `missing_taxa_list$allowed_states` if provided,
 #'   otherwise the global `allowed_states` argument. A taxon-level value replaces the global one (no intersection).
 #'   Same logic as `resolve_include_target_clade_stem()`.
-#'   `NULL`, an empty vector or `NA` for a taxon use the global argument. A taxon with neither a taxon-level value nor a global one has all the states
-#'   of the simmap allowed (the states are then only followed, and grafting is not restricted). The function stops if some states are not in the simmap.
+#'   `NULL`, an empty vector or `NA` for a taxon use the global argument.
 #'
 #' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of character vectors: `missing_taxa_list$allowed_states`.
 #' @param allowed_states `NULL`, or character vector. The global `allowed_states` argument.
-#' @param states Character vector. States of the simmap.
 #' @param taxon_names Character vector. `missing_taxa_list$Taxon_name`.
+#' @param check_values Function with 2 arguments (`values`, `who`) that stops if the values are not valid
+#'   (`who` describes where the values come from, used in the message).
 #'
 #' @noRd
 #'
-#' @return A list named after `taxon_names`, with the allowed states (character vector, no duplicate) of each taxon.
+#' @return A list named after `taxon_names`, with the values (character vector, no duplicate) of each taxon. `NULL` for the taxa without values (neither a taxon-level value nor a global one).
 #'
 
-resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states = NULL, states, taxon_names)
+resolve_allowed_values <- function (allowed_states_taxa, allowed_states, taxon_names, check_values)
 {
   n_taxa <- length(taxon_names)
   if (!is.null(allowed_states))
   {
-    check_allowed_states(allowed_states, states, who = "the global 'allowed_states' argument")
+    check_values(allowed_states, "the global 'allowed_states' argument")
     allowed_states <- unique(allowed_states)
   }
   if (!is.null(allowed_states_taxa) && !is.list(allowed_states_taxa))
@@ -207,15 +207,155 @@ resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states =
     {
       resolved[i] <- list(allowed_states)
     } else {
-      check_allowed_states(value, states, who = paste0("'missing_taxa_list$allowed_states' of taxon '", taxon_names[i], "'"))
+      check_values(value, paste0("'missing_taxa_list$allowed_states' of taxon '", taxon_names[i], "'"))
       resolved[[i]] <- unique(value)
     }
   }
+  resolved
+}
+
+
+#' @title Resolve the allowed states of each taxon
+#'
+#' @description Get the states in which each taxon can be grafted: the states of `missing_taxa_list$allowed_states` for the taxon if provided,
+#'   otherwise the global `allowed_states` argument. A taxon-level value replaces the global one (no intersection).
+#'   Same logic as `resolve_include_target_clade_stem()`.
+#'   `NULL`, an empty vector or `NA` for a taxon use the global argument. A taxon with neither a taxon-level value nor a global one has all the states
+#'   of the simmap allowed (the states are then only followed, and grafting is not restricted). The function stops if some states are not in the simmap.
+#'   States are matched exactly with the states of the simmap (see `resolve_allowed_ranges()` to treat the states as biogeographic ranges).
+#'
+#' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of character vectors: `missing_taxa_list$allowed_states`.
+#' @param allowed_states `NULL`, or character vector. The global `allowed_states` argument.
+#' @param states Character vector. States of the simmap.
+#' @param taxon_names Character vector. `missing_taxa_list$Taxon_name`.
+#'
+#' @noRd
+#'
+#' @return A list named after `taxon_names`, with the allowed states (character vector, no duplicate) of each taxon.
+#'
+
+resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states = NULL, states, taxon_names)
+{
+  resolved <- resolve_allowed_values(allowed_states_taxa = allowed_states_taxa, allowed_states = allowed_states, taxon_names = taxon_names,
+                                     check_values = function (values, who) { check_allowed_states(values, states, who = who) })
 
   # No states provided (neither taxon-level nor global): all the states are allowed
   without_states <- which(vapply(resolved, is.null, logical(1)))
   for (i in without_states) { resolved[[i]] <- states }
   resolved
+}
+
+
+#' @title Resolve the allowed ranges of each taxon (states treated as biogeographic ranges)
+#'
+#' @description Same as `resolve_allowed_states()` with `treat_states_as_areas = TRUE`: the states of the simmap and the allowed states
+#'   are biogeographic ranges (see utils_ranges.R). An allowed range R matches a state S of the simmap if R is contained in S.
+#'   The states of the simmap and the allowed ranges must be correctly coded (stops otherwise, naming the incorrect states and why),
+#'   and the areas of the allowed ranges must be in the simmap (stops otherwise, with the areas available).
+#'   The allowed ranges of each taxon are then resolved into the acceptable states (the states of the simmap that contain at least one of them)
+#'   and, for each acceptable state, the allowed ranges that a lineage grafted in this state can inherit.
+#'   A taxon without allowed states (neither taxon-level nor global) can be grafted in all the states and inherits the whole state.
+#'   The function stops if no state of the simmap contains any of the allowed ranges of a taxon, and warns if some allowed ranges are contained in no state (they are ignored).
+#'   It also warns that grafting a lineage in a smaller range than the branch (e.g., 'A' on 'AB') creates subset sympatry events.
+#'
+#' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of character vectors: `missing_taxa_list$allowed_states`.
+#' @param allowed_states `NULL`, or character vector. The global `allowed_states` argument.
+#' @param states Character vector. States of the simmap.
+#' @param taxon_names Character vector. `missing_taxa_list$Taxon_name`.
+#'
+#' @noRd
+#'
+#' @return A list with 2 items, both named after `taxon_names`:
+#'  * `allowed_states` List of character vectors. The acceptable states of each taxon (states of the simmap, in the order of `states`),
+#'    to be used as the allowed states of `resolve_allowed_states()`.
+#'  * `range_candidates` List of named lists. For each taxon, a list named after its acceptable states, giving the character vector of the allowed ranges
+#'    contained in each state (the ranges a lineage grafted in this state can inherit). Without allowed states: each state is its own (only) candidate.
+#'
+
+resolve_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_states = NULL, states, taxon_names)
+{
+  validate_range_coding(states, who = "the simmap")
+  check_values <- function (values, who)
+  {
+    validate_range_coding(values, who = who)
+    check_allowed_areas(values, states, who = who)
+  }
+  resolved <- resolve_allowed_values(allowed_states_taxa = allowed_states_taxa, allowed_states = allowed_states, taxon_names = taxon_names, check_values = check_values)
+
+  acceptable <- candidates <- vector("list", length(taxon_names))
+  names(acceptable) <- names(candidates) <- taxon_names
+  unmatched <- list()
+  for (i in seq_along(taxon_names))
+  {
+    if (is.null(resolved[[i]]))
+    {
+      # No allowed states: all the states are acceptable, and a lineage inherits the whole state of the branch
+      acceptable[[i]] <- states
+      candidates[[i]] <- as.list(states)
+      names(candidates[[i]]) <- states
+    } else {
+      expanded <- expand_allowed_ranges(allowed_ranges = resolved[[i]], states = states)
+      if (length(expanded$acceptable_states) == 0)
+      {
+        stop("No state of the simmap contains the allowed range(s) of taxon '", taxon_names[i], "': ", paste0("'", resolved[[i]], "'", collapse = ", "), ".\n",
+             "States available in the simmap: ", paste0("'", states, "'", collapse = ", "), ".")
+      }
+      acceptable[[i]] <- expanded$acceptable_states
+      candidates[[i]] <- expanded$candidates
+      for (range in expanded$unmatched_ranges) { unmatched[[range]] <- c(unmatched[[range]], taxon_names[i]) }
+    }
+  }
+
+  # Allowed ranges contained in no state of the simmap are never used
+  if (length(unmatched) > 0)
+  {
+    describe <- function (range) { paste0("'", range, "' (taxa: ", paste(utils::head(unmatched[[range]], 5), collapse = ", "), if (length(unmatched[[range]]) > 5) ", ..." else "", ")") }
+    warning("With 'treat_states_as_areas = TRUE', some allowed ranges are not contained in any state of the simmap, so they are ignored: ",
+            paste(vapply(names(unmatched), describe, character(1)), collapse = "; "), ".\n",
+            "States available in the simmap: ", paste0("'", states, "'", collapse = ", "), ".", call. = FALSE)
+  }
+
+  # Grafting a lineage in a smaller range than the branch creates a change of range at the node: subset sympatry
+  pairs <- unique(do.call(rbind, lapply(candidates, function (x) data.frame(state = rep(names(x), lengths(x)), range = unlist(x, use.names = FALSE), stringsAsFactors = FALSE))))
+  pairs <- pairs[pairs$state != pairs$range, , drop = FALSE]
+  if (nrow(pairs) > 0)
+  {
+    n_show <- min(nrow(pairs), 5)
+    warning("With 'treat_states_as_areas = TRUE', a lineage can be grafted in a smaller range than the branch it is grafted on: ",
+            paste0("range '", pairs$range[seq_len(n_show)], "' on a branch in range '", pairs$state[seq_len(n_show)], "'", collapse = "; "),
+            if (nrow(pairs) > n_show) paste0("; ... (", nrow(pairs) - n_show, " more)") else "", ".\n",
+            "These grafts create subset sympatry events, (AB) -> (AB), (A), where the new lineage inherits a range included in the range of the branch ",
+            "(not jump dispersal nor vicariance): the state of the new lineage differs from the state of the branch at the node.", call. = FALSE)
+  }
+
+  list(allowed_states = acceptable, range_candidates = candidates)
+}
+
+
+#' @title Warn if a simmap is provided but has no effect
+#'
+#' @description A simmap has an effect if it restricts grafting (some allowed states, global or taxon-level) or if the updated simmap is returned.
+#'   Without any allowed states and with `return_simmap = FALSE`, the simmap is useless: this is likely a mistake of the user, so a warning is sent.
+#'
+#' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of character vectors: `missing_taxa_list$allowed_states` (before resolution).
+#' @param allowed_states `NULL`, or character vector. The global `allowed_states` argument.
+#' @param return_simmap Logical. The `return_simmap` argument.
+#'
+#' @noRd
+#'
+#' @return `NULL` (invisibly).
+#'
+
+warn_if_simmap_unused <- function (allowed_states_taxa = NULL, allowed_states = NULL, return_simmap = TRUE)
+{
+  given_in_list <- any(vapply(allowed_states_taxa, function (x) length(x) > 0 && !all(is.na(x)), logical(1)))
+  if (!return_simmap && is.null(allowed_states) && !given_in_list)
+  {
+    warning("A 'simmap' is provided without any allowed states (neither the global 'allowed_states' argument nor 'missing_taxa_list$allowed_states') and 'return_simmap = FALSE': ",
+            "the simmap does not restrict grafting and is not returned, so it has no effect.\n",
+            "Provide 'allowed_states' to restrict grafting, or set 'return_simmap = TRUE' to get the states of the grafted taxa.", call. = FALSE)
+  }
+  invisible(NULL)
 }
 
 
