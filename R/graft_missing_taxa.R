@@ -120,7 +120,7 @@
 #' @param nb_simulations Integer. Number of simulations, i.e., of grafted phylogenies to produce in the same run, from the same backbone and the same `missing_taxa_list`.
 #'   The grafting is stochastic, so ideally downstream analyses should be run on a set of grafted phylogenies rather than on a single one. Default is `1`.
 #'   See the section 'Multiple simulations' for the output, the seeds and the failures.
-#' @param force_simulations Logical. Whether to try new seeds until `nb_simulations` grafted phylogenies are obtained, up to `10 * nb_simulations` attempts,
+#' @param force_simulations Logical. Whether to try new seeds until `nb_simulations` grafted phylogenies are obtained, up to `10 * nb_simulations` attempts
 #'   (see 'Multiple simulations' in Details section). If `FALSE`, the simulations that fail are skipped. Default is `FALSE`.
 #' @param seed Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
 #'   is restored on exit. Set to `NULL` to use the random number generator of the session. Default is `1234`.
@@ -290,7 +290,6 @@
 #' Any other error (invalid inputs, no branch available for a taxon, ...) concerns all the simulations and stops the whole run.
 #'
 #' With `save_temp = TRUE` and several simulations, each simulation saves its temporary phylogeny in its own file, with the suffix `"_sim_k"` added before `".rds"` in `temp_file_path`.
-#' With several simulations, `verbose = TRUE` prints one line per simulation instead of the progress within the simulation.
 #'
 #' ### Sampling fraction and unsampled species
 #'
@@ -770,6 +769,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     tracker <- tracker
     missing_taxa_list <- missing_taxa_list
     verbose <- verbose_sim
+    # With several simulations, the progress messages state the simulation they belong to
+    sim_label <- if (nb_simulations > 1) paste0(" - Simulation n\u00b0", sim_index) else ""
     temp_file_path <- temp_file_path_simulation(temp_file_path = temp_file_path, index = sim_index, multiple = nb_simulations > 1)
 
     ## Set seed of the simulation, for the duration of the simulation only (the global RNG state is restored on exit)
@@ -795,7 +796,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       groups_uniform <- group_and_order_clades(phy, missing_taxa_list$Target_clade, include_target_clade_stem = missing_taxa_list$include_target_clade_stem)
       missing_taxa_list <- lapply(X = missing_taxa_list, FUN = function (x) { x[groups_uniform$taxa_order] })
 
-      if (verbose) cat(paste0(Sys.time(), " - Start grafting process\n"))
+      if (verbose) cat(paste0(Sys.time(), sim_label, " - Start grafting process\n"))
 
       for (i in seq_len(n_missing))
       {
@@ -882,7 +883,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         # Print progress if requested
         if (verbose && (i %% 100 == 0))
         {
-          cat(paste0(Sys.time(), " - Missing taxa grafted n\u00b0", i, "/", n_missing, "\n"))
+          cat(paste0(Sys.time(), sim_label, " - Missing taxa grafted n\u00b0", i, "/", n_missing, "\n"))
         }
       }
     }
@@ -890,7 +891,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     ## ---- For "BD_clades" strategy: Loop per target clade, nested ones first ---- ##
     if (method == "BD_clades")
     {
-      if (verbose) cat(paste0(Sys.time(), " - Start identification and ordering of target clades\n"))
+      if (verbose) cat(paste0(Sys.time(), sim_label, " - Start identification and ordering of target clades\n"))
 
       # Identify groups of taxa (target clade, availability of its stem and, with a simmap, allowed states) and order them by clade size
       # Since nested clades are always smaller than their higher parents, this is equivalent to order by nesting scheme
@@ -903,7 +904,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       # and reused for its other groups (same clade, so same rates and sampling fraction)
       BD_cache <- list()
 
-      if (verbose) cat(paste0(Sys.time(), " - Start grafting process per clades\n"))
+      if (verbose) cat(paste0(Sys.time(), sim_label, " - Start grafting process per clades\n"))
 
       # Initiate number of taxa and clades grafted
       nb_taxa_grafted <- 0
@@ -1091,7 +1092,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         # Print progress if requested
         if (verbose && (nb_clades_grafted %% 10 == 0))
         {
-          cat(paste0(Sys.time(), " - Missing taxa grafted within clades n\u00b0", nb_clades_grafted, "/", n_groups,
+          cat(paste0(Sys.time(), sim_label, " - Missing taxa grafted within clades n\u00b0", nb_clades_grafted, "/", n_groups,
                      " - Taxa n\u00b0", nb_taxa_grafted, "/", n_missing, "\n"))
         }
       }
@@ -1101,7 +1102,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     is_ultrametric <- ape::is.ultrametric(phy, tol = ultrametric_tol)
     if (!is_ultrametric)
     {
-      if (verbose) { cat(paste0(Sys.time(), " - Ensure the ultrametricity of the final tree\n") )}
+      if (verbose) { cat(paste0(Sys.time(), sim_label, " - Ensure the ultrametricity of the final tree\n") )}
       # Force ultrametry to avoid issue with bad rounding, but only of the grafted tips, to keep the backbone intact
       phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxon_name, root_age = root_age)
     }

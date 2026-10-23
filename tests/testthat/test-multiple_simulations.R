@@ -315,3 +315,32 @@ test_that("graft_missing_clades() with several simulations skips the simulations
   expect_error(suppressWarnings(graft_missing_clades(toy$phy, mcl, simmap = simmap_none, allowed_states = "C", max_age_redraws = 1, nb_simulations = 3, verbose = FALSE, seed = 1)),
                "None of the 3 simulation\\(s\\) could be obtained.*No usable divergence time")
 })
+
+## Test the progress messages
+test_that("with several simulations, the progress messages are the same as with one simulation and state the simulation they belong to",
+{
+  toy <- toy_setup()
+  mtl <- multi_missing_taxa(toy)
+  mcl <- multi_missing_clades(toy)
+  runs <- list(
+    taxa_uniform = function (verbose, ...) graft_missing_taxa(toy$phy, mtl, method = "uniform", verbose = verbose, ...),
+    taxa_BD = function (verbose, ...) graft_missing_taxa(toy$phy, mtl, method = "BD_clades", verbose = verbose, ...),
+    clades = function (verbose, ...) graft_missing_clades(toy$phy, mcl, verbose = verbose, ...))
+  strip <- function (x) sub("^[0-9: .-]+", "", x) # Remove the time
+  for (run in runs)
+  {
+    single <- capture.output(invisible(run(TRUE, nb_simulations = 1, seed = 3)))
+    expect_gt(length(single), 0)
+    expect_false(any(grepl("Simulation", single)))
+
+    multi <- capture.output(invisible(run(TRUE, nb_simulations = 2, seed = 3)))
+    for (k in 1:2)
+    {
+      lines_k <- grep(paste0("Simulation n[^ ]*", k, " - "), multi, value = TRUE)
+      expect_gt(length(lines_k), 0)
+      # The messages of a simulation are the ones of a single run, with the simulation added after the time
+      expect_true(all(sub(paste0("Simulation n[^ ]*", k, " - "), "", strip(lines_k)) %in% strip(single)))
+    }
+    expect_length(capture.output(invisible(run(FALSE, nb_simulations = 2, seed = 3))), 0)
+  }
+})

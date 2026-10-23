@@ -123,7 +123,7 @@ temp_file_path_simulation <- function (temp_file_path, index, multiple)
 #' @param nb_simulations Integer. Number of simulations requested.
 #' @param force_simulations Logical. Whether to try new seeds until `nb_simulations` simulations are obtained.
 #' @param seed `NULL`, or integer. Seed of the run.
-#' @param verbose Logical. Whether to display the progress.
+#' @param verbose Logical. Whether the simulations display their progress (passed to `simulate_one()` as `verbose_sim`).
 #'
 #' @noRd
 #'
@@ -138,7 +138,7 @@ run_simulations <- function (simulate_one, nb_simulations, force_simulations, se
   several <- nb_simulations > 1
   max_attempts <- if (force_simulations) 10 * nb_simulations else nb_simulations
   seeds <- derive_simulation_seeds(seed, max_attempts)
-  verbose_sim <- verbose && !several
+  verbose_sim <- verbose
 
   results <- list()
   failures <- list()
@@ -148,7 +148,6 @@ run_simulations <- function (simulate_one, nb_simulations, force_simulations, se
   {
     attempt <- attempt + 1
     sim_seed <- if (is.null(seeds)) NULL else seeds[attempt]
-    if (verbose && several) { cat(paste0(Sys.time(), " - Simulation n\u00b0", attempt, " (", length(results), "/", nb_simulations, " obtained)\n")) }
 
     run <- function () simulate_one(sim_seed = sim_seed, sim_index = attempt, verbose_sim = verbose_sim)
     if (several || force_simulations)

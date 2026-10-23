@@ -172,13 +172,12 @@ test_that("run_simulations() stops when no simulation is obtained, and stops at 
   expect_error(run_simulations(counting, 3, TRUE, seed = 7), "generic problem")
 })
 
-test_that("run_simulations() displays the progress of each simulation with several simulations, and the progress within the simulation with one",
+test_that("run_simulations() passes 'verbose' to the simulations as it is, whatever the number of simulations, and prints nothing itself",
 {
-  expect_output(run_simulations(fake_simulation(), 2, FALSE, seed = 7, verbose = TRUE), "Simulation n.*1.*Simulation n.*2")
-  expect_silent(run_simulations(fake_simulation(), 2, FALSE, seed = 7, verbose = FALSE))
   seen <- NULL
   recorder <- function (sim_seed, sim_index, verbose_sim) { seen <<- c(seen, verbose_sim); fake_simulation()(sim_seed, sim_index, verbose_sim) }
-  capture.output(run_simulations(recorder, 1, FALSE, seed = 7, verbose = TRUE))
-  capture.output(run_simulations(recorder, 2, FALSE, seed = 7, verbose = TRUE))
-  expect_equal(seen, c(TRUE, FALSE, FALSE))
+  expect_silent(run_simulations(recorder, 1, FALSE, seed = 7, verbose = TRUE))
+  expect_silent(run_simulations(recorder, 2, FALSE, seed = 7, verbose = TRUE))
+  expect_silent(run_simulations(recorder, 2, FALSE, seed = 7, verbose = FALSE))
+  expect_equal(seen, c(TRUE, TRUE, TRUE, FALSE, FALSE))
 })

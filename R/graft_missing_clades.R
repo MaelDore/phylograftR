@@ -194,7 +194,6 @@
 #' Any other error (invalid inputs, no branch available for a taxon, ...) concerns all the simulations and stops the whole run.
 #'
 #' With `save_temp = TRUE` and several simulations, each simulation saves its temporary phylogeny in its own file, with the suffix `"_sim_k"` added before `".rds"` in `temp_file_path`.
-#' With several simulations, `verbose = TRUE` prints one line per simulation instead of the progress within the simulation.
 #'
 #' ### Enclosing clades
 #'
@@ -285,7 +284,7 @@
 #' # Seeds of the simulations, to reproduce each phylogeny alone
 #' attr(grafted_phys, "seeds")
 #'
-#' #' # Plot phylos
+#' # Plot phylos
 #' old_par <- par()["mfrow"]
 #' par(mfrow = c(1, 3))
 #' plot(grafted_phys[[1]], cex = 0.7, main = "Sim #1") # sim_1
@@ -567,6 +566,8 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     tracker <- tracker
     missing_taxa_list <- missing_taxa_list
     verbose <- verbose_sim
+    # With several simulations, the progress messages state the simulation they belong to
+    sim_label <- if (nb_simulations > 1) paste0(" - Simulation n\u00b0", sim_index) else ""
     temp_file_path <- temp_file_path_simulation(temp_file_path = temp_file_path, index = sim_index, multiple = nb_simulations > 1)
 
     ## Set seed of the simulation, for the duration of the simulation only (the global RNG state is restored on exit)
@@ -581,7 +582,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     groups <- group_and_order_clades(phy, missing_taxa_list$Sister_clade)
     n_groups <- length(groups$group_clade_tips)
 
-    if (verbose) cat(paste0(Sys.time(), " - Start grafting process per missing clades\n"))
+    if (verbose) cat(paste0(Sys.time(), sim_label, " - Start grafting process per missing clades\n"))
 
     # Initiate number of taxa and missing clades grafted
     nb_taxa_grafted <- 0
@@ -758,7 +759,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
 
       if (verbose && (nb_missing_clades_grafted %% 10 == 0))
       {
-        cat(paste0(Sys.time(), " - Missing taxa grafted within clades n\u00b0", nb_missing_clades_grafted, "/", n_groups,
+        cat(paste0(Sys.time(), sim_label, " - Missing taxa grafted within clades n\u00b0", nb_missing_clades_grafted, "/", n_groups,
                    " - Taxa n\u00b0", nb_taxa_grafted, "/", n_missing, "\n"))
       }
     }
@@ -767,7 +768,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     is_ultrametric <- ape::is.ultrametric(phy, tol = ultrametric_tol)
     if (!is_ultrametric)
     {
-      if (verbose) { cat(paste0(Sys.time(), " - Ensure the ultrametricity of the final tree\n") )}
+      if (verbose) { cat(paste0(Sys.time(), sim_label, " - Ensure the ultrametricity of the final tree\n") )}
       # Force ultrametry to avoid issue with bad rounding
       phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxon_name, root_age = root_age)
     }
