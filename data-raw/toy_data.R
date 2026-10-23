@@ -7,8 +7,9 @@
 
 # Run from the root of the package, after loading it (devtools::load_all() or devtools::install()).
 # Produces:
-#  * data/toy_backbone.rda, data/toy_missing_taxa_list.rda, data/toy_total_richness_per_clades.rda, data/toy_simmap.rda, data/toy_missing_taxa_list_with_allowed_states.rda
-#  * inst/extdata/toy_missing_taxa.csv, inst/extdata/toy_total_richness.csv, inst/extdata/toy_missing_taxa_with_allowed_states.csv
+#  * data/toy_backbone.rda, data/toy_missing_taxa_list.rda, data/toy_total_richness_per_clades.rda, data/toy_simmap.rda, data/toy_missing_taxa_list_with_allowed_states.rda,
+#    data/toy_simmap_ranges.rda, data/toy_missing_taxa_list_with_allowed_ranges.rda
+#  * inst/extdata/toy_missing_taxa.csv, inst/extdata/toy_total_richness.csv, inst/extdata/toy_missing_taxa_with_allowed_states.csv, inst/extdata/toy_missing_taxa_with_allowed_ranges.csv
 
 
 ##### 1/ Create backbone phylogeny #####
@@ -156,7 +157,190 @@ toy_missing_taxa_list_with_allowed_states <- phylograftR::import_missing_taxa_li
 stopifnot(all(unlist(toy_missing_taxa_list_with_allowed_states$allowed_states) %in% toy_simmap_states))
 
 
-##### 7/ Save objects #####
+##### 7/ Create a stochastic character map (simmap) of the backbone with biogeographic ranges #####
+
+# Four ranges, coded as in BioGeoBEARS: "A", "B", "AB" and "BC" ------------------------------------------------
+# Areas A, B and C. Range "C" alone is not a state, so "C" is only found within "BC".
+
+# Anagenetic changes along the branches ------------------------------------------------------------------------
+# Only single-step changes of range between the states, i.e., the gain (dispersal, "d" in BioGeoBEARS) or the loss (local extinction, "e") of a single area:
+#   "d": "A" -> "AB", "B" -> "AB" and "B" -> "BC"; "e": "AB" -> "A", "AB" -> "B" and "BC" -> "B".
+# A change of two areas at once is not allowed ("AB" <-> "BC"), so the states are connected as a chain: A - AB - B - BC.
+# All the allowed changes have the same rate (0.04 per unit of time, as for 'toy_simmap').
+
+# Build transition matrix
+toy_simmap_ranges_states <- c("A", "B", "AB", "BC")
+toy_simmap_ranges_Q <- matrix(0, nrow = 4, ncol = 4, dimnames = list(toy_simmap_ranges_states, toy_simmap_ranges_states))
+for (change in list(c("A", "AB"), c("B", "AB"), c("B", "BC")))
+{
+  toy_simmap_ranges_Q[change[1], change[2]] <- toy_simmap_rate
+  toy_simmap_ranges_Q[change[2], change[1]] <- toy_simmap_rate
+}
+diag(toy_simmap_ranges_Q) <- -rowSums(toy_simmap_ranges_Q)
+
+# Helpers on ranges and events ------------------------------------------------------------------------------------
+split_areas <- function (range) { strsplit(range, split = "", fixed = TRUE)[[1]] }
+is_loss_of_one_area <- function (from, to) { length(split_areas(to)) == length(split_areas(from)) - 1 && all(split_areas(to) %in% split_areas(from)) }
+n_toy_tips <- ape::Ntip(toy_backbone)
+toy_nodes <- (n_toy_tips + 1):(n_toy_tips + toy_backbone$Nnode)
+
+# Range of the lineage at the end of the branch above a node (the root range for the root)
+range_above_node <- function (simmap, node)
+{
+  parent_edge <- match(node, simmap$edge[, 2])
+  if (is.na(parent_edge)) { simmap$node.states[1, 1] } else { utils::tail(names(simmap$maps[[parent_edge]]), 1) }
+}
+
+# Cladogenetic events: move part of the changes to the nodes -------------------------------------------------------
+# A simulated history only has anagenetic changes, that happen anywhere along the branches. To also represent cladogenetic events, where the change
+# is linked to the speciation event, some changes are moved to the parental node: the first piece of the branch is removed and the new range starts at the node.
+# Only the first change of a branch that is the loss of one area can be moved, as it gives a cladogenetic event of BioGeoBEARS:
+#   * if one of the two descendant branches is moved, e.g., (AB) -> (AB), (A): subset sympatry ("s");
+#   * if both are moved and the descendant ranges split the ancestral range, e.g., (AB) -> (A), (B): vicariance ("v").
+# The gain of an area cannot be moved: (A) -> (A), (AB) is not an event of BioGeoBEARS. Jump dispersal ("j") is not represented.
+# The nodes are taken in a random order, and changes are moved until about 'target_share' of the events (anagenetic changes and cladogenetic events) are cladogenetic.
+
+move_changes_to_nodes <- function (simmap, seed, target_share = 0.3)
+{
+  force(simmap)
+  set.seed(seed)
+  n_anagenetic <- sum(lengths(simmap$maps) - 1)
+  n_cladogenetic <- 0
+  for (node in sample(toy_nodes))
+  {
+    if (n_cladogenetic / (n_cladogenetic + n_anagenetic) >= target_share) { break }
+    node_range <- range_above_node(simmap, node)
+    child_edges <- which(simmap$edge[, 1] == node)
+    movable <- child_edges[vapply(child_edges, function (edge)
+    {
+      pieces <- names(simmap$maps[[edge]])
+      length(pieces) >= 2 && pieces[1] == node_range && is_loss_of_one_area(pieces[1], pieces[2])
+    }, logical(1))]
+    if (length(movable) == 0) { next }
+    new_ranges <- vapply(movable, function (edge) names(simmap$maps[[edge]])[2], character(1))
+    vicariance <- length(movable) == 2 && new_ranges[1] != new_ranges[2] && setequal(unlist(strsplit(new_ranges, "")), split_areas(node_range)) && runif(1) < 0.5
+    moved <- if (vicariance) movable else movable[sample.int(length(movable), 1)]
+    for (edge in moved)
+    {
+      pieces <- simmap$maps[[edge]]
+      simmap$maps[[edge]] <- stats::setNames(c(pieces[1] + pieces[2], pieces[-(1:2)]), names(pieces)[-1])
+      simmap$node.states[edge, 1] <- names(pieces)[2]
+    }
+    n_anagenetic <- n_anagenetic - length(moved)
+    n_cladogenetic <- n_cladogenetic + 1
+  }
+  # Update the total duration per range and branch
+  simmap$mapped.edge[] <- 0
+  for (edge in seq_along(simmap$maps))
+  {
+    for (range in unique(names(simmap$maps[[edge]]))) { simmap$mapped.edge[edge, range] <- sum(simmap$maps[[edge]][names(simmap$maps[[edge]]) == range]) }
+  }
+  simmap
+}
+
+# Count the events of a simmap of ranges, with the BioGeoBEARS syntax -----------------------------------------------
+#  * anagenetic (changes within branches): "d" (gain of one area), "e" (loss of one area), "other" (anything else)
+#  * cladogenetic (at the nodes, from the range above the node and the ranges at the start of the two descendant branches):
+#    "y" (narrow sympatry: single-area range copied), "range_copying" (widespread range copied by both descendants, e.g., (AB) -> (AB), (AB)),
+#    "s" (subset sympatry), "v" (vicariance), "other" (anything else)
+
+count_toy_events <- function (simmap)
+{
+  changes <- do.call(rbind, lapply(simmap$maps, function (map)
+  {
+    pieces <- names(map)
+    if (length(pieces) < 2) { NULL } else { data.frame(from = utils::head(pieces, -1), to = utils::tail(pieces, -1), stringsAsFactors = FALSE) }
+  }))
+  anagenetic <- ifelse(mapply(is_loss_of_one_area, changes$from, changes$to), "e", ifelse(mapply(is_loss_of_one_area, changes$to, changes$from), "d", "other"))
+  cladogenetic <- vapply(toy_nodes, function (node)
+  {
+    node_range <- range_above_node(simmap, node)
+    descendant_ranges <- vapply(which(simmap$edge[, 1] == node), function (edge) names(simmap$maps[[edge]])[1], character(1))
+    if (all(descendant_ranges == node_range)) { return(if (nchar(node_range) == 1) "y" else "range_copying") }
+    if (sum(descendant_ranges == node_range) == 1)
+    {
+      shifted <- descendant_ranges[descendant_ranges != node_range]
+      return(if (nchar(node_range) > 1 && nchar(shifted) == 1 && shifted %in% split_areas(node_range)) "s" else "other")
+    }
+    areas_1 <- split_areas(descendant_ranges[1])
+    areas_2 <- split_areas(descendant_ranges[2])
+    if (nchar(node_range) > 1 && !any(areas_1 %in% areas_2) && setequal(c(areas_1, areas_2), split_areas(node_range))) { return("v") }
+    "other"
+  }, character(1))
+  list(anagenetic = table(factor(anagenetic, levels = c("d", "e", "other"))),
+       cladogenetic = table(factor(cladogenetic, levels = c("y", "range_copying", "s", "v", "other"))))
+}
+
+# Simulation and choice of the seed --------------------------------------------------------------------------------
+# A single history is simulated from a root in range "AB" (phytools::sim.history()), then changes are moved to the nodes (see above).
+# The seed (the same for the two steps) is the first among 1 to 20000 giving a balanced map:
+#  * each range covers between 18% and 32% of the total length of the branches,
+#  * between 15% and 30% of the branches include a change of range, and no branch has more than 4 pieces,
+#  * each range is found in 5 to 10 of the 30 tips,
+#  * all the events are of a type of BioGeoBEARS (no "other"), with at least 2 subset sympatry events and 1 vicariance event,
+#  * between 25% and 36% of the events (anagenetic changes and cladogenetic events "s" and "v") are cladogenetic.
+
+simulate_toy_simmap_ranges <- function (seed)
+{
+  set.seed(seed)
+  simmap <- phytools::sim.history(tree = toy_backbone, Q = toy_simmap_ranges_Q, anc = "AB", message = FALSE)
+  move_changes_to_nodes(simmap, seed = seed, target_share = 0.3)
+}
+
+is_balanced_simmap_ranges <- function (simmap)
+{
+  duration_per_state <- colSums(simmap$mapped.edge)
+  if (!all(toy_simmap_ranges_states %in% names(duration_per_state))) { return(FALSE) }
+  share_of_length <- duration_per_state[toy_simmap_ranges_states] / sum(duration_per_state)
+  share_of_branches_with_change <- mean(lengths(simmap$maps) > 1)
+  tips_per_state <- table(factor(simmap$states, levels = toy_simmap_ranges_states))
+  events <- count_toy_events(simmap)
+  n_events <- sum(events$anagenetic[c("d", "e")]) + sum(events$cladogenetic[c("s", "v")])
+  share_cladogenetic <- sum(events$cladogenetic[c("s", "v")]) / n_events
+  all(share_of_length >= 0.18 & share_of_length <= 0.32) &&
+    share_of_branches_with_change >= 0.15 && share_of_branches_with_change <= 0.30 && max(lengths(simmap$maps)) <= 4 &&
+    all(tips_per_state >= 5 & tips_per_state <= 10) &&
+    events$anagenetic["other"] == 0 && events$cladogenetic["other"] == 0 && events$cladogenetic["s"] >= 2 && events$cladogenetic["v"] >= 1 &&
+    share_cladogenetic >= 0.25 && share_cladogenetic <= 0.36
+}
+
+toy_simmap_ranges_seed <- NULL
+for (seed in 1:20000)
+{
+  if (is_balanced_simmap_ranges(simulate_toy_simmap_ranges(seed))) { toy_simmap_ranges_seed <- seed; break }
+}
+stopifnot(!is.null(toy_simmap_ranges_seed))
+toy_simmap_ranges <- simulate_toy_simmap_ranges(toy_simmap_ranges_seed)
+
+# Summary of the map
+toy_simmap_ranges_seed # 3598
+round(colSums(toy_simmap_ranges$mapped.edge) / sum(toy_simmap_ranges$mapped.edge), 2) # Share of the total branch length in each range
+table(toy_simmap_ranges$states) # Ranges of the tips
+count_toy_events(toy_simmap_ranges) # Events: anagenetic d = 8, e = 4; cladogenetic y = 13, range_copying = 10, s = 5, v = 1
+
+
+##### 8/ Create a version of the table of missing taxa with allowed ranges #####
+
+# Same table as in 2/, with the extra column 'allowed_states': the ranges of 'toy_simmap_ranges' where each taxon can be grafted, separated by commas.
+# Used with 'treat_states_as_ranges = TRUE': an allowed range matches the branch pieces in a range that contains it, and the grafted lineage inherits the allowed range.
+# All the allowed ranges are states of 'toy_simmap_ranges' (so no warning is sent), and some are contained in other states:
+# "A" is also found in "AB", "B" in "AB" and "BC". Grafting a lineage in "A" on a branch in "AB" is a subset sympatric speciation event, (AB) -> (AB), (A).
+# Blank cells (NA) use the global 'allowed_states' argument of the grafting functions (c("A", "B") in the examples).
+# The states give 4 taxa with a taxon-level value (one or several ranges) and 3 taxa using the global argument.
+
+toy_missing_taxa_with_allowed_ranges_table <- toy_missing_taxa_table
+toy_missing_taxa_with_allowed_ranges_table$allowed_states <- c("A", NA, NA, "B, BC", "B", NA, "A, BC")
+
+utils::write.csv(toy_missing_taxa_with_allowed_ranges_table, file = "inst/extdata/toy_missing_taxa_with_allowed_ranges.csv", row.names = FALSE, na = "")
+
+toy_missing_taxa_list_with_allowed_ranges <- phylograftR::import_missing_taxa_list(
+  file = "inst/extdata/toy_missing_taxa_with_allowed_ranges.csv", phy = toy_backbone)
+
+# The ranges are states of the toy simmap
+stopifnot(all(unlist(toy_missing_taxa_list_with_allowed_ranges$allowed_states) %in% toy_simmap_ranges_states))
+
+
+##### 9/ Save objects #####
 
 dir.create("data", showWarnings = FALSE)
 save(toy_backbone, file = "data/toy_backbone.rda", compress = "gzip", version = 2)
@@ -164,3 +348,5 @@ save(toy_missing_taxa_list, file = "data/toy_missing_taxa_list.rda", compress = 
 save(toy_total_richness_per_clades, file = "data/toy_total_richness_per_clades.rda", compress = "gzip", version = 2)
 save(toy_simmap, file = "data/toy_simmap.rda", compress = "gzip", version = 2)
 save(toy_missing_taxa_list_with_allowed_states, file = "data/toy_missing_taxa_list_with_allowed_states.rda", compress = "gzip", version = 2)
+save(toy_simmap_ranges, file = "data/toy_simmap_ranges.rda", compress = "gzip", version = 2)
+save(toy_missing_taxa_list_with_allowed_ranges, file = "data/toy_missing_taxa_list_with_allowed_ranges.rda", compress = "gzip", version = 2)

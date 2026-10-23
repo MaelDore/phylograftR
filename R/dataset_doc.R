@@ -8,9 +8,10 @@
 
 # Includes:
 #  - A backbone phylogeny for grafting
-#  - A list of missing taxa to be grafted, with and without allowed_states
+#  - A list of missing taxa to be grafted, with and without allowed states or allowed ranges
 #  - A table of total richness per clades to inform sampling fractions with unsampled species
-#  - A stochastic character map (simmap) of the backbone phylogeny, mapping a trait or range with three states
+#  - A stochastic character map (simmap) of the backbone phylogeny, mapping a trait with three states
+#  - A stochastic character map (simmap) of the backbone phylogeny, mapping biogeographic ranges with four states
 
 
 ##### 1/ Toy backbone phylogeny #####
@@ -107,7 +108,7 @@
 #'
 #' # Graft with the toy simmap
 #' # Taxa with taxon-level states follow their specific constraints.
-#' # Taxa without taxon-level states follow the global argument and can only be grafted on "blue" or "green" branches
+#' # Taxa without taxon-level states follow the global argument and can only be grafted on "blue" or "green" branches.
 #' data(toy_backbone)
 #' data(toy_simmap)
 #'
@@ -116,7 +117,81 @@
 #'                                   simmap = toy_simmap, allowed_states = c("blue", "green"),
 #'                                   verbose = FALSE, seed = 1234)
 #'
+#' # Plot the updated simmap
+#' plot(grafted_phy$simmap, fsize = 0.5, ftype = "i",
+#'      colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+#'
+#' # Inspect final states of each grafted taxon
+#' taxon_names <- toy_missing_taxa_list_with_allowed_states$Taxon_name
+#' tip_edges <- match(match(taxon_names, grafted_phy$tip.label), grafted_phy$edge[, 2])
+#' taxon_states <- setNames(object = vapply(grafted_phy$simmap$maps[tip_edges], function (x) names(x)[1], character(1)), nm = taxon_names)
+#' # Should match with the allowed ranges. NULL default to "blue" or "green" based on the 'allowed_states' argument.
+#' taxon_states
+#' toy_missing_taxa_list_with_allowed_states$allowed_states
+#'
+#'
 "toy_missing_taxa_list_with_allowed_states"
+
+
+##### 2c/ Toy missing taxa list with allowed ranges #####
+
+#' @title Toy list of missing taxa, with allowed ranges
+#'
+#' @description Same as [`phylograftR::toy_missing_taxa_list_with_allowed_states`][toy_missing_taxa_list_with_allowed_states], with biogeographic ranges as allowed states:
+#'   the `$allowed_states` item holds ranges of [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges], coded as in BioGeoBEARS, in which each taxon can be grafted.
+#'   It is used to showcase the grafting with biogeographic ranges as states, with `treat_states_as_ranges = TRUE`
+#'   (see the Details section "Biogeographic ranges as states" of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]).
+#'
+#'   It is the output of [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] applied to the table
+#'   `system.file("extdata", "toy_missing_taxa_with_allowed_ranges.csv", package = "phylograftR")`.
+#'   Four taxa have a taxon-level value (one or several ranges) for `$allowed_states` and three have none (`NULL`),
+#'   so they use the global `allowed_states` argument of the grafting function.
+#'   All the allowed ranges are states of the toy simmap, so grafting does not raise warnings. Some are contained in other states of the simmap
+#'   (`"A"` in `"AB"`, `"B"` in `"AB"` and `"BC"`): a lineage grafted in a branch in `"AB"` with the allowed range `"A"` inherits `"A"`,
+#'   which is a subset sympatric speciation event, `(AB) -> (AB), (A)`.
+#'   Such a list requires a `simmap` to graft.
+#'
+#' @usage data(toy_missing_taxa_list_with_allowed_ranges)
+#' @format A named list with the same 7 taxa and items as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], and the extra item:
+#'  * `$allowed_states` List (one element per taxon, named after the taxa) of character vectors of ranges of [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges]
+#'    in which the taxon can be grafted, or `NULL` to use the global `allowed_states` argument. `"Genus_a_sp1"`: `"A"`;
+#'    `"Genus_b_sp1"`: `"B"` and `"BC"`; `"Genus_b_sp2"`: `"B"`; `"Genus_c_sp2"`: `"A"` and `"BC"`; the others: `NULL`.
+#'
+#' @seealso [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges], [`phylograftR::toy_missing_taxa_list_with_allowed_states`][toy_missing_taxa_list_with_allowed_states],
+#'   [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list]
+#'
+#' @examples
+#' # Import the list
+#' data(toy_missing_taxa_list_with_allowed_ranges)
+#' toy_missing_taxa_list_with_allowed_ranges$allowed_states
+#'
+#' # Compare to the initial '.csv' file
+#' system.file("extdata", "toy_missing_taxa_with_allowed_ranges.csv", package = "phylograftR")
+#'
+#' # Graft with the toy simmap of ranges, treating the states as ranges
+#' # Taxa with taxon-level ranges follow their specific constraints.
+#' # Taxa without taxon-level ranges follow the global argument and can only be grafted on branches in a range containing "A" or "B".
+#' data(toy_backbone)
+#' data(toy_simmap_ranges)
+#'
+#' grafted_phy <- graft_missing_taxa(phy = toy_backbone,
+#'                                   missing_taxa_list = toy_missing_taxa_list_with_allowed_ranges,
+#'                                   simmap = toy_simmap_ranges, allowed_states = c("A", "B"),
+#'                                   treat_states_as_ranges = TRUE,
+#'                                   verbose = FALSE, seed = 1234)
+#'
+#' # Plot the updated simmap
+#' plot(grafted_phy$simmap, col = c("A" = "gold", "B" = "dodgerblue", "AB" = "limegreen", "BC" = "firebrick2"))
+#'
+#' # Inspect range inherited by each grafted taxon (state of its terminal branch in the updated simmap)
+#' taxon_names <- toy_missing_taxa_list_with_allowed_ranges$Taxon_name
+#' tip_edges <- match(match(taxon_names, grafted_phy$tip.label), grafted_phy$edge[, 2])
+#' taxon_ranges <- setNames(object = vapply(grafted_phy$simmap$maps[tip_edges], function (x) names(x)[1], character(1)), nm = taxon_names)
+#' # Should match with the allowed ranges. NULL default to "A" or "B" based on the 'allowed_ranges' argument.
+#' taxon_ranges
+#' toy_missing_taxa_list_with_allowed_ranges$allowed_states
+#'
+"toy_missing_taxa_list_with_allowed_ranges"
 
 
 ##### 3/ Toy total richness data #####
@@ -181,3 +256,59 @@
 #' colSums(toy_simmap$mapped.edge)
 #'
 "toy_simmap"
+
+
+##### 4b/ Toy simmap of biogeographic ranges #####
+
+#' @title Toy stochastic character map of biogeographic ranges of the toy backbone phylogeny
+#'
+#' @description Stochastic character map (simmap) of [`phylograftR::toy_backbone`][toy_backbone] with four states that are biogeographic ranges
+#'   coded as in BioGeoBEARS: `"A"`, `"B"`, `"AB"` and `"BC"` (areas A, B and C; the area C is only found in `"BC"`).
+#'   It can be used as `simmap` with `treat_states_as_ranges = TRUE` to graft taxa on branches in ranges that contain their allowed ranges
+#'   (see the Details section "Biogeographic ranges as states" of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and the examples of
+#'   [`phylograftR::toy_missing_taxa_list_with_allowed_ranges`][toy_missing_taxa_list_with_allowed_ranges]).
+#'
+#'   It was simulated with `phytools::sim.history()` from a root in range `"AB"`, with equal rates (0.04 per unit of time) for the anagenetic changes of range
+#'   that gain or lose a single area (`"A"` <-> `"AB"`, `"B"` <-> `"AB"` and `"B"` <-> `"BC"`). A change of two areas at once (`"AB"` <-> `"BC"`) is not allowed.
+#'   As a simulated history only has anagenetic changes, some of them were then moved to the parental node of their branch, to also represent cladogenetic events
+#'   (see the Details section). Among the first 20000 seeds, the one used (3598) is the first giving a balanced map:
+#'   * The four ranges cover similar shares of the total branch length (about 30% `"B"`, 26% `"AB"`, 25% `"A"` and 20% `"BC"`).
+#'   * A moderate number of changes of range: 10 of the 58 branches include a change of range (no branch has more than 3 pieces).
+#'   * Each range is found in 5 to 10 of the 30 tips.
+#'
+#' @details
+#' Events represented in the map, with the syntax of BioGeoBEARS.
+#'
+#' Anagenetic changes (along the branches, 12 in total):
+#' * 8 `"d"` (range expansion, gain of one area): 5 `"A"` -> `"AB"` and 3 `"B"` -> `"BC"`.
+#' * 4 `"e"` (range contraction, loss of one area): 3 `"AB"` -> `"A"` and 1 `"AB"` -> `"B"`.
+#'
+#' Cladogenetic events (at the 29 nodes, from the range of the lineage above the node and the ranges at the start of the two descendant branches):
+#' * 5 `"s"` (subset sympatry), such as `(AB) -> (AB), (A)`: one descendant keeps the widespread range, the other starts in a single area within it.
+#'   They are the events that are produced by the grafting functions when a taxon inherits an allowed range smaller than the range of the lineage it is grafted on
+#'   (subset sympatric speciation, see [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]).
+#' * 1 `"v"` (vicariance), `(AB) -> (A), (B)`: the widespread range is split between the two descendants.
+#' * 13 `"y"` (narrow sympatry): both descendants inherit the single-area range of the lineage, such as `(A) -> (A), (A)`.
+#' * 10 nodes where both descendants inherit the same widespread range (widespread sympatry): `(AB) -> (AB), (AB)` or `(BC) -> (BC), (BC)`
+#'   (allowed in BAYAREALIKE-type models, but not in DEC).
+#'
+#' @usage data(toy_simmap_ranges)
+#' @format An object of classes `"simmap"` and `"phylo"` (see `phytools::make.simmap()`), with the same tips, topology and branch lengths as
+#'   [`phylograftR::toy_backbone`][toy_backbone], and the additional elements `$maps` (for each branch, the duration spent in each range,
+#'   from the rootward node to the tipward node), `$mapped.edge` (total duration per range and branch), `$node.states` and `$states` (ranges of the nodes and tips).
+#'
+#' @seealso [`phylograftR::toy_simmap`][toy_simmap] for a simmap with three states that are not ranges,
+#'   [`phylograftR::toy_missing_taxa_list_with_allowed_ranges`][toy_missing_taxa_list_with_allowed_ranges], [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
+#'
+#' @examples
+#' # Import the data
+#' data(toy_simmap_ranges)
+#'
+#' # Plot the map
+#' range_colors <- c(A = "gold", B = "dodgerblue", AB = "limegreen", BC = "firebrick2")
+#' phytools::plotSimmap(toy_simmap_ranges, colors = range_colors, fsize = 0.7, ftype = "i")
+#'
+#' # Duration spent in each range (sum on all the branches)
+#' colSums(toy_simmap_ranges$mapped.edge)
+#'
+"toy_simmap_ranges"
