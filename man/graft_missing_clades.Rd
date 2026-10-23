@@ -9,6 +9,8 @@ graft_missing_clades(
   missing_taxa_list,
   simmap = NULL,
   allowed_states = NULL,
+  treat_states_as_ranges = FALSE,
+  return_simmap = TRUE,
   min_valid_fraction = 0.1,
   max_age_redraws = 1000,
   min_tips = 5,
@@ -18,6 +20,8 @@ graft_missing_clades(
   save_temp = FALSE,
   save_temp_every = 10,
   temp_file_path = NULL,
+  nb_simulations = 1,
+  force_simulations = FALSE,
   seed = 1234
 )
 }
@@ -48,10 +52,21 @@ where it is grafted, along all its branches, so the states can be followed along
 See 'Species attributes' in Details section. Default is \code{NULL} (no restriction for grafting based on states).}
 
 \item{allowed_states}{Character vector. The states of \code{simmap} in which grafting is allowed. This is the default for all taxa:
-taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. States are matched exactly with the states of the \code{simmap}.
-The function stops if a \code{simmap} is provided and some taxa have no allowed states (neither a global nor a taxon-level value),
-if some states are not in the \code{simmap}, or if \code{allowed_states} is provided without a \code{simmap}.
-Default is \code{NULL} (no restriction for grafting based on states).}
+taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. States are matched exactly with the states of the \code{simmap}, unless \code{treat_states_as_ranges = TRUE}.
+Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the \code{simmap}.
+The function stops if some states are not in the \code{simmap}, or if \code{allowed_states} is provided without a \code{simmap}.
+With \code{treat_states_as_ranges = TRUE}, a range that is not a state of the \code{simmap} is accepted if it is contained in some of them (e.g., \code{"A"} can be allowed if \code{"AB"} is found on the \code{simmap}).
+Default is \code{NULL} (all states allowed).}
+
+\item{treat_states_as_ranges}{Logical. Only used with a \code{simmap}. Whether the states of the \code{simmap} are biogeographic ranges to be treated as sets of areas, rather than as unrelated states.
+Ranges must be coded as in \code{BioGeoBEARS}: one capital letter per area, and the letters of a multi-area range in alphabetical order (e.g., \code{"A"}, \code{"AB"}, \code{"ABC"}).
+If \code{TRUE}, an allowed range enables grafting on branch pieces in any range that contains it: \code{"A"} can be grafted on \code{"A"}, \code{"AB"} and \code{"ABC"},
+whereas \code{"AB"} can be grafted on \code{"AB"} and \code{"ABC"} but not \code{"A"}.
+
+See 'Biogeographic ranges as states' in Details section. Default is \code{FALSE} (states are matched exactly).}
+
+\item{return_simmap}{Logical. Only used with a \code{simmap}, and silently ignored without it. Whether to add the updated \code{simmap} to the output, in \verb{$simmap} (see 'Value').
+Default is \code{TRUE}.}
 
 \item{min_valid_fraction}{Numeric between 0 and 1. Only used with a \code{simmap}. Threshold of the fraction of the time window of the divergence time of a missing clade
 (the stem branch of its sister clade) that is in its allowed states. A warning lists the missing clades below the threshold for inspection,
@@ -93,8 +108,16 @@ Default is \code{.Machine$double.eps^0.5}.}
 
 \item{temp_file_path}{Character string. Path of the \code{.rds} file used for temporary saves. It must end with \code{.rds} and its directory must exist and be writable. Default is \code{NULL}, which saves in \code{"./temp_phy_from_grafting.rds"}.}
 
+\item{nb_simulations}{Integer. Number of simulations, i.e., of grafted phylogenies to produce in the same run, from the same backbone and \code{missing_taxa_list}.
+The grafting is stochastic, so ideally downstream analyses should be run on a set of grafted phylogenies rather than on a single one. Default is \code{1}.
+See 'Multiple simulations' in Details section for handling of the output, the seeds and the failures.}
+
+\item{force_simulations}{Logical. Whether to try new seeds until \code{nb_simulations} grafted phylogenies are obtained, up to \code{10 * nb_simulations} attempts
+(see 'Multiple simulations' in Details section). If \code{FALSE}, the simulations that fail are skipped. Default is \code{FALSE}.}
+
 \item{seed}{Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
-is restored on exit. Set to \code{NULL} to use the random number generator of the session. Default is \code{1234}.}
+is restored on exit. Set to \code{NULL} to use the random number generator of the session. Default is \code{1234}.
+With several simulations, it is the master seed: the first simulation uses \code{seed}, and the seeds of the other simulations are derived from it (see 'Multiple simulations').}
 }
 \value{
 The function returns an object of class \code{"phylo"}: the backbone phylogeny with the grafted taxa added as new tips.
@@ -110,6 +133,8 @@ Use them to color the phylogeny on plots (see examples).
 
 These elements are not updated by functions that modify the phylogeny (e.g., \code{ape::drop.tip()}, which removes tips but keeps the other elements as they are,
 and \code{ape::write.tree()}, which removes them). Use \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to recompute \code{grafted_tips} and \code{grafted_edges} on a manipulated phylogeny.
+
+Optional elements can be added to the output based on what optional argument was provided:
 \itemize{
 \item \code{sampling_fraction_df} Only if \code{total_richness_per_clades} is provided (a list with only \code{NA} values also returns it, assuming no unsampled species).
 Data frame with one row per clade of \code{total_richness_per_clades}:
@@ -123,7 +148,17 @@ Data frame with one row per clade of \code{total_richness_per_clades}:
 \item \code{sampling_fraction} Numeric. Fraction of the clade richness present in the grafted phylogeny as \code{(nb_backbone_species + nb_missing_species) / total_richness}.
 This can be used to account for clade-specific sampling fraction in downstream analyses.
 }
+\item \code{simmap} Only if a \code{simmap} is provided and \code{return_simmap = TRUE}. The updated stochastic character map of the grafted phylogeny (class \code{"simmap"}):
+the pieces of the branches of the backbone keep their states (cut where taxa were grafted), and every grafted clades is entirely in the state of the point where it was grafted.
+With \code{treat_states_as_ranges = TRUE}, each grafted clade is entirely in the range it inherited (see 'Biogeographic ranges as states' in Details section).
+This element can be plotted as any \code{simmap}, e.g., \code{plot(grafted_phy$simmap)}, or used to extract the states of the tips with \code{phytools::getStates(grafted_phy$simmap, type = "tips")}.
+It has the same exact topology and branch lengths as the grafted phylogeny.
 }
+
+With \code{nb_simulations > 1}, the function returns an object of class \code{"multiPhylo"} with one grafted phylogeny per simulation, named \code{"sim_1"}, \code{"sim_2"}, ...
+Each phylogeny has the elements described above (including \verb{$simmap} if a \code{simmap} was provided and \code{return_simmap = TRUE}).
+The \code{"multiPhylo"} object has the attributes \code{"seeds"} (named vector of the seeds of the phylogenies, to reproduce each of them alone with \code{nb_simulations = 1};
+\code{NULL} if \code{seed = NULL}) and \code{"failed"} (data.frame with the seed and the reason of the simulations that failed, 0 row if none).
 }
 \description{
 This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny as clades sister to clades of the backbone.
@@ -169,12 +204,48 @@ The divergence time of the missing clade is drawn with \code{TreeSim::corsim()} 
 it is drawn again, up to \code{max_age_redraws} times.
 
 The \code{simmap} can also be provided so that the states are updated alongside the phylogeny: the whole missing clade (all its taxa and branches)
-inherits the state of the point of the stem branch where it is grafted. The \code{simmap} itself is not modified.
-At the moment, the allowed states are still required with a \code{simmap}. Following the states without restricting the grafting, and returning the updated \code{simmap}, are planned.
-If all the states are allowed, the result is the same as without \code{simmap} (for the same \code{seed}).
+inherits the state of the point of the stem branch where it is grafted. The updated \code{simmap} is returned in \verb{$simmap}, if \code{return_simmap = TRUE}).
+The allowed states are not required: without any allowed states, all the states are allowed, grafting is not restricted by the states,
+but the simmap will be updated, assuming grafted clades inherit the state of the point where they are grafted.
 
 The function stops, before any grafting, if the taxa of a same missing clade have different allowed states, or if the stem branch of a sister clade has no piece in the allowed states
 (the clades are listed), and warns about the missing clades with a small share of their stem branch in allowed states (see \code{min_valid_fraction}).
+}
+
+\subsection{Biogeographic ranges as states}{
+
+With \code{treat_states_as_ranges = TRUE}, the states of the \code{simmap} are biogeographic ranges, coded as in \code{BioGeoBEARS}
+(one capital letter per area, and the letters of a multi-area range in alphabetical order, e.g., \code{"AB"}),
+and the allowed states are the ranges a missing clade can have.
+
+An allowed range matches a state of the \code{simmap} if it is contained in it: a missing clade allowed in \code{"A"} can be grafted on the parts of the stem branch in \code{"A"}, \code{"AB"} or \code{"ABC"},
+whereas a missing clade allowed in \code{"AB"} only can be grafted on the parts of the stem branch in \code{"AB"} or \code{"ABC"}.
+
+When multiple allowed states are provided, the inherited range is drawn randomly from the allowed ranges enclosed within the range of the stem branch piece where it is grafted.
+When grafting on an edge with a larger range than the inherited range (e.g., \code{"A"} on \code{"AB"}), this results in a subset sympatric speciation event such as (AB) -> (AB), (A).
+In the returned \code{simmap}, the branches of the grafted clades are in their inherited range, whereas the stem branch it is grafted on continues in its own range.
+}
+
+\subsection{Multiple simulations}{
+
+With \code{nb_simulations > 1}, the grafting is simulated \code{nb_simulations} times from the same backbone and the same \code{missing_taxa_list}.
+Each simulation starts again from the backbone: the birth-death models are fitted on the tree of the simulation (they depend on the taxa already grafted),
+and the simulations do not share anything but the inputs. The phylogenies are returned in a \code{"multiPhylo"} object (a single \code{"phylo"} if \code{nb_simulations = 1}),
+and the memory used grows with the number of simulations.
+
+The first simulation uses \code{seed}, so it is the same phylogeny as a run with \code{nb_simulations = 1} and the same \code{seed}.
+The seeds of the other simulations are drawn from a stream started by \code{seed}, and returned in the attribute \code{"seeds"}:
+a simulation can be reproduced alone with its seed, and the first simulations of a longer run are the same as the ones of a shorter run.
+With \code{seed = NULL}, the simulations follow the random number generator of the session.
+
+A failure that is specific to a simulation, because of the random draws (no usable divergence age or time after \code{max_age_redraws} redraws), skips this simulation with a warning:
+the name of a phylogeny keeps the index of its simulation (e.g., \code{"sim_3"} is missing if the third simulation failed). The function reports the number of phylogenies obtained
+if it differs from \code{nb_simulations}, and stops if no simulation succeeded.
+With \code{force_simulations = TRUE}, new seeds are tried until \code{nb_simulations} phylogenies are obtained (up to \code{10 * nb_simulations} attempts):
+the phylogenies are then named \code{"sim_1"} to \code{"sim_N"} without gaps, and the seeds of the failed attempts are in the attribute \code{"failed"}.
+Any other error (invalid inputs, no branch available for a taxon, ...) concerns all the simulations and stops the whole run.
+
+With \code{save_temp = TRUE} and several simulations, each simulation saves its temporary phylogeny in its own file, with the suffix \code{"_sim_k"} added before \code{".rds"} in \code{temp_file_path}.
 }
 
 \subsection{Enclosing clades}{
@@ -217,6 +288,8 @@ or if a clade has fewer unsampled species than the sum of the clades with an inf
 }
 }
 \examples{
+# --- Prepare data --- #
+
 # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units
 set.seed(1234)
 phy <- ape::rcoal(n = 30)
@@ -229,6 +302,8 @@ missing_clades_list <- list(
   # M1 and M2 share the same sister clade: they are grafted together as one missing clade
   Sister_clade = list(M1 = c("t8", "t22"), M2 = c("t8", "t22"), M3 = c("t26", "t18"), M4 = "t5"))
 
+# --- Perform grafting --- #
+
 # Graft the missing clades
 grafted_phy <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
                                     verbose = FALSE, seed = 1234)
@@ -238,6 +313,26 @@ plot(grafted_phy, cex = 0.7)
 plot(grafted_phy, cex = 0.7,
      edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
      tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+
+# --- Produce several grafted phylogenies --- #
+
+# The grafting is stochastic: several simulations can be run at once from the same backbone and list
+# (a "multiPhylo" named sim_1, sim_2, ...; sim_1 is the same as a single run with the same seed)
+grafted_phys <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
+                                      nb_simulations = 3, verbose = FALSE, seed = 1234)
+names(grafted_phys)
+# Seeds of the simulations, to reproduce each phylogeny alone
+attr(grafted_phys, "seeds")
+
+# Plot phylos
+old_par <- par()["mfrow"]
+par(mfrow = c(1, 3))
+plot(grafted_phys[[1]], cex = 0.7, main = "Sim #1") # sim_1
+plot(grafted_phys[[2]], cex = 0.7, main = "Sim #2") # sim_2
+plot(grafted_phys[[3]], cex = 0.7, main = "Sim #3") # sim_3
+par(old_par)
+
+# --- Account for unsampled species --- #
 
 # Account for unsampled species with the total richness of the sister clades.
 # All the unique sister clades must be listed (NA = unknown richness)
@@ -249,6 +344,8 @@ grafted_phy_richness <- graft_missing_clades(phy = phy, missing_taxa_list = miss
                                              verbose = FALSE, seed = 1234)
 grafted_phy_richness$sampling_fraction_df
 
+# --- Apply attribute-based exclusions --- #
+
 # Restrict the grafting to some states of a stochastic character map (simmap) of the backbone
 # The toy simmap has three states, "blue", "green" and "red"
 data(toy_backbone)
@@ -256,22 +353,30 @@ data(toy_simmap)
 
 # List the missing taxa to graft
 missing_clades_list_states <- list(
-   Taxon_name = c("M1", "M2"),
-   Sister_clade = list(M1 = c("t26", "t18"), M2 = "t14"))
+   Taxon_name = c("M1", "M2", "M3", "M4", "M5"),
+   Sister_clade = list(M1 = c("t26", "t18"), M2 = c("t26", "t18"), M3 = c("t26", "t18"),
+                       M4 = "t14", M5 = "t14"))
 
 # The simmap shows that the targeted stem branches recorded state shifts.
 plot(toy_simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 
 # We can use 'allowed_states' to limit grafting on the "green" portions of the stem branches
+   # The stem branch from the "bottom" clade shifts from "green" to "red"
+   # The terminal (stem) branch of "t14" shift from "green" to "red" too
 grafted_phy_states <- graft_missing_clades(phy = toy_backbone,
                                            missing_taxa_list = missing_clades_list_states,
                                            simmap = toy_simmap, allowed_states = "green",
                                            verbose = FALSE, seed = 1234)
 
-# Plot the updated simmap, with new grafted taxa branching from "green" segments
-# of the stem branches of their sister clades (To update at Step 6)
-plot(grafted_phy_states)
-# plot(toy_simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+# Plot output phylogeny with colored grafts
+plot(grafted_phy_states, cex = 0.7,
+     edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
+     tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
+
+# The updated simmap is in the output: the new grafted clades branch from the "green" segments
+# of the stem branches of their sister clades, and each newly grafted clades are entirely "green"
+plot(grafted_phy_states$simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+
 
 }
 \seealso{

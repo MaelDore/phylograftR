@@ -12,6 +12,8 @@ graft_missing_taxa(
   exclude_subclades_stem = TRUE,
   simmap = NULL,
   allowed_states = NULL,
+  treat_states_as_ranges = FALSE,
+  return_simmap = TRUE,
   min_valid_fraction = 0.1,
   max_age_redraws = 1000,
   method = "BD_clades",
@@ -22,6 +24,8 @@ graft_missing_taxa(
   save_temp_every = 10,
   temp_file_path = NULL,
   ultrametric_tol = .Machine$double.eps^0.5,
+  nb_simulations = 1,
+  force_simulations = FALSE,
   seed = 1234
 )
 }
@@ -81,10 +85,21 @@ See 'Species attributes' in Details section.
 Default is \code{NULL} (no restriction for grafting based on states).}
 
 \item{allowed_states}{Character vector. The states of \code{simmap} in which grafting is allowed. This is the default for all taxa:
-taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. States are matched exactly with the states of the \code{simmap}.
-The function stops if a \code{simmap} is provided and some taxa have no allowed states (neither a global nor a taxon-level value),
-if some states are not in the \code{simmap}, or if \code{allowed_states} is provided without a \code{simmap}.
-Default is \code{NULL} (no restriction for grafting based on states).}
+taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. States are matched exactly with the states of the \code{simmap}, unless \code{treat_states_as_ranges = TRUE}.
+Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the \code{simmap}.
+The function stops if some states are not in the \code{simmap}, or if \code{allowed_states} is provided without a \code{simmap}.
+With \code{treat_states_as_ranges = TRUE}, a range that is not a state of the \code{simmap} is accepted if it is contained in some of them (e.g., \code{"A"} can be allowed if \code{"AB"} is found on the \code{simmap}).
+Default is \code{NULL} (all states allowed).}
+
+\item{treat_states_as_ranges}{Logical. Only used with a \code{simmap}. Whether the states of the \code{simmap} are biogeographic ranges to be treated as sets of areas, rather than as unrelated states.
+Ranges must be coded as in \code{BioGeoBEARS}: one capital letter per area, and the letters of a multi-area range in alphabetical order (e.g., \code{"A"}, \code{"AB"}, \code{"ABC"}).
+If \code{TRUE}, an allowed range enables grafting on branch pieces in any range that contains it: \code{"A"} can be grafted on \code{"A"}, \code{"AB"} and \code{"ABC"},
+whereas \code{"AB"} can be grafted on \code{"AB"} and \code{"ABC"} but not \code{"A"}.
+
+See 'Biogeographic ranges as states' in Details section. Default is \code{FALSE} (states are matched exactly).}
+
+\item{return_simmap}{Logical. Only used with a \code{simmap}, and silently ignored without it. Whether to add the updated \code{simmap} to the output, in \verb{$simmap} (see 'Value').
+Default is \code{TRUE}.}
 
 \item{min_valid_fraction}{Numeric between 0 and 1. Only used with a \code{simmap}. Threshold below which a warning lists the taxa for inspection,
 as their grafting positions are concentrated on a small part of their target clade. The fraction is computed on the backbone, before grafting:
@@ -96,9 +111,9 @@ or to its crown age if the stem is not available) where at least one available b
 Default is \code{0.1}.
 }}
 
-\item{max_age_redraws}{Integer. Only used with a \code{simmap} and \code{method = "BD_clades"}. Maximum number of times the divergence ages of a group of taxa
-(same target clade, same stem availability and same allowed states) can be redrawn, when some of the ages drawn cannot be used because no available branch
-in an allowed state crosses them. The function stops with an informative message if this limit is reached. See 'Species attributes' in Details section. Default is \code{1000}.}
+\item{max_age_redraws}{Integer. Only used with \code{method = "BD_clades"}. Maximum number of times the divergence ages of a group of taxa
+(same target clade, same stem availability and, with a \code{simmap}, same allowed states) can be redrawn, when some of the ages drawn cannot be used because no available branch
+(in an allowed state with a \code{simmap}) crosses them. The function stops with an informative message if this limit is reached. See 'Methods' and 'Species attributes' in Details section. Default is \code{1000}.}
 
 \item{method}{Character string. Method used to draw the divergence times and the branches used for grafting.
 Must be one of \code{"uniform"} or \code{"BD_clades"} (default). See Details.}
@@ -138,8 +153,16 @@ and every \code{save_temp_every} target clades for \code{method = "BD_clades"}. 
 \item{ultrametric_tol}{Numeric. Tolerance used by \code{ape::is.ultrametric()} for the ultrametricity checks of the backbone and of the final phylogeny.
 Default is \code{.Machine$double.eps^0.5}.}
 
+\item{nb_simulations}{Integer. Number of simulations, i.e., of grafted phylogenies to produce in the same run, from the same backbone and the same \code{missing_taxa_list}.
+The grafting is stochastic, so ideally downstream analyses should be run on a set of grafted phylogenies rather than on a single one. Default is \code{1}.
+See the section 'Multiple simulations' for the output, the seeds and the failures.}
+
+\item{force_simulations}{Logical. Whether to try new seeds until \code{nb_simulations} grafted phylogenies are obtained, up to \code{10 * nb_simulations} attempts
+(see 'Multiple simulations' in Details section). If \code{FALSE}, the simulations that fail are skipped. Default is \code{FALSE}.}
+
 \item{seed}{Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
-is restored on exit. Set to \code{NULL} to use the random number generator of the session. Default is \code{1234}.}
+is restored on exit. Set to \code{NULL} to use the random number generator of the session. Default is \code{1234}.
+With several simulations, it is the master seed: the first simulation uses \code{seed}, and the seeds of the other simulations are derived from it (see 'Multiple simulations').}
 }
 \value{
 The function returns an object of class \code{"phylo"}: the backbone phylogeny with the grafted taxa added as new tips.
@@ -155,6 +178,8 @@ Use them to color the phylogeny on plots (see examples).
 
 These elements are not updated by functions that modify the phylogeny (e.g., \code{ape::drop.tip()}, which removes tips but keeps the other elements as they are,
 and \code{ape::write.tree()}, which removes them). Use \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to recompute \code{grafted_tips} and \code{grafted_edges} on a manipulated phylogeny.
+
+Optional elements can be added to the output based on what optional argument was provided:
 \itemize{
 \item \code{sampling_fraction_df} Only if \code{total_richness_per_clades} is provided (a list with only \code{NA} values also returns it, assuming no unsampled species).
 Data frame with one row per clade of \code{total_richness_per_clades}:
@@ -168,7 +193,17 @@ Data frame with one row per clade of \code{total_richness_per_clades}:
 \item \code{sampling_fraction} Numeric. Fraction of the clade richness present in the grafted phylogeny as \code{(nb_backbone_species + nb_missing_species) / total_richness}.
 This can be used to account for clade-specific sampling fraction in downstream analyses.
 }
+\item \code{simmap} Only if a \code{simmap} is provided and \code{return_simmap = TRUE}. The updated stochastic character map of the grafted phylogeny (class \code{"simmap"}):
+the pieces of the branches of the backbone keep their states (cut where taxa were grafted), and the grafted branch is entirely in the state of the point where it was grafted.
+With \code{treat_states_as_ranges = TRUE}, the grafted branch is entirely in the range it inherited (see 'Biogeographic ranges as states' in Details section).
+This element can be plotted as any \code{simmap}, e.g., \code{plot(grafted_phy$simmap)}, or used to extract the states of the tips with \code{phytools::getStates(grafted_phy$simmap, type = "tips")}.
+It has the same exact topology and branch lengths as the grafted phylogeny.
 }
+
+With \code{nb_simulations > 1}, the function returns an object of class \code{"multiPhylo"} with one grafted phylogeny per simulation, named \code{"sim_1"}, \code{"sim_2"}, ...
+Each phylogeny has the elements described above (including \verb{$simmap} if a \code{simmap} was provided and \code{return_simmap = TRUE}).
+The \code{"multiPhylo"} object has the attributes \code{"seeds"} (named vector of the seeds of the phylogenies, to reproduce each of them alone with \code{nb_simulations = 1};
+\code{NULL} if \code{seed = NULL}) and \code{"failed"} (data.frame with the seed and the reason of the simulations that failed, 0 row if none).
 }
 \description{
 This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny.
@@ -186,8 +221,7 @@ The backbone is never modified: only new tips are added.
 The function stops, before any grafting, if the backbone is not ultrametric, or is not binary (i.e., all nodes have only two descendant lineages).
 It also stops if some taxa have no branch available for grafting. The taxa concerned are listed in the error message,
 so the constraints (\code{include_target_clade_stem}, \code{Excluded_subclades}, \code{exclude_subclades_stem} or, with a \code{simmap}, the allowed states) can be adjusted.
-With \code{method = "BD_clades"} and no \code{simmap}, the function can also stop during grafting if no available branch crosses the divergence age drawn for a taxon
-(with a \code{simmap}, such ages are redrawn, see 'Species attributes').
+With \code{method = "BD_clades"}, the function can also stop during grafting if no usable divergence age is found after \code{max_age_redraws} redraws (see 'Methods').
 }
 
 \subsection{Target clades, stem regions and excluded subclades}{
@@ -239,11 +273,16 @@ For each target clade, a birth-death model is fitted with \code{phytools::fit.bd
 The sampling fraction accounts for the number of missing taxa provided for grafting in this clade.
 The divergence times of all taxa missing in the target clade are then jointly drawn with \code{TreeSim::corsim()}, between the present and the stem age of the clade
 (or its crown age if the stem is not available for these taxa).
-Taxa are grafted from the oldest to the youngest divergence time. Each taxon is grafted on a branch drawn uniformly among the available branches that cross its divergence age.
-Younger taxa can therefore be grafted on the branches of older missing taxa.
+Taxa are grafted from the oldest to the youngest divergence time following this procedure:
+\enumerate{
+\item A taxon is grafted at its age if an available branch in an allowed state crosses this age in the current tree.
+\item The ages for which no such valid branch piece exists are discarded.
+\item The ages of the taxa left are drawn again jointly, and grafted or discarded in the same way.
+This is repeated until all the taxa of the group are grafted, up to \code{max_age_redraws} times.
 Taxa of the same target clade with different stem availability (or, with a \code{simmap}, different allowed states) are drawn in separate groups,
 and the birth-death model is fitted only once per target clade.
-\code{"BD_clades"} is the recommended method, but it can be time consuming for large phylogenies.
+\code{"BD_clades"} is the recommended grafting method, but it can be time consuming for large phylogenies.
+}
 }
 
 With both methods, nested clades are processed first, so the taxa of a larger clade are grafted on a tree that already
@@ -259,22 +298,60 @@ A \code{simmap} describes the states of a discrete attribute (e.g., a trait or a
 With a \code{simmap}, each taxon can only be grafted on the pieces of the available branches that are in its allowed states
 (\code{missing_taxa_list$allowed_states} of the taxon if provided, otherwise the global argument \code{allowed_states}).
 This combines with the other constraints: the available branches are those of the target clade, minus the excluded subclades, restricted to the allowed states.
+If all states are allowed (all states listed in \code{allowed_states}, or no allowed states at all), grafting is not restricted by the states,
+and constraints are only based on target clades and excluded subclades.
 
 A grafted taxon is assumed to be in the state of the point of the backbone where it was grafted, along its whole branch,
 and so are the taxa grafted on its branch later. Taxa grafted later can therefore be grafted on the branches of taxa grafted earlier,
-if their state is allowed. The \code{simmap} itself is not modified.
+if their state is allowed.
 
-With \code{method = "uniform"}, the draw is uniform over the available pieces, weighted by their length: every time point in an allowed state has the same chance to be selected.
+The states are updated alongside the phylogeny, and the updated \code{simmap} is returned in \verb{$simmap} if \code{return_simmap = TRUE}.
+A \code{simmap} can thus be provided with \code{allowed_states = NULL}, only to get the states of the grafted taxa and branches:
+grafting is then not restricted by the states and gives the same result as without \code{simmap} (for the same \code{seed}).
+
+With \code{method = "uniform"}, the draw is uniform over the available pieces (i.e., portion of branches in the allowed states), weighted by their length:
+every time point in an allowed state has the same chance to be selected.
 
 With \code{method = "BD_clades"}, the divergence ages of the taxa of a group (same target clade, same stem availability and same allowed states) are drawn jointly
 with \code{TreeSim::corsim()}, as without a \code{simmap}: the diversification model is not modified by the states.
-An age can only be used if an available branch in an allowed state crosses it. The ages are used from the oldest to the youngest, each for one taxon of the group:
-\enumerate{
-\item A taxon is grafted at its age if an available branch in an allowed state crosses this age in the current tree.
-\item The ages for which no such valid branch piece exists are discarded.
-\item The ages of the taxa left are drawn again jointly, and grafted or discarded in the same way.
-This is repeated until all the taxa of the group are grafted, up to \code{max_age_redraws} times.
+The same grafting procedure, described above without a \code{simmap}, is then used except that
+an age can only be used if an available branch in an allowed state crosses it (without a \code{simmap}, if an available branch crosses it).
+The ages are used from the oldest to the youngest, each for one taxon of the group.
 }
+
+\subsection{Biogeographic ranges as states}{
+
+With \code{treat_states_as_ranges = TRUE}, the states of the \code{simmap} are biogeographic ranges, coded as in \code{BioGeoBEARS}
+(one capital letter per area, and the letters of a multi-area range in alphabetical order, e.g., \code{"AB"}),
+and the allowed states are the ranges a missing clade can have.
+
+An allowed range matches a state of the \code{simmap} if it is contained in it: a missing taxon allowed in \code{"A"} can be grafted on branch pieces in \code{"A"}, \code{"AB"} or \code{"ABC"},
+whereas a missing taxon allowed in \code{"AB"} only can be grafted on branch pieces in \code{"AB"} or \code{"ABC"}.
+
+When multiple allowed states are provided, the inherited range is drawn randomly from the allowed ranges enclosed within the range of the branch piece where it is grafted.
+When grafting on an edge with a larger range than the inherited range (e.g., \code{"A"} on \code{"AB"}), this results in a subset sympatric speciation event such as (AB) -> (AB), (A).
+In the returned \code{simmap}, the branches of the grafted lineage are in their inherited range, whereas the branch it is grafted on continues in its own range.
+}
+
+\subsection{Multiple simulations}{
+
+With \code{nb_simulations > 1}, the grafting is simulated \code{nb_simulations} times from the same backbone and the same \code{missing_taxa_list}.
+Each simulation starts again from the backbone: the birth-death models are fitted on the tree of the simulation (they depend on the taxa already grafted),
+and the simulations do not share anything but the inputs. The phylogenies are returned in a \code{"multiPhylo"} object (a single \code{"phylo"} if \code{nb_simulations = 1}),
+and the memory used grows with the number of simulations.
+
+The first simulation uses \code{seed}, so it is the same phylogeny as a run with \code{nb_simulations = 1} and the same \code{seed}.
+The seeds of the other simulations are drawn from a stream started by \code{seed}, and returned in the attribute \code{"seeds"}:
+a simulation can be reproduced alone with its seed, and the first simulations of a longer run are the same as the ones of a shorter run.
+With \code{seed = NULL}, the simulations follow the random number generator of the session.
+
+A failure that is specific to a simulation, because of the random draws (no usable divergence age or time after \code{max_age_redraws} redraws), skips this simulation with a warning:
+the name of a phylogeny keeps the index of its simulation (e.g., \code{"sim_3"} is missing if the third simulation failed). The function reports the number of phylogenies obtained
+if it differs from \code{nb_simulations}, and stops if no simulation succeeded. With \code{force_simulations = TRUE}, new seeds are tried until \code{nb_simulations} phylogenies are obtained
+(up to \code{10 * nb_simulations} attempts): the phylogenies are then named \code{"sim_1"} to \code{"sim_N"} without gaps, and the seeds of the failed attempts are in the attribute \code{"failed"}.
+Any other error (invalid inputs, no branch available for a taxon, ...) concerns all the simulations and stops the whole run.
+
+With \code{save_temp = TRUE} and several simulations, each simulation saves its temporary phylogeny in its own file, with the suffix \code{"_sim_k"} added before \code{".rds"} in \code{temp_file_path}.
 }
 
 \subsection{Sampling fraction and unsampled species}{
@@ -348,6 +425,24 @@ grafted_phy_uniform <- graft_missing_taxa(phy = phy, missing_taxa_list = missing
 check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
                            missing_taxa_list = missing_taxa_list)
 
+# --- Produce several grafted phylogenies --- #
+
+# The grafting is stochastic: several simulations can be run at once from the same backbone and list
+# (a "multiPhylo" named sim_1, sim_2, ...; sim_1 is the same as a single run with the same seed)
+grafted_phys <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+                                    method = "uniform", nb_simulations = 3, verbose = FALSE, seed = 1234)
+names(grafted_phys)
+# Seeds of the simulations, to reproduce each phylogeny alone
+attr(grafted_phys, "seeds")
+
+# Plot phylos
+old_par <- par()["mfrow"]
+par(mfrow = c(1, 3))
+plot(grafted_phys[[1]], cex = 0.7, main = "Sim #1") # sim_1
+plot(grafted_phys[[2]], cex = 0.7, main = "Sim #2") # sim_2
+plot(grafted_phys[[3]], cex = 0.7, main = "Sim #3") # sim_3
+par(old_par)
+
 # --- Account for unsampled species --- #
 
 # Account for unsampled species with the total richness of the clades.
@@ -368,20 +463,33 @@ grafted_phy_richness$sampling_fraction_df
 # The toy simmap has three states, "blue", "green" and "red"
 data(toy_backbone)
 data(toy_simmap)
-data(toy_missing_taxa_list)
+data(toy_missing_taxa_list_with_allowed_states)
 
-# Perform grafting informed with the simmap and associated 'allowed_states'
-# With the default method ("BD_clades"), the divergence ages are drawn from a birth-death model
-# and redrawn if they cannot be used because of the states
+# This missing_taxa_list has the item 'allowed_states', with the states where each taxon can be grafted
+# (NULL for the taxa without a specific value).
+toy_missing_taxa_list_with_allowed_states$allowed_states
+
+# Perform grafting informed with the simmap and associated 'allowed_states'.
+# The taxa without taxon-level states use the global 'allowed_states' argument:
+# here they can only be grafted on "blue" or "green" sections of the branches
 grafted_phy_states <- graft_missing_taxa(phy = toy_backbone,
-                                         missing_taxa_list = toy_missing_taxa_list,
+                                         missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
                                          simmap = toy_simmap, allowed_states = c("blue", "green"),
                                          method = "BD_clades", verbose = FALSE, seed = 1234)
 
-# Plot output
+# Plot output phylogeny with colored grafts
 plot(grafted_phy_states, cex = 0.7,
      edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
      tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
+
+# The updated simmap is in the output: the grafted taxa are in the state of the point where they were grafted
+plot(grafted_phy_states$simmap, fsize = 0.5, ftype = "i",
+     colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+
+# States of the grafted taxa: "Genus_a_sp1" and "Genus_c_sp2" can be "red" thanks to their taxon-level states,
+# but the taxa using the global states cannot
+phytools::getStates(grafted_phy_states$simmap, type = "tips")[toy_missing_taxa_list_with_allowed_states$Taxon_name]
+
 
 }
 \seealso{

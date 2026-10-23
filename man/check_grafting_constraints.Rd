@@ -11,6 +11,8 @@ check_grafting_constraints(
   include_target_clade_stem = TRUE,
   use_excluded_subclades = TRUE,
   exclude_subclades_stem = TRUE,
+  allowed_states = NULL,
+  treat_states_as_ranges = FALSE,
   check_backbone = TRUE,
   tolerance = 1e-06,
   stop_on_failure = FALSE,
@@ -36,6 +38,18 @@ If no \verb{$Excluded_subclades} item is found in \code{missing_taxa_list}, a wa
 (a taxon sister to an excluded subclade is then a violation). Excluded subclades with a value in \code{missing_taxa_list$exclude_subclades_stem} use it instead
 (\code{NA} or no item: this global value is used). Default is \code{TRUE}.}
 
+\item{allowed_states}{Character vector. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: the states in which grafting is allowed. This is the default for all taxa:
+taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. Only used if \code{phy_grafted} has a \verb{$simmap} item
+(the updated simmap returned by \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} with a \code{simmap}).
+The function stops if some states are not in the \code{simmap}. Default is \code{NULL} (all states allowed for the taxa without a taxon-level value).}
+
+\item{treat_states_as_ranges}{Logical. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: whether the states of the \code{simmap} and the allowed states are treated as biogeographic ranges:
+an allowed range enables grafting on branch pieces in any range that contains it: \code{"A"} can be grafted on \code{"A"}, \code{"AB"} and \code{"ABC"}, whereas \code{"AB"} can be grafted on \code{"AB"} and \code{"ABC"} but not \code{"A"}.
+Only used if \code{phy_grafted} has a \verb{$simmap} item, otherwise the function stops if \code{TRUE}.
+States / ranges are coded as in BioGeoBEARS (see the Details section "Biogeographic ranges as states").
+The function stops if the states of the \code{simmap} or the allowed states are not correctly coded, or if an area of the allowed states is not in the \code{simmap}.
+Default is \code{FALSE} (states are matched exactly).}
+
 \item{check_backbone}{Logical. Whether to check that the topology and branch lengths of the backbone are preserved once the grafted taxa are pruned. Default is \code{TRUE}.}
 
 \item{tolerance}{Numeric. Tolerance for the maximum deviation in backbone branch lengths, relative to the depth (root age) of the backbone.
@@ -57,7 +71,14 @@ The function returns a data.frame with one row per taxon in \code{missing_taxa_l
 \item \verb{$excluded_ok}: Logical. Whether the taxon is outside all its excluded subclades (and not on their stem, for the subclades with an excluded stem).
 \item \verb{$n_excluded_violated}: Integer. Number of excluded subclades violated.
 \item \verb{$excluded_violated}: Character string. Names of the excluded subclades violated (or their indices if the subclades are not named), separated by commas (\code{NA} if none).
-\item \verb{$ok}: Logical. Whether the taxon respects both its target clade and its excluded subclades.
+\item \verb{$states_ok}: Logical. Only checked if \code{phy_grafted} has a \verb{$simmap} item: whether the taxon was grafted in one of its allowed states
+(\code{missing_taxa_list$allowed_states} of the taxon if provided, otherwise the global \code{allowed_states} argument; all the states if neither is provided).
+With \code{treat_states_as_ranges = TRUE}, the state of the terminal branch of the taxon (the range it inherited) must be one of its allowed ranges (any range if the taxon has no allowed states).
+\code{NA} if \code{phy_grafted} has no \verb{$simmap}.
+\item \verb{$ranges_ok}: Logical. Only checked with \code{treat_states_as_ranges = TRUE} and a \verb{$simmap} item: whether the range inherited by the taxon is contained in the state of the lineage at the graft point
+(see the Details section "Biogeographic ranges as states"). \code{NA} if not checked, or if the taxon is grafted at the root (no parent lineage).
+This differs from \verb{$states_ok} that checks only the validity of the terminal tip state. Here, the validity of the inherited range is assessed against the range of the backbone lineage it was grafted on.
+\item \verb{$ok}: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
 }
 
 The data.frame has the following attributes:
@@ -86,6 +107,10 @@ The 'stem' position is not restricted to a taxon being directly sister to the ta
 so several missing taxa can form together a group sister to the target clade (i.e, a missing-only subtree grafted on the the stem).
 Only backbone tips are considered when checking the position of a taxon (missing taxa are ignored), so such configurations are valid.
 
+If \code{phy_grafted} has a \verb{$simmap} item (the updated \code{simmap} returned by the grafting functions when a \code{simmap} is provided), the states are also checked:
+a grafted taxon is in the state of the point where it was grafted, along its whole terminal branch, so the states of its terminal branch in the \code{simmap} must be allowed.
+The \code{simmap} item is used as it is: it is not compared to the backbone.
+
 A taxon respects its excluded subclades if it is not nested within any of them.
 If the stem of an excluded subclade is excluded (\code{exclude_subclades_stem = TRUE}, the default), the taxon must also not be on its stem, i.e., sister to the subclade
 (or to other missing taxa sister to the subclade), with no other backbone tip in between. For a single-tip excluded subclade, the taxon must not be on the branch of the tip.
@@ -93,6 +118,19 @@ As in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}, if t
 
 Branches of the backbone are matched between the pruned grafted phylogeny and the backbone by the set of tips they subtend.
 Branch lengths are considered preserved if the maximum deviation, relative to the depth of the backbone, is lower than \code{tolerance}.
+\subsection{Biogeographic ranges as states}{
+
+With \code{treat_states_as_ranges = TRUE}, the states are biogeographic ranges (one capital letter per area, e.g., \code{"A"}, \code{"AB"}, \code{"BC"}), and a range is a set of areas.
+A grafted lineage inherits one of its allowed ranges, which can be a subset of the state of the lineage it is grafted on.
+Example: the range \code{"A"} can be inherited from a lineage in the state \code{"AB"}. This then describes a subset sympatric speciation event: \verb{(AB) -> (AB), (A)}.
+
+Two checks are then performed:
+\itemize{
+\item \verb{$states_ok}: the state of the terminal branch of the taxon is exactly one of its allowed ranges (the range inherited).
+\item \verb{$ranges_ok}: the range inherited is contained in the state of the lineage at the graft point (e.g., \code{"A"} is contained in \code{"AB"}, but \code{"BC"} is not).
+The check is skipped (\code{NA}) for taxa grafted at the root.
+}
+}
 }
 \examples{
 # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units

@@ -50,6 +50,7 @@ A \code{missing_taxa_list}: a list, ready to be used in the grafting functions, 
 \item \verb{$Excluded_subclades} Only if the column was provided. List (one element per taxon) of lists of character vectors of tips. \code{NULL} for taxa with no excluded subclades.
 The subclades are named after their labels if \code{Excluded_subclades_names} was provided.
 \item \verb{$exclude_subclades_stem} Only if the column was provided. List (one element per taxon) of logical vectors (one value per excluded subclade), or \code{NULL}.
+\item \verb{$allowed_states} Only if the column was provided. List (one element per taxon) of character vectors of states, or \code{NULL} for taxa without a taxon-level value (the global \code{allowed_states} argument is used).
 }
 
 Every item is named after the taxa (\verb{$Taxon_name}), in the same order.
@@ -84,6 +85,11 @@ The last one is a single tip define by its tip label (\code{"t7"}). Use blank ce
 with one value per subclade of \code{Excluded_subclades} separated by semicolons, or a single value used for all of them.
 Ex: \code{"FALSE; TRUE; TRUE"}.
 \code{NA} values and blank cells use the global \code{exclude_subclades_stem} argument of \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}.
+\item \code{allowed_states}: (Optional) For each taxon, the states of a \code{simmap} in which it can be grafted (see the \code{simmap} argument of \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}
+or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}), separated by commas. It is accepted with both \code{Target_clade} and \code{Sister_clade}.
+Ex: \code{"blue, green"}. Blank cells and \code{NA} have no taxon-level value, so the global \code{allowed_states} argument of the grafting function is used for the taxon.
+States are matched exactly with the states of the \code{simmap} (e.g., case matters) when grafting, and so cannot contain commas.
+The names of the states are not checked here as the \code{simmap} is not provided: the grafting function checks them.
 }
 
 Optional columns that do not match items in \code{missing_taxa_list} can be used to provide names of clades:
