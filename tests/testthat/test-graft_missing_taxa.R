@@ -1080,7 +1080,7 @@ test_that("graft_missing_taxa() with treat_states_as_ranges = TRUE grafts with a
   mtl <- toy_missing_taxa(toy)
   mtl_b <- list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$B, X2 = toy$B)) # the clade B is entirely in the state AB
   expect_warning(grafted <- graft_missing_taxa(toy$phy, mtl_b, simmap = range_simmap, allowed_states = "B", treat_states_as_ranges = TRUE, method = "uniform", verbose = FALSE, seed = 3),
-                 "some allowed ranges are not states of the simmap: 'B' \\(contained in the states 'AB', 'BC'.*The grafting is run assuming that these ranges can be inherited.*subset sympatry")
+                 "some allowed ranges are not states of the simmap: 'B' \\(contained in the states 'AB', 'BC'.*The grafting is run assuming that these ranges can be inherited.*subset sympatric speciation")
   states <- graft_states_in_simmap(grafted, mtl_b$Taxon_name)
   expect_identical(states$state, c("B", "B"))
   expect_true(all(range_in_states_pairwise(states$state, states$parent_state)))

@@ -297,12 +297,12 @@ test_that("check_grafting_constraints() checks treat_states_as_ranges and gives 
   expect_error(check_grafting_constraints(grafted, toy$phy, mtl, treat_states_as_ranges = "yes", verbose = FALSE), "'treat_states_as_ranges' must be TRUE or FALSE")
   expect_error(check_grafting_constraints(grafted, toy$phy, mtl, treat_states_as_ranges = NA, verbose = FALSE), "'treat_states_as_ranges' must be TRUE or FALSE")
 
-  # Default: the column range_ok is not checked
+  # Default: the column ranges_ok is not checked
   checks_exact <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = c("A", "B"), verbose = FALSE)
-  expect_true(all(is.na(checks_exact$range_ok)))
+  expect_true(all(is.na(checks_exact$ranges_ok)))
   # With ranges, a single-area range inherited from a state is the state itself, and is contained in the state of the graft point
   checks_ranges <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = c("A", "B"), treat_states_as_ranges = TRUE, verbose = FALSE)
-  expect_true(all(checks_ranges$range_ok))
+  expect_true(all(checks_ranges$ranges_ok))
   expect_identical(checks_ranges$states_ok, checks_exact$states_ok)
   expect_identical(checks_ranges$ok, checks_exact$ok)
   expect_true(attr(checks_ranges, "all_ok"))
@@ -320,13 +320,13 @@ test_that("check_grafting_constraints() validates taxa grafted with ranges, incl
   range_simmap <- make_toy_range_simmap(toy$phy) # States: A, AB, BC
   taxa <- paste0("X", 1:6)
   mtl <- list(Taxon_name = taxa, Target_clade = stats::setNames(rep(list(toy$B), 6), taxa), Excluded_subclades = stats::setNames(rep(list(NULL), 6), taxa))
-  # Clade B is entirely in the state AB: range 'A' is a subset of it (subset sympatry), range 'AB' is the state itself
+  # Clade B is entirely in the state AB: range 'A' is a subset of it (subset sympatric speciation), range 'AB' is the state itself
   for (allowed in list("A", "AB", c("A", "B"), c("A", "AB"), NULL))
   {
     grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = range_simmap, allowed_states = allowed, treat_states_as_ranges = TRUE, method = "uniform", seed = 2)
     checks <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = allowed, treat_states_as_ranges = TRUE, verbose = FALSE)
     expect_true(all(checks$states_ok))
-    expect_true(all(checks$range_ok))
+    expect_true(all(checks$ranges_ok))
     expect_true(all(checks$ok))
     expect_true(attr(checks, "all_ok"))
   }
@@ -337,7 +337,7 @@ test_that("check_grafting_constraints() validates taxa grafted with ranges, incl
   # The allowed ranges are not the ranges inherited: the taxa inherited 'A', so 'AB' is not accepted
   checks_ab <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "AB", treat_states_as_ranges = TRUE, verbose = FALSE)
   expect_false(any(checks_ab$states_ok))
-  expect_true(all(checks_ab$range_ok))
+  expect_true(all(checks_ab$ranges_ok))
   # Any range is accepted without allowed states
   expect_true(all(check_grafting_constraints(grafted, toy$phy, mtl, treat_states_as_ranges = TRUE, verbose = FALSE)$states_ok))
   # The taxon-level allowed ranges replace the global ones
@@ -363,17 +363,17 @@ test_that("check_grafting_constraints() flags the taxa that inherited a range no
   names(bad$simmap$maps[[tip_edge]]) <- "BC"
   checks <- check_grafting_constraints(bad, toy$phy, mtl, allowed_states = c("A", "BC"), treat_states_as_ranges = TRUE, verbose = FALSE)
   expect_true(checks$states_ok[1])
-  expect_false(checks$range_ok[1])
+  expect_false(checks$ranges_ok[1])
   expect_false(checks$ok[1])
-  expect_true(all(checks$range_ok[-1]))
+  expect_true(all(checks$ranges_ok[-1]))
   expect_true(all(checks$ok[-1]))
   expect_false(attr(checks, "all_ok"))
   # Both checks fail if 'BC' is not allowed
   checks_both <- check_grafting_constraints(bad, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)
   expect_false(checks_both$states_ok[1])
-  expect_false(checks_both$range_ok[1])
+  expect_false(checks_both$ranges_ok[1])
   # Matching the states exactly, the range is not checked
-  expect_true(is.na(check_grafting_constraints(bad, toy$phy, mtl, allowed_states = c("A", "BC"), verbose = FALSE)$range_ok[1]))
+  expect_true(is.na(check_grafting_constraints(bad, toy$phy, mtl, allowed_states = c("A", "BC"), verbose = FALSE)$ranges_ok[1]))
 
   # The failure is described in the summary and in the error message
   summary_text <- paste(capture.output(check_grafting_constraints(bad, toy$phy, mtl, allowed_states = c("A", "BC"), treat_states_as_ranges = TRUE, verbose = TRUE)), collapse = "\n")
@@ -411,7 +411,7 @@ test_that("check_grafting_constraints() goes up the branches leading to missing 
   }
   expect_false(is.null(found))
   grafted <- found
-  expect_true(all(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)$range_ok))
+  expect_true(all(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)$ranges_ok))
 
   # The state of the graft point is changed to 'BC' on the backbone branches above the graft nodes, so the range 'A' is not contained
   # in it for the taxa grafted directly on them, and also for the taxa grafted on the branches of these taxa (only found by going up)
@@ -428,7 +428,7 @@ test_that("check_grafting_constraints() goes up the branches leading to missing 
   }
   checks <- check_grafting_constraints(bad, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)
   expect_true(all(checks$states_ok))
-  expect_false(any(checks$range_ok))
+  expect_false(any(checks$ranges_ok))
   expect_false(attr(checks, "all_ok"))
 })
 
@@ -443,7 +443,7 @@ test_that("check_grafting_constraints() does not check the range of a taxon graf
   at_root <- grafted$edge[tip_edge, 1] == ape::Ntip(grafted) + 1
   checks <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)
   expect_true(checks$states_ok)
-  if (at_root) { expect_true(is.na(checks$range_ok)) } else { expect_true(checks$range_ok) }
+  if (at_root) { expect_true(is.na(checks$ranges_ok)) } else { expect_true(checks$ranges_ok) }
   expect_true(checks$ok)
 })
 
@@ -476,7 +476,7 @@ test_that("check_grafting_constraints() validates the coding of the ranges, and 
   expect_error(check_grafting_constraints(without_simmap, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE), "'allowed_states' and 'treat_states_as_ranges' can only be used")
   checks <- check_grafting_constraints(without_simmap, toy$phy, mtl, treat_states_as_ranges = FALSE, verbose = FALSE)
   expect_true(all(is.na(checks$states_ok)))
-  expect_true(all(is.na(checks$range_ok)))
+  expect_true(all(is.na(checks$ranges_ok)))
   expect_true(all(checks$ok))
   expect_no_warning(check_grafting_constraints(without_simmap, toy$phy, mtl, verbose = FALSE))
   expect_no_match(paste(capture.output(check_grafting_constraints(without_simmap, toy$phy, mtl, verbose = TRUE)), collapse = "\n"), "Range not in graft-point state")

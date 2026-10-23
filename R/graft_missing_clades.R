@@ -160,7 +160,7 @@
 #' whereas a missing clade allowed in `"AB"` only can be grafted on the parts of the stem branch in `"AB"` or `"ABC"`.
 #'
 #' When multiple allowed states are provided, the inherited range is drawn randomly from the allowed ranges enclosed within the range of the stem branch piece where it is grafted.
-#' When grafting on an edge with a larger range than the inherited range (e.g., `"A"` on `"AB"`), this results in a sympatric subset event such as (AB) -> (AB), (A).
+#' When grafting on an edge with a larger range than the inherited range (e.g., `"A"` on `"AB"`), this results in a subset sympatric speciation event such as (AB) -> (AB), (A).
 #' In the returned `simmap`, the branches of the grafted clades are in their inherited range, whereas the stem branch it is grafted on continues in its own range.
 #'
 #' ### Enclosing clades

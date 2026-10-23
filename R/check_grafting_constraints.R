@@ -57,7 +57,7 @@
 #'      (`missing_taxa_list$allowed_states` of the taxon if provided, otherwise the global `allowed_states` argument; all the states if neither is provided).
 #'      With `treat_states_as_ranges = TRUE`, the state of the terminal branch of the taxon (the range it inherited) must be one of its allowed ranges (any range if the taxon has no allowed states).
 #'      `NA` if `phy_grafted` has no `$simmap`.
-#' * `$range_ok`: Logical. Only checked with `treat_states_as_ranges = TRUE` and a `$simmap` item: whether the range inherited by the taxon is contained in the state of the lineage at the graft point
+#' * `$ranges_ok`: Logical. Only checked with `treat_states_as_ranges = TRUE` and a `$simmap` item: whether the range inherited by the taxon is contained in the state of the lineage at the graft point
 #'      (see the Details section "Biogeographic ranges as states"). `NA` if not checked, or if the taxon is grafted at the root (no parent lineage).
 #'      This differs from `$states_ok` that checks only the validity of the terminal tip state. Here, the validity of the inherited range is assessed against the range of the backbone lineage it was grafted on.
 #' * `$ok`: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
@@ -103,7 +103,7 @@
 #'
 #' Two checks are then performed:
 #' * `$states_ok`: the state of the terminal branch of the taxon is exactly one of its allowed ranges (the range inherited).
-#' * `$range_ok`: the range inherited is contained in the state of the lineage at the graft point (e.g., `"A"` is contained in `"AB"`, but `"BC"` is not).
+#' * `$ranges_ok`: the range inherited is contained in the state of the lineage at the graft point (e.g., `"A"` is contained in `"AB"`, but `"BC"` is not).
 #'   The check is skipped (`NA`) for taxa grafted at the root.
 #'
 #' @importFrom ape all.equal.phylo getMRCA keep.tip node.depth.edgelength prop.part
@@ -278,7 +278,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                     n_excluded_violated = NA,
                     excluded_violated = NA, # Indices of the violated excluded subclades
                     states_ok = NA, # Only checked with a simmap in phy_grafted
-                    range_ok = NA, # Only checked with a simmap in phy_grafted and treat_states_as_ranges = TRUE
+                    ranges_ok = NA, # Only checked with a simmap in phy_grafted and treat_states_as_ranges = TRUE
                     ok = FALSE,
                     stringsAsFactors = FALSE)
   graft_point_state <- rep(NA_character_, n_taxa) # State of the lineage at the graft point (only with treat_states_as_ranges = TRUE), for the messages
@@ -392,12 +392,12 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
           parent_edge <- match(phy_grafted$edge[parent_edge, 1], phy_grafted$edge[, 2])
           if (is.na(parent_edge)) { graft_point_state[i] <- NA_character_ }
         }
-        if (!is.na(graft_point_state[i])) { res$range_ok[i] <- range_in_states(inherited_range, graft_point_state[i]) }
+        if (!is.na(graft_point_state[i])) { res$ranges_ok[i] <- range_in_states(inherited_range, graft_point_state[i]) }
       }
     }
 
     # Overall, a taxon is okay if the rules for target clade and excluded subclades are respected, and the states are allowed (if checked)
-    res$ok[i] <- res$target_ok[i] & res$excluded_ok[i] & !isFALSE(res$states_ok[i]) & !isFALSE(res$range_ok[i])
+    res$ok[i] <- res$target_ok[i] & res$excluded_ok[i] & !isFALSE(res$states_ok[i]) & !isFALSE(res$ranges_ok[i])
   }
 
   ## 1.3/ Check the backbone is preserved ####
@@ -478,7 +478,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
               if (isFALSE(res$states_ok[i])) paste0(if (check_ranges) "inherited a range that is not allowed (" else "grafted in a state that is not allowed (",
                                                     paste(names(simmap_grafted$maps[[match(match(taxa_names[i], phy_grafted$tip.label), phy_grafted$edge[, 2])]]), collapse = ", "),
                                                     "; allowed: ", paste(allowed_states_taxa[[i]], collapse = ", "), ")"),
-              if (isFALSE(res$range_ok[i])) paste0("inherited a range that is not contained in the state of the graft point (",
+              if (isFALSE(res$ranges_ok[i])) paste0("inherited a range that is not contained in the state of the graft point (",
                                                    names(simmap_grafted$maps[[match(match(taxa_names[i], phy_grafted$tip.label), phy_grafted$edge[, 2])]])[1],
                                                    " not in ", graft_point_state[i], ")")), collapse = "; ")
     }, character(1))
@@ -500,7 +500,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                "  - Target clade violated:          ", sum(res$target_ok %in% FALSE), "\n",
                "  - Excluded subclade violated:     ", sum(res$excluded_ok %in% FALSE), "\n",
                if (check_states) paste0("  - Allowed states violated:        ", sum(res$states_ok %in% FALSE), "\n") else "",
-               if (check_ranges) paste0("  - Range not in graft-point state: ", sum(res$range_ok %in% FALSE), "\n") else "",
+               if (check_ranges) paste0("  - Range not in graft-point state: ", sum(res$ranges_ok %in% FALSE), "\n") else "",
                "  - Backbone: ", backbone_msg, if (!all(res$ok)) paste0(describe_failures(), "\n") else "", "\n",
                "  => ", ifelse(all_ok, "All constraints respected\n", "Some constraints NOT respected (see returned data.frame and attributes)\n")))
   }

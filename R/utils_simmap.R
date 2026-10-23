@@ -267,7 +267,7 @@ resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states =
 #'
 #' The states of the simmap below are `c("A", "B", "AB", "BC")`:
 #' * Allowed range "A" matches the states "A" and "AB". The acceptable states are `c("A", "AB")`, and a lineage grafted in either of them inherits "A".
-#'   On a branch in "AB", this is a subset sympatry event, (AB) -> (AB), (A).
+#'   On a branch in "AB", this is a subset sympatric speciation event, (AB) -> (AB), (A).
 #' * Allowed range "B" matches "B", "AB" and "BC". The acceptable states are `c("B", "AB", "BC")`, and the lineage inherits "B" in each of them.
 #' * Allowed range "AB" alone matches only the states that contain both areas: "AB". The lineage inherits "AB", never "A" or "B" alone.
 #' * Allowed ranges `c("A", "B")` match all the states. In "AB" both are candidates, and the range inherited is drawn among them when grafting,
@@ -297,7 +297,7 @@ resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states =
 #' * `allowed_states = "B"` gives `$allowed_states$X1` = `c("AB", "BC", "B")`, `$range_candidates$X1` = `list(AB = "B", BC = "B", B = "B")` and `$inherited_states` = `"B"`.
 #'
 #' An allowed range that is not a state of the simmap but is contained in some of them is accepted (it does not stop the function), with a warning explaining the mismatch:
-#' the grafting is run assuming that the range can be inherited by lineages grafted in the states that contain it, which results in subset sympatry events.
+#' the grafting is run assuming that the range can be inherited by lineages grafted in the states that contain it, which results in subset sympatric speciation events.
 #' Here, the warning concerns "B", contained in "AB" and "BC". The function only stops if an area is not in the simmap, or if a range is contained in no state (or warns and ignores it if other allowed ranges can be used).
 #'
 #' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of character vectors: `missing_taxa_list$allowed_states`.
@@ -384,7 +384,7 @@ resolve_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_states =
     }
     warning("With 'treat_states_as_ranges = TRUE', some allowed ranges are not states of the simmap: ", paste(vapply(names(not_states), describe, character(1)), collapse = "; "), ".\n",
             "The grafting is run assuming that these ranges can be inherited by lineages grafted in the states of the simmap that contain them, ",
-            "which results in subset sympatry events (e.g., (AB) -> (AB), (A) for a range 'A' inherited from a state 'AB'). ",
+            "which results in subset sympatric speciation events (e.g., (AB) -> (AB), (A) for a range 'A' inherited from a state 'AB'). ",
             "The ranges inherited are added to the states of the updated simmap.", call. = FALSE)
   }
 
