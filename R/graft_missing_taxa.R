@@ -66,9 +66,10 @@
 #'   See 'Species attributes' in Details section.
 #'   Default is `NULL` (no restriction for grafting based on states).
 #' @param allowed_states Character vector. The states of `simmap` in which grafting is allowed. This is the default for all taxa:
-#'   taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead. States are matched exactly with the states of the `simmap`.
+#'   taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead. States are matched exactly with the states of the `simmap`, unless `treat_states_as_ranges = TRUE`.
 #'   Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the `simmap`.
 #'   The function stops if some states are not in the `simmap`, or if `allowed_states` is provided without a `simmap`.
+#'   With `treat_states_as_ranges = TRUE`, a range that is not a state of the `simmap` is accepted if it is contained in some of them (e.g., `"A"` can be allowed if `"AB"` is found on the `simmap`).
 #'   Default is `NULL` (all states allowed).
 #' @param treat_states_as_ranges Logical. Only used with a `simmap`. Whether the states of the `simmap` are biogeographic ranges to be treated as sets of areas, rather than as unrelated states.
 #'   Ranges must be coded as in `BioGeoBEARS`: one capital letter per area, and the letters of a multi-area range in alphabetical order (e.g., `"A"`, `"AB"`, `"ABC"`).
@@ -144,7 +145,8 @@
 #'     * `sampling_fraction` Numeric. Fraction of the clade richness present in the grafted phylogeny as `(nb_backbone_species + nb_missing_species) / total_richness`.
 #'       This can be used to account for clade-specific sampling fraction in downstream analyses.
 #'   * `simmap` Only if a `simmap` is provided and `return_simmap = TRUE`. The updated stochastic character map of the grafted phylogeny (class `"simmap"`):
-#'     the pieces of the branches of the backbone keep their states (cut where taxa were grafted), and every grafted clades is entirely in the state of the point where it was grafted.
+#'     the pieces of the branches of the backbone keep their states (cut where taxa were grafted), and the grafted branch is entirely in the state of the point where it was grafted.
+#'     With `treat_states_as_ranges = TRUE`, the grafted branch is entirely in the range it inherited (see 'Biogeographic ranges as states' in Details section).
 #'     This element can be plotted as any `simmap`, e.g., `plot(grafted_phy$simmap)`, or used to extract the states of the tips with `phytools::getStates(grafted_phy$simmap, type = "tips")`.
 #'     It has the same exact topology and branch lengths as the grafted phylogeny.
 #'
@@ -255,7 +257,8 @@
 #' whereas a missing taxon allowed in `"AB"` only can be grafted on branch pieces in `"AB"` or `"ABC"`.
 #'
 #' When multiple allowed states are provided, the inherited range is drawn randomly from the allowed ranges enclosed within the range of the branch piece where it is grafted.
-#' When grafting on an edge with a larger range than the inherited range (e.g., `"A"` on `"AB"`), this results in a subset sympatry event such as (AB) -> (AB), (A).
+#' When grafting on an edge with a larger range than the inherited range (e.g., `"A"` on `"AB"`), this results in a sympatric subset event such as (AB) -> (AB), (A).
+#' In the returned `simmap`, the branches of the grafted lineage are in their inherited range, whereas the branch it is grafted on continues in its own range.
 #'
 #' ### Sampling fraction and unsampled species
 #'
@@ -647,6 +650,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
                                          states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
       missing_taxa_list$allowed_states <- resolved$allowed_states # Allowed states adjusted to the ones observed in the simmap
       missing_taxa_list$range_candidates <- resolved$range_candidates # List of ranges that can be inherited by the taxa, based on which allowed state it is grafted on
+      tracker <- extend_tracker_states(tracker = tracker, extra_states = resolved$inherited_states) # Ranges inherited that are not states of the simmap (need to be added to update the next allowed states)
     } else {
       missing_taxa_list$allowed_states <- resolve_allowed_states(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
                                                                  states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
@@ -790,7 +794,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       if (use_states)
       {
         tracked <- track_graft(tracker = tracker, phy_before = phy_before_graft, phy_after = phy, node = selected_node_ID, position = position,
-                               tip_label = focal_taxon_name, allowed_states = missing_taxa_list$allowed_states[[i]], edge_ages = edge_ages_i)
+                               tip_label = focal_taxon_name, allowed_states = missing_taxa_list$allowed_states[[i]],
+                               range_candidates = missing_taxa_list$range_candidates[[i]], edge_ages = edge_ages_i)
         phy <- tracked$phy
         tracker <- tracked$tracker
       }
@@ -955,6 +960,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
               seed = NULL,
               tracker = tracker,
               allowed_states = if (use_states) missing_taxa_list_i$allowed_states[[j]] else NULL,
+              range_candidates = if (use_states) missing_taxa_list_i$range_candidates[[j]] else NULL,
               redraw_if_unusable = TRUE)
 
           # A NULL output means that no available branch (in an allowed state with a simmap) crosses the age: the age is discarded and the taxon stays pending.
@@ -1166,6 +1172,8 @@ draw_random_grafting_position_along_available_branch_segments <- function (
 #' @param tracker Optional. Output of `start_state_tracking()` (updated by `track_graft()` after each graft). If provided, only the pieces of the available branches
 #'   in `allowed_states` that cross the age are used. Default is `NULL` (whole branches).
 #' @param allowed_states Character vector. States in which grafting is allowed. Only used with a `tracker`.
+#' @param range_candidates `NULL`, or named list (named after the states) of character vectors: the ranges the new taxon can inherit when grafted in each state
+#'   (`treat_states_as_ranges = TRUE`). Only used with a `tracker`. Default is `NULL`: the taxon takes the state of the point where it was grafted.
 #' @param redraw_if_unusable Logical. If `TRUE`, the function returns `NULL` when no available branch crosses `divergence_age`, so the caller can draw another age.
 #'   If `FALSE` (default), it stops with an informative message.
 #'
@@ -1192,6 +1200,7 @@ graft_from_divergence_age <- function (phy, # Backbone phylogeny
                                        seed = NULL, # Seed is set by the main function. Default NULL to not alter the global RNG state
                                        tracker = NULL, # Output of start_state_tracking(), updated by track_graft(): restricts the grafting to the segments in allowed states
                                        allowed_states = NULL, # States in which grafting is allowed. Only used with a tracker
+                                       range_candidates = NULL, # Ranges that can be inherited by the new taxon in each state (treat_states_as_ranges = TRUE). Only used with a tracker
                                        redraw_if_unusable = FALSE) # Return NULL (instead of stopping) if no available branch crosses the age, so the caller can draw another age
 {
   # Set the seed if provided
@@ -1243,7 +1252,7 @@ graft_from_divergence_age <- function (phy, # Backbone phylogeny
   if (!is.null(tracker))
   {
     tracked <- track_graft(tracker = tracker, phy_before = phy_before_graft, phy_after = phy, node = selected_node_ID, position = position,
-                           tip_label = tip_label, allowed_states = allowed_states, edge_ages = edge_ages)
+                           tip_label = tip_label, allowed_states = allowed_states, range_candidates = range_candidates, edge_ages = edge_ages)
     phy <- tracked$phy
     tracker <- tracked$tracker
   }

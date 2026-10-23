@@ -35,9 +35,10 @@
 #'
 #'   See 'Species attributes' in Details section. Default is `NULL` (no restriction for grafting based on states).
 #' @param allowed_states Character vector. The states of `simmap` in which grafting is allowed. This is the default for all taxa:
-#'   taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead. States are matched exactly with the states of the `simmap`.
+#'   taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead. States are matched exactly with the states of the `simmap`, unless `treat_states_as_ranges = TRUE`.
 #'   Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the `simmap`.
 #'   The function stops if some states are not in the `simmap`, or if `allowed_states` is provided without a `simmap`.
+#'   With `treat_states_as_ranges = TRUE`, a range that is not a state of the `simmap` is accepted if it is contained in some of them (e.g., `"A"` can be allowed if `"AB"` is found on the `simmap`).
 #'   Default is `NULL` (all states allowed).
 #' @param treat_states_as_ranges Logical. Only used with a `simmap`. Whether the states of the `simmap` are biogeographic ranges to be treated as sets of areas, rather than as unrelated states.
 #'   Ranges must be coded as in `BioGeoBEARS`: one capital letter per area, and the letters of a multi-area range in alphabetical order (e.g., `"A"`, `"AB"`, `"ABC"`).
@@ -105,6 +106,7 @@
 #'       This can be used to account for clade-specific sampling fraction in downstream analyses.
 #'   * `simmap` Only if a `simmap` is provided and `return_simmap = TRUE`. The updated stochastic character map of the grafted phylogeny (class `"simmap"`):
 #'     the pieces of the branches of the backbone keep their states (cut where taxa were grafted), and every grafted clades is entirely in the state of the point where it was grafted.
+#'     With `treat_states_as_ranges = TRUE`, each grafted clade is entirely in the range it inherited (see 'Biogeographic ranges as states' in Details section).
 #'     This element can be plotted as any `simmap`, e.g., `plot(grafted_phy$simmap)`, or used to extract the states of the tips with `phytools::getStates(grafted_phy$simmap, type = "tips")`.
 #'     It has the same exact topology and branch lengths as the grafted phylogeny.
 #'
@@ -158,7 +160,8 @@
 #' whereas a missing clade allowed in `"AB"` only can be grafted on the parts of the stem branch in `"AB"` or `"ABC"`.
 #'
 #' When multiple allowed states are provided, the inherited range is drawn randomly from the allowed ranges enclosed within the range of the stem branch piece where it is grafted.
-#' When grafting on an edge with a larger range than the inherited range (e.g., `"A"` on `"AB"`), this results in a subset sympatry event such as (AB) -> (AB), (A).
+#' When grafting on an edge with a larger range than the inherited range (e.g., `"A"` on `"AB"`), this results in a sympatric subset event such as (AB) -> (AB), (A).
+#' In the returned `simmap`, the branches of the grafted clades are in their inherited range, whereas the stem branch it is grafted on continues in its own range.
 #'
 #' ### Enclosing clades
 #'
@@ -410,6 +413,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
                                          states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
       missing_taxa_list$allowed_states <- resolved$allowed_states # Allowed states adjusted to the ones observed in the simmap
       missing_taxa_list$range_candidates <- resolved$range_candidates # List of ranges that can be inherited by the taxa, based on which allowed state it is grafted on
+      tracker <- extend_tracker_states(tracker = tracker, extra_states = resolved$inherited_states) # Ranges inherited that are not states of the simmap (need to be added to update the next allowed states)
     } else {
       missing_taxa_list$allowed_states <- resolve_allowed_states(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
                                                                  states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
@@ -443,7 +447,23 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
   if (use_states)
   {
     # Taxa grafted together as one missing clade must share their allowed states
-    states_of_group <- lapply(seq_len(n_groups), function (g) { vapply(missing_taxa_list$allowed_states[groups$group_ID == g], function (x) paste(sort(unique(x)), collapse = ", "), character(1)) })
+    # (with ranges, they must also share the ranges they inherit in each state: the whole missing clade inherits one range)
+    describe_states <- function (i)
+    {
+      description <- paste(sort(unique(missing_taxa_list$allowed_states[[i]])), collapse = ", ")
+      if (treat_states_as_ranges)
+      {
+        candidates <- missing_taxa_list$range_candidates[[i]]
+        candidates <- candidates[order(names(candidates), method = "radix")]
+        description <- paste0(description, "; ranges inherited: ", paste0(names(candidates), " -> ", vapply(candidates, function (x) paste(sort(x, method = "radix"), collapse = "|"), character(1)), collapse = ", "))
+      }
+      description
+    }
+    states_of_group <- lapply(seq_len(n_groups), function (g)
+    {
+      in_group <- which(groups$group_ID == g)
+      vapply(stats::setNames(in_group, missing_taxa_list$Taxon_name[in_group]), describe_states, character(1))
+    })
     inconsistent <- which(vapply(states_of_group, function (x) length(unique(x)) > 1, logical(1)))
     if (length(inconsistent) > 0)
     {
@@ -559,9 +579,11 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
 
     # With a simmap: pieces of the stem branch in the allowed states of the missing clade
     allowed_states_i <- NULL
+    range_candidates_i <- NULL
     if (use_states)
     {
       allowed_states_i <- missing_taxa_list_i$allowed_states[[1]] # Same states for all the taxa of the missing clade (checked before grafting)
+      range_candidates_i <- missing_taxa_list_i$range_candidates[[1]] # Same ranges to inherit for all the taxa of the missing clade (checked before grafting). NULL without ranges
       edge_ages_i <- root_age - phytools::nodeHeights(phy)
       stem_segments_i <- get_allowed_segments_tracked(tracker = tracker, phy = phy, nodes = MRCA_node_i, allowed_states = allowed_states_i, edge_ages = edge_ages_i)
     }
@@ -615,7 +637,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
       if (use_states)
       {
         tracked <- track_graft(tracker = tracker, phy_before = phy_before_graft, phy_after = phy, node = MRCA_node_i, position = position_i,
-                               tip_label = missing_taxa_list_i$Taxon_name, allowed_states = allowed_states_i, edge_ages = edge_ages_i)
+                               tip_label = missing_taxa_list_i$Taxon_name, allowed_states = allowed_states_i, range_candidates = range_candidates_i, edge_ages = edge_ages_i)
         phy <- tracked$phy
         tracker <- tracked$tracker
       }
@@ -638,7 +660,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
       if (use_states)
       {
         tracked <- track_graft_subtree(tracker = tracker, phy_before = phy_before_graft, phy_after = phy, node = MRCA_node_i, position = position_i,
-                                       tip_labels = missing_taxa_list_i$Taxon_name, allowed_states = allowed_states_i, edge_ages = edge_ages_i)
+                                       tip_labels = missing_taxa_list_i$Taxon_name, allowed_states = allowed_states_i, range_candidates = range_candidates_i, edge_ages = edge_ages_i)
         phy <- tracked$phy
         tracker <- tracked$tracker
       }

@@ -1009,6 +1009,116 @@ test_that("graft_missing_taxa() with treat_states_as_ranges = TRUE grafts on the
   expect_error(graft_missing_taxa(toy$phy, mtl, simmap = range_simmap, allowed_states = "A", method = "uniform", verbose = FALSE, seed = 3), "no branch available for grafting in their allowed states")
 })
 
+## Test that the taxa inherit an allowed range, contained in the state of the branch they were grafted on, and that the grafting positions only depend on the acceptable states
+test_that("graft_missing_taxa() with treat_states_as_ranges = TRUE gives the taxa one of their allowed ranges, contained in the state of their parent branch",
+{
+  toy <- toy_setup()
+  range_simmap <- make_toy_range_simmap(toy$phy) # states A, AB and BC
+  mtl <- toy_missing_taxa(toy)
+
+  # Allowed range "A": acceptable states A and AB. Same positions as the exact matching of A and AB (a single candidate: no additional random draw)
+  areas <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = range_simmap, allowed_states = "A", treat_states_as_ranges = TRUE, method = "uniform", seed = 3)
+  exact <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = range_simmap, allowed_states = c("A", "AB"), method = "uniform", seed = 3)
+  expect_identical(drop_simmap(areas), drop_simmap(exact))
+  states_areas <- graft_states_in_simmap(areas, mtl$Taxon_name)
+  states_exact <- graft_states_in_simmap(exact, mtl$Taxon_name)
+  expect_identical(states_areas$state, rep("A", length(mtl$Taxon_name)))
+  # The exact matching gives the state of the branch: AB for the taxa grafted on a branch in AB
+  expect_identical(states_exact$state, states_exact$parent_state)
+  expect_true(any(states_exact$state == "AB"))
+  expect_true(all(range_in_states_pairwise(states_areas$state, states_areas$parent_state)))
+
+  # Allowed ranges "A" and "B": the range inherited is drawn among the ranges contained in the state of the branch
+  for (seed in 1:3)
+  {
+    both <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = range_simmap, allowed_states = c("A", "B"), treat_states_as_ranges = TRUE, method = "uniform", seed = seed)
+    states_both <- graft_states_in_simmap(both, mtl$Taxon_name)
+    expect_true(all(states_both$state %in% c("A", "B")))
+    expect_true(all(range_in_states_pairwise(states_both$state, states_both$parent_state)))
+  }
+
+  # Allowed range "AB" alone: inherited as such, from the states AB only here
+  mtl_b <- list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$B, X2 = toy$B))
+  grafted_ab <- quiet_graft(graft_missing_taxa, toy$phy, mtl_b, simmap = range_simmap, allowed_states = "AB", treat_states_as_ranges = TRUE, method = "uniform", seed = 3)
+  expect_identical(graft_states_in_simmap(grafted_ab, mtl_b$Taxon_name)$state, c("AB", "AB"))
+
+  # Both methods, and a taxon-level value
+  mtl_taxon <- mtl
+  mtl_taxon$allowed_states <- list(X1 = "A", X2 = c("A", "B"), X3 = NULL, X4 = NULL, X5 = NULL)
+  for (method in c("uniform", "BD_clades"))
+  {
+    grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl_taxon, simmap = range_simmap, allowed_states = c("A", "B"), treat_states_as_ranges = TRUE, method = method, seed = 2)
+    states_taxon <- graft_states_in_simmap(grafted, mtl$Taxon_name)
+    expect_true(all(range_in_states_pairwise(states_taxon$state, states_taxon$parent_state)))
+    expect_identical(states_taxon$state[1], "A")
+    expect_true(states_taxon$state[2] %in% c("A", "B"))
+    expect_true(ape::is.ultrametric(grafted))
+    expect_equal(unname(rowSums(grafted$simmap$mapped.edge)), grafted$edge.length, tolerance = 1e-6)
+  }
+})
+
+## Test that both candidate ranges are drawn when several allowed ranges are contained in the state of the branch
+test_that("graft_missing_taxa() with treat_states_as_ranges = TRUE draws among the ranges contained in the state of the branch",
+{
+  toy <- toy_setup()
+  range_simmap <- make_toy_range_simmap(toy$phy)
+  mtl_b <- list(Taxon_name = "X1", Target_clade = list(X1 = toy$B)) # the clade B is entirely in the state AB
+  inherited <- vapply(1:30, function (seed)
+  {
+    grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl_b, simmap = range_simmap, allowed_states = c("A", "B"), treat_states_as_ranges = TRUE, method = "uniform", seed = seed)
+    graft_states_in_simmap(grafted, "X1")$state
+  }, character(1))
+  expect_setequal(unique(inherited), c("A", "B"))
+  expect_true(all(table(inherited) >= 5))
+})
+
+## Test that an allowed range that is not a state of the simmap but is contained in some of them does not stop the grafting, and sends a warning explaining the mismatch
+test_that("graft_missing_taxa() with treat_states_as_ranges = TRUE grafts with a warning when an allowed range is not a state of the simmap but is contained in some",
+{
+  toy <- toy_setup()
+  range_simmap <- make_toy_range_simmap(toy$phy) # states A, AB and BC: "B" is not a state
+  mtl <- toy_missing_taxa(toy)
+  mtl_b <- list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$B, X2 = toy$B)) # the clade B is entirely in the state AB
+  expect_warning(grafted <- graft_missing_taxa(toy$phy, mtl_b, simmap = range_simmap, allowed_states = "B", treat_states_as_ranges = TRUE, method = "uniform", verbose = FALSE, seed = 3),
+                 "some allowed ranges are not states of the simmap: 'B' \\(contained in the states 'AB', 'BC'.*The grafting is run assuming that these ranges can be inherited.*subset sympatry")
+  states <- graft_states_in_simmap(grafted, mtl_b$Taxon_name)
+  expect_identical(states$state, c("B", "B"))
+  expect_true(all(range_in_states_pairwise(states$state, states$parent_state)))
+  expect_true("B" %in% colnames(grafted$simmap$mapped.edge))
+
+  # With the exact matching, the same allowed state stops with the list of the states available
+  expect_error(graft_missing_taxa(toy$phy, mtl, simmap = range_simmap, allowed_states = "B", method = "uniform", verbose = FALSE), "not in the simmap: 'B'")
+  # An area that is not in the simmap, or a range contained in no state, still stops
+  expect_error(graft_missing_taxa(toy$phy, mtl, simmap = range_simmap, allowed_states = "D", treat_states_as_ranges = TRUE, method = "uniform", verbose = FALSE), "Areas available in the simmap")
+  expect_error(graft_missing_taxa(toy$phy, mtl, simmap = range_simmap, allowed_states = "AC", treat_states_as_ranges = TRUE, method = "uniform", verbose = FALSE), "No state of the simmap contains")
+})
+
+## Test that a range inherited that is not a state of the simmap is in the returned simmap
+test_that("graft_missing_taxa() with treat_states_as_ranges = TRUE adds the ranges inherited that are not states of the simmap to the returned simmap",
+{
+  toy <- toy_setup()
+  # States AB and BC only (the toy state A is also AB)
+  two_states <- relabel_simmap(make_toy_simmap(toy$phy), c(A = "AB", B = "BC", C = "AB"))
+  two_states$mapped.edge <- NULL
+  mtl <- toy_missing_taxa(toy)
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = two_states, allowed_states = "B", treat_states_as_ranges = TRUE, method = "uniform", seed = 3)
+  expect_identical(graft_states_in_simmap(grafted, mtl$Taxon_name)$state, rep("B", 5))
+  expect_true("B" %in% colnames(grafted$simmap$mapped.edge))
+  expect_setequal(colnames(grafted$simmap$mapped.edge), c("AB", "BC", "B"))
+  expect_equal(unname(rowSums(grafted$simmap$mapped.edge)), grafted$edge.length, tolerance = 1e-6)
+
+  # A taxon without allowed states can be grafted on the branches of the taxa that inherited "B"
+  chain_names <- paste0("X", 1:12)
+  mtl_chain <- list(Taxon_name = chain_names, Target_clade = stats::setNames(rep(list(toy$B), 12), chain_names),
+                    allowed_states = stats::setNames(c(as.list(rep("B", 6)), vector("list", 6)), chain_names))
+  chain <- quiet_graft(graft_missing_taxa, toy$phy, mtl_chain, simmap = two_states, treat_states_as_ranges = TRUE, method = "uniform", seed = 5)
+  expect_equal(unname(rowSums(chain$simmap$mapped.edge)), chain$edge.length, tolerance = 1e-6)
+  expect_true(all(unlist(lapply(chain$simmap$maps, names)) %in% c("AB", "BC", "B")))
+  chain_states <- graft_states_in_simmap(chain, chain_names)
+  expect_true(any(chain_states$parent_state[7:12] == "B")) # taxa without allowed states grafted on the branch of a taxon that inherited "B"
+  expect_identical(chain_states$state[chain_states$parent_state == "B"], rep("B", sum(chain_states$parent_state == "B")))
+})
+
 ## Test that the states and the allowed ranges are strictly checked with TRUE only
 test_that("graft_missing_taxa() with treat_states_as_ranges = TRUE stops if the states or the allowed ranges are not coded as in BioGeoBEARS",
 {

@@ -290,6 +290,16 @@ resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states =
 #' * `allowed_states = "AB"` gives `$allowed_states$X1` = `"AB"` and `$range_candidates$X1` = `list(AB = "AB")`.
 #' * No allowed states gives `$allowed_states$X1` = `c("A", "B", "AB", "BC")` and `$range_candidates$X1` = `list(A = "A", B = "B", AB = "AB", BC = "BC")`.
 #'
+#' A lineage can inherit a range that is not a state of the simmap. For example, with the states `c("AB", "BC")` and the allowed range "B", a lineage grafted in "AB" or "BC" inherits "B"
+#' (an allowed range of the taxon), which is not a state of the simmap. This range is then a state of the lineages grafted, so taxa grafted later can be grafted on their branches
+#' if it contains one of their allowed ranges (or whatever the range if they have no allowed states). These ranges are listed in `$inherited_states`, and are added to the acceptable states and to the candidates.
+#' Here, with the states `c("A", "B", "AB", "BC")` present in the `simmap` and one taxon "X1":
+#' * `allowed_states = "B"` gives `$allowed_states$X1` = `c("AB", "BC", "B")`, `$range_candidates$X1` = `list(AB = "B", BC = "B", B = "B")` and `$inherited_states` = `"B"`.
+#'
+#' An allowed range that is not a state of the simmap but is contained in some of them is accepted (it does not stop the function), with a warning explaining the mismatch:
+#' the grafting is run assuming that the range can be inherited by lineages grafted in the states that contain it, which results in subset sympatry events.
+#' Here, the warning concerns "B", contained in "AB" and "BC". The function only stops if an area is not in the simmap, or if a range is contained in no state (or warns and ignores it if other allowed ranges can be used).
+#'
 #' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of character vectors: `missing_taxa_list$allowed_states`.
 #' @param allowed_states `NULL`, or character vector. The global `allowed_states` argument.
 #' @param states Character vector. States of the simmap.
@@ -297,11 +307,13 @@ resolve_allowed_states <- function (allowed_states_taxa = NULL, allowed_states =
 #'
 #' @noRd
 #'
-#' @return A list with 2 items, both named after `taxon_names`:
-#'  * `allowed_states` List of character vectors. The acceptable states of each taxon (states of the simmap, in the order of `states`),
+#' @return A list with 3 items:
+#'  * `allowed_states` List named after `taxon_names` of character vectors. The acceptable states of each taxon (states of the simmap, then inherited ranges, in this order),
 #'    to be used as the allowed states of `resolve_allowed_states()`.
-#'  * `range_candidates` List of named lists. For each taxon, a list named after its acceptable states, giving the character vector of the allowed ranges
+#'  * `range_candidates` List named after `taxon_names` of named lists. For each taxon, a list named after its acceptable states, giving the character vector of the allowed ranges
 #'    contained in each state (the ranges a lineage grafted in this state can inherit). Without allowed states: each state is its own (only) candidate.
+#'  * `inherited_states` Character vector. The ranges that can be inherited by grafted lineages and are not states of the simmap
+#'    (to add to the states of the tracker with `extend_tracker_states()`), sorted. The acceptable states and candidates already include them.
 #'
 
 resolve_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_states = NULL, states, taxon_names)
@@ -314,31 +326,41 @@ resolve_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_states =
   }
   resolved <- resolve_allowed_values(allowed_states_taxa = allowed_states_taxa, allowed_states = allowed_states, taxon_names = taxon_names, check_values = check_values)
 
-  acceptable <- candidates <- vector("list", length(taxon_names))
-  names(acceptable) <- names(candidates) <- taxon_names
-  unmatched <- list()
-  for (i in seq_along(taxon_names))
+  # Acceptable states and candidate ranges of each taxon, among a set of states
+  expand_taxa <- function (state_set)
   {
-    if (is.null(resolved[[i]]))
+    acceptable <- candidates <- unmatched <- vector("list", length(taxon_names))
+    names(acceptable) <- names(candidates) <- names(unmatched) <- taxon_names
+    for (i in seq_along(taxon_names))
     {
-      # No allowed states: all the states are acceptable, and a lineage inherits the whole state of the branch
-      acceptable[[i]] <- states
-      candidates[[i]] <- as.list(states)
-      names(candidates[[i]]) <- states
-    } else {
-      expanded <- expand_allowed_ranges(allowed_ranges = resolved[[i]], states = states)
-      if (length(expanded$acceptable_states) == 0)
+      if (is.null(resolved[[i]]))
       {
-        stop("No state of the simmap contains the allowed range(s) of taxon '", taxon_names[i], "': ", paste0("'", resolved[[i]], "'", collapse = ", "), ".\n",
-             "States available in the simmap: ", paste0("'", states, "'", collapse = ", "), ".")
+        # No allowed states: all the states are acceptable, and a lineage inherits the whole state of the branch
+        acceptable[[i]] <- state_set
+        candidates[[i]] <- as.list(state_set)
+        names(candidates[[i]]) <- state_set
+      } else {
+        expanded <- expand_allowed_ranges(allowed_ranges = resolved[[i]], states = state_set)
+        acceptable[[i]] <- expanded$acceptable_states
+        candidates[[i]] <- expanded$candidates
+        unmatched[[i]] <- expanded$unmatched_ranges
       }
-      acceptable[[i]] <- expanded$acceptable_states
-      candidates[[i]] <- expanded$candidates
-      for (range in expanded$unmatched_ranges) { unmatched[[range]] <- c(unmatched[[range]], taxon_names[i]) }
     }
+    list(acceptable = acceptable, candidates = candidates, unmatched = unmatched)
+  }
+
+  ## States of the simmap
+  expanded <- expand_taxa(states)
+  no_state <- which(lengths(expanded$acceptable) == 0)
+  if (length(no_state) > 0)
+  {
+    stop("No state of the simmap contains the allowed range(s) of taxon '", taxon_names[no_state[1]], "': ", paste0("'", resolved[[no_state[1]]], "'", collapse = ", "), ".\n",
+         "States available in the simmap: ", paste0("'", states, "'", collapse = ", "), ".")
   }
 
   # Allowed ranges contained in no state of the simmap are never used
+  unmatched <- list()
+  for (i in seq_along(taxon_names)) { for (range in expanded$unmatched[[i]]) { unmatched[[range]] <- c(unmatched[[range]], taxon_names[i]) } }
   if (length(unmatched) > 0)
   {
     describe <- function (range) { paste0("'", range, "' (taxa: ", paste(utils::head(unmatched[[range]], 5), collapse = ", "), if (length(unmatched[[range]]) > 5) ", ..." else "", ")") }
@@ -347,7 +369,32 @@ resolve_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_states =
             "States available in the simmap: ", paste0("'", states, "'", collapse = ", "), ".", call. = FALSE)
   }
 
-  list(allowed_states = acceptable, range_candidates = candidates)
+  # Allowed ranges that are not states of the simmap, but are contained in some of them: accepted, with a warning explaining the mismatch
+  not_states <- list()
+  for (i in seq_along(taxon_names))
+  {
+    for (range in setdiff(resolved[[i]], c(states, expanded$unmatched[[i]]))) { not_states[[range]] <- c(not_states[[range]], taxon_names[i]) }
+  }
+  if (length(not_states) > 0)
+  {
+    describe <- function (range)
+    {
+      paste0("'", range, "' (contained in the states ", paste0("'", states[range_in_states(range, states)], "'", collapse = ", "),
+             "; taxa: ", paste(utils::head(not_states[[range]], 5), collapse = ", "), if (length(not_states[[range]]) > 5) ", ..." else "", ")")
+    }
+    warning("With 'treat_states_as_ranges = TRUE', some allowed ranges are not states of the simmap: ", paste(vapply(names(not_states), describe, character(1)), collapse = "; "), ".\n",
+            "The grafting is run assuming that these ranges can be inherited by lineages grafted in the states of the simmap that contain them, ",
+            "which results in subset sympatry events (e.g., (AB) -> (AB), (A) for a range 'A' inherited from a state 'AB'). ",
+            "The ranges inherited are added to the states of the updated simmap.", call. = FALSE)
+  }
+
+  ## Ranges inherited by the grafted lineages that are not states of the simmap (e.g., "A" inherited on a branch in "AB")
+  # They are states of the lineages grafted: a taxon grafted later can be grafted on their branches if they contain one of its allowed ranges
+  # (or whatever the range if it has no allowed states), so the acceptable states and candidates are resolved again among the states of the simmap and these ranges
+  inherited_states <- sort(setdiff(unique(unlist(expanded$candidates, use.names = FALSE)), states), method = "radix")
+  if (length(inherited_states) > 0) { expanded <- expand_taxa(c(states, inherited_states)) }
+
+  list(allowed_states = expanded$acceptable, range_candidates = expanded$candidates, inherited_states = inherited_states)
 }
 
 
@@ -467,8 +514,32 @@ start_state_tracking <- function (phy, simmap, tol = 1e-6)
     tip_labels = phy$tip.label,
     n_tips = n_tips,
     node_age = node_age,
+    extra_states = character(0), # States added by extend_tracker_states() (ranges that can be inherited and are not states of the simmap)
     missing_state = character(0)) # State of each grafted taxon (named by its label)
 
+  tracker
+}
+
+
+#' @title Add states to the tracker
+#'
+#' @description With `treat_states_as_ranges = TRUE`, a lineage can inherit a range that is not a state of the simmap (e.g., "A" grafted on a branch in "AB",
+#'   when the simmap has no state "A"). These ranges are added to the states of the tracker (after the states of the simmap, so their indices do not change),
+#'   so they can be recorded for the grafted lineages and be the state of the branches a taxon grafted later is grafted on.
+#'
+#' @param tracker Output of `start_state_tracking()`.
+#' @param extra_states Character vector. States to add (the states already in the tracker are ignored).
+#'
+#' @noRd
+#'
+#' @return The updated `tracker`. The added states are listed in `tracker$extra_states`.
+#'
+
+extend_tracker_states <- function (tracker, extra_states)
+{
+  new_states <- setdiff(extra_states, tracker$states)
+  tracker$states <- c(tracker$states, new_states)
+  tracker$extra_states <- c(tracker$extra_states, new_states)
   tracker
 }
 
@@ -649,6 +720,32 @@ get_state_at_position <- function (tracker, phy, node, position, allowed_states 
 }
 
 
+#' @title Choose the state inherited by a grafted lineage
+#'
+#' @description Without candidate ranges, a grafted lineage takes the state of the point where it was grafted. With candidate ranges
+#'   (`treat_states_as_ranges = TRUE`), it inherits one of the allowed ranges contained in this state, drawn uniformly. No random number is drawn
+#'   if there is a single candidate, so single-area states give the same trees as without ranges.
+#'
+#' @param state Character string. State of the point of the branch where the lineage is grafted.
+#' @param range_candidates `NULL`, or named list (named after the states) of character vectors: the ranges that can be inherited in each state.
+#'
+#' @noRd
+#'
+#' @return Character string. The state of the grafted lineage.
+#'
+
+choose_inherited_state <- function (state, range_candidates = NULL)
+{
+  if (is.null(range_candidates)) { return(state) }
+  candidates <- range_candidates[[state]]
+  if (is.null(candidates))
+  {
+    stop("Internal error: no range can be inherited when grafting on a branch in state '", state, "'.")
+  }
+  sample_one(candidates)
+}
+
+
 #' @title Update the tracking after a graft
 #'
 #' @description After a taxon was grafted with `phytools::bind.tip()`, record its state (the state of the point where it was grafted) and label the new node,
@@ -661,6 +758,9 @@ get_state_at_position <- function (tracker, phy, node, position, allowed_states 
 #' @param position Numeric. Position of the graft on this branch: distance from its tipward node.
 #' @param tip_label Character string. Label of the grafted taxon.
 #' @param allowed_states Character vector. States in which grafting was allowed (used to solve ties at the limit of two pieces). Default is `NULL` (all states).
+#' @param range_candidates `NULL`, or named list (named after the states) of character vectors: the ranges the new taxon can inherit when grafted on a branch in each state
+#'   (`treat_states_as_ranges = TRUE`, see `resolve_allowed_ranges()`). One of the candidates of the state of the point of the graft is drawn (without drawing a random number if there is a single one).
+#'   Default is `NULL`: the taxon takes the state of the point where it was grafted.
 #' @param edge_ages Numeric matrix. Ages (rootward, tipward) of the branches of `phy_before`.
 #'
 #' @noRd
@@ -668,12 +768,15 @@ get_state_at_position <- function (tracker, phy, node, position, allowed_states 
 #' @return A list with 2 elements: the updated `phy` (`phy_after` with its new node labelled) and the updated `tracker`.
 #'
 
-track_graft <- function (tracker, phy_before, phy_after, node, position, tip_label, allowed_states = NULL, edge_ages)
+track_graft <- function (tracker, phy_before, phy_after, node, position, tip_label, allowed_states = NULL, range_candidates = NULL, edge_ages)
 {
   info <- get_lineage_info(tracker = tracker, phy = phy_before, nodes = node, edge_ages = edge_ages)
   state <- get_state_at_position(tracker = tracker, phy = phy_before, node = node, position = position, allowed_states = allowed_states, edge_ages = edge_ages)
 
-  # Label of the new node: backbone lineage or missing-only subtree
+  # State of the new taxon: the state of the point of the graft, or one of the ranges it can inherit there
+  inherited_state <- choose_inherited_state(state = state, range_candidates = range_candidates)
+
+  # Label of the new node: backbone lineage or missing-only subtree (the node is on the branch where the taxon was grafted, so it has the state of this branch, not the inherited one)
   new_label <- if (!is.na(info$backbone_node)) paste0("gr", info$backbone_node) else paste0("ms", match(state, tracker$states))
 
   # The new node is the parent of the new tip. It is unlabelled unless the tip was attached directly to an existing node
@@ -687,7 +790,7 @@ track_graft <- function (tracker, phy_before, phy_after, node, position, tip_lab
     phy_after$node.label[node_index] <- new_label
   }
 
-  tracker$missing_state[tip_label] <- state
+  tracker$missing_state[tip_label] <- inherited_state
   list(phy = phy_after, tracker = tracker)
 }
 
@@ -705,6 +808,8 @@ track_graft <- function (tracker, phy_before, phy_after, node, position, tip_lab
 #' @param position Numeric. Position of the graft on this branch: distance from its tipward node.
 #' @param tip_labels Character vector. Labels of the taxa of the grafted subtree (at least 2).
 #' @param allowed_states Character vector. States in which grafting was allowed (used to solve ties at the limit of two pieces). Default is `NULL` (all states).
+#' @param range_candidates `NULL`, or named list of character vectors: the ranges the subtree can inherit when grafted on a branch in each state (see `track_graft()`).
+#'   One range is drawn for the whole subtree. Default is `NULL`: the subtree takes the state of the point where it was grafted.
 #' @param edge_ages Numeric matrix. Ages (rootward, tipward) of the branches of `phy_before`.
 #'
 #' @importFrom ape getMRCA Ntip
@@ -714,11 +819,13 @@ track_graft <- function (tracker, phy_before, phy_after, node, position, tip_lab
 #' @return A list with 2 elements: the updated `phy` (`phy_after` with the new nodes labelled) and the updated `tracker`.
 #'
 
-track_graft_subtree <- function (tracker, phy_before, phy_after, node, position, tip_labels, allowed_states = NULL, edge_ages)
+track_graft_subtree <- function (tracker, phy_before, phy_after, node, position, tip_labels, allowed_states = NULL, range_candidates = NULL, edge_ages)
 {
   info <- get_lineage_info(tracker = tracker, phy = phy_before, nodes = node, edge_ages = edge_ages)
   state <- get_state_at_position(tracker = tracker, phy = phy_before, node = node, position = position, allowed_states = allowed_states, edge_ages = edge_ages)
-  missing_label <- paste0("ms", match(state, tracker$states))
+  inherited_state <- choose_inherited_state(state = state, range_candidates = range_candidates)
+  edge_label <- paste0("ms", match(state, tracker$states)) # State of the branch where the subtree is grafted
+  missing_label <- paste0("ms", match(inherited_state, tracker$states)) # State of the subtree
 
   # Root of the subtree and node where it is attached to the branch (its parent)
   n_tips <- ape::Ntip(phy_after)
@@ -728,11 +835,11 @@ track_graft_subtree <- function (tracker, phy_before, phy_after, node, position,
   subtree_nodes <- c(subtree_root, subtree_nodes[subtree_nodes > n_tips])
 
   # The attachment node belongs to the lineage of the branch (backbone lineage or missing-only subtree), and the nodes of the subtree to a missing-only subtree
-  attach_label <- if (!is.na(info$backbone_node)) paste0("gr", info$backbone_node) else missing_label
+  attach_label <- if (!is.na(info$backbone_node)) paste0("gr", info$backbone_node) else edge_label
   phy_after$node.label[attach_node - n_tips] <- attach_label
   phy_after$node.label[subtree_nodes - n_tips] <- missing_label
 
-  tracker$missing_state[tip_labels] <- state
+  tracker$missing_state[tip_labels] <- inherited_state
   list(phy = phy_after, tracker = tracker)
 }
 
@@ -802,7 +909,8 @@ build_updated_simmap <- function (tracker, phy_tracked, phy)
   names(maps) <- NULL
 
   ## Total time in each state per branch
-  states <- tracker$states
+  # The states of the simmap are all kept, but the ranges added to the states of the tracker are only kept if a branch is in this state
+  states <- tracker$states[!(tracker$states %in% tracker$extra_states) | tracker$states %in% unlist(lapply(maps, names), use.names = FALSE)]
   mapped_edge <- matrix(0, nrow = n_edges, ncol = length(states), dimnames = list(paste(phy$edge[, 1], phy$edge[, 2], sep = ","), states))
   cell <- (match(unlist(lapply(maps, names), use.names = FALSE), states) - 1) * n_edges + rep(seq_len(n_edges), lengths(maps))
   total <- tapply(unlist(maps, use.names = FALSE), cell, sum)

@@ -155,6 +155,25 @@ make_toy_range_simmap <- function (phy, seed = 1, rate = 0.04)
   relabel_simmap(make_toy_simmap(phy, seed = seed, rate = rate), c(A = "A", B = "AB", C = "BC"))
 }
 
+## Is each range contained in the state at the same position? (vectorised version of range_in_states())
+range_in_states_pairwise <- function (ranges, states) { mapply(function (range, state) range_in_states(range, state), ranges, states, USE.NAMES = FALSE) }
+
+## State of each grafted taxon in the returned simmap, and state of its parent branch at the graft point (end of the branch above the node where the taxon is attached)
+# Returns a data.frame with one row per taxon: taxon, state (the range inherited), parent_state
+graft_states_in_simmap <- function (grafted, taxa)
+{
+  edge <- grafted$edge
+  one_taxon <- function (taxon)
+  {
+    tip_edge <- match(match(taxon, grafted$tip.label), edge[, 2])
+    parent_edge <- match(edge[tip_edge, 1], edge[, 2])
+    parent_map <- if (is.na(parent_edge)) NULL else grafted$simmap$maps[[parent_edge]]
+    data.frame(taxon = taxon, state = names(grafted$simmap$maps[[tip_edge]])[1],
+               parent_state = if (is.null(parent_map)) NA_character_ else names(parent_map)[length(parent_map)], stringsAsFactors = FALSE)
+  }
+  do.call(rbind, lapply(taxa, one_taxon))
+}
+
 ## Function to create a backbone phylogeny and its associated simmaps
 toy_simmap_setup <- function ()
 {

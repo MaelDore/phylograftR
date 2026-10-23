@@ -505,6 +505,74 @@ test_that("graft_missing_clades() with treat_states_as_ranges = TRUE grafts on t
   expect_error(graft_missing_clades(toy$phy, mcl, simmap = range_simmap, allowed_states = "A", verbose = FALSE, seed = 3), "no piece of the stem branch of their sister clade in their allowed states")
 })
 
+## Test that a missing clade inherits one allowed range for all its taxa and branches
+test_that("graft_missing_clades() with treat_states_as_ranges = TRUE gives the whole missing clade one of its allowed ranges, contained in the state of its stem branch",
+{
+  toy <- toy_setup()
+  range_simmap <- make_toy_range_simmap(toy$phy) # states A, AB and BC
+  mcl <- toy_missing_clades(toy)
+
+  # Allowed range "A": acceptable states A and AB. Same positions as the exact matching of A and AB (a single candidate: no additional random draw)
+  areas <- quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = range_simmap, allowed_states = "A", treat_states_as_ranges = TRUE, seed = 3)
+  exact <- quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = range_simmap, allowed_states = c("A", "AB"), seed = 3)
+  expect_identical(drop_simmap(areas), drop_simmap(exact))
+  states_areas <- graft_states_in_simmap(areas, mcl$Taxon_name)
+  expect_identical(states_areas$state, rep("A", 4))
+  expect_true(all(range_in_states_pairwise(states_areas$state, states_areas$parent_state)))
+  expect_true(any(graft_states_in_simmap(exact, mcl$Taxon_name)$state == "AB"))
+
+  # M1 and M2 are grafted together as one clade (same sister clade): all the branches of the clade are in the inherited range
+  clade_edges <- which(areas$edge[, 2] %in% c(match(c("M1", "M2"), areas$tip.label), ape::getMRCA(areas, c("M1", "M2"))))
+  expect_length(clade_edges, 3)
+  expect_identical(unique(unlist(lapply(areas$simmap$maps[clade_edges], names))), "A")
+
+  # Several allowed ranges: one range for the whole clade, among the ranges contained in the state of the stem branch
+  inherited <- lapply(1:20, function (seed)
+  {
+    grafted <- quiet_graft(graft_missing_clades, toy$phy, mcl, simmap = range_simmap, allowed_states = c("A", "B"), treat_states_as_ranges = TRUE, seed = seed)
+    states <- graft_states_in_simmap(grafted, mcl$Taxon_name)
+    expect_true(all(range_in_states_pairwise(states$state, states$parent_state)))
+    expect_identical(states$state[1], states$state[2]) # the two taxa of the clade
+    states$state[1]
+  })
+  expect_setequal(unique(unlist(inherited)), c("A", "B"))
+})
+
+## Test that taxa of the same missing clade must also share the ranges they inherit
+test_that("graft_missing_clades() with treat_states_as_ranges = TRUE stops if the taxa of a missing clade have the same acceptable states but inherit different ranges",
+{
+  toy <- toy_setup()
+  # A single state, AB: allowed range "A" gives the acceptable states AB and A (inherited), and so do the allowed ranges "A" and "AB" but with another range to inherit in AB
+  one_state <- relabel_simmap(make_toy_simmap(toy$phy), c(A = "AB", B = "AB", C = "AB"))
+  one_state$mapped.edge <- NULL
+  mcl <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B, M2 = toy$B), allowed_states = list(M1 = "A", M2 = c("A", "AB")))
+  expect_warning(expect_error(graft_missing_clades(toy$phy, mcl, simmap = one_state, treat_states_as_ranges = TRUE, verbose = FALSE),
+               "have taxa with different allowed states.*M1 \\(A, AB; ranges inherited: A -> A, AB -> A\\).*M2 \\(A, AB; ranges inherited: A -> A, AB -> A\\|AB\\)"),
+                 "not states of the simmap")
+  # The same ranges give no error
+  mcl$allowed_states <- list(M1 = c("AB", "A"), M2 = c("A", "AB"))
+  suppressWarnings(expect_no_error(graft_missing_clades(toy$phy, mcl, simmap = one_state, treat_states_as_ranges = TRUE, verbose = FALSE)))
+})
+
+## Test that an allowed range that is not a state of the simmap but is contained in some of them does not stop the grafting, and sends a warning explaining the mismatch
+test_that("graft_missing_clades() with treat_states_as_ranges = TRUE grafts with a warning when an allowed range is not a state of the simmap but is contained in some",
+{
+  toy <- toy_setup()
+  range_simmap <- make_toy_range_simmap(toy$phy) # states A, AB and BC: "B" is not a state
+  mcl <- toy_missing_clades(toy)
+  mcl_b <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B, M2 = toy$B)) # the clade B is entirely in the state AB
+  expect_warning(grafted <- graft_missing_clades(toy$phy, mcl_b, simmap = range_simmap, allowed_states = "B", treat_states_as_ranges = TRUE, verbose = FALSE, seed = 3),
+                 "some allowed ranges are not states of the simmap: 'B' \\(contained in the states 'AB', 'BC'.*The grafting is run assuming that these ranges can be inherited.*subset sympatry")
+  states <- graft_states_in_simmap(grafted, mcl_b$Taxon_name)
+  expect_identical(states$state, c("B", "B"))
+  expect_true(all(range_in_states_pairwise(states$state, states$parent_state)))
+  expect_true("B" %in% colnames(grafted$simmap$mapped.edge))
+
+  # With the exact matching, the same allowed state stops with the list of the states available
+  expect_error(graft_missing_clades(toy$phy, mcl, simmap = range_simmap, allowed_states = "B", verbose = FALSE), "not in the simmap: 'B'")
+  expect_error(graft_missing_clades(toy$phy, mcl, simmap = range_simmap, allowed_states = "D", treat_states_as_ranges = TRUE, verbose = FALSE), "Areas available in the simmap")
+})
+
 ## Test that the states and the allowed ranges are strictly checked with TRUE only
 test_that("graft_missing_clades() with treat_states_as_ranges = TRUE stops if the states or the allowed ranges are not coded as in BioGeoBEARS",
 {

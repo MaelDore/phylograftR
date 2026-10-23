@@ -321,15 +321,17 @@ test_that("resolve_allowed_ranges() gives the acceptable states and the candidat
   # Global "A" matches A and AB; the taxon-level values replace it (NULL and NA use the global value)
   resolved <- suppressWarnings(resolve_allowed_ranges(allowed_states_taxa = list(X1 = NULL, X2 = "BC", X3 = c("A", "B"), X4 = NA), allowed_states = "A",
                                                       states = states, taxon_names = taxa))
-  expect_identical(names(resolved), c("allowed_states", "range_candidates"))
+  expect_identical(names(resolved), c("allowed_states", "range_candidates", "inherited_states"))
   expect_identical(names(resolved$allowed_states), taxa)
   expect_identical(names(resolved$range_candidates), taxa)
   expect_identical(resolved$allowed_states$X1, c("A", "AB"))
   expect_identical(resolved$range_candidates$X1, list(A = "A", AB = "A"))
   expect_identical(resolved$allowed_states$X2, "BC")
   expect_identical(resolved$range_candidates$X2, list(BC = "BC"))
-  expect_identical(resolved$allowed_states$X3, c("A", "AB", "BC"))
-  expect_identical(resolved$range_candidates$X3, list(A = "A", AB = c("A", "B"), BC = "B"))
+  # "B" is inherited in AB and BC but is not a state of the simmap: it is added to the acceptable states
+  expect_identical(resolved$inherited_states, "B")
+  expect_identical(resolved$allowed_states$X3, c("A", "AB", "BC", "B"))
+  expect_identical(resolved$range_candidates$X3, list(A = "A", AB = c("A", "B"), BC = "B", B = "B"))
   expect_identical(resolved$allowed_states$X4, c("A", "AB"))
 })
 
@@ -384,6 +386,54 @@ test_that("resolve_allowed_ranges() gives the outputs described in its documenta
   expect_error(resolve(allowed_states = "D"), "Areas available in the simmap: 'A', 'B', 'C'")
 })
 
+## Test that the ranges inherited that are not states of the simmap are added to the acceptable states of all the taxa
+test_that("resolve_allowed_ranges() adds the inherited ranges that are not states of the simmap, also for the taxa without allowed states",
+{
+  # Example of the documentation: allowed range "B" with the states AB and BC
+  expect_warning(resolved <- resolve_allowed_ranges(allowed_states_taxa = list(X1 = "B", X2 = NULL, X3 = "BC"), states = c("AB", "BC"), taxon_names = c("X1", "X2", "X3")),
+                 "not states of the simmap: 'B'")
+  expect_identical(resolved$inherited_states, "B")
+  expect_identical(resolved$allowed_states$X1, c("AB", "BC", "B"))
+  expect_identical(resolved$range_candidates$X1, list(AB = "B", BC = "B", B = "B"))
+  # A taxon without allowed states can be grafted on the branches of the lineages that inherited "B", and inherits the whole state
+  expect_identical(resolved$allowed_states$X2, c("AB", "BC", "B"))
+  expect_identical(resolved$range_candidates$X2, list(AB = "AB", BC = "BC", B = "B"))
+  # "BC" is a state of the simmap: it matches BC only here, and not "B" (not contained in "BC")
+  expect_identical(resolved$allowed_states$X3, "BC")
+  expect_identical(resolved$range_candidates$X3, list(BC = "BC"))
+
+  # No inherited range outside of the states of the simmap
+  expect_identical(resolve_allowed_ranges(allowed_states = "BC", states = c("AB", "BC"), taxon_names = "X1")$inherited_states, character(0))
+  expect_identical(resolve_allowed_ranges(states = c("AB", "BC"), taxon_names = "X1")$inherited_states, character(0))
+})
+
+## Test that an allowed range that is not a state of the simmap but is contained in some of them is accepted, with a warning explaining the mismatch
+test_that("resolve_allowed_ranges() warns about the allowed ranges that are not states of the simmap but are contained in some of them, and still resolves them",
+{
+  states <- c("A", "AB", "BC")
+  # "B" is contained in AB and BC but is not a state of the simmap: no stop, and a warning explaining the mismatch
+  expect_warning(resolved <- resolve_allowed_ranges(allowed_states = c("A", "B"), states = states, taxon_names = c("X1", "X2")),
+                 "some allowed ranges are not states of the simmap: 'B' \\(contained in the states 'AB', 'BC'; taxa: X1, X2\\)\\.\nThe grafting is run assuming that these ranges can be inherited.*subset sympatry events.*added to the states of the updated simmap")
+  expect_identical(resolved$inherited_states, "B") # inherited, and added to the acceptable states
+  expect_identical(resolved$allowed_states$X1, c("A", "AB", "BC", "B"))
+  expect_identical(resolved$range_candidates$X1, list(A = "A", AB = c("A", "B"), BC = "B", B = "B"))
+
+  # Taxon-level values: only the taxa concerned are listed. Several ranges are described in one warning
+  warnings <- testthat::capture_warnings(resolve_allowed_ranges(allowed_states_taxa = list(X1 = "B", X2 = "A", X3 = c("B", "C")), states = c("A", "AB", "BC", "C"), taxon_names = c("X1", "X2", "X3")))
+  expect_length(warnings, 1)
+  expect_match(warnings, "'B' \\(contained in the states 'AB', 'BC'; taxa: X1, X3\\)")
+  expect_no_match(warnings, "'A' \\(contained")
+  expect_no_match(warnings, "'C' \\(contained")
+
+  # No warning when the allowed ranges are states of the simmap, or without allowed states
+  expect_no_warning(resolve_allowed_ranges(allowed_states = c("A", "AB", "BC"), states = states, taxon_names = "X1"))
+  expect_no_warning(resolve_allowed_ranges(states = states, taxon_names = "X1"))
+  # A range that is not contained in any state is not described in this warning (it is ignored with its own warning)
+  warnings <- testthat::capture_warnings(resolve_allowed_ranges(allowed_states = c("A", "AC"), states = c("A", "AB", "BC"), taxon_names = "X1"))
+  expect_length(warnings, 1)
+  expect_match(warnings, "not contained in any state of the simmap, so they are ignored: 'AC'")
+})
+
 ## Test that allowed ranges contained in no state are ignored with a warning, and that the function stops if none is contained in a state
 test_that("resolve_allowed_ranges() warns about allowed ranges contained in no state, and stops if a taxon has no state containing its allowed ranges",
 {
@@ -419,6 +469,119 @@ test_that("resolve_allowed_ranges() stops if the states or the allowed ranges ar
   # Same checks of the list as with the exact matching
   expect_error(resolve_allowed_ranges(allowed_states_taxa = list(X1 = "A"), states = states, taxon_names = c("X1", "X2")), "same length as 'Taxon_name'")
   expect_error(resolve_allowed_ranges(allowed_states_taxa = c(X1 = "A"), states = states, taxon_names = "X1"), "must be a list")
+})
+
+
+# ---- Inheritance of ranges at graft ----
+
+## Test that the inherited state is the state of the point of the graft without candidates, and a candidate range otherwise, without random draw for a single candidate
+test_that("choose_inherited_state() returns the state without candidates, the only candidate without drawing, and draws uniformly among several candidates",
+{
+  expect_identical(choose_inherited_state("AB"), "AB")
+  candidates <- list(A = "A", AB = c("A", "B"), BC = "B")
+  expect_identical(choose_inherited_state("A", candidates), "A")
+
+  # No random number is drawn with a single candidate
+  set.seed(1)
+  seed_before <- .Random.seed
+  choose_inherited_state("BC", candidates)
+  expect_identical(.Random.seed, seed_before)
+
+  # Both candidates are drawn, with a similar frequency
+  set.seed(2)
+  draws <- vapply(1:400, function (i) choose_inherited_state("AB", candidates), character(1))
+  expect_setequal(unique(draws), c("A", "B"))
+  expect_true(all(table(draws) > 140))
+  expect_error(choose_inherited_state("C", candidates), "no range can be inherited when grafting on a branch in state 'C'")
+})
+
+## Test that tracker states are extended after the states of the simmap, without changing their index
+test_that("extend_tracker_states() adds the new states after the states of the simmap",
+{
+  s <- toy_simmap_setup()
+  tracker <- start_state_tracking(label_backbone_nodes(s$phy)$phy, s$simmap)
+  extended <- extend_tracker_states(tracker, c("AB", "A", "B"))
+  expect_identical(extended$states, c("A", "B", "C", "AB"))
+  expect_identical(extended$extra_states, "AB")
+  expect_identical(tracker$extra_states, character(0))
+  expect_identical(extend_tracker_states(extended, c("AB", "A"))$states, extended$states)
+})
+
+## Run two successive grafts on the toy simmap with ranges (A, AB, BC): the first one on a piece in AB, the second one on the branch of the first one
+graft_with_ranges <- function (candidates, extra_states)
+{
+  s <- toy_simmap_setup()
+  simmap <- relabel_simmap(s$simmap, c(A = "A", B = "AB", C = "BC"))
+  phy <- label_backbone_nodes(s$phy)$phy
+  tracker <- extend_tracker_states(start_state_tracking(phy, simmap), extra_states)
+  root_age <- max(phytools::nodeHeights(phy)[, 2])
+  acceptable <- names(candidates)
+
+  graft <- function (phy, tracker, node, position, label)
+  {
+    edge_ages <- root_age - phytools::nodeHeights(phy)
+    new_length <- position + (root_age - phytools::nodeheight(phy, node))
+    phy_after <- phytools::bind.tip(phy, tip.label = label, edge.length = new_length, where = node, position = position)
+    track_graft(tracker, phy, phy_after, node, position, label, allowed_states = acceptable, range_candidates = candidates, edge_ages = edge_ages)
+  }
+
+  # First graft: in the middle of a piece in AB
+  pieces <- tracker$state_table[tracker$state_table$state == "AB", ]
+  first <- graft(phy, tracker, pieces$node[1], mean(c(pieces$from[1], pieces$to[1])), "T1")
+  # Second graft: in the middle of the branch of the first taxon
+  node_2 <- match("T1", first$phy$tip.label)
+  second <- graft(first$phy, first$tracker, node_2, first$phy$edge.length[match(node_2, first$phy$edge[, 2])] / 2, "T2")
+  list(first = first, second = second, simmap = simmap, root_age = root_age)
+}
+
+## Test that a grafted taxon inherits a candidate range, and the lineages of the grafted taxa keep this state
+test_that("track_graft() records the inherited range, and the new node on the branch of a grafted taxon keeps the state of this branch",
+{
+  # In AB, the taxon inherits "A" (it is a state of the simmap)
+  res <- graft_with_ranges(list(A = "A", AB = "A", BC = "B", B = "B"), character(0))
+  expect_identical(unname(res$first$tracker$missing_state["T1"]), "A")
+  # The second taxon is grafted on the branch of the first one, in state A: it inherits the candidate of this state, and the new node has the state of the branch
+  expect_identical(unname(res$second$tracker$missing_state["T2"]), "A")
+  states <- res$second$tracker$states
+  node_labels <- res$second$phy$node.label
+  expect_true(paste0("ms", match("A", states)) %in% node_labels[!node_labels %in% res$first$phy$node.label])
+
+  # The returned simmap: the grafted branches are entirely in the inherited range, the branch of T1 is cut in two pieces in this range
+  simmap <- build_updated_simmap(res$second$tracker, res$second$phy, res$second$phy)
+  edge <- simmap$edge
+  tip_states <- vapply(c("T1", "T2"), function (taxon) paste(names(simmap$maps[[match(match(taxon, simmap$tip.label), edge[, 2])]]), collapse = "+"), character(1))
+  expect_identical(unname(tip_states), c("A", "A"))
+  node_T1 <- res$second$phy$edge[match(match("T1", res$second$phy$tip.label), res$second$phy$edge[, 2]), 1]
+  expect_identical(names(simmap$maps[[match(node_T1, edge[, 2])]]), "A") # branch above the node where T2 is attached: still the branch of T1
+  expect_identical(colnames(simmap$mapped.edge), c("A", "AB", "BC")) # states of the simmap
+  expect_equal(unname(rowSums(simmap$mapped.edge)), simmap$edge.length, tolerance = 1e-8)
+})
+
+## Test that a range inherited that is not a state of the simmap is a state of the tracker and of the returned simmap, and that taxa can be grafted on its branches
+test_that("track_graft() records an inherited range that is not a state of the simmap, which becomes a state of the grafted lineages and of the returned simmap",
+{
+  res <- graft_with_ranges(list(A = "A", AB = "B", BC = "B", B = "B"), "B")
+  expect_identical(res$second$tracker$states, c("A", "AB", "BC", "B"))
+  expect_identical(unname(res$first$tracker$missing_state["T1"]), "B")
+  expect_identical(unname(res$second$tracker$missing_state["T2"]), "B")
+
+  # The branches of the grafted taxa are in the allowed state "B": the segments in this state are the branches of the grafted taxa (and the new node on the branch of T1)
+  root_age <- res$root_age
+  phy <- res$second$phy
+  segments <- get_allowed_segments_tracked(res$second$tracker, phy, phy$edge[, 2], "B", root_age - phytools::nodeHeights(phy))
+  expect_true(all(match(c("T1", "T2"), phy$tip.label) %in% segments$node))
+  expect_equal(sum(segments$to - segments$from), sum(phy$edge.length[match(segments$node, phy$edge[, 2])]))
+  expect_equal(nrow(get_allowed_segments_tracked(res$first$tracker, res$first$phy, res$first$phy$edge[, 2], "B", root_age - phytools::nodeHeights(res$first$phy))), 1)
+
+  # The returned simmap has the column "B", with the total length of the branches of T1 and T2 and of the pieces of the branch of T1
+  simmap <- build_updated_simmap(res$second$tracker, phy, phy)
+  expect_identical(colnames(simmap$mapped.edge), c("A", "AB", "BC", "B"))
+  expect_true(simmap$mapped.edge[match(match("T1", phy$tip.label), phy$edge[, 2]), "B"] > 0)
+
+  # An added state that no lineage inherited is not in the returned simmap
+  tracker <- extend_tracker_states(res$second$tracker, "D")
+  expect_false("D" %in% colnames(build_updated_simmap(tracker, phy, phy)$mapped.edge))
+  expect_true(all(c("A", "AB", "BC") %in% colnames(build_updated_simmap(res$second$tracker, phy, phy)$mapped.edge)))
 })
 
 
