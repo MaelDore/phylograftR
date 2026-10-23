@@ -267,9 +267,10 @@ test_that("check_grafting_constraints() checks the allowed states if the grafted
   # Unknown states are listed with the states of the simmap
   expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "red", verbose = FALSE), "'red'.*'A', 'B', 'C'")
 
-  # Without the updated simmap, the states are not checked: NA, with a warning if allowed states are provided
+  # Without the updated simmap, the states are not checked: NA, and the function stops if allowed states are provided
   without_simmap <- drop_simmap(grafted)
-  expect_warning(checks_ns <- check_grafting_constraints(without_simmap, toy$phy, mtl, allowed_states = "A", verbose = FALSE), "'allowed_states' ignored")
+  expect_error(check_grafting_constraints(without_simmap, toy$phy, mtl, allowed_states = "A", verbose = FALSE), "'allowed_states' can only be used if 'phy_grafted' has a '\\$simmap' item")
+  checks_ns <- check_grafting_constraints(without_simmap, toy$phy, mtl, verbose = FALSE)
   expect_true(all(is.na(checks_ns$states_ok)))
   expect_true(all(checks_ns$ok))
   expect_no_warning(check_grafting_constraints(without_simmap, toy$phy, mtl, verbose = FALSE))
@@ -279,4 +280,204 @@ test_that("check_grafting_constraints() checks the allowed states if the grafted
   bad <- grafted
   bad$simmap <- list(1)
   expect_error(check_grafting_constraints(bad, toy$phy, mtl, verbose = FALSE), "must be a stochastic character map")
+})
+
+
+# ---- Biogeographic ranges as states (treat_states_as_ranges) ----
+
+## Test that the argument is checked, and that single-area states give the same checks as the exact matching
+test_that("check_grafting_constraints() checks treat_states_as_ranges and gives the same results as the exact matching for single-area states",
+{
+  toy <- toy_setup()
+  simmap <- make_toy_simmap(toy$phy)
+  taxa <- paste0("X", 1:6)
+  mtl <- list(Taxon_name = taxa, Target_clade = stats::setNames(rep(list(toy$A), 6), taxa), Excluded_subclades = stats::setNames(rep(list(NULL), 6), taxa))
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = simmap, allowed_states = c("A", "B"), method = "uniform", seed = 1)
+
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, treat_states_as_ranges = "yes", verbose = FALSE), "'treat_states_as_ranges' must be TRUE or FALSE")
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, treat_states_as_ranges = NA, verbose = FALSE), "'treat_states_as_ranges' must be TRUE or FALSE")
+
+  # Default: the column range_ok is not checked
+  checks_exact <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = c("A", "B"), verbose = FALSE)
+  expect_true(all(is.na(checks_exact$range_ok)))
+  # With ranges, a single-area range inherited from a state is the state itself, and is contained in the state of the graft point
+  checks_ranges <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = c("A", "B"), treat_states_as_ranges = TRUE, verbose = FALSE)
+  expect_true(all(checks_ranges$range_ok))
+  expect_identical(checks_ranges$states_ok, checks_exact$states_ok)
+  expect_identical(checks_ranges$ok, checks_exact$ok)
+  expect_true(attr(checks_ranges, "all_ok"))
+  # Other allowed states flag the same taxa
+  other_exact <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "C", verbose = FALSE)
+  other_ranges <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "C", treat_states_as_ranges = TRUE, verbose = FALSE)
+  expect_identical(other_ranges$states_ok, other_exact$states_ok)
+  expect_false(attr(other_ranges, "all_ok"))
+})
+
+## Test that a phylogeny grafted with ranges passes both checks, with and without the allowed ranges
+test_that("check_grafting_constraints() validates taxa grafted with ranges, including ranges that are subsets of the states",
+{
+  toy <- toy_setup()
+  range_simmap <- make_toy_range_simmap(toy$phy) # States: A, AB, BC
+  taxa <- paste0("X", 1:6)
+  mtl <- list(Taxon_name = taxa, Target_clade = stats::setNames(rep(list(toy$B), 6), taxa), Excluded_subclades = stats::setNames(rep(list(NULL), 6), taxa))
+  # Clade B is entirely in the state AB: range 'A' is a subset of it (subset sympatry), range 'AB' is the state itself
+  for (allowed in list("A", "AB", c("A", "B"), c("A", "AB"), NULL))
+  {
+    grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = range_simmap, allowed_states = allowed, treat_states_as_ranges = TRUE, method = "uniform", seed = 2)
+    checks <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = allowed, treat_states_as_ranges = TRUE, verbose = FALSE)
+    expect_true(all(checks$states_ok))
+    expect_true(all(checks$range_ok))
+    expect_true(all(checks$ok))
+    expect_true(attr(checks, "all_ok"))
+  }
+
+  # The ranges inherited are the allowed ranges ('A' here), and not the state of the branch
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = range_simmap, allowed_states = "A", treat_states_as_ranges = TRUE, method = "uniform", seed = 2)
+  expect_true(all(graft_states_in_simmap(grafted, taxa)$state == "A"))
+  # The allowed ranges are not the ranges inherited: the taxa inherited 'A', so 'AB' is not accepted
+  checks_ab <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "AB", treat_states_as_ranges = TRUE, verbose = FALSE)
+  expect_false(any(checks_ab$states_ok))
+  expect_true(all(checks_ab$range_ok))
+  # Any range is accepted without allowed states
+  expect_true(all(check_grafting_constraints(grafted, toy$phy, mtl, treat_states_as_ranges = TRUE, verbose = FALSE)$states_ok))
+  # The taxon-level allowed ranges replace the global ones
+  mtl_taxon <- mtl
+  mtl_taxon$allowed_states <- stats::setNames(rep(list(NULL), 6), taxa)
+  mtl_taxon$allowed_states[["X1"]] <- "AB"
+  checks_taxon <- check_grafting_constraints(grafted, toy$phy, mtl_taxon, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)
+  expect_identical(unname(checks_taxon$states_ok), c(FALSE, rep(TRUE, 5)))
+})
+
+## Test that the range inherited must be contained in the state of the lineage at the graft point
+test_that("check_grafting_constraints() flags the taxa that inherited a range not contained in the state of the graft point",
+{
+  toy <- toy_setup()
+  range_simmap <- make_toy_range_simmap(toy$phy)
+  taxa <- paste0("X", 1:6)
+  mtl <- list(Taxon_name = taxa, Target_clade = stats::setNames(rep(list(toy$B), 6), taxa), Excluded_subclades = stats::setNames(rep(list(NULL), 6), taxa))
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = range_simmap, allowed_states = "A", treat_states_as_ranges = TRUE, method = "uniform", seed = 2)
+  tip_edge <- match(match("X1", grafted$tip.label), grafted$edge[, 2])
+
+  # The terminal branch of X1 is changed to 'BC', which is allowed but not contained in the state 'AB' at the graft point
+  bad <- grafted
+  names(bad$simmap$maps[[tip_edge]]) <- "BC"
+  checks <- check_grafting_constraints(bad, toy$phy, mtl, allowed_states = c("A", "BC"), treat_states_as_ranges = TRUE, verbose = FALSE)
+  expect_true(checks$states_ok[1])
+  expect_false(checks$range_ok[1])
+  expect_false(checks$ok[1])
+  expect_true(all(checks$range_ok[-1]))
+  expect_true(all(checks$ok[-1]))
+  expect_false(attr(checks, "all_ok"))
+  # Both checks fail if 'BC' is not allowed
+  checks_both <- check_grafting_constraints(bad, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)
+  expect_false(checks_both$states_ok[1])
+  expect_false(checks_both$range_ok[1])
+  # Matching the states exactly, the range is not checked
+  expect_true(is.na(check_grafting_constraints(bad, toy$phy, mtl, allowed_states = c("A", "BC"), verbose = FALSE)$range_ok[1]))
+
+  # The failure is described in the summary and in the error message
+  summary_text <- paste(capture.output(check_grafting_constraints(bad, toy$phy, mtl, allowed_states = c("A", "BC"), treat_states_as_ranges = TRUE, verbose = TRUE)), collapse = "\n")
+  expect_match(summary_text, "Range not in graft-point state: +1")
+  expect_match(summary_text, "X1: inherited a range that is not contained in the state of the graft point \\(BC not in [A-Z]+\\)")
+  expect_error(check_grafting_constraints(bad, toy$phy, mtl, allowed_states = c("A", "BC"), treat_states_as_ranges = TRUE, stop_on_failure = TRUE, verbose = FALSE),
+               "X1: inherited a range that is not contained in the state of the graft point")
+  expect_match(paste(capture.output(check_grafting_constraints(bad, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = TRUE)), collapse = "\n"),
+               "X1: inherited a range that is not allowed \\(BC; allowed: A\\); inherited a range that is not contained")
+  # The line is not printed without ranges
+  expect_no_match(paste(capture.output(check_grafting_constraints(bad, toy$phy, mtl, verbose = TRUE)), collapse = "\n"), "Range not in graft-point state")
+})
+
+## Test that the state at the graft point is searched above the missing-only branches that are in the range inherited
+test_that("check_grafting_constraints() goes up the branches leading to missing taxa only to find the state of the graft point",
+{
+  toy <- toy_setup()
+  range_simmap <- make_toy_range_simmap(toy$phy)
+  taxa <- paste0("X", 1:8)
+  mtl <- list(Taxon_name = taxa, Target_clade = stats::setNames(rep(list(toy$B), 8), taxa), Excluded_subclades = stats::setNames(rep(list(NULL), 8), taxa))
+  n_tips <- ape::Ntip(toy$phy)
+  # Find a grafting where a taxon is attached on a branch leading to missing taxa only (grafted on the branch of another missing taxon)
+  found <- NULL
+  for (seed in 1:40)
+  {
+    grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = range_simmap, allowed_states = "A", treat_states_as_ranges = TRUE, method = "uniform", seed = seed)
+    tip_edges <- match(match(taxa, grafted$tip.label), grafted$edge[, 2])
+    parent_edges <- match(grafted$edge[tip_edges, 1], grafted$edge[, 2])
+    leads_to_missing <- vapply(grafted$edge[parent_edges, 2], function (node)
+    {
+      tips <- grafted$tip.label[phytools::getDescendants(grafted, node)]
+      !any(tips %in% toy$phy$tip.label)
+    }, logical(1))
+    if (any(leads_to_missing)) { found <- grafted; break }
+  }
+  expect_false(is.null(found))
+  grafted <- found
+  expect_true(all(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)$range_ok))
+
+  # The state of the graft point is changed to 'BC' on the backbone branches above the graft nodes, so the range 'A' is not contained
+  # in it for the taxa grafted directly on them, and also for the taxa grafted on the branches of these taxa (only found by going up)
+  bad <- grafted
+  for (e in seq_len(nrow(bad$edge)))
+  {
+    tips <- bad$tip.label[phytools::getDescendants(bad, bad$edge[e, 2])]
+    if (bad$edge[e, 2] <= n_tips) { tips <- bad$tip.label[bad$edge[e, 2]] }
+    if (any(tips %in% toy$phy$tip.label) && any(tips %in% taxa))
+    {
+      map <- bad$simmap$maps[[e]]
+      if (names(map)[length(map)] == "AB") { names(bad$simmap$maps[[e]])[length(map)] <- "BC" }
+    }
+  }
+  checks <- check_grafting_constraints(bad, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)
+  expect_true(all(checks$states_ok))
+  expect_false(any(checks$range_ok))
+  expect_false(attr(checks, "all_ok"))
+})
+
+## Test that a taxon grafted at the root is not checked
+test_that("check_grafting_constraints() does not check the range of a taxon grafted at the root",
+{
+  toy <- toy_setup()
+  range_simmap <- make_toy_range_simmap(toy$phy)
+  mtl <- list(Taxon_name = "X1", Target_clade = list(X1 = toy$phy$tip.label), Excluded_subclades = list(X1 = NULL))
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = range_simmap, allowed_states = "A", treat_states_as_ranges = TRUE, seed = 1)
+  tip_edge <- match(match("X1", grafted$tip.label), grafted$edge[, 2])
+  at_root <- grafted$edge[tip_edge, 1] == ape::Ntip(grafted) + 1
+  checks <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)
+  expect_true(checks$states_ok)
+  if (at_root) { expect_true(is.na(checks$range_ok)) } else { expect_true(checks$range_ok) }
+  expect_true(checks$ok)
+})
+
+## Test the validation of the states and the allowed ranges, and the case without simmap
+test_that("check_grafting_constraints() validates the coding of the ranges, and ignores treat_states_as_ranges without simmap",
+{
+  toy <- toy_setup()
+  range_simmap <- make_toy_range_simmap(toy$phy)
+  taxa <- paste0("X", 1:3)
+  mtl <- list(Taxon_name = taxa, Target_clade = stats::setNames(rep(list(toy$B), 3), taxa), Excluded_subclades = stats::setNames(rep(list(NULL), 3), taxa))
+  grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, simmap = range_simmap, allowed_states = "A", treat_states_as_ranges = TRUE, seed = 1)
+
+  # Allowed ranges that are incorrectly coded, or with areas that are not in the simmap
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "ba", treat_states_as_ranges = TRUE, verbose = FALSE), "the global 'allowed_states' argument.*'ba'")
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "AD", treat_states_as_ranges = TRUE, verbose = FALSE), "'D'.*Areas available in the simmap: 'A', 'B', 'C'")
+  mtl_taxon <- mtl
+  mtl_taxon$allowed_states <- stats::setNames(list("A", "red", NULL), taxa)
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl_taxon, treat_states_as_ranges = TRUE, verbose = FALSE), "taxon 'X2'.*'red'")
+  # States of the simmap that are not ranges
+  bad_states <- grafted
+  names(bad_states$simmap$maps[[1]])[1] <- "ab"
+  colnames(bad_states$simmap$mapped.edge)[1] <- "ab"
+  expect_error(check_grafting_constraints(bad_states, toy$phy, mtl, treat_states_as_ranges = TRUE, verbose = FALSE), "the simmap of 'phy_grafted'.*'ab'")
+  # Matching the states exactly, ranges are just states
+  expect_no_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "A", verbose = FALSE))
+
+  # Without simmap, the function stops early if treat_states_as_ranges = TRUE (and/or allowed states are provided), and the columns are NA otherwise
+  without_simmap <- drop_simmap(grafted)
+  expect_error(check_grafting_constraints(without_simmap, toy$phy, mtl, treat_states_as_ranges = TRUE, verbose = FALSE), "'treat_states_as_ranges' can only be used if 'phy_grafted' has a '\\$simmap' item")
+  expect_error(check_grafting_constraints(without_simmap, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE), "'allowed_states' and 'treat_states_as_ranges' can only be used")
+  checks <- check_grafting_constraints(without_simmap, toy$phy, mtl, treat_states_as_ranges = FALSE, verbose = FALSE)
+  expect_true(all(is.na(checks$states_ok)))
+  expect_true(all(is.na(checks$range_ok)))
+  expect_true(all(checks$ok))
+  expect_no_warning(check_grafting_constraints(without_simmap, toy$phy, mtl, verbose = FALSE))
+  expect_no_match(paste(capture.output(check_grafting_constraints(without_simmap, toy$phy, mtl, verbose = TRUE)), collapse = "\n"), "Range not in graft-point state")
 })
