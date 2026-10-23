@@ -117,8 +117,14 @@
 #' @param temp_file_path Character string. Path of the `.rds` file used for temporary saves. It must end with `.rds` and its directory must exist and be writable. Default is `NULL`, which saves in `"./temp_phy_from_grafting.rds"`.
 #' @param ultrametric_tol Numeric. Tolerance used by `ape::is.ultrametric()` for the ultrametricity checks of the backbone and of the final phylogeny.
 #'   Default is `.Machine$double.eps^0.5`.
+#' @param nb_simulations Integer. Number of simulations, i.e., of grafted phylogenies to produce in the same run, from the same backbone and the same `missing_taxa_list`.
+#'   The grafting is stochastic, so ideally downstream analyses should be run on a set of grafted phylogenies rather than on a single one. Default is `1`.
+#'   See the section 'Multiple simulations' for the output, the seeds and the failures.
+#' @param force_simulations Logical. Whether to try new seeds until `nb_simulations` grafted phylogenies are obtained, up to `10 * nb_simulations` attempts,
+#'   (see 'Multiple simulations' in Details section). If `FALSE`, the simulations that fail are skipped. Default is `FALSE`.
 #' @param seed Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
 #'   is restored on exit. Set to `NULL` to use the random number generator of the session. Default is `1234`.
+#'   With several simulations, it is the master seed: the first simulation uses `seed`, and the seeds of the other simulations are derived from it (see 'Multiple simulations').
 #'
 #' @return The function returns an object of class `"phylo"`: the backbone phylogeny with the grafted taxa added as new tips.
 #'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
@@ -149,6 +155,11 @@
 #'     With `treat_states_as_ranges = TRUE`, the grafted branch is entirely in the range it inherited (see 'Biogeographic ranges as states' in Details section).
 #'     This element can be plotted as any `simmap`, e.g., `plot(grafted_phy$simmap)`, or used to extract the states of the tips with `phytools::getStates(grafted_phy$simmap, type = "tips")`.
 #'     It has the same exact topology and branch lengths as the grafted phylogeny.
+#'
+#'   With `nb_simulations > 1`, the function returns an object of class `"multiPhylo"` with one grafted phylogeny per simulation, named `"sim_1"`, `"sim_2"`, ...
+#'   Each phylogeny has the elements described above (including `$simmap` if a `simmap` was provided and `return_simmap = TRUE`).
+#'   The `"multiPhylo"` object has the attributes `"seeds"` (named vector of the seeds of the phylogenies, to reproduce each of them alone with `nb_simulations = 1`;
+#'   `NULL` if `seed = NULL`) and `"failed"` (data.frame with the seed and the reason of the simulations that failed, 0 row if none).
 #'
 #' @details
 #' ### Stop conditions
@@ -260,6 +271,27 @@
 #' When grafting on an edge with a larger range than the inherited range (e.g., `"A"` on `"AB"`), this results in a subset sympatric speciation event such as (AB) -> (AB), (A).
 #' In the returned `simmap`, the branches of the grafted lineage are in their inherited range, whereas the branch it is grafted on continues in its own range.
 #'
+#' ### Multiple simulations
+#'
+#' With `nb_simulations > 1`, the grafting is simulated `nb_simulations` times from the same backbone and the same `missing_taxa_list`.
+#' Each simulation starts again from the backbone: the birth-death models are fitted on the tree of the simulation (they depend on the taxa already grafted),
+#' and the simulations do not share anything but the inputs. The phylogenies are returned in a `"multiPhylo"` object (a single `"phylo"` if `nb_simulations = 1`),
+#' and the memory used grows with the number of simulations.
+#'
+#' The first simulation uses `seed`, so it is the same phylogeny as a run with `nb_simulations = 1` and the same `seed`.
+#' The seeds of the other simulations are drawn from a stream started by `seed`, and returned in the attribute `"seeds"`:
+#' a simulation can be reproduced alone with its seed, and the first simulations of a longer run are the same as the ones of a shorter run.
+#' With `seed = NULL`, the simulations follow the random number generator of the session.
+#'
+#' A failure that is specific to a simulation, because of the random draws (no usable divergence age or time after `max_age_redraws` redraws), skips this simulation with a warning:
+#' the name of a phylogeny keeps the index of its simulation (e.g., `"sim_3"` is missing if the third simulation failed). The function reports the number of phylogenies obtained
+#' if it differs from `nb_simulations`, and stops if no simulation succeeded. With `force_simulations = TRUE`, new seeds are tried until `nb_simulations` phylogenies are obtained
+#' (up to `10 * nb_simulations` attempts): the phylogenies are then named `"sim_1"` to `"sim_N"` without gaps, and the seeds of the failed attempts are in the attribute `"failed"`.
+#' Any other error (invalid inputs, no branch available for a taxon, ...) concerns all the simulations and stops the whole run.
+#'
+#' With `save_temp = TRUE` and several simulations, each simulation saves its temporary phylogeny in its own file, with the suffix `"_sim_k"` added before `".rds"` in `temp_file_path`.
+#' With several simulations, `verbose = TRUE` prints one line per simulation instead of the progress within the simulation.
+#'
 #' ### Sampling fraction and unsampled species
 #'
 #' Under `method = "BD_clades"`, the birth-death model of a clade is fitted with the sampling fraction
@@ -348,6 +380,24 @@
 #' check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
 #'                            missing_taxa_list = missing_taxa_list)
 #'
+#' # --- Produce several grafted phylogenies --- #
+#'
+#' # The grafting is stochastic: several simulations can be run at once from the same backbone and list
+#' # (a "multiPhylo" named sim_1, sim_2, ...; sim_1 is the same as a single run with the same seed)
+#' grafted_phys <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+#'                                     method = "uniform", nb_simulations = 3, verbose = FALSE, seed = 1234)
+#' names(grafted_phys)
+#' # Seeds of the simulations, to reproduce each phylogeny alone
+#' attr(grafted_phys, "seeds")
+#'
+#' # Plot phylos
+#' old_par <- par()["mfrow"]
+#' par(mfrow = c(1, 3))
+#' plot(grafted_phys[[1]], cex = 0.7, main = "Sim #1") # sim_1
+#' plot(grafted_phys[[2]], cex = 0.7, main = "Sim #2") # sim_2
+#' plot(grafted_phys[[3]], cex = 0.7, main = "Sim #3") # sim_3
+#' par(old_par)
+#'
 #' # --- Account for unsampled species --- #
 #'
 #' # Account for unsampled species with the total richness of the clades.
@@ -416,10 +466,15 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 save_temp_every = 10,
                                 temp_file_path = NULL, # Default = "./temp_phy_from_grafting.rds"
                                 ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
+                                nb_simulations = 1, # Number of grafted phylogenies to produce in the same run (a multiPhylo if > 1)
+                                force_simulations = FALSE, # If TRUE, try new seeds until nb_simulations phylogenies are obtained (up to 10 x nb_simulations attempts)
                                 seed = 1234)
 {
   ### ---- Check input validity ---- ###
   {
+    ## Check 'nb_simulations' and 'force_simulations'
+    check_nb_simulations(nb_simulations = nb_simulations, force_simulations = force_simulations)
+
     ## Check 'method'
     if (!(method %in% c("uniform", "BD_clades")))
     {
@@ -706,354 +761,372 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     }
   }
 
-  ## Set seed if provided, for the duration of this function only (the global RNG state is restored on exit)
-  set_local_seed(seed)
+  ### ---- Simulations ---- ###
 
-  ## Randomize the order of taxa so it has no influence on the pattern of grafting
-  # Taxa of the same target clade are exchangeable: their order is random.
-    # With method = 'uniform', taxa are then re-ordered by target clade so nested clades are processed first (the random order is kept within each clade).
-    # With method = 'BD_clades', taxa are grouped and ordered by clade within the loop.
-  random_order <- sample.int(n_missing)
-  missing_taxa_list <- lapply(X = missing_taxa_list, FUN = function (x) { x[random_order] })
-
-  # Root age: constant during grafting (all new tips reach the present) => computed once
-  root_age <- max(phytools::nodeHeights(tree = phy)[, 2])
-
-  ## ---- For "uniform" strategy: Loop per taxon, nested target clades first ---- ##
-  if (method == "uniform")
+  # Function to produce one simulation = one grafted phylogeny, from the backbone, the tracker for states prepared above, and the associated seed and index
+  simulate_one <- function (sim_seed, sim_index, verbose_sim)
   {
-    # Order taxa by target clade, nested clades first (random order kept within each clade).
-    # Rationale: taxa of a larger clade are grafted on a tree that already includes the taxa of the clades nested within it,
-    # so they can be grafted on the branches of those taxa. This is the same rule as for the 'BD_clades' method.
-    # The order of taxa within each target clade remains random.
-    groups_uniform <- group_and_order_clades(phy, missing_taxa_list$Target_clade, include_target_clade_stem = missing_taxa_list$include_target_clade_stem)
-    missing_taxa_list <- lapply(X = missing_taxa_list, FUN = function (x) { x[groups_uniform$taxa_order] })
+    phy <- phy
+    tracker <- tracker
+    missing_taxa_list <- missing_taxa_list
+    verbose <- verbose_sim
+    temp_file_path <- temp_file_path_simulation(temp_file_path = temp_file_path, index = sim_index, multiple = nb_simulations > 1)
 
-    if (verbose) cat(paste0(Sys.time(), " - Start grafting process\n"))
+    ## Set seed of the simulation, for the duration of the simulation only (the global RNG state is restored on exit)
+    set_local_seed(sim_seed)
 
-    for (i in seq_len(n_missing))
+    ## Randomize the order of taxa so it has no influence on the pattern of grafting
+    # Taxa of the same target clade are exchangeable: their order is random.
+      # With method = 'uniform', taxa are then re-ordered by target clade so nested clades are processed first (the random order is kept within each clade).
+      # With method = 'BD_clades', taxa are grouped and ordered by clade within the loop.
+    random_order <- sample.int(n_missing)
+    missing_taxa_list <- lapply(X = missing_taxa_list, FUN = function (x) { x[random_order] })
+
+    # Root age: constant during grafting (all new tips reach the present) => computed once
+    root_age <- max(phytools::nodeHeights(tree = phy)[, 2])
+
+    ## ---- For "uniform" strategy: Loop per taxon, nested target clades first ---- ##
+    if (method == "uniform")
     {
-      focal_taxon_name <- missing_taxa_list$Taxon_name[i]
-      # Is the stem of the target clade available for this taxon?
-      include_target_clade_stem_i <- missing_taxa_list$include_target_clade_stem[i]
+      # Order taxa by target clade, nested clades first (random order kept within each clade).
+      # Rationale: taxa of a larger clade are grafted on a tree that already includes the taxa of the clades nested within it,
+      # so they can be grafted on the branches of those taxa. This is the same rule as for the 'BD_clades' method.
+      # The order of taxa within each target clade remains random.
+      groups_uniform <- group_and_order_clades(phy, missing_taxa_list$Target_clade, include_target_clade_stem = missing_taxa_list$include_target_clade_stem)
+      missing_taxa_list <- lapply(X = missing_taxa_list, FUN = function (x) { x[groups_uniform$taxa_order] })
 
-      # Get node associated to tips
-        # 1 tip => tip node
-        # 2 tips => MRCA node
-      MRCA_node <- get_clade_node(phy, missing_taxa_list$Target_clade[[i]])
+      if (verbose) cat(paste0(Sys.time(), " - Start grafting process\n"))
 
-      # Get the branches of the excluded subclades: the branches within each subclade, and its stem region if its stem is excluded
-      # (single tips exclude their terminal branch only if their stem is excluded)
-      excluded_nodes <- NULL
-      if (use_excluded_subclades)
+      for (i in seq_len(n_missing))
       {
-        excluded_nodes <- get_excluded_branch_nodes(phy = phy, excluded_subclades_tips_list = missing_taxa_list$Excluded_subclades[[i]],
-                                                    exclude_subclades_stem = missing_taxa_list$exclude_subclades_stem[[i]],
-                                                    missing_tip_labels = missing_taxa_list$Taxon_name)
-      }
+        focal_taxon_name <- missing_taxa_list$Taxon_name[i]
+        # Is the stem of the target clade available for this taxon?
+        include_target_clade_stem_i <- missing_taxa_list$include_target_clade_stem[i]
 
-      # Warn if the target clade is the whole tree: it has no stem branch, so only branches inside the clade can be used
-      if (include_target_clade_stem_i && length(missing_taxa_list$Target_clade[[i]]) > 1 && is.na(get_parent_node(phy, MRCA_node)))
-      {
-        warning("Target clade of '", focal_taxon_name, "' defined by ", paste(missing_taxa_list$Target_clade[[i]], collapse = ", "),
-                " is the whole tree: it has no stem branch, so only branches inside the clade are used")
-      }
+        # Get node associated to tips
+          # 1 tip => tip node
+          # 2 tips => MRCA node
+        MRCA_node <- get_clade_node(phy, missing_taxa_list$Target_clade[[i]])
 
-      # With a simmap: Get ages of the branches of the current tree, to cut them in pieces in the allowed states of the taxon, and follow the states through grafting
-      edge_ages_i <- if (use_states) root_age - phytools::nodeHeights(phy) else NULL
-
-      # Select branch for grafting using uniform distribution weighted by branch length to ensure a flat density over any time point along branches
-      # (no diversification model). With a simmap, only the segments in allowed states are used
-      # The draw returns the selected branch (tipward node) and the position of the graft on it (distance from its tipward node)
-      drawn_point <- draw_random_grafting_position_along_available_branch_segments(
-         phy = phy, MRCA_node = MRCA_node, include_target_clade_stem = include_target_clade_stem_i,
-         excluded_nodes = excluded_nodes,
-         missing_tip_labels = missing_taxa_list$Taxon_name, seed = NULL,
-         tracker = tracker, allowed_states = if (use_states) missing_taxa_list$allowed_states[[i]] else NULL, edge_ages = edge_ages_i)
-
-      # Stop with an informative message if no branch is available (all branches excluded by the user's constraints)
-      if (is.null(drawn_point))
-      {
-        stop("No branch available to graft '", focal_taxon_name, "'.\n",
-             "All branches of its target clade (tips: ", paste(missing_taxa_list$Target_clade[[i]], collapse = ", "), ") are excluded",
-             if (use_states) " or not in its allowed states" else "", ".\n",
-             "Adjust 'include_target_clade_stem' (global or in missing_taxa_list), 'missing_taxa_list$Excluded_subclades' or 'exclude_subclades_stem' (global or in missing_taxa_list) for this taxon.")
-      }
-
-      selected_node_ID <- drawn_point$node
-      # Position of the graft: drawn from a uniform distribution along the selected segment
-      position <- drawn_point$position
-
-      # Compute the new branch length to reach present time => make the tree ultrametric
-      new_branch_length <- position + (root_age - phytools::nodeheight(tree = phy, node = selected_node_ID))
-      # Graft new branch
-      phy_before_graft <- phy
-      phy <- phytools::bind.tip(tree = phy, tip.label = focal_taxon_name, edge.length = new_branch_length,
-                                where = selected_node_ID, position = position)
-      # With a simmap: the new taxon takes the state of the point where it was grafted, and the new node is labelled to keep following the branches
-      if (use_states)
-      {
-        tracked <- track_graft(tracker = tracker, phy_before = phy_before_graft, phy_after = phy, node = selected_node_ID, position = position,
-                               tip_label = focal_taxon_name, allowed_states = missing_taxa_list$allowed_states[[i]],
-                               range_candidates = missing_taxa_list$range_candidates[[i]], edge_ages = edge_ages_i)
-        phy <- tracked$phy
-        tracker <- tracked$tracker
-      }
-      # Enforce ultrametricity for the new terminal branch only (backbone branches are left untouched)
-      phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = focal_taxon_name, root_age = root_age)
-
-      # Save temporary phylo if requested
-      if (save_temp && (i %% save_temp_every == 0))
-      {
-        if (is.null(temp_file_path))
+        # Get the branches of the excluded subclades: the branches within each subclade, and its stem region if its stem is excluded
+        # (single tips exclude their terminal branch only if their stem is excluded)
+        excluded_nodes <- NULL
+        if (use_excluded_subclades)
         {
-          temp_file_path <- "./temp_phy_from_grafting.rds"
+          excluded_nodes <- get_excluded_branch_nodes(phy = phy, excluded_subclades_tips_list = missing_taxa_list$Excluded_subclades[[i]],
+                                                      exclude_subclades_stem = missing_taxa_list$exclude_subclades_stem[[i]],
+                                                      missing_tip_labels = missing_taxa_list$Taxon_name)
         }
-        # Save the phylogeny with original node labels restored
-        saveRDS(object = restore_node_labels(phy = phy, labelled = labelled_backbone), file = file.path(temp_file_path))
-      }
 
-      # Print progress if requested
-      if (verbose && (i %% 100 == 0))
-      {
-        cat(paste0(Sys.time(), " - Missing taxa grafted n\u00b0", i, "/", n_missing, "\n"))
-      }
-    }
-  }
-
-  ## ---- For "BD_clades" strategy: Loop per target clade, nested ones first ---- ##
-  if (method == "BD_clades")
-  {
-    if (verbose) cat(paste0(Sys.time(), " - Start identification and ordering of target clades\n"))
-
-    # Identify groups of taxa (target clade, availability of its stem and, with a simmap, allowed states) and order them by clade size
-    # Since nested clades are always smaller than their higher parents, this is equivalent to order by nesting scheme
-    # Groups of the same clade are consecutive, with the taxa without access to the stem first
-    groups <- group_and_order_clades(phy, missing_taxa_list$Target_clade, include_target_clade_stem = missing_taxa_list$include_target_clade_stem,
-                                     allowed_states = if (use_states) missing_taxa_list$allowed_states else NULL)
-    n_groups <- length(groups$group_clade_tips)
-
-    # Cache of the BD models: the model is fitted once per target clade, before grafting its first group of taxa,
-    # and reused for its other groups (same clade, so same rates and sampling fraction)
-    BD_cache <- list()
-
-    if (verbose) cat(paste0(Sys.time(), " - Start grafting process per clades\n"))
-
-    # Initiate number of taxa and clades grafted
-    nb_taxa_grafted <- 0
-    nb_clades_grafted <- 0
-
-    # Loop per ordered clades
-    for (i in groups$group_order)
-    {
-      # Extract ID of taxa in group n°i
-      taxa_ID_i <- which(groups$group_ID == i)
-      # Extract associated data
-      missing_taxa_list_i <- lapply(X = missing_taxa_list, FUN = function (x) { x[taxa_ID_i] })
-      # Extract the tips defining the target clade
-      target_clade_tips_i <- groups$group_clade_tips[[i]]
-      # Is the stem of the target clade available for the taxa of this group?
-      include_target_clade_stem_i <- groups$group_include_target_clade_stem[i]
-      # Get number of taxa to graft in this group
-      ntips_missing <- length(taxa_ID_i)
-
-      # Identify MRCA node in grafted tree
-      # Node is recomputed from tips because MRCA node IDs change after each graft
-      MRCA_node_i <- get_clade_node(phy, target_clade_tips_i)
-      is_single_tip <- length(target_clade_tips_i) == 1
-
-      # Identify the stem node of the target clade, i.e., its parent node in the BACKBONE phylogeny.
-      # Missing taxa previously grafted on the stem created new nodes between the clade and its backbone parent.
-      # Walking rootward past those nodes (they only have 'missing-only' subtrees as side branches) gives the true stem node,
-      # so the stem age is always the one of the backbone, and not the age of a node created by a graft.
-      stem_node_i <- get_stem_region_nodes(phy, MRCA_node_i, missing_tip_labels = missing_taxa_list$Taxon_name)$top_parent
-
-      # Warn against problematic cases with no stem available, because the target clade is the whole tree
-      if (is.na(stem_node_i))
-      {
-        if (include_target_clade_stem_i && !is_single_tip)
+        # Warn if the target clade is the whole tree: it has no stem branch, so only branches inside the clade can be used
+        if (include_target_clade_stem_i && length(missing_taxa_list$Target_clade[[i]]) > 1 && is.na(get_parent_node(phy, MRCA_node)))
         {
-          warning("Target clade defined by ", paste(target_clade_tips_i, collapse = ", "),
+          warning("Target clade of '", focal_taxon_name, "' defined by ", paste(missing_taxa_list$Target_clade[[i]], collapse = ", "),
                   " is the whole tree: it has no stem branch, so only branches inside the clade are used")
         }
-        # For case where the target clade is the full tree but no stem edge is required to be included,
-        # no need to send a warning; but set the stem node to equal the MRCA node
-        stem_node_i <- MRCA_node_i
-      }
 
-      # Compute stem age
-      stem_age_i <- root_age - phytools::nodeheight(tree = phy, node = stem_node_i)
+        # With a simmap: Get ages of the branches of the current tree, to cut them in pieces in the allowed states of the taxon, and follow the states through grafting
+        edge_ages_i <- if (use_states) root_age - phytools::nodeHeights(phy) else NULL
 
-      ## Deal with the different cases
-      if (is_single_tip)
-      {
-        ## Case for single tips
+        # Select branch for grafting using uniform distribution weighted by branch length to ensure a flat density over any time point along branches
+        # (no diversification model). With a simmap, only the segments in allowed states are used
+        # The draw returns the selected branch (tipward node) and the position of the graft on it (distance from its tipward node)
+        drawn_point <- draw_random_grafting_position_along_available_branch_segments(
+           phy = phy, MRCA_node = MRCA_node, include_target_clade_stem = include_target_clade_stem_i,
+           excluded_nodes = excluded_nodes,
+           missing_tip_labels = missing_taxa_list$Taxon_name, seed = NULL,
+           tracker = tracker, allowed_states = if (use_states) missing_taxa_list$allowed_states[[i]] else NULL, edge_ages = edge_ages_i)
 
-        # Only its stem branch is available,
-        # so only the stem age is provided to TreeSim::corsim()
-        divergence_times_i <- stem_age_i
-        upper_age_i <- stem_age_i # Use the stem age as upper bound
-        ntips_present <- 1
-
-      } else {
-        ## Case for clades
-
-        # Extract target clade as crown clade (does not include the stem branch)
-        crown_clade_tree_i <- ape::extract.clade(phy = phy, node = MRCA_node_i)
-        ntips_present <- ape::Ntip(crown_clade_tree_i)
-
-        # Get branching times within the crown clade
-        divergence_times_i <- ape::branching.times(crown_clade_tree_i)
-        crown_age_i <- max(divergence_times_i)
-        # Use the stem age as upper bound if the stem is available for the taxa of this group
-        # Otherwise, use the crown age
-        upper_age_i <- if (include_target_clade_stem_i) stem_age_i else crown_age_i
-      }
-
-      ## Fit Birth-Death on the clade, or on the smallest enclosing clade with >= min_tips tips
-      # Stop at the root if reached
-      # Fitted only once per target clade (before its first group is grafted, so all its taxa are still pending), then reused
-      clade_key_i <- as.character(groups$group_clade_ID[i])
-      if (is.null(BD_cache[[clade_key_i]]))
-      {
-        BD_cache[[clade_key_i]] <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, min_tips = min_tips,
-                                                   richness_info = richness_info) # Sampling fraction accounts for taxa still to graft and unsampled species
-      }
-      BD_i <- BD_cache[[clade_key_i]]
-
-      ## Draw the divergence ages with TreeSim::corsim and graft the taxa of the group, from the oldest to the youngest age
-      # An age can only be used if an available branch (in an allowed state with a simmap) crosses it in the current tree:
-      # the taxa that could not be grafted are left pending and their ages are drawn again until they lend on a valid age (see below)
-      pending <- seq_len(ntips_missing) # Taxa of the group still to graft (indices within the group)
-      n_redraws <- 0
-      repeat
-      {
-        ## Simulate missing divergence times with TreeSim::corsim (for the pending taxa only)
-        new_divergence_times_i <- TreeSim::corsim(x = divergence_times_i, lambda = BD_i$b, mu = BD_i$d,
-                                                  missing = length(pending), told = upper_age_i)
-        # Extract the divergence times for the missing taxa
-        divergence_times_missing_taxa_i <- extract_new_divergence_times(all_times = new_divergence_times_i, old_times = divergence_times_i)
-
-        # Graft missing taxa from oldest to youngest, so younger taxa can be grafted on branches of older missing taxa
-        # (extract_new_divergence_times() sorts the ages in decreasing order)
-        not_grafted <- integer(0)
-        for (k in seq_along(pending))
+        # Stop with an informative message if no branch is available (all branches excluded by the user's constraints)
+        if (is.null(drawn_point))
         {
-          j <- pending[k]
-          if (use_excluded_subclades)
+          stop("No branch available to graft '", focal_taxon_name, "'.\n",
+               "All branches of its target clade (tips: ", paste(missing_taxa_list$Target_clade[[i]], collapse = ", "), ") are excluded",
+               if (use_states) " or not in its allowed states" else "", ".\n",
+               "Adjust 'include_target_clade_stem' (global or in missing_taxa_list), 'missing_taxa_list$Excluded_subclades' or 'exclude_subclades_stem' (global or in missing_taxa_list) for this taxon.")
+        }
+
+        selected_node_ID <- drawn_point$node
+        # Position of the graft: drawn from a uniform distribution along the selected segment
+        position <- drawn_point$position
+
+        # Compute the new branch length to reach present time => make the tree ultrametric
+        new_branch_length <- position + (root_age - phytools::nodeheight(tree = phy, node = selected_node_ID))
+        # Graft new branch
+        phy_before_graft <- phy
+        phy <- phytools::bind.tip(tree = phy, tip.label = focal_taxon_name, edge.length = new_branch_length,
+                                  where = selected_node_ID, position = position)
+        # With a simmap: the new taxon takes the state of the point where it was grafted, and the new node is labelled to keep following the branches
+        if (use_states)
+        {
+          tracked <- track_graft(tracker = tracker, phy_before = phy_before_graft, phy_after = phy, node = selected_node_ID, position = position,
+                                 tip_label = focal_taxon_name, allowed_states = missing_taxa_list$allowed_states[[i]],
+                                 range_candidates = missing_taxa_list$range_candidates[[i]], edge_ages = edge_ages_i)
+          phy <- tracked$phy
+          tracker <- tracked$tracker
+        }
+        # Enforce ultrametricity for the new terminal branch only (backbone branches are left untouched)
+        phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = focal_taxon_name, root_age = root_age)
+
+        # Save temporary phylo if requested
+        if (save_temp && (i %% save_temp_every == 0))
+        {
+          if (is.null(temp_file_path))
           {
-            excluded_subclades_tips_list_i <- missing_taxa_list_i$Excluded_subclades[[j]]
-          } else {
-            excluded_subclades_tips_list_i <- NULL
+            temp_file_path <- "./temp_phy_from_grafting.rds"
           }
-
-          grafted_j <- graft_from_divergence_age(
-              phy = phy,
-              divergence_age = divergence_times_missing_taxa_i[k],
-              tip_label = missing_taxa_list_i$Taxon_name[j],
-              target_clade_tips = missing_taxa_list_i$Target_clade[[j]],
-              excluded_subclades_tips_list = excluded_subclades_tips_list_i,
-              exclude_subclades_stem = missing_taxa_list_i$exclude_subclades_stem[[j]],
-              include_target_clade_stem = include_target_clade_stem_i,
-              missing_tip_labels = missing_taxa_list$Taxon_name,
-              root_age = root_age,
-              seed = NULL,
-              tracker = tracker,
-              allowed_states = if (use_states) missing_taxa_list_i$allowed_states[[j]] else NULL,
-              range_candidates = if (use_states) missing_taxa_list_i$range_candidates[[j]] else NULL,
-              redraw_if_unusable = TRUE)
-
-          # A NULL output means that no available branch (in an allowed state with a simmap) crosses the age: the age is discarded and the taxon stays pending.
-          # The ages older than the oldest usable age are the ones that fail: every younger age crosses the lineage grafted at the oldest usable age
-          if (is.null(grafted_j))
-          {
-            not_grafted <- c(not_grafted, j)
-          } else if (use_states) {
-            phy <- grafted_j$phy
-            tracker <- grafted_j$tracker
-          } else {
-            phy <- grafted_j
-          }
+          # Save the phylogeny with original node labels restored
+          saveRDS(object = restore_node_labels(phy = phy, labelled = labelled_backbone), file = file.path(temp_file_path))
         }
 
-        pending <- not_grafted
-        if (length(pending) == 0) { break }
-
-        # Draw again the ages of the taxa left. The ages are drawn from the same clade and not conditioned on the lineages grafted so far:
-        # the ages of TreeSim::corsim() are independent draws, and the lineages grafted are accounted for by the branches that cross the ages.
-        n_redraws <- n_redraws + 1
-        if (n_redraws > max_age_redraws)
+        # Print progress if requested
+        if (verbose && (i %% 100 == 0))
         {
-          # Describe the time window of the divergence ages (from the present to the upper age) and the share of it crossed by available branches in the current tree, for each taxon left
-          edge_ages_now <- root_age - phytools::nodeHeights(phy)
-          n_show <- min(length(pending), 10)
-          coverage_pending <- vapply(pending[seq_len(n_show)], function (j)
-          {
-            segments_j <- get_available_segments(phy = phy, target_clade_tips = missing_taxa_list_i$Target_clade[[j]],
-                                                 excluded_subclades_tips_list = if (use_excluded_subclades) missing_taxa_list_i$Excluded_subclades[[j]] else NULL,
-                                                 exclude_subclades_stem = missing_taxa_list_i$exclude_subclades_stem[[j]],
-                                                 include_target_clade_stem = include_target_clade_stem_i, missing_tip_labels = missing_taxa_list$Taxon_name,
-                                                 tracker = tracker, allowed_states = if (use_states) missing_taxa_list_i$allowed_states[[j]] else NULL, edge_ages = edge_ages_now)
-            get_time_coverage(phy = phy, segments = segments_j, edge_ages = edge_ages_now, upper_age = upper_age_i)
-          }, numeric(1))
-          stop("No usable divergence age was found for ", length(pending), " taxa of the target clade defined by ", paste(target_clade_tips_i, collapse = ", "),
-               " after ", max_age_redraws, " redraws of their divergence ages ('max_age_redraws').\n",
-               "Time window of the divergence ages: from age 0 to age ", signif(upper_age_i, 4), " (", if (include_target_clade_stem_i) "stem age" else "crown age", " of the target clade).\n",
-               "Share of this window crossed by the available branches", if (use_states) " in the allowed states" else "", " (current tree):\n",
-               paste0("  - ", missing_taxa_list_i$Taxon_name[pending[seq_len(n_show)]], ": ", sprintf("%.2f%%", 100 * coverage_pending),
-                      if (use_states) paste0(" (allowed states: ", vapply(missing_taxa_list_i$allowed_states[pending[seq_len(n_show)]], paste, character(1), collapse = ", "), ")") else "", collapse = "\n"),
-               if (length(pending) > n_show) paste0("\n  ... and ", length(pending) - n_show, " more") else "", "\n",
-               "No available branch crosses the ages drawn: the part of the time window where branches are available is too narrow or too far from the ages expected from the diversification model.\n",
-               "Increase 'max_age_redraws', ", if (use_states) "extend the allowed states" else "adjust the excluded subclades or the stem availability", ", or use method = 'uniform'.")
+          cat(paste0(Sys.time(), " - Missing taxa grafted n\u00b0", i, "/", n_missing, "\n"))
         }
-      }
-
-      # Update counts of grafted taxa and grafted clades
-      nb_taxa_grafted <- nb_taxa_grafted + ntips_missing
-      nb_clades_grafted <- nb_clades_grafted + 1
-
-      # Save temporary phylo if requested
-      if (save_temp && (nb_clades_grafted %% save_temp_every == 0))
-      {
-        if (is.null(temp_file_path))
-        {
-          temp_file_path <- "./temp_phy_from_grafting.rds"
-        }
-        saveRDS(object = restore_node_labels(phy = phy, labelled = labelled_backbone), file = file.path(temp_file_path))
-      }
-
-      # Print progress if requested
-      if (verbose && (nb_clades_grafted %% 10 == 0))
-      {
-        cat(paste0(Sys.time(), " - Missing taxa grafted within clades n\u00b0", nb_clades_grafted, "/", n_groups,
-                   " - Taxa n\u00b0", nb_taxa_grafted, "/", n_missing, "\n"))
       }
     }
+
+    ## ---- For "BD_clades" strategy: Loop per target clade, nested ones first ---- ##
+    if (method == "BD_clades")
+    {
+      if (verbose) cat(paste0(Sys.time(), " - Start identification and ordering of target clades\n"))
+
+      # Identify groups of taxa (target clade, availability of its stem and, with a simmap, allowed states) and order them by clade size
+      # Since nested clades are always smaller than their higher parents, this is equivalent to order by nesting scheme
+      # Groups of the same clade are consecutive, with the taxa without access to the stem first
+      groups <- group_and_order_clades(phy, missing_taxa_list$Target_clade, include_target_clade_stem = missing_taxa_list$include_target_clade_stem,
+                                       allowed_states = if (use_states) missing_taxa_list$allowed_states else NULL)
+      n_groups <- length(groups$group_clade_tips)
+
+      # Cache of the BD models: the model is fitted once per target clade, before grafting its first group of taxa,
+      # and reused for its other groups (same clade, so same rates and sampling fraction)
+      BD_cache <- list()
+
+      if (verbose) cat(paste0(Sys.time(), " - Start grafting process per clades\n"))
+
+      # Initiate number of taxa and clades grafted
+      nb_taxa_grafted <- 0
+      nb_clades_grafted <- 0
+
+      # Loop per ordered clades
+      for (i in groups$group_order)
+      {
+        # Extract ID of taxa in group n°i
+        taxa_ID_i <- which(groups$group_ID == i)
+        # Extract associated data
+        missing_taxa_list_i <- lapply(X = missing_taxa_list, FUN = function (x) { x[taxa_ID_i] })
+        # Extract the tips defining the target clade
+        target_clade_tips_i <- groups$group_clade_tips[[i]]
+        # Is the stem of the target clade available for the taxa of this group?
+        include_target_clade_stem_i <- groups$group_include_target_clade_stem[i]
+        # Get number of taxa to graft in this group
+        ntips_missing <- length(taxa_ID_i)
+
+        # Identify MRCA node in grafted tree
+        # Node is recomputed from tips because MRCA node IDs change after each graft
+        MRCA_node_i <- get_clade_node(phy, target_clade_tips_i)
+        is_single_tip <- length(target_clade_tips_i) == 1
+
+        # Identify the stem node of the target clade, i.e., its parent node in the BACKBONE phylogeny.
+        # Missing taxa previously grafted on the stem created new nodes between the clade and its backbone parent.
+        # Walking rootward past those nodes (they only have 'missing-only' subtrees as side branches) gives the true stem node,
+        # so the stem age is always the one of the backbone, and not the age of a node created by a graft.
+        stem_node_i <- get_stem_region_nodes(phy, MRCA_node_i, missing_tip_labels = missing_taxa_list$Taxon_name)$top_parent
+
+        # Warn against problematic cases with no stem available, because the target clade is the whole tree
+        if (is.na(stem_node_i))
+        {
+          if (include_target_clade_stem_i && !is_single_tip)
+          {
+            warning("Target clade defined by ", paste(target_clade_tips_i, collapse = ", "),
+                    " is the whole tree: it has no stem branch, so only branches inside the clade are used")
+          }
+          # For case where the target clade is the full tree but no stem edge is required to be included,
+          # no need to send a warning; but set the stem node to equal the MRCA node
+          stem_node_i <- MRCA_node_i
+        }
+
+        # Compute stem age
+        stem_age_i <- root_age - phytools::nodeheight(tree = phy, node = stem_node_i)
+
+        ## Deal with the different cases
+        if (is_single_tip)
+        {
+          ## Case for single tips
+
+          # Only its stem branch is available,
+          # so only the stem age is provided to TreeSim::corsim()
+          divergence_times_i <- stem_age_i
+          upper_age_i <- stem_age_i # Use the stem age as upper bound
+          ntips_present <- 1
+
+        } else {
+          ## Case for clades
+
+          # Extract target clade as crown clade (does not include the stem branch)
+          crown_clade_tree_i <- ape::extract.clade(phy = phy, node = MRCA_node_i)
+          ntips_present <- ape::Ntip(crown_clade_tree_i)
+
+          # Get branching times within the crown clade
+          divergence_times_i <- ape::branching.times(crown_clade_tree_i)
+          crown_age_i <- max(divergence_times_i)
+          # Use the stem age as upper bound if the stem is available for the taxa of this group
+          # Otherwise, use the crown age
+          upper_age_i <- if (include_target_clade_stem_i) stem_age_i else crown_age_i
+        }
+
+        ## Fit Birth-Death on the clade, or on the smallest enclosing clade with >= min_tips tips
+        # Stop at the root if reached
+        # Fitted only once per target clade (before its first group is grafted, so all its taxa are still pending), then reused
+        clade_key_i <- as.character(groups$group_clade_ID[i])
+        if (is.null(BD_cache[[clade_key_i]]))
+        {
+          BD_cache[[clade_key_i]] <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, min_tips = min_tips,
+                                                     richness_info = richness_info) # Sampling fraction accounts for taxa still to graft and unsampled species
+        }
+        BD_i <- BD_cache[[clade_key_i]]
+
+        ## Draw the divergence ages with TreeSim::corsim and graft the taxa of the group, from the oldest to the youngest age
+        # An age can only be used if an available branch (in an allowed state with a simmap) crosses it in the current tree:
+        # the taxa that could not be grafted are left pending and their ages are drawn again until they lend on a valid age (see below)
+        pending <- seq_len(ntips_missing) # Taxa of the group still to graft (indices within the group)
+        n_redraws <- 0
+        repeat
+        {
+          ## Simulate missing divergence times with TreeSim::corsim (for the pending taxa only)
+          new_divergence_times_i <- TreeSim::corsim(x = divergence_times_i, lambda = BD_i$b, mu = BD_i$d,
+                                                    missing = length(pending), told = upper_age_i)
+          # Extract the divergence times for the missing taxa
+          divergence_times_missing_taxa_i <- extract_new_divergence_times(all_times = new_divergence_times_i, old_times = divergence_times_i)
+
+          # Graft missing taxa from oldest to youngest, so younger taxa can be grafted on branches of older missing taxa
+          # (extract_new_divergence_times() sorts the ages in decreasing order)
+          not_grafted <- integer(0)
+          for (k in seq_along(pending))
+          {
+            j <- pending[k]
+            if (use_excluded_subclades)
+            {
+              excluded_subclades_tips_list_i <- missing_taxa_list_i$Excluded_subclades[[j]]
+            } else {
+              excluded_subclades_tips_list_i <- NULL
+            }
+
+            grafted_j <- graft_from_divergence_age(
+                phy = phy,
+                divergence_age = divergence_times_missing_taxa_i[k],
+                tip_label = missing_taxa_list_i$Taxon_name[j],
+                target_clade_tips = missing_taxa_list_i$Target_clade[[j]],
+                excluded_subclades_tips_list = excluded_subclades_tips_list_i,
+                exclude_subclades_stem = missing_taxa_list_i$exclude_subclades_stem[[j]],
+                include_target_clade_stem = include_target_clade_stem_i,
+                missing_tip_labels = missing_taxa_list$Taxon_name,
+                root_age = root_age,
+                seed = NULL,
+                tracker = tracker,
+                allowed_states = if (use_states) missing_taxa_list_i$allowed_states[[j]] else NULL,
+                range_candidates = if (use_states) missing_taxa_list_i$range_candidates[[j]] else NULL,
+                redraw_if_unusable = TRUE)
+
+            # A NULL output means that no available branch (in an allowed state with a simmap) crosses the age: the age is discarded and the taxon stays pending.
+            # The ages older than the oldest usable age are the ones that fail: every younger age crosses the lineage grafted at the oldest usable age
+            if (is.null(grafted_j))
+            {
+              not_grafted <- c(not_grafted, j)
+            } else if (use_states) {
+              phy <- grafted_j$phy
+              tracker <- grafted_j$tracker
+            } else {
+              phy <- grafted_j
+            }
+          }
+
+          pending <- not_grafted
+          if (length(pending) == 0) { break }
+
+          # Draw again the ages of the taxa left. The ages are drawn from the same clade and not conditioned on the lineages grafted so far:
+          # the ages of TreeSim::corsim() are independent draws, and the lineages grafted are accounted for by the branches that cross the ages.
+          n_redraws <- n_redraws + 1
+          if (n_redraws > max_age_redraws)
+          {
+            # Describe the time window of the divergence ages (from the present to the upper age) and the share of it crossed by available branches in the current tree, for each taxon left
+            edge_ages_now <- root_age - phytools::nodeHeights(phy)
+            n_show <- min(length(pending), 10)
+            coverage_pending <- vapply(pending[seq_len(n_show)], function (j)
+            {
+              segments_j <- get_available_segments(phy = phy, target_clade_tips = missing_taxa_list_i$Target_clade[[j]],
+                                                   excluded_subclades_tips_list = if (use_excluded_subclades) missing_taxa_list_i$Excluded_subclades[[j]] else NULL,
+                                                   exclude_subclades_stem = missing_taxa_list_i$exclude_subclades_stem[[j]],
+                                                   include_target_clade_stem = include_target_clade_stem_i, missing_tip_labels = missing_taxa_list$Taxon_name,
+                                                   tracker = tracker, allowed_states = if (use_states) missing_taxa_list_i$allowed_states[[j]] else NULL, edge_ages = edge_ages_now)
+              get_time_coverage(phy = phy, segments = segments_j, edge_ages = edge_ages_now, upper_age = upper_age_i)
+            }, numeric(1))
+            stop_simulation_failure("No usable divergence age was found for ", length(pending), " taxa of the target clade defined by ", paste(target_clade_tips_i, collapse = ", "),
+                 " after ", max_age_redraws, " redraws of their divergence ages ('max_age_redraws').\n",
+                 "Time window of the divergence ages: from age 0 to age ", signif(upper_age_i, 4), " (", if (include_target_clade_stem_i) "stem age" else "crown age", " of the target clade).\n",
+                 "Share of this window crossed by the available branches", if (use_states) " in the allowed states" else "", " (current tree):\n",
+                 paste0("  - ", missing_taxa_list_i$Taxon_name[pending[seq_len(n_show)]], ": ", sprintf("%.2f%%", 100 * coverage_pending),
+                        if (use_states) paste0(" (allowed states: ", vapply(missing_taxa_list_i$allowed_states[pending[seq_len(n_show)]], paste, character(1), collapse = ", "), ")") else "", collapse = "\n"),
+                 if (length(pending) > n_show) paste0("\n  ... and ", length(pending) - n_show, " more") else "", "\n",
+                 "No available branch crosses the ages drawn: the part of the time window where branches are available is too narrow or too far from the ages expected from the diversification model.\n",
+                 "Increase 'max_age_redraws', ", if (use_states) "extend the allowed states" else "adjust the excluded subclades or the stem availability", ", or use method = 'uniform'.")
+          }
+        }
+
+        # Update counts of grafted taxa and grafted clades
+        nb_taxa_grafted <- nb_taxa_grafted + ntips_missing
+        nb_clades_grafted <- nb_clades_grafted + 1
+
+        # Save temporary phylo if requested
+        if (save_temp && (nb_clades_grafted %% save_temp_every == 0))
+        {
+          if (is.null(temp_file_path))
+          {
+            temp_file_path <- "./temp_phy_from_grafting.rds"
+          }
+          saveRDS(object = restore_node_labels(phy = phy, labelled = labelled_backbone), file = file.path(temp_file_path))
+        }
+
+        # Print progress if requested
+        if (verbose && (nb_clades_grafted %% 10 == 0))
+        {
+          cat(paste0(Sys.time(), " - Missing taxa grafted within clades n\u00b0", nb_clades_grafted, "/", n_groups,
+                     " - Taxa n\u00b0", nb_taxa_grafted, "/", n_missing, "\n"))
+        }
+      }
+    }
+
+    # Final check of ultrametricity (can take a long time for large phylogenies)
+    is_ultrametric <- ape::is.ultrametric(phy, tol = ultrametric_tol)
+    if (!is_ultrametric)
+    {
+      if (verbose) { cat(paste0(Sys.time(), " - Ensure the ultrametricity of the final tree\n") )}
+      # Force ultrametry to avoid issue with bad rounding, but only of the grafted tips, to keep the backbone intact
+      phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxon_name, root_age = root_age)
+    }
+
+    # Restore the original node labels (none if the backbone had none, and an empty string for the nodes created by grafting otherwise)
+    phy_tracked <- phy # Save the tracked phylogeny to use to build the updated simmap below
+    phy <- restore_node_labels(phy = phy_tracked, labelled = labelled_backbone)
+
+    # With a simmap: the updated simmap of the grafted tree, built from the states followed during grafting (before the grafted elements are added)
+    updated_simmap <- NULL
+    if (use_states && return_simmap) { updated_simmap <- build_updated_simmap(tracker = tracker, phy_tracked = phy_tracked, phy = phy) }
+
+    # Add the elements identifying the grafted tips and branches, and the sampling fraction table of the clades if 'total_richness_per_clades' was provided
+    phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxon_name)
+    if (!is.null(richness_info$table)) phy$sampling_fraction_df <- richness_info$table
+    if (!is.null(updated_simmap)) phy$simmap <- updated_simmap
+
+    return(phy)
   }
 
-  # Final check of ultrametricity (can take a long time for large phylogenies)
-  is_ultrametric <- ape::is.ultrametric(phy, tol = ultrametric_tol)
-  if (!is_ultrametric)
-  {
-    if (verbose) { cat(paste0(Sys.time(), " - Ensure the ultrametricity of the final tree\n") )}
-    # Force ultrametry to avoid issue with bad rounding, but only of the grafted tips, to keep the backbone intact
-    phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = missing_taxa_list$Taxon_name, root_age = root_age)
-  }
+  ## Run the simulations for the given nb of iterations, and forcing rule
+  phy_all_sims <- run_simulations(simulate_one = simulate_one, nb_simulations = nb_simulations, force_simulations = force_simulations, seed = seed, verbose = verbose)
 
-  # Restore the original node labels (none if the backbone had none, and an empty string for the nodes created by grafting otherwise)
-  phy_tracked <- phy # Save the tracked phylogeny to use to build the updated simmap below
-  phy <- restore_node_labels(phy = phy_tracked, labelled = labelled_backbone)
-
-  # With a simmap: the updated simmap of the grafted tree, built from the states followed during grafting (before the grafted elements are added)
-  updated_simmap <- NULL
-  if (use_states && return_simmap) { updated_simmap <- build_updated_simmap(tracker = tracker, phy_tracked = phy_tracked, phy = phy) }
-
-  # Add the elements identifying the grafted tips and branches, and the sampling fraction table of the clades if 'total_richness_per_clades' was provided
-  phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxon_name)
-  if (!is.null(richness_info$table)) phy$sampling_fraction_df <- richness_info$table
-  if (!is.null(updated_simmap)) phy$simmap <- updated_simmap
-
-  return(phy)
+  # Return output
+  return(phy_all_sims)
 }
 
 
