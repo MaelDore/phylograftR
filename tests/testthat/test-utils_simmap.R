@@ -359,7 +359,7 @@ test_that("resolve_allowed_ranges() with single-area states is the same as the e
   expect_identical(ranges$range_candidates$X1, list(A = "A", C = "C"))
 })
 
-## Test that no warning is sent when a candidate range is smaller than the state (subset sympatric speciation events are expected with ranges)
+## Test that no warning is sent when an allowed range is a state of the simmap and is smaller than other states containing it (e.g., "A" in "AB")
 test_that("resolve_allowed_ranges() does not warn when a candidate range is smaller than the state",
 {
   states <- c("A", "AB", "BC")
@@ -413,7 +413,7 @@ test_that("resolve_allowed_ranges() warns about the allowed ranges that are not 
   states <- c("A", "AB", "BC")
   # "B" is contained in AB and BC but is not a state of the simmap: no stop, and a warning explaining the mismatch
   expect_warning(resolved <- resolve_allowed_ranges(allowed_states = c("A", "B"), states = states, taxon_names = c("X1", "X2")),
-                 "some allowed ranges are not states of the simmap: 'B' \\(contained in the states 'AB', 'BC'; taxa: X1, X2\\)\\.\nThe grafting is run assuming that these ranges can be inherited.*subset sympatric speciation events.*added to the states of the updated simmap")
+                 "some allowed ranges are not states of the simmap: 'B' \\(contained in the states 'AB', 'BC'; taxa: X1, X2\\)\\.\nThe grafting is run assuming that these ranges can be inherited.*subset sympatric speciation events \\(e\\.g\\., \\(AB\\) -> \\(AB\\), \\(B\\) for the range 'B' inherited from the state 'AB'\\).*added to the states of the updated simmap")
   expect_identical(resolved$inherited_states, "B") # inherited, and added to the acceptable states
   expect_identical(resolved$allowed_states$X1, c("A", "AB", "BC", "B"))
   expect_identical(resolved$range_candidates$X1, list(A = "A", AB = c("A", "B"), BC = "B", B = "B"))

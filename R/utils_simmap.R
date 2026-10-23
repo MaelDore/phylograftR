@@ -382,9 +382,13 @@ resolve_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_states =
       paste0("'", range, "' (contained in the states ", paste0("'", states[range_in_states(range, states)], "'", collapse = ", "),
              "; taxa: ", paste(utils::head(not_states[[range]], 5), collapse = ", "), if (length(not_states[[range]]) > 5) ", ..." else "", ")")
     }
+    # Example of event given in the message: the first range with the first state of the simmap containing it
+    example_range <- names(not_states)[1]
+    example_state <- states[range_in_states(example_range, states)][1]
     warning("With 'treat_states_as_ranges = TRUE', some allowed ranges are not states of the simmap: ", paste(vapply(names(not_states), describe, character(1)), collapse = "; "), ".\n",
             "The grafting is run assuming that these ranges can be inherited by lineages grafted in the states of the simmap that contain them, ",
-            "which results in subset sympatric speciation events (e.g., (AB) -> (AB), (A) for a range 'A' inherited from a state 'AB'). ",
+            "which results in subset sympatric speciation events (e.g., (", example_state, ") -> (", example_state, "), (", example_range, ") for the range '", example_range,
+            "' inherited from the state '", example_state, "'). ",
             "The ranges inherited are added to the states of the updated simmap.", call. = FALSE)
   }
 
