@@ -16,6 +16,8 @@
 #'   (e.g., with `ape::drop.tip()`, which does not update the elements of the phylogeny it does not know).
 #'
 #' @param phy An object of class `"phylo"`. The phylogeny, including the grafted taxa.
+#'   It can also be a set of phylogenies (class `"multiPhylo"`, e.g., the output of the grafting functions with `nb_simulations > 1`),
+#'   or a list of them with one element per stochastic map (output of the grafting functions with a `"multiSimmap"`): the elements are then added to each phylogeny.
 #' @param grafted_taxa Character vector. Labels of the grafted taxa (e.g., `missing_taxa_list$Taxon_name`).
 #'   Labels that are not tips of `phy` are ignored, with a warning.
 #'
@@ -36,7 +38,8 @@
 #'   * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade with constraints (target clades and excluded subclades),
 #'   * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to a clade of the backbone.
 #'
-#' @return The phylogeny `phy` (class `"phylo"`), with two elements added, or replaced if `phy` already had them:
+#' @return The phylogeny `phy` (class `"phylo"`), with two elements added, or replaced if `phy` already had them (for a `"multiPhylo"` or a list of maps: the same object,
+#'   with each phylogeny updated:
 #'  * `grafted_tips` Named logical vector with one value per tip of `phy`, in the order of `phy$tip.label`.
 #'    `TRUE` for grafted tips. Names are the tip labels.
 #'  * `grafted_edges` Named logical vector with one value per branch (edge) of `phy`, in the order of the rows of `phy$edge`.
@@ -45,6 +48,8 @@
 #' @author Maël Doré
 #'
 #' @examples
+#' # --- Prepare data --- #
+#'
 #' # Create a toy backbone phylogeny, and graft taxa
 #' set.seed(1234)
 #' phy <- ape::rcoal(n = 30)
@@ -52,11 +57,14 @@
 #' missing_taxa_list <- list(
 #'   Taxon_name = c("X1", "X2", "X3", "X4"),
 #'   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")))
+#'
+#' # --- Perform grafting --- #
 #' grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
 #'                                   verbose = FALSE, seed = 1234)
 #'
-#' # Identify the grafted tips and branches:
-#' # the function returns the phylogeny with two additional elements
+#' # --- Identify the grafted tips and branches --- #
+#'
+#' # The function returns the phylogeny with two additional elements
 #' grafted_phy <- identify_grafted(phy = grafted_phy, grafted_taxa = missing_taxa_list$Taxon_name)
 #' table(grafted_phy$grafted_tips)
 #' table(grafted_phy$grafted_edges)
@@ -65,6 +73,8 @@
 #' plot(grafted_phy, cex = 0.7,
 #'      edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
 #'      tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+#'
+#' # --- Update the grafted tips and branches on a pruned phylogeny --- #
 #'
 #' # Prune the phylogeny: drop a grafted tip and a backbone tip
 #' pruned_phy <- ape::drop.tip(phy = grafted_phy, tip = c("X2", "t1"))
@@ -84,8 +94,54 @@
 #'      edge.color = c("black", "red")[pruned_phy$grafted_edges + 1],
 #'      tip.color = c("black", "red")[pruned_phy$grafted_tips + 1])
 #'
+#' # --- Identify the grafted tips and branches on several phylogenies --- #
+#'
+#' # Graft multiple phylogenies at once (nb_simulations > 1)
+#' grafted_phys <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+#'                                    nb_simulations = 2, verbose = FALSE, seed = 1234)
+#'
+#' # Drop a tip across all grafted phylogenies
+#' pruned_phys <- ape::drop.tip(phy = grafted_phys, tip = "X2")
+#'
+#' # Updated grafting information of all phylogenies at once
+#' pruned_phys <- identify_grafted(
+#'    phy = pruned_phys,
+#'    grafted_taxa = setdiff(missing_taxa_list$Taxon_name, "X2"))
+#'
+#' # Inspect updated information across phylogenies
+#' sapply(pruned_phys, function (x) sum(x$grafted_tips))
+#'
 
 identify_grafted <- function (phy, grafted_taxa)
+{
+  ## A single phylogeny
+  if (inherits(phy, "phylo")) { return(identify_grafted_one(phy = phy, grafted_taxa = grafted_taxa)) }
+
+  ## Several phylogenies (the same warnings are sent once)
+  is_set <- function (x) inherits(x, "multiPhylo") || inherits(x, "phylo")
+  if (inherits(phy, "multiPhylo"))
+  {
+    with_unique_warnings(for (j in seq_along(phy)) { phy[[j]] <- identify_grafted_one(phy = phy[[j]], grafted_taxa = grafted_taxa) })
+    return(phy)
+  }
+  if (is.list(phy) && length(phy) > 0 && all(vapply(phy, is_set, logical(1))))
+  {
+    with_unique_warnings(for (k in seq_along(phy))
+    {
+      if (inherits(phy[[k]], "phylo")) {
+        phy[[k]] <- identify_grafted_one(phy = phy[[k]], grafted_taxa = grafted_taxa)
+      } else {
+        for (j in seq_along(phy[[k]])) { phy[[k]][[j]] <- identify_grafted_one(phy = phy[[k]][[j]], grafted_taxa = grafted_taxa) }
+      }
+    })
+    return(phy)
+  }
+  stop("'phy' must be an object of class 'phylo' (or 'multiPhylo', or a list of 'phylo' and 'multiPhylo' objects, one per map).")
+}
+
+
+## Identify the grafted tips and branches of a single phylogeny (see identify_grafted())
+identify_grafted_one <- function (phy, grafted_taxa)
 {
   ## Check input
   if (!inherits(phy, "phylo")) stop("'phy' must be an object of class 'phylo'")

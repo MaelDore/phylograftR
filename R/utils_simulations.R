@@ -363,3 +363,81 @@ run_maps <- function (simulate_one, prepared, map_names, multiple, nb_simulation
   }
   structure(results, failed_maps = failed_maps)
 }
+
+
+#' @title Evaluate an expression and send its warnings once
+#'
+#' @description Evaluates `expr`, gathers its warnings, and sends each distinct message once at the end. Used when the same step is applied to several phylogenies
+#'   (e.g., the same warning about the inputs would otherwise be sent for each phylogeny).
+#'
+#' @param expr Expression to evaluate.
+#'
+#' @noRd
+#'
+#' @return The value of `expr`.
+#'
+
+with_unique_warnings <- function (expr)
+{
+  messages <- character(0)
+  value <- withCallingHandlers(expr, warning = function (w) { messages <<- c(messages, conditionMessage(w)); invokeRestart("muffleWarning") })
+  for (message in unique(messages)) { warning(message, call. = FALSE) }
+  value
+}
+
+
+#' @title Describe the structure of grafted phylogenies given to a function
+#'
+#' @description Lists the phylogenies of the output of the grafting functions: a phylogeny, a `"multiPhylo"` (the simulations of one map), or a list of them (the maps of a `"multiSimmap"`).
+#'
+#' @param x A `"phylo"`, a `"multiPhylo"`, or a plain list (named after the maps) of `"phylo"` and `"multiPhylo"` objects.
+#' @param arg Name of the argument, for the error messages.
+#'
+#' @noRd
+#'
+#' @return A list with the elements `phylos` (list of phylogenies, in the order of the input), `map` (name of the map of each phylogeny), `simulation` (integer index of the simulation of each phylogeny:
+#'   the index in the name `"sim_k"` or `"<map>_sim_k"` of a `"multiPhylo"`, otherwise its position, 1 for a single phylogeny), `seed` (integer, `NA` if unknown) and `is_list` (whether `x` is a list of maps).
+#'   The map is the name of the list of maps, otherwise the attribute `"map"` of the phylogeny, otherwise `"map_1"`.
+#'
+
+list_grafted_phylogenies <- function (x, arg = "phy_grafted")
+{
+  phylos <- list(); map <- character(0); simulation <- integer(0)
+  index_of <- function (names_x, n) {
+    if (is.null(names_x)) { return(seq_len(n)) }
+    idx <- suppressWarnings(as.integer(sub("^(.*_)?sim_([0-9]+)$", "\\2", names_x)))
+    ifelse(is.na(idx) | !grepl("sim_[0-9]+$", names_x), seq_len(n), idx)
+  }
+  add <- function (phy, default_map, forced_map = NULL, index = 1L)
+  {
+    phylos[[length(phylos) + 1]] <<- phy
+    map <<- c(map, if (!is.null(forced_map)) forced_map else if (!is.null(attr(phy, "map"))) attr(phy, "map") else default_map)
+    simulation <<- c(simulation, index)
+  }
+  bad <- function () stop("'", arg, "' must be a phylogeny (class 'phylo'), a set of phylogenies (class 'multiPhylo'), or a list of them with one element per map (output of the grafting functions with a 'multiSimmap').")
+
+  if (inherits(x, "phylo")) {
+    add(x, "map_1")
+    is_list <- FALSE
+  } else if (inherits(x, "multiPhylo")) {
+    idx <- index_of(names(x), length(x))
+    for (j in seq_along(x)) { add(x[[j]], "map_1", index = idx[j]) }
+    is_list <- FALSE
+  } else if (is.list(x) && length(x) > 0) {
+    map_names <- names(x)
+    if (is.null(map_names) || anyNA(map_names) || any(map_names == "")) { map_names <- paste0("map_", seq_along(x)) }
+    for (k in seq_along(x))
+    {
+      el <- x[[k]]
+      if (inherits(el, "phylo")) { add(el, map_names[k], forced_map = map_names[k]) }
+      else if (inherits(el, "multiPhylo")) {
+        idx <- index_of(names(el), length(el))
+        for (j in seq_along(el)) { add(el[[j]], map_names[k], forced_map = map_names[k], index = idx[j]) }
+      } else { bad() }
+    }
+    is_list <- TRUE
+  } else { bad() }
+  if (length(phylos) == 0) { stop("'", arg, "' does not contain any phylogeny.") }
+  seed <- vapply(phylos, function (p) { s <- attr(p, "seed"); if (is.null(s)) NA_integer_ else as.integer(s) }, integer(1))
+  list(phylos = phylos, map = map, simulation = simulation, seed = seed, is_list = is_list)
+}

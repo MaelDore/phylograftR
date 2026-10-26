@@ -14,7 +14,9 @@
 #' within its target clade (or on its stem branch if allowed), and outside its excluded subclades.
 #' It can also check that the backbone phylogeny is preserved by the grafting once the grafted taxa are pruned.
 #'
-#' @param phy_grafted An object of class `"phylo"`. The phylogeny after grafting.
+#' @param phy_grafted An object of class `"phylo"`. The phylogeny after grafting. It can also be a set of grafted phylogenies (class `"multiPhylo"`, from `nb_simulations > 1`),
+#'   or a list with one element per stochastic map (a `"phylo"` or a `"multiPhylo"`, from the grafting functions used with a `"multiSimmap"` to account for multiple alternative trait evolutionary histories).
+#'   See 'Several grafted phylogenies' in Details section.
 #' @param phy_backbone An object of class `"phylo"`. The backbone phylogeny used for grafting (i.e., before grafting).
 #' @param missing_taxa_list A list with the information on the grafted taxa. Typically the same list as used for grafting.
 #'   Items: `$Taxon_name`, `$Target_clade`, and optionally `$include_target_clade_stem`, `$Excluded_subclades` and `$exclude_subclades_stem`.
@@ -42,8 +44,11 @@
 #' @param stop_on_failure Logical. Whether to stop with an error if any constraint is violated. Default is `FALSE`.
 #' @param verbose Logical. Whether to print a summary of the checks. Default is `TRUE`.
 #'
-#' @return The function returns a data.frame with one row per taxon in `missing_taxa_list` (in the original order), and the following columns:
+#' @return The function returns a data.frame with one row per taxon in `missing_taxa_list` (in the original order) for each phylogeny checked, and the following columns:
 #'
+#' * `$map`: Name of the stochastic map used to constrain grafting based on species attributes. `NA` if none was used.
+#' * `$simulation`: Integer. Index of the simulation (the index in the name `"sim_k"` of the phylogeny; 1 for a single phylogeny).
+#' * `$seed`: Integer. Seed of the simulation (attribute `"seed"` of the phylogeny, `NA` if unknown).
 #' * `$Taxon_name`: Name of the taxon.
 #' * `$in_tree`: Logical. Whether the taxon is found in the grafted phylogeny.
 #' * `$include_target_clade_stem`: Logical. Whether the stem of the target clade was accepted for this taxon (`missing_taxa_list$include_target_clade_stem` of the taxon if provided, otherwise the global `include_target_clade_stem` argument).
@@ -62,13 +67,18 @@
 #'      This differs from `$states_ok` that checks only the validity of the terminal tip state. Here, the validity of the inherited range is assessed against the range of the backbone lineage it was grafted on.
 #' * `$ok`: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
 #'
-#' The data.frame has the following attributes:
+#' With a list of maps as `phy_grafted`, the function returns a list of such data.frames (one per map, named after the maps, with the attribute `"all_ok"` for all the maps),
+#' since the maps have their own constraints: in each data.frame, the rows of all the simulations of the map are merged.
+#'
+#' The data.frame has the following attributes (for several phylogenies: `"topology_preserved"` and `"backbone_preserved"` are `TRUE` if they are `TRUE` for all the phylogenies,
+#' the deviations are the maximum over the phylogenies, and `"all_ok"` is `TRUE` if it is `TRUE` for all of them):
 #'
 #' * `"topology_preserved"`: Logical. Whether the backbone topology is preserved once the grafted taxa are pruned (`NA` if `check_backbone = FALSE`).
 #' * `"max_branch_length_deviation"`: Numeric. Maximum absolute deviation in backbone branch lengths (`NA` if the topology is not preserved).
 #' * `"max_branch_length_deviation_relative"`: Numeric. Same, relative to the depth of the backbone.
 #' * `"backbone_preserved"`: Logical. Whether both topology and branch lengths are preserved, within `tolerance` (`NA` if `check_backbone = FALSE`).
 #' * `"all_ok"`: Logical. Whether all taxa respect their constraints and the backbone is preserved (if checked).
+#' * `"phylogenies"`: data.frame with one row per phylogeny checked (columns `map`, `simulation`, `seed`, `n_failed` (number of taxa that failed), `backbone_preserved` and `all_ok`).
 #'
 #' Attributes are accessed with `attr(x = output, which = "attribute_name")`.
 #'
@@ -95,6 +105,13 @@
 #' Branches of the backbone are matched between the pruned grafted phylogeny and the backbone by the set of tips they subtend.
 #' Branch lengths are considered preserved if the maximum deviation, relative to the depth of the backbone, is lower than `tolerance`.
 #'
+#' ### Several grafted phylogenies
+#'
+#' The phylogenies are checked one by one against the same `phy_backbone` and `missing_taxa_list`. When `allowed_states` or `treat_states_as_ranges` are used,
+#' each phylogeny is checked with its own `$simmap` item (the maps of a `"multiSimmap"` can differ). The warnings about the inputs are sent once.
+#' With several phylogenies, `verbose = TRUE` prints one summary for all of them (number of phylogenies respecting all the constraints, number of violations of each type,
+#' and the first phylogenies with violations), and `stop_on_failure = TRUE` stops if any phylogeny violates a constraint.
+#'
 #' ### Biogeographic ranges as states
 #'
 #' With `treat_states_as_ranges = TRUE`, the states are biogeographic ranges (one capital letter per area, e.g., `"A"`, `"AB"`, `"BC"`), and a range is a set of areas.
@@ -119,6 +136,8 @@
 #' @author Maël Doré
 #'
 #' @examples
+#' # --- Prepare data --- #
+#'
 #' # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units
 #' set.seed(1234)
 #' phy <- ape::rcoal(n = 30)
@@ -131,9 +150,13 @@
 #'   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")),
 #'   Excluded_subclades = list(X1 = list(c("t10", "t19")), X2 = NULL, X3 = NULL, X4 = NULL))
 #'
+#' # --- Perform grafting --- #
+#'
 #' # Graft the missing taxa
 #' grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
 #'                                   verbose = FALSE, seed = 1234)
+#'
+#' # --- Check one grafted phylogenies --- #
 #'
 #' # Check that the grafted taxa respect their constraints, and that the backbone is preserved
 #' check_results <- check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
@@ -141,9 +164,157 @@
 #' check_results
 #' attr(check_results, "all_ok")
 #'
+#' # --- Check several grafted phylogenies --- #
+#'
+#' # Build 3 grafted phylognies (i.e., simulations) with the same backbone and constraints
+#' grafted_phys <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+#'                                    nb_simulations = 3, verbose = FALSE, seed = 1234)
+#'
+#'# Check all resulting grafted phylogenies at once
+#' check_results_multi <- check_grafting_constraints(phy_grafted = grafted_phys, phy_backbone = phy,
+#'                                                   missing_taxa_list = missing_taxa_list)
+#'
+#' # With several simulations: the data.frame has the columns 'map', 'simulation' and 'seed',
+#' # and the summary is printed once for all the phylogenies
+#' head(check_results_multi[, c("map", "simulation", "seed", "Taxon_name", "ok")])
+#'
+#' # An additional attribute provide a summary per phylogeny: number of taxa that failed, backbone preserved, all constraints respected
+#' attr(check_results_multi, "phylogenies")
+#'
+#'
 
 
 check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
+                                        phy_backbone, # Backbone phylogeny used for the grafting (before grafting)
+                                        missing_taxa_list, # Same list as used for grafting. Items: Taxon_name, Target_clade, include_target_clade_stem, Excluded_subclades, exclude_subclades_stem
+                                        include_target_clade_stem = TRUE, # Same as in graft_missing_taxa(): accept grafting on the stem branch of the target clade?
+                                        use_excluded_subclades = TRUE, # Same as in graft_missing_taxa(): check the excluded subclades?
+                                        exclude_subclades_stem = TRUE, # Same as in graft_missing_taxa(): is the stem of the excluded subclades also excluded?
+                                        allowed_states = NULL, # Same as in graft_missing_taxa(): states where grafting is allowed. Only checked if phy_grafted has a $simmap item
+                                        treat_states_as_ranges = FALSE, # Same as in graft_missing_taxa(): states are biogeographic ranges (allowed ranges inherited, contained in the state of the graft point)
+                                        check_backbone = TRUE, # Check that the backbone topology and branch lengths are preserved after pruning the grafted taxa
+                                        tolerance = 1e-6, # Tolerance for the max deviation in backbone branch lengths, relative to the depth (root age) of the backbone
+                                        stop_on_failure = FALSE, # Stop with an error if any constraint is violated
+                                        verbose = TRUE) # Print a summary
+{
+  ## List the phylogenies to check: a phylogeny, a multiPhylo (simulations of a map), or a list of maps
+  listed <- list_grafted_phylogenies(phy_grafted, arg = "phy_grafted")
+  n_phylos <- length(listed$phylos)
+
+  ## A single phylogeny: the summary and the error are the ones of the check of one phylogeny
+  one <- function (phy, verbose, stop_on_failure, who = NULL)
+  {
+    with_context <- function (expr) {
+      if (is.null(who)) return(expr)
+      tryCatch(expr, error = function (e) stop(who, ": ", conditionMessage(e), call. = FALSE))
+    }
+    with_context(check_grafting_constraints_one(
+      phy_grafted = phy, phy_backbone = phy_backbone, missing_taxa_list = missing_taxa_list, include_target_clade_stem = include_target_clade_stem,
+      use_excluded_subclades = use_excluded_subclades, exclude_subclades_stem = exclude_subclades_stem, allowed_states = allowed_states,
+      treat_states_as_ranges = treat_states_as_ranges, check_backbone = check_backbone, tolerance = tolerance,
+      stop_on_failure = stop_on_failure, verbose = verbose))
+  }
+  add_columns <- function (res, k) { cbind(map = listed$map[k], simulation = listed$simulation[k], seed = listed$seed[k], res, stringsAsFactors = FALSE) }
+  copy_attributes <- function (res, from) { for (a in c("topology_preserved", "max_branch_length_deviation", "max_branch_length_deviation_relative", "backbone_preserved", "all_ok")) { attr(res, a) <- attr(from, a) }; res }
+
+  if (n_phylos == 1 && !listed$is_list)
+  {
+    res <- one(listed$phylos[[1]], verbose = verbose, stop_on_failure = stop_on_failure)
+    out <- copy_attributes(add_columns(res, 1), res)
+    attr(out, "phylogenies") <- data.frame(map = listed$map[1], simulation = listed$simulation[1], seed = listed$seed[1],
+                                           n_failed = sum(!res$ok | !res$in_tree), backbone_preserved = attr(res, "backbone_preserved"), all_ok = attr(res, "all_ok"), stringsAsFactors = FALSE)
+    return(out)
+  }
+
+  ## Several phylogenies: checked one by one, the warnings about the inputs are sent once
+  results <- with_unique_warnings(lapply(seq_len(n_phylos), function (k)
+  {
+    one(listed$phylos[[k]], verbose = FALSE, stop_on_failure = FALSE, who = paste0("Map '", listed$map[k], "', simulation ", listed$simulation[k]))
+  }))
+
+  # Summary table of the phylogenies
+  table_phylos <- data.frame(map = listed$map, simulation = listed$simulation, seed = listed$seed,
+                             n_failed = vapply(results, function (r) sum(!r$ok | !r$in_tree), integer(1)),
+                             backbone_preserved = vapply(results, function (r) attr(r, "backbone_preserved"), logical(1)),
+                             all_ok = vapply(results, function (r) attr(r, "all_ok"), logical(1)), stringsAsFactors = FALSE)
+
+  # One data.frame per map, with the rows of all its simulations
+  with_columns <- lapply(seq_len(n_phylos), function (k) add_columns(results[[k]], k))
+  aggregate_attributes <- function (ks, res)
+  {
+    parts <- results[ks]
+    all_of <- function (a) { v <- vapply(parts, function (r) attr(r, a), logical(1)); if (all(is.na(v))) NA else all(v, na.rm = TRUE) && !anyNA(v) }
+    max_of <- function (a) { v <- vapply(parts, function (r) attr(r, a), numeric(1)); if (all(is.na(v))) NA_real_ else max(v, na.rm = TRUE) }
+    attr(res, "topology_preserved") <- if (check_backbone) all(vapply(parts, function (r) isTRUE(attr(r, "topology_preserved")), logical(1))) else NA
+    attr(res, "max_branch_length_deviation") <- max_of("max_branch_length_deviation")
+    attr(res, "max_branch_length_deviation_relative") <- max_of("max_branch_length_deviation_relative")
+    attr(res, "backbone_preserved") <- if (check_backbone) all(vapply(parts, function (r) isTRUE(attr(r, "backbone_preserved")), logical(1))) else NA
+    attr(res, "all_ok") <- all(vapply(parts, function (r) isTRUE(attr(r, "all_ok")), logical(1)))
+    attr(res, "phylogenies") <- table_phylos[ks, , drop = FALSE]
+    rownames(attr(res, "phylogenies")) <- NULL
+    res
+  }
+  merge_map <- function (ks) { res <- do.call(rbind, with_columns[ks]); rownames(res) <- NULL; aggregate_attributes(ks, res) }
+  if (listed$is_list)
+  {
+    maps <- unique(listed$map)
+    output <- stats::setNames(lapply(maps, function (m) merge_map(which(listed$map == m))), maps)
+    attr(output, "all_ok") <- all(table_phylos$all_ok)
+    attr(output, "phylogenies") <- table_phylos
+  } else {
+    output <- merge_map(seq_len(n_phylos))
+  }
+  all_ok <- all(table_phylos$all_ok)
+
+  # Aggregated summary
+  if (verbose)
+  {
+    all_rows <- do.call(rbind, results)
+    n_taxa <- nrow(results[[1]])
+    check_states <- !all(is.na(all_rows$states_ok))
+    check_ranges <- !all(is.na(all_rows$ranges_ok))
+    n_maps <- length(unique(listed$map))
+    deviation <- suppressWarnings(max(vapply(results, function (r) attr(r, "max_branch_length_deviation_relative"), numeric(1)), na.rm = TRUE))
+    backbone_msg <- if (!check_backbone) { "not checked" } else {
+      paste0("preserved in ", sum(table_phylos$backbone_preserved %in% TRUE), "/", n_phylos, " phylogenies, branch lengths shifted by max ",
+             format(deviation, digits = 3), " of backbone depth (tolerance = ", format(tolerance), ")")
+    }
+    violating <- which(!table_phylos$all_ok)
+    n_show <- min(length(violating), 10)
+    cat(paste0(n_phylos, " phylogenies checked (", n_maps, " map(s)), ", n_taxa, " taxa each\n",
+               "  - Phylogenies respecting all the constraints: ", sum(table_phylos$all_ok), "/", n_phylos, "\n",
+               "  Violations, over all the phylogenies (number of taxa x phylogenies):\n",
+               "  - Missing from the grafted tree: ", sum(!all_rows$in_tree), "\n",
+               "  - Target clade violated:          ", sum(all_rows$target_ok %in% FALSE), "\n",
+               "  - Excluded subclade violated:     ", sum(all_rows$excluded_ok %in% FALSE), "\n",
+               if (check_states) paste0("  - Allowed states violated:        ", sum(all_rows$states_ok %in% FALSE), "\n") else "",
+               if (check_ranges) paste0("  - Range not in graft-point state: ", sum(all_rows$ranges_ok %in% FALSE), "\n") else "",
+               "  - Backbone: ", backbone_msg, "\n",
+               if (length(violating) > 0) paste0("  Phylogenies with violations:\n",
+                                                 paste0("    - map ", table_phylos$map[violating[seq_len(n_show)]], ", simulation ", table_phylos$simulation[violating[seq_len(n_show)]],
+                                                        if (!all(is.na(table_phylos$seed))) paste0(" (seed ", table_phylos$seed[violating[seq_len(n_show)]], ")") else "",
+                                                        ": ", table_phylos$n_failed[violating[seq_len(n_show)]], " taxa failed",
+                                                        ifelse(table_phylos$backbone_preserved[violating[seq_len(n_show)]] %in% FALSE, ", backbone NOT preserved", ""), collapse = "\n"),
+                                                 if (length(violating) > n_show) paste0("\n    ... and ", length(violating) - n_show, " more") else "", "\n") else "",
+               "  => ", ifelse(all_ok, "All constraints respected\n", "Some constraints NOT respected (see returned data.frame(s) and attributes)\n")))
+  }
+
+  if (stop_on_failure && !all_ok)
+  {
+    violating <- which(!table_phylos$all_ok)
+    n_show <- min(length(violating), 10)
+    stop("Some grafting constraints are not respected in ", length(violating), " of ", n_phylos, " phylogenies:\n",
+         paste0("  - map ", table_phylos$map[violating[seq_len(n_show)]], ", simulation ", table_phylos$simulation[violating[seq_len(n_show)]], ": ",
+                table_phylos$n_failed[violating[seq_len(n_show)]], " taxa failed; backbone preserved = ", table_phylos$backbone_preserved[violating[seq_len(n_show)]], collapse = "\n"),
+         if (length(violating) > n_show) paste0("\n  ... and ", length(violating) - n_show, " more") else "")
+  }
+
+  output
+}
+
+
+## Check the grafting constraints for a single phylogeny (see check_grafting_constraints())
+check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after grafting
                                         phy_backbone, # Backbone phylogeny used for the grafting (before grafting)
                                         missing_taxa_list, # Same list as used for grafting. Items: Taxon_name, Target_clade, include_target_clade_stem, Excluded_subclades, exclude_subclades_stem
                                         include_target_clade_stem = TRUE, # Same as in graft_missing_taxa(): accept grafting on the stem branch of the target clade?
