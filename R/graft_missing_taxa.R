@@ -299,7 +299,7 @@
 #'
 #' ### Multiple stochastic maps
 #'
-#' With multiple stochastic maps of the same trait are provided as a `"multiSimmap"`, the grafting is run with each of its maps.
+#' When multiple stochastic maps of the same trait are provided as a `"multiSimmap"`, the grafting is run with each of its maps.
 #' The maps are alternative hypotheses of the evolution of the same trait (or range), used as alternative constraints.
 #' All the maps and the simulations are crossed: each map is used for `nb_simulations` simulations, so `P` maps give `P * nb_simulations` grafted phylogenies
 #' This can lead to a quick inflation of computation time, thus a warning is sent if the total number of grafted phylogenies (`P * nb_simulations`) is more than 1000.
@@ -473,10 +473,12 @@
 #' # Here, 3 maps are simulated from the states of the tips of the toy simmap.
 #' tip_states <- phytools::getStates(toy_simmap, type = "tips")
 #'
-#' old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
+#' # (the random number generator of the session is restored afterwards)
+#' had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+#' if (had_seed) old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
 #' set.seed(118)
 #' toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states, model = "ER", nsim = 3, message = FALSE)
-#' set.seed(old_seed)
+#' if (had_seed) assign(".Random.seed", old_seed, envir = globalenv()) else rm(".Random.seed", envir = globalenv())
 #'
 #' # Graft using constraints from all 3 simmaps X 2 simulations per simmap
 #' grafted_phys_maps <- graft_missing_taxa(phy = toy_backbone,
