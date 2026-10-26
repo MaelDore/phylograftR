@@ -20,7 +20,9 @@ check_grafting_constraints(
 )
 }
 \arguments{
-\item{phy_grafted}{An object of class \code{"phylo"}. The phylogeny after grafting.}
+\item{phy_grafted}{An object of class \code{"phylo"}. The phylogeny after grafting. It can also be a set of grafted phylogenies (class \code{"multiPhylo"}, from \code{nb_simulations > 1}),
+or a list with one element per stochastic map (a \code{"phylo"} or a \code{"multiPhylo"}, from the grafting functions used with a \code{"multiSimmap"} to account for multiple alternative trait evolutionary histories).
+See 'Several grafted phylogenies' in Details section.}
 
 \item{phy_backbone}{An object of class \code{"phylo"}. The backbone phylogeny used for grafting (i.e., before grafting).}
 
@@ -60,8 +62,11 @@ Default is \code{1e-6}.}
 \item{verbose}{Logical. Whether to print a summary of the checks. Default is \code{TRUE}.}
 }
 \value{
-The function returns a data.frame with one row per taxon in \code{missing_taxa_list} (in the original order), and the following columns:
+The function returns a data.frame with one row per taxon in \code{missing_taxa_list} (in the original order) for each phylogeny checked, and the following columns:
 \itemize{
+\item \verb{$map}: Name of the stochastic map used to constrain grafting based on species attributes. \code{NA} if none was used.
+\item \verb{$simulation}: Integer. Index of the simulation (the index in the name \code{"sim_k"} of the phylogeny; 1 for a single phylogeny).
+\item \verb{$seed}: Integer. Seed of the simulation (attribute \code{"seed"} of the phylogeny, \code{NA} if unknown).
 \item \verb{$Taxon_name}: Name of the taxon.
 \item \verb{$in_tree}: Logical. Whether the taxon is found in the grafted phylogeny.
 \item \verb{$include_target_clade_stem}: Logical. Whether the stem of the target clade was accepted for this taxon (\code{missing_taxa_list$include_target_clade_stem} of the taxon if provided, otherwise the global \code{include_target_clade_stem} argument).
@@ -81,13 +86,18 @@ This differs from \verb{$states_ok} that checks only the validity of the termina
 \item \verb{$ok}: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
 }
 
-The data.frame has the following attributes:
+With a list of maps as \code{phy_grafted}, the function returns a list of such data.frames (one per map, named after the maps, with the attribute \code{"all_ok"} for all the maps),
+since the maps have their own constraints: in each data.frame, the rows of all the simulations of the map are merged.
+
+The data.frame has the following attributes (for several phylogenies: \code{"topology_preserved"} and \code{"backbone_preserved"} are \code{TRUE} if they are \code{TRUE} for all the phylogenies,
+the deviations are the maximum over the phylogenies, and \code{"all_ok"} is \code{TRUE} if it is \code{TRUE} for all of them):
 \itemize{
 \item \code{"topology_preserved"}: Logical. Whether the backbone topology is preserved once the grafted taxa are pruned (\code{NA} if \code{check_backbone = FALSE}).
 \item \code{"max_branch_length_deviation"}: Numeric. Maximum absolute deviation in backbone branch lengths (\code{NA} if the topology is not preserved).
 \item \code{"max_branch_length_deviation_relative"}: Numeric. Same, relative to the depth of the backbone.
 \item \code{"backbone_preserved"}: Logical. Whether both topology and branch lengths are preserved, within \code{tolerance} (\code{NA} if \code{check_backbone = FALSE}).
 \item \code{"all_ok"}: Logical. Whether all taxa respect their constraints and the backbone is preserved (if checked).
+\item \code{"phylogenies"}: data.frame with one row per phylogeny checked (columns \code{map}, \code{simulation}, \code{seed}, \code{n_failed} (number of taxa that failed), \code{backbone_preserved} and \code{all_ok}).
 }
 
 Attributes are accessed with \code{attr(x = output, which = "attribute_name")}.
@@ -118,6 +128,14 @@ As in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}, if t
 
 Branches of the backbone are matched between the pruned grafted phylogeny and the backbone by the set of tips they subtend.
 Branch lengths are considered preserved if the maximum deviation, relative to the depth of the backbone, is lower than \code{tolerance}.
+\subsection{Several grafted phylogenies}{
+
+The phylogenies are checked one by one against the same \code{phy_backbone} and \code{missing_taxa_list}. When \code{allowed_states} or \code{treat_states_as_ranges} are used,
+each phylogeny is checked with its own \verb{$simmap} item (the maps of a \code{"multiSimmap"} can differ). The warnings about the inputs are sent once.
+With several phylogenies, \code{verbose = TRUE} prints one summary for all of them (number of phylogenies respecting all the constraints, number of violations of each type,
+and the first phylogenies with violations), and \code{stop_on_failure = TRUE} stops if any phylogeny violates a constraint.
+}
+
 \subsection{Biogeographic ranges as states}{
 
 With \code{treat_states_as_ranges = TRUE}, the states are biogeographic ranges (one capital letter per area, e.g., \code{"A"}, \code{"AB"}, \code{"BC"}), and a range is a set of areas.
@@ -133,6 +151,8 @@ The check is skipped (\code{NA}) for taxa grafted at the root.
 }
 }
 \examples{
+# --- Prepare data --- #
+
 # Create a toy backbone phylogeny: ultrametric, with a root age of 50 time units
 set.seed(1234)
 phy <- ape::rcoal(n = 30)
@@ -145,15 +165,37 @@ missing_taxa_list <- list(
   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")),
   Excluded_subclades = list(X1 = list(c("t10", "t19")), X2 = NULL, X3 = NULL, X4 = NULL))
 
+# --- Perform grafting --- #
+
 # Graft the missing taxa
 grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
                                   verbose = FALSE, seed = 1234)
+
+# --- Check one grafted phylogenies --- #
 
 # Check that the grafted taxa respect their constraints, and that the backbone is preserved
 check_results <- check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
                                             missing_taxa_list = missing_taxa_list)
 check_results
 attr(check_results, "all_ok")
+
+# --- Check several grafted phylogenies --- #
+
+# Build 3 grafted phylognies (i.e., simulations) with the same backbone and constraints
+grafted_phys <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+                                   nb_simulations = 3, verbose = FALSE, seed = 1234)
+
+# Check all resulting grafted phylogenies at once
+check_results_multi <- check_grafting_constraints(phy_grafted = grafted_phys, phy_backbone = phy,
+                                                  missing_taxa_list = missing_taxa_list)
+
+# With several simulations: the data.frame has the columns 'map', 'simulation' and 'seed',
+# and the summary is printed once for all the phylogenies
+head(check_results_multi[, c("map", "simulation", "seed", "Taxon_name", "ok")])
+
+# An additional attribute provide a summary per phylogeny: number of taxa that failed, backbone preserved, all constraints respected
+attr(check_results_multi, "phylogenies")
+
 
 }
 \seealso{

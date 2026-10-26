@@ -77,12 +77,13 @@ If \code{FALSE}, only the branches within the subclade are excluded, and the tax
 For a single-tip excluded subclade, the terminal branch is the only branch of the tip, and it is its stem: the tip excludes nothing if \code{FALSE}
 (a warning lists these cases). Only used if \code{use_excluded_subclades = TRUE}. Default is \code{TRUE}.}
 
-\item{simmap}{(Optional) A single stochastic character map of the backbone, of class \code{"simmap"} (e.g., from \code{phytools::make.simmap()} or \code{phytools::sim.history()}),
-mapping a species attribute (e.g., a trait or a range) with discrete states along the branches of \code{phy}.
+\item{simmap}{(Optional) A stochastic character map of the backbone, of class \code{"simmap"} (e.g., from \code{phytools::make.simmap()} or \code{phytools::sim.history()}),
+or a set of maps of the same trait, of class \code{"multiSimmap"} (e.g., from \code{phytools::make.simmap(nsim = 10)}), used as alternative hypotheses of the evolution of a species attribute
+(e.g., a trait or a range) with discrete states along the branches of \code{phy}.
 It must have the same tips, topology and branch lengths as \code{phy}. With a \code{simmap}, taxa can only be grafted on the parts of the branches
-that are in their allowed states (see \code{allowed_states}). A list of maps (\code{"multiSimmap"}) is not accepted.
-See 'Species attributes' in Details section.
-Default is \code{NULL} (no restriction for grafting based on states).}
+that are in their allowed states (see \code{allowed_states}).
+
+See 'Species attributes' and 'Multiple stochastic maps' in Details section. Default is \code{NULL} (no restriction for grafting based on states).}
 
 \item{allowed_states}{Character vector. The states of \code{simmap} in which grafting is allowed. This is the default for all taxa:
 taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. States are matched exactly with the states of the \code{simmap}, unless \code{treat_states_as_ranges = TRUE}.
@@ -204,6 +205,11 @@ With \code{nb_simulations > 1}, the function returns an object of class \code{"m
 Each phylogeny has the elements described above (including \verb{$simmap} if a \code{simmap} was provided and \code{return_simmap = TRUE}).
 The \code{"multiPhylo"} object has the attributes \code{"seeds"} (named vector of the seeds of the phylogenies, to reproduce each of them alone with \code{nb_simulations = 1};
 \code{NULL} if \code{seed = NULL}) and \code{"failed"} (data.frame with the seed and the reason of the simulations that failed, 0 row if none).
+
+With multiple stochastic maps (i.e., a \code{"multiSimmap"}) provided as \code{simmap}, the function returns a list with one element per map (named after the maps):
+a phylogeny if \code{nb_simulations = 1}, a \code{"multiPhylo"} otherwise (see 'Multiple stochastic maps').
+The list has the attribute \code{"failed_maps"} (data.frame with the \code{map} and the \code{reason} of the maps without any simulation, dropped from the output).
+The phylogenies have the attributes \code{"seed"} (their seed, unless \code{seed = NULL}) and, with several maps, \code{"map"}, to ensure reproducibility of each simulation.
 }
 \description{
 This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny.
@@ -354,6 +360,23 @@ Any other error (invalid inputs, no branch available for a taxon, ...) concerns 
 With \code{save_temp = TRUE} and several simulations, each simulation saves its temporary phylogeny in its own file, with the suffix \code{"_sim_k"} added before \code{".rds"} in \code{temp_file_path}.
 }
 
+\subsection{Multiple stochastic maps}{
+
+When multiple stochastic maps of the same trait are provided as a \code{"multiSimmap"}, the grafting is run with each of its maps.
+The maps are alternative hypotheses of the evolution of the same trait (or range), used as alternative constraints.
+All the maps and the simulations are crossed: each map is used for \code{nb_simulations} simulations, so \code{P} maps give \code{P * nb_simulations} grafted phylogenies
+This can lead to a quick inflation of computation time, thus a warning is sent if the total number of grafted phylogenies (\code{P * nb_simulations}) is more than 1000.
+
+The output is a list with one element per stochastic map, named after the maps (the names of the \code{"multiSimmap"} if it has some, otherwise \code{"map_1"}, ..., \code{"map_P"}).
+With \code{nb_simulations = 1}, each element is a grafted phylogeny. With several simulations, each element is a \code{"multiPhylo"} (see 'Multiple simulations')
+with phylogenies named \code{"<map>_sim_1"}, \code{"<map>_sim_2"}, ... and the attributes \code{"seeds"} and \code{"failed"} of the map.
+Each phylogeny can be reproduced alone with its map (as a single \code{simmap}) and its seed.
+
+A map for which no simulation could be obtained is dropped from the output with a warning, and listed in the attribute \code{"failed_maps"} of the list
+(data.frame with the columns \code{map} and \code{reason}). The function stops if no map gives any phylogeny.
+With \code{save_temp = TRUE}, the temporary files get the suffix \code{"_map_<name>"} before the suffix of the simulation.
+}
+
 \subsection{Sampling fraction and unsampled species}{
 
 Under \code{method = "BD_clades"}, the birth-death model of a clade is fitted with the sampling fraction
@@ -489,6 +512,34 @@ plot(grafted_phy_states$simmap, fsize = 0.5, ftype = "i",
 # States of the grafted taxa: "Genus_a_sp1" and "Genus_c_sp2" can be "red" thanks to their taxon-level states,
 # but the taxa using the global states cannot
 phytools::getStates(grafted_phy_states$simmap, type = "tips")[toy_missing_taxa_list_with_allowed_states$Taxon_name]
+
+
+# --- Use several stochastic maps (alternative hypotheses of trait evolution) as attribute-based constraints --- #
+
+# A 'multiSimmap' gives several stochastic maps of the same trait: the grafting is run with each of them.
+# Here, 3 maps are simulated from the states of the tips of the toy simmap.
+tip_states <- phytools::getStates(toy_simmap, type = "tips")
+
+# (the random number generator of the session is restored afterwards)
+had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+if (had_seed) old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
+set.seed(118)
+toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states, model = "ER", nsim = 3, message = FALSE)
+if (had_seed) assign(".Random.seed", old_seed, envir = globalenv()) else rm(".Random.seed", envir = globalenv())
+
+# Graft using constraints from all 3 simmaps X 2 simulations per simmap
+grafted_phys_maps <- graft_missing_taxa(phy = toy_backbone,
+                                        missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
+                                        simmap = toy_multiSimmap, allowed_states = c("blue", "green"),
+                                        method = "BD_clades", nb_simulations = 2, verbose = FALSE, seed = 1234)
+
+# Inspect output:
+# A list with one element per simmap, each a multiPhylo with the simulations of the map
+names(grafted_phys_maps)
+names(grafted_phys_maps$map_2)
+# The map and the seed of a phylogeny
+attr(grafted_phys_maps$map_2[[1]], "map")
+attr(grafted_phys_maps$map_2[[1]], "seed")
 
 
 }

@@ -43,13 +43,14 @@ Only used with a \code{simmap}. Taxa with the same sister clade are grafted toge
 (the function stops otherwise, and lists the clades concerned).
 }}
 
-\item{simmap}{(Optional) A single stochastic character map of the backbone, of class \code{"simmap"} (e.g., from \code{phytools::make.simmap()} or \code{phytools::sim.history()}),
-mapping a species attribute (e.g., a trait or a range) with discrete states along the branches of \code{phy}.
+\item{simmap}{(Optional) A stochastic character map of the backbone, of class \code{"simmap"} (e.g., from \code{phytools::make.simmap()} or \code{phytools::sim.history()}),
+or a set of maps of the same trait, of class \code{"multiSimmap"} (e.g., from \code{phytools::make.simmap(nsim = 10)}), used as alternative hypotheses of the evolution of a species attribute
+(e.g., a trait or a range) with discrete states along the branches of \code{phy}.
 It must have the same tips, topology and branch lengths as \code{phy}. With a \code{simmap}, the missing clades can only be grafted on the parts of the stem branches
 of their sister clades that are in their allowed states (see \code{allowed_states}), and each missing clade inherits the state of the point of the stem branch
 where it is grafted, along all its branches, so the states can be followed alongside the phylogeny.
 
-See 'Species attributes' in Details section. Default is \code{NULL} (no restriction for grafting based on states).}
+See 'Species attributes' and 'Multiple stochastic maps' in Details section. Default is \code{NULL} (no restriction for grafting based on states).}
 
 \item{allowed_states}{Character vector. The states of \code{simmap} in which grafting is allowed. This is the default for all taxa:
 taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. States are matched exactly with the states of the \code{simmap}, unless \code{treat_states_as_ranges = TRUE}.
@@ -159,6 +160,11 @@ With \code{nb_simulations > 1}, the function returns an object of class \code{"m
 Each phylogeny has the elements described above (including \verb{$simmap} if a \code{simmap} was provided and \code{return_simmap = TRUE}).
 The \code{"multiPhylo"} object has the attributes \code{"seeds"} (named vector of the seeds of the phylogenies, to reproduce each of them alone with \code{nb_simulations = 1};
 \code{NULL} if \code{seed = NULL}) and \code{"failed"} (data.frame with the seed and the reason of the simulations that failed, 0 row if none).
+
+With multiple stochastic maps (i.e., a \code{"multiSimmap"}) provided as \code{simmap}, the function returns a list with one element per map (named after the maps):
+a phylogeny if \code{nb_simulations = 1}, a \code{"multiPhylo"} otherwise (see 'Multiple stochastic maps').
+The list has the attribute \code{"failed_maps"} (data.frame with the \code{map} and the \code{reason} of the maps without any simulation, dropped from the output).
+The phylogenies have the attributes \code{"seed"} (their seed, unless \code{seed = NULL}) and, with several maps, \code{"map"}, to ensure reproducibility of each simulation.
 }
 \description{
 This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny as clades sister to clades of the backbone.
@@ -185,6 +191,13 @@ between the crown age of the sister clade and its stem age (or between the prese
 \item A single missing taxon is grafted as a new tip at this divergence time. For several taxa, a missing clade is grown with \code{TreeSim::sim.bd.taxa.age()}
 under the fitted model, conditioned on the number of taxa and on its stem age (the drawn divergence time), and grafted on the stem branch of the sister clade.
 }
+}
+
+\subsection{Enclosing clades}{
+
+When a sister clade contains fewer tips than \code{min_tips}, an alternative higher clade is selected to fit the birth-death model.
+This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the sister clade, until a clade meets the \code{min_tips} condition.
+This ensures that the diversification dynamics modeled are based on enough tips to be relevant, while being closely associated with the sister clade.
 }
 
 \subsection{Species attributes: allowed states of a simmap}{
@@ -248,11 +261,21 @@ Any other error (invalid inputs, no branch available for a taxon, ...) concerns 
 With \code{save_temp = TRUE} and several simulations, each simulation saves its temporary phylogeny in its own file, with the suffix \code{"_sim_k"} added before \code{".rds"} in \code{temp_file_path}.
 }
 
-\subsection{Enclosing clades}{
+\subsection{Multiple stochastic maps}{
 
-When a sister clade contains fewer tips than \code{min_tips}, an alternative higher clade is selected to fit the birth-death model.
-This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the sister clade, until a clade meets the \code{min_tips} condition.
-This ensures that the diversification dynamics modeled are based on enough tips to be relevant, while being closely associated with the sister clade.
+When multiple stochastic maps of the same trait are provided as a \code{"multiSimmap"}, the grafting is run with each of its maps.
+The maps are alternative hypotheses of the evolution of the same trait (or range), used as alternative constraints.
+All the maps and the simulations are crossed: each map is used for \code{nb_simulations} simulations, so \code{P} maps give \code{P * nb_simulations} grafted phylogenies.
+This can lead to a quick inflation of computation time, thus a warning is sent if the total number of grafted phylogenies (\code{P * nb_simulations}) is more than 1000.
+
+The output is a list with one element per stochastic map, named after the maps (the names of the \code{"multiSimmap"} if it has some, otherwise \code{"map_1"}, ..., \code{"map_P"}).
+With \code{nb_simulations = 1}, each element is a grafted phylogeny. With several simulations, each element is a \code{"multiPhylo"} (see 'Multiple simulations')
+with phylogenies named \code{"<map>_sim_1"}, \code{"<map>_sim_2"}, ... and the attributes \code{"seeds"} and \code{"failed"} of the map.
+Each phylogeny can be reproduced alone with its map (as a single \code{simmap}) and its seed.
+
+A map for which no simulation could be obtained is dropped from the output with a warning, and listed in the attribute \code{"failed_maps"} of the list
+(data.frame with the columns \code{map} and \code{reason}). The function stops if no map gives any phylogeny.
+With \code{save_temp = TRUE}, the temporary files get the suffix \code{"_map_<name>"} before the suffix of the simulation.
 }
 
 \subsection{Sampling fraction}{
@@ -314,6 +337,7 @@ plot(grafted_phy, cex = 0.7,
      edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
      tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
 
+
 # --- Produce several grafted phylogenies --- #
 
 # The grafting is stochastic: several simulations can be run at once from the same backbone and list
@@ -332,6 +356,7 @@ plot(grafted_phys[[2]], cex = 0.7, main = "Sim #2") # sim_2
 plot(grafted_phys[[3]], cex = 0.7, main = "Sim #3") # sim_3
 par(old_par)
 
+
 # --- Account for unsampled species --- #
 
 # Account for unsampled species with the total richness of the sister clades.
@@ -343,6 +368,7 @@ grafted_phy_richness <- graft_missing_clades(phy = phy, missing_taxa_list = miss
                                              total_richness_per_clades = total_richness_per_clades,
                                              verbose = FALSE, seed = 1234)
 grafted_phy_richness$sampling_fraction_df
+
 
 # --- Apply attribute-based exclusions --- #
 
@@ -376,6 +402,34 @@ plot(grafted_phy_states, cex = 0.7,
 # The updated simmap is in the output: the new grafted clades branch from the "green" segments
 # of the stem branches of their sister clades, and each newly grafted clades are entirely "green"
 plot(grafted_phy_states$simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+
+
+# --- Use several stochastic maps (alternative hypotheses of trait evolution) as attribute-based constraints --- #
+
+# A 'multiSimmap' gives several stochastic maps of the same trait: the grafting is run with each of them.
+# Here, 3 maps are simulated from the states of the tips of the toy simmap.
+tip_states <- phytools::getStates(toy_simmap, type = "tips")
+
+# (the random number generator of the session is restored afterwards)
+had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+if (had_seed) old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
+set.seed(118)
+toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states, model = "ER", nsim = 3, message = FALSE)
+if (had_seed) assign(".Random.seed", old_seed, envir = globalenv()) else rm(".Random.seed", envir = globalenv())
+
+# Graft using constraints from all 3 simmaps X 2 simulations per simmap
+grafted_phys_maps <- graft_missing_clades(phy = toy_backbone,
+                                         missing_taxa_list = missing_clades_list_states,
+                                         simmap = toy_multiSimmap, allowed_states = "green",
+                                         nb_simulations = 2, verbose = FALSE, seed = 1234)
+
+# Inspect output:
+# A list with one element per simmap, each a multiPhylo with the simulations of the map
+names(grafted_phys_maps)
+names(grafted_phys_maps$map_2)
+# The map and the seed of a phylogeny are included as attributes for reproducibility
+attr(grafted_phys_maps$map_2[[1]], "map")
+attr(grafted_phys_maps$map_2[[1]], "seed")
 
 
 }

@@ -7,13 +7,16 @@
 identify_grafted(phy, grafted_taxa)
 }
 \arguments{
-\item{phy}{An object of class \code{"phylo"}. The phylogeny, including the grafted taxa.}
+\item{phy}{An object of class \code{"phylo"}. The phylogeny, including the grafted taxa.
+It can also be a set of phylogenies (class \code{"multiPhylo"}, e.g., the output of the grafting functions with \code{nb_simulations > 1}),
+or a list of them with one element per stochastic map (output of the grafting functions with a \code{"multiSimmap"}): the elements are then added to each phylogeny.}
 
 \item{grafted_taxa}{Character vector. Labels of the grafted taxa (e.g., \code{missing_taxa_list$Taxon_name}).
 Labels that are not tips of \code{phy} are ignored, with a warning.}
 }
 \value{
-The phylogeny \code{phy} (class \code{"phylo"}), with two elements added, or replaced if \code{phy} already had them:
+The phylogeny \code{phy} (class \code{"phylo"}), with two elements added, or replaced if \code{phy} already had them (for a \code{"multiPhylo"} or a list of maps: the same object,
+with each phylogeny updated:
 \itemize{
 \item \code{grafted_tips} Named logical vector with one value per tip of \code{phy}, in the order of \code{phy$tip.label}.
 \code{TRUE} for grafted tips. Names are the tip labels.
@@ -38,6 +41,8 @@ Node IDs are renumbered by functions that remove tips, such as \code{ape::drop.t
 use this function again to update the \code{grafted_tips} and \code{grafted_edges} elements in that case.
 }
 \examples{
+# --- Prepare data --- #
+
 # Create a toy backbone phylogeny, and graft taxa
 set.seed(1234)
 phy <- ape::rcoal(n = 30)
@@ -45,11 +50,14 @@ phy$edge.length <- phy$edge.length / max(ape::node.depth.edgelength(phy)) * 50
 missing_taxa_list <- list(
   Taxon_name = c("X1", "X2", "X3", "X4"),
   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")))
+
+# --- Perform grafting --- #
 grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
                                   verbose = FALSE, seed = 1234)
 
-# Identify the grafted tips and branches:
-# the function returns the phylogeny with two additional elements
+# --- Identify the grafted tips and branches --- #
+
+# The function returns the phylogeny with two additional elements
 grafted_phy <- identify_grafted(phy = grafted_phy, grafted_taxa = missing_taxa_list$Taxon_name)
 table(grafted_phy$grafted_tips)
 table(grafted_phy$grafted_edges)
@@ -58,6 +66,8 @@ table(grafted_phy$grafted_edges)
 plot(grafted_phy, cex = 0.7,
      edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
      tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+
+# --- Update the grafted tips and branches on a pruned phylogeny --- #
 
 # Prune the phylogeny: drop a grafted tip and a backbone tip
 pruned_phy <- ape::drop.tip(phy = grafted_phy, tip = c("X2", "t1"))
@@ -76,6 +86,23 @@ pruned_phy <- identify_grafted(
 plot(pruned_phy, cex = 0.7,
      edge.color = c("black", "red")[pruned_phy$grafted_edges + 1],
      tip.color = c("black", "red")[pruned_phy$grafted_tips + 1])
+
+# --- Identify the grafted tips and branches on several phylogenies --- #
+
+# Graft multiple phylogenies at once (nb_simulations > 1)
+grafted_phys <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
+                                   nb_simulations = 2, verbose = FALSE, seed = 1234)
+
+# Drop a tip across all grafted phylogenies
+pruned_phys <- ape::drop.tip(phy = grafted_phys, tip = "X2")
+
+# Updated grafting information of all phylogenies at once
+pruned_phys <- identify_grafted(
+   phy = pruned_phys,
+   grafted_taxa = setdiff(missing_taxa_list$Taxon_name, "X2"))
+
+# Inspect updated information across phylogenies
+sapply(pruned_phys, function (x) sum(x$grafted_tips))
 
 }
 \seealso{
