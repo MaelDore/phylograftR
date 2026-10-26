@@ -90,22 +90,26 @@ derive_simulation_seeds <- function (seed, n)
 
 #' @title Path of the temporary file of a simulation
 #'
-#' @description With several simulations, the temporary phylogenies are saved in one file per simulation, to avoid overwriting: `"_sim_k"` is added before the extension `".rds"`.
+#' @description With several simulations (or several maps), the temporary phylogenies are saved in one file per simulation (and map), to avoid overwriting:
+#'   `"_map_<name>"` (name of the map, with the characters other than letters, digits, `_`, `.` and `-` replaced by `_`) and `"_sim_k"` are added before the extension `".rds"`.
 #'
 #' @param temp_file_path `NULL` (default path `"./temp_phy_from_grafting.rds"`), or path ending with `".rds"`.
 #' @param index Integer. Index of the simulation.
-#' @param multiple Logical. Whether several simulations are run. If `FALSE`, `temp_file_path` is returned as it is.
+#' @param multiple Logical. Whether several simulations are run. If `FALSE`, no suffix for the simulation is added.
+#' @param map_name `NULL` (a single map), or name of the map. The suffix of the map is added if not `NULL`.
 #'
 #' @noRd
 #'
-#' @return A path (or `NULL` if `multiple = FALSE` and `temp_file_path` is `NULL`).
+#' @return A path (or `NULL` if there is no suffix to add and `temp_file_path` is `NULL`).
 #'
 
-temp_file_path_simulation <- function (temp_file_path, index, multiple)
+temp_file_path_simulation <- function (temp_file_path, index, multiple, map_name = NULL)
 {
-  if (!multiple) { return(temp_file_path) }
+  if (!multiple && is.null(map_name)) { return(temp_file_path) }
   if (is.null(temp_file_path)) { temp_file_path <- "./temp_phy_from_grafting.rds" }
-  sub("\\.rds$", paste0("_sim_", index, ".rds"), temp_file_path)
+  suffix <- paste0(if (!is.null(map_name)) paste0("_map_", gsub("[^A-Za-z0-9_.-]", "_", map_name)),
+                   if (multiple) paste0("_sim_", index), collapse = "")
+  sub("\\.rds$", paste0(suffix, ".rds"), temp_file_path)
 }
 
 
@@ -123,17 +127,18 @@ temp_file_path_simulation <- function (temp_file_path, index, multiple)
 #' @param nb_simulations Integer. Number of simulations requested.
 #' @param force_simulations Logical. Whether to try new seeds until `nb_simulations` simulations are obtained.
 #' @param seed `NULL`, or integer. Seed of the run.
+#' @param allow_empty Logical. If `TRUE`, no simulation obtained does not stop the function: an empty object of class `"phylograftR_no_simulation"` with the attribute `"failed"` is returned (used to drop a map, see `run_maps()`).
 #' @param verbose Logical. Whether the simulations display their progress (passed to `simulate_one()` as `verbose_sim`).
 #'
 #' @noRd
 #'
-#' @return With `nb_simulations = 1`, a phylogeny. Otherwise a `"multiPhylo"` object with the phylogenies named `"sim_1"`, `"sim_2"`, ...
+#' @return With `nb_simulations = 1`, a phylogeny (with the attribute `"seed"`, its seed, unless `seed` is `NULL`). Otherwise a `"multiPhylo"` object with the phylogenies named `"sim_1"`, `"sim_2"`, ...
 #'   (the index of the simulation, so some can be missing if simulations failed, or consecutive numbers with `force_simulations`), with the attributes:
 #'  * `"seeds"`: named vector with the seeds of the phylogenies (`NULL` if `seed` is `NULL`).
 #'  * `"failed"`: data.frame with the columns `seed` and `reason` of the simulations that failed (0 row if none).
 #'
 
-run_simulations <- function (simulate_one, nb_simulations, force_simulations, seed, verbose = FALSE)
+run_simulations <- function (simulate_one, nb_simulations, force_simulations, seed, verbose = FALSE, allow_empty = FALSE)
 {
   several <- nb_simulations > 1
   max_attempts <- if (force_simulations) 10 * nb_simulations else nb_simulations
@@ -163,6 +168,8 @@ run_simulations <- function (simulate_one, nb_simulations, force_simulations, se
     {
       failures[[length(failures) + 1]] <- list(seed = if (is.null(sim_seed)) NA else sim_seed, reason = conditionMessage(out), condition = out)
     } else {
+      # The seed of the simulation is kept with the phylogeny
+      if (!is.null(sim_seed)) { attr(out, "seed") <- as.integer(sim_seed) }
       results[[length(results) + 1]] <- out
       names(results)[length(results)] <- paste0("sim_", if (force_simulations) length(results) else attempt)
     }
@@ -177,6 +184,7 @@ run_simulations <- function (simulate_one, nb_simulations, force_simulations, se
   ## No simulation obtained
   if (length(results) == 0)
   {
+    if (allow_empty) { return(structure(list(), class = "phylograftR_no_simulation", failed = failed)) }
     # The error of the only attempt is raised as it is
     if (attempt == 1) { stop(failures[[1]]$condition) }
     stop("None of the ", attempt, " simulation(s) could be obtained", if (force_simulations) " (up to 10 times the number of simulations requested)" else "", ".\n",
@@ -204,4 +212,154 @@ run_simulations <- function (simulate_one, nb_simulations, force_simulations, se
     seeds_obtained <- stats::setNames(seeds[used], names(results))
   }
   structure(results, class = "multiPhylo", seeds = seeds_obtained, failed = failed)
+}
+
+
+#' @title Check the `simmap` argument of the grafting functions
+#'
+#' @description Accepts `NULL`, a single stochastic character map (`"simmap"`) or a set of maps of the same trait (`"multiSimmap"`). A plain list of maps is not accepted
+#'   (it is reserved for the maps of several traits). The maps are only listed here: each map is validated against the backbone when it is prepared (see `utils_simmap.R`).
+#'
+#' @param simmap `NULL`, a `"simmap"` or a `"multiSimmap"`.
+#'
+#' @noRd
+#'
+#' @return A list with the elements `maps` (list of maps, `list(NULL)` without `simmap`), `names` (names of the maps: the names of the `"multiSimmap"` if it has some,
+#'   otherwise `"map_1"`, `"map_2"`, ...; `NULL` for a single map or no map) and `multiple` (`TRUE` for a `"multiSimmap"`, even with one map: the output is then a list with one element per map).
+#'
+
+check_simmap_input <- function (simmap)
+{
+  if (is.null(simmap)) { return(list(maps = list(NULL), names = NULL, multiple = FALSE)) }
+  if (inherits(simmap, "multiSimmap"))
+  {
+    maps <- unclass(simmap)
+    attributes(maps) <- list(names = names(simmap))
+    if (length(maps) == 0) { stop("'simmap' is a 'multiSimmap' without any map.") }
+    map_names <- names(maps)
+    if (is.null(map_names) || all(is.na(map_names) | map_names == ""))
+    {
+      map_names <- paste0("map_", seq_along(maps))
+    } else {
+      unnamed <- which(is.na(map_names) | map_names == "")
+      if (length(unnamed) > 0)
+      {
+        stop("Some maps of 'simmap' are named and others are not (maps n\u00b0", paste(unnamed, collapse = ", "), "): name all the maps or none of them.")
+      }
+      duplicated_names <- unique(map_names[duplicated(map_names)])
+      if (length(duplicated_names) > 0)
+      {
+        stop("The maps of 'simmap' must have different names. Duplicated names: ", paste(duplicated_names, collapse = ", "), ".")
+      }
+    }
+    names(maps) <- NULL
+    return(list(maps = maps, names = map_names, multiple = TRUE))
+  }
+  if (inherits(simmap, "simmap")) { return(list(maps = list(simmap), names = NULL, multiple = FALSE)) }
+  if (is.list(simmap) && !inherits(simmap, "phylo"))
+  {
+    stop("'simmap' must be a single stochastic character map (class 'simmap') or a set of maps of the same trait (class 'multiSimmap'), not a plain list of maps.\n",
+         "Maps of several traits are not supported yet. To use maps of the same trait, build a 'multiSimmap', e.g., with phytools::make.simmap(nsim = ...) or ",
+         "'structure(list_of_maps, class = c(\"multiSimmap\", \"multiPhylo\"))'.")
+  }
+  stop("'simmap' must be a stochastic character map of class 'simmap', as returned by phytools::make.simmap() or phytools::sim.history(), or a set of maps of class 'multiSimmap'.")
+}
+
+
+#' @title Add the name of the map to the messages of a step of the preparation
+#'
+#' @description Evaluates `expr`. If `map_name` is not `NULL`, the errors and the warnings of `expr` are sent again with the message starting with the name of the map,
+#'   to know which map is concerned when several maps are used.
+#'
+#' @param expr Expression to evaluate.
+#' @param map_name `NULL`, or name of the map.
+#'
+#' @noRd
+#'
+#' @return The value of `expr`.
+#'
+
+with_map_context <- function (expr, map_name)
+{
+  if (is.null(map_name)) { return(expr) }
+  tryCatch(
+    withCallingHandlers(expr, warning = function (w) { warning("Map '", map_name, "': ", conditionMessage(w), call. = FALSE); invokeRestart("muffleWarning") }),
+    error = function (e) stop("Map '", map_name, "': ", conditionMessage(e), call. = FALSE))
+}
+
+
+#' @title Run the simulations of each map
+#'
+#' @description Runs `run_simulations()` for each map prepared, and gathers the results.
+#'
+#'   Without `"multiSimmap"` (`multiple = FALSE`), this is `run_simulations()` on the single map (or no map).
+#'   With a `"multiSimmap"`, each map has the same seeds (the maps are compared with the same random draws) and the result is a list with one element per map, named after the map:
+#'   a phylogeny if `nb_simulations = 1`, otherwise a `"multiPhylo"` (as in `run_simulations()`) named `"<map>_sim_1"`, `"<map>_sim_2"`, ...
+#'   A map with no simulation obtained is dropped with a warning, and the function stops if no map gives a simulation.
+#'
+#' @param simulate_one Function with 6 arguments: `tracker` and `missing_taxa_list` (of the map), `map_name` (`NULL` without `"multiSimmap"`), `sim_seed`, `sim_index` and `verbose_sim`.
+#' @param prepared List with one element per map, each a list with the elements `tracker` and `missing_taxa_list`.
+#' @param map_names Names of the maps (`NULL` if `multiple = FALSE`).
+#' @param multiple Logical. Whether `simmap` was a `"multiSimmap"`.
+#' @param nb_simulations,force_simulations,seed,verbose See `run_simulations()`.
+#'
+#' @noRd
+#'
+#' @return Without `"multiSimmap"`, the output of `run_simulations()`. Otherwise a named list with one element per map kept, each a phylogeny or a `"multiPhylo"`, with the attribute `"failed_maps"`
+#'   (data.frame with the columns `map` and `reason` of the maps dropped, 0 row if none). Each phylogeny has the attributes `"seed"` and `"map"`.
+#'
+
+run_maps <- function (simulate_one, prepared, map_names, multiple, nb_simulations, force_simulations, seed, verbose = FALSE)
+{
+  run_map <- function (k)
+  {
+    name <- if (multiple) map_names[k] else NULL
+    simulate_map <- function (sim_seed, sim_index, verbose_sim)
+    {
+      simulate_one(tracker = prepared[[k]]$tracker, missing_taxa_list = prepared[[k]]$missing_taxa_list, map_name = name,
+                   sim_seed = sim_seed, sim_index = sim_index, verbose_sim = verbose_sim)
+    }
+    run_simulations(simulate_one = simulate_map, nb_simulations = nb_simulations, force_simulations = force_simulations, seed = seed, verbose = verbose, allow_empty = multiple)
+  }
+  if (!multiple) { return(run_map(1)) }
+
+  n_maps <- length(prepared)
+  if (n_maps * nb_simulations > 1000)
+  {
+    warning(n_maps, " maps x ", nb_simulations, " simulations = ", n_maps * nb_simulations, " grafted phylogenies will be produced (more than 1000): ",
+            "this can take a long time and use a lot of memory.", call. = FALSE)
+  }
+
+  results <- list()
+  failed_maps <- list()
+  for (k in seq_len(n_maps))
+  {
+    if (verbose) { cat(paste0(Sys.time(), " - Map ", map_names[k], " (", k, "/", n_maps, ")\n")) }
+    out <- with_map_context(run_map(k), map_names[k])
+    if (inherits(out, "phylograftR_no_simulation"))
+    {
+      reasons <- unique(attr(out, "failed")$reason)
+      failed_maps[[length(failed_maps) + 1]] <- data.frame(map = map_names[k], reason = paste(reasons, collapse = "\n"), stringsAsFactors = FALSE)
+      warning("Map '", map_names[k], "': none of the ", nb_simulations, " simulation(s) could be obtained, the map is dropped from the output.\n",
+              "Reasons:\n", paste0("  - ", reasons, collapse = "\n"), call. = FALSE)
+      next
+    }
+    if (inherits(out, "multiPhylo"))
+    {
+      for (j in seq_along(out)) { attr(out[[j]], "map") <- map_names[k] }
+      names(out) <- paste0(map_names[k], "_", names(out))
+      if (!is.null(attr(out, "seeds"))) { names(attr(out, "seeds")) <- names(out) }
+    } else {
+      attr(out, "map") <- map_names[k]
+    }
+    results[[map_names[k]]] <- out
+  }
+  failed_maps <- if (length(failed_maps) > 0) do.call(rbind, failed_maps) else data.frame(map = character(0), reason = character(0), stringsAsFactors = FALSE)
+
+  if (length(results) == 0)
+  {
+    stop("None of the ", n_maps, " maps gave a simulation.\nReasons:\n",
+         paste0("  - ", failed_maps$map, ": ", sub("\n.*", "", failed_maps$reason), collapse = "\n"))
+  }
+  structure(results, failed_maps = failed_maps)
 }

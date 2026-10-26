@@ -321,8 +321,8 @@ test_that("graft_missing_clades() stops or warns before grafting on invalid or p
   mcl_states <- mcl
   mcl_states$allowed_states <- list(M1 = "A", M2 = "A", M3 = "A", M4 = "A")
   expect_error(graft_missing_clades(toy$phy, mcl_states, verbose = FALSE), "requires a 'simmap'")
-  # Several maps
-  expect_error(graft(simmap = structure(list(simmap, simmap), class = c("multiSimmap", "multiPhylo")), allowed_states = "A"), "multiSimmap")
+  # A plain list of maps
+  expect_error(graft(simmap = list(simmap, simmap), allowed_states = "A"), "not a plain list of maps")
   # Other arguments
   for (value in list(-0.1, 1.5, NA, "0.1", c(0.1, 0.2)))
   {

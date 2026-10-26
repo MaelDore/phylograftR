@@ -59,12 +59,13 @@
 #'   If `FALSE`, only the branches within the subclade are excluded, and the taxon can be sister to it.
 #'   For a single-tip excluded subclade, the terminal branch is the only branch of the tip, and it is its stem: the tip excludes nothing if `FALSE`
 #'   (a warning lists these cases). Only used if `use_excluded_subclades = TRUE`. Default is `TRUE`.
-#' @param simmap (Optional) A single stochastic character map of the backbone, of class `"simmap"` (e.g., from `phytools::make.simmap()` or `phytools::sim.history()`),
-#'   mapping a species attribute (e.g., a trait or a range) with discrete states along the branches of `phy`.
+#' @param simmap (Optional) A stochastic character map of the backbone, of class `"simmap"` (e.g., from `phytools::make.simmap()` or `phytools::sim.history()`),
+#'   or a set of maps of the same trait, of class `"multiSimmap"` (e.g., from `phytools::make.simmap(nsim = 10)`), used as alternative hypotheses of the evolution of a species attribute
+#'   (e.g., a trait or a range) with discrete states along the branches of `phy`.
 #'   It must have the same tips, topology and branch lengths as `phy`. With a `simmap`, taxa can only be grafted on the parts of the branches
-#'   that are in their allowed states (see `allowed_states`). A list of maps (`"multiSimmap"`) is not accepted.
-#'   See 'Species attributes' in Details section.
-#'   Default is `NULL` (no restriction for grafting based on states).
+#'   that are in their allowed states (see `allowed_states`).
+#'
+#'   See 'Species attributes' and 'Multiple stochastic maps' in Details section. Default is `NULL` (no restriction for grafting based on states).
 #' @param allowed_states Character vector. The states of `simmap` in which grafting is allowed. This is the default for all taxa:
 #'   taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead. States are matched exactly with the states of the `simmap`, unless `treat_states_as_ranges = TRUE`.
 #'   Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the `simmap`.
@@ -160,6 +161,11 @@
 #'   Each phylogeny has the elements described above (including `$simmap` if a `simmap` was provided and `return_simmap = TRUE`).
 #'   The `"multiPhylo"` object has the attributes `"seeds"` (named vector of the seeds of the phylogenies, to reproduce each of them alone with `nb_simulations = 1`;
 #'   `NULL` if `seed = NULL`) and `"failed"` (data.frame with the seed and the reason of the simulations that failed, 0 row if none).
+#'
+#'   With multiple stochastic maps (i.e., a `"multiSimmap"`) provided as `simmap`, the function returns a list with one element per map (named after the maps):
+#'   a phylogeny if `nb_simulations = 1`, a `"multiPhylo"` otherwise (see 'Multiple stochastic maps').
+#'   The list has the attribute `"failed_maps"` (data.frame with the `map` and the `reason` of the maps without any simulation, dropped from the output).
+#'   The phylogenies have the attributes `"seed"` (their seed, unless `seed = NULL`) and, with several maps, `"map"`, to ensure reproducibility of each simulation.
 #'
 #' @details
 #' ### Stop conditions
@@ -290,6 +296,22 @@
 #' Any other error (invalid inputs, no branch available for a taxon, ...) concerns all the simulations and stops the whole run.
 #'
 #' With `save_temp = TRUE` and several simulations, each simulation saves its temporary phylogeny in its own file, with the suffix `"_sim_k"` added before `".rds"` in `temp_file_path`.
+#'
+#' ### Multiple stochastic maps
+#'
+#' With multiple stochastic maps of the same trait are provided as a `"multiSimmap"`, the grafting is run with each of its maps.
+#' The maps are alternative hypotheses of the evolution of the same trait (or range), used as alternative constraints.
+#' All the maps and the simulations are crossed: each map is used for `nb_simulations` simulations, so `P` maps give `P * nb_simulations` grafted phylogenies
+#' This can lead to a quick inflation of computation time, thus a warning is sent if the total number of grafted phylogenies (`P * nb_simulations`) is more than 1000.
+#'
+#' The output is a list with one element per stochastic map, named after the maps (the names of the `"multiSimmap"` if it has some, otherwise `"map_1"`, ..., `"map_P"`).
+#' With `nb_simulations = 1`, each element is a grafted phylogeny. With several simulations, each element is a `"multiPhylo"` (see 'Multiple simulations')
+#' with phylogenies named `"<map>_sim_1"`, `"<map>_sim_2"`, ... and the attributes `"seeds"` and `"failed"` of the map.
+#' Each phylogeny can be reproduced alone with its map (as a single `simmap`) and its seed.
+#'
+#' A map for which no simulation could be obtained is dropped from the output with a warning, and listed in the attribute `"failed_maps"` of the list
+#' (data.frame with the columns `map` and `reason`). The function stops if no map gives any phylogeny.
+#' With `save_temp = TRUE`, the temporary files get the suffix `"_map_<name>"` before the suffix of the simulation.
 #'
 #' ### Sampling fraction and unsampled species
 #'
@@ -445,13 +467,40 @@
 #' phytools::getStates(grafted_phy_states$simmap, type = "tips")[toy_missing_taxa_list_with_allowed_states$Taxon_name]
 #'
 #'
+#' # --- Use several stochastic maps (alternative hypotheses of trait evolution) as attribute-based constraints --- #
+#'
+#' # A 'multiSimmap' gives several stochastic maps of the same trait: the grafting is run with each of them.
+#' # Here, 3 maps are simulated from the states of the tips of the toy simmap.
+#' tip_states <- phytools::getStates(toy_simmap, type = "tips")
+#'
+#' old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
+#' set.seed(118)
+#' toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states, model = "ER", nsim = 3, message = FALSE)
+#' set.seed(old_seed)
+#'
+#' # Graft using constraints from all 3 simmaps X 2 simulations per simmap
+#' grafted_phys_maps <- graft_missing_taxa(phy = toy_backbone,
+#'                                         missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
+#'                                         simmap = toy_multiSimmap, allowed_states = c("blue", "green"),
+#'                                         method = "BD_clades", nb_simulations = 2, verbose = FALSE, seed = 1234)
+#'
+#' # Inspect output:
+#' # A list with one element per simmap, each a multiPhylo with the simulations of the map
+#' names(grafted_phys_maps)
+#' names(grafted_phys_maps$map_2)
+#' # The map and the seed of a phylogeny
+#' attr(grafted_phys_maps$map_2[[1]], "map")
+#' attr(grafted_phys_maps$map_2[[1]], "seed")
+#'
+#'
+
 
 graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 missing_taxa_list, # List with Taxon_name = c(), and items named after Taxon_name: Target_clade = list(X1 = c(), ...), include_target_clade_stem = c(X1 = TRUE, ...) (optional), Excluded_subclades = list(X1 = list(c(), c()), X2 = NULL, ...), exclude_subclades_stem = list(X1 = c(TRUE, NA), X2 = NULL, ...) (optional)
                                 include_target_clade_stem = TRUE, # Include the stem of the target clades when grafting? Default for all taxa, overridden by missing_taxa_list$include_target_clade_stem
                                 use_excluded_subclades = TRUE, # Avoid grafting within Excluded_subclades?
                                 exclude_subclades_stem = TRUE, # Also exclude the stem of the excluded subclades? Default for all subclades, overridden by missing_taxa_list$exclude_subclades_stem
-                                simmap = NULL, # NULL, or stochastic character map (class "simmap") of the backbone: restricts grafting to the branch segments in allowed states
+                                simmap = NULL, # NULL, or stochastic character map(s) (class "simmap" or "multiSimmap")  of the backbone: restricts grafting to the branch segments in allowed states
                                 allowed_states = NULL, # States of the simmap where grafting is allowed. Default for all taxa, overridden by missing_taxa_list$allowed_states. NULL: all states
                                 treat_states_as_ranges = FALSE, # Are the states of the simmap biogeographic ranges to be treated as sets of areas? An allowed range matches the states that contain it. (only with a simmap)
                                 return_simmap = TRUE, # Add the updated simmap to the output ($simmap)? Only with a simmap
@@ -520,6 +569,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     ## Species attributes: 'simmap', 'allowed_states' and 'min_valid_fraction'
     # The states of each taxon are resolved below, once the simmap is validated and the backbone labelled
     use_states <- !is.null(simmap)
+    simmap_input <- check_simmap_input(simmap) # The maps (a single one, or the maps of a 'multiSimmap'), their names and whether the output is a list of maps
     if (!is.numeric(min_valid_fraction) || length(min_valid_fraction) != 1 || is.na(min_valid_fraction) || min_valid_fraction < 0 || min_valid_fraction > 1)
     {
       stop("'min_valid_fraction' must be a single number between 0 and 1")
@@ -538,10 +588,6 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     }
     if (use_states)
     {
-      if (inherits(simmap, "multiSimmap"))
-      {
-        stop("'simmap' must be a single stochastic character map (class 'simmap'), not a list of maps (class 'multiSimmap').")
-      }
       warn_if_simmap_unused(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states, return_simmap = return_simmap)
     } else {
       if (treat_states_as_ranges)
@@ -691,87 +737,99 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   labelled_backbone <- label_backbone_nodes(phy)
   phy <- labelled_backbone$phy
 
-  ## With a simmap: validate it, start following the states of the branches through grafting, and resolve the allowed states of each taxon
-  # The resolved list (one character vector per taxon, no NULL) replaces the item in the list, so it follows the taxa when they are reordered
-  tracker <- NULL
-  if (use_states)
-  {
-    tracker <- start_state_tracking(phy = phy, simmap = simmap)
-    if (treat_states_as_ranges)
-    {
-      # Allowed ranges are resolved into the acceptable states (the states containing an allowed range), used to restrict grafting, and the candidate ranges of each state
-      resolved <- resolve_allowed_ranges(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
-                                         states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
-      missing_taxa_list$allowed_states <- resolved$allowed_states # Allowed states adjusted to the ones observed in the simmap
-      missing_taxa_list$range_candidates <- resolved$range_candidates # List of ranges that can be inherited by the taxa, based on which allowed state it is grafted on
-      tracker <- extend_tracker_states(tracker = tracker, extra_states = resolved$inherited_states) # Ranges inherited that are not states of the simmap (need to be added to update the next allowed states)
-    } else {
-      missing_taxa_list$allowed_states <- resolve_allowed_states(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
-                                                                 states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
-    }
-  }
+  ### ---- Prepare the maps ---- ###
 
-  ## Check upfront that every taxon has at least one branch available for grafting (and, with a simmap, a piece of branch in its allowed states)
-  # Better to stop before grafting than in the middle of a long run
-  no_branch_taxa <- find_taxa_without_allowed_branch(phy = phy, missing_taxa_list = missing_taxa_list,
-                                                     include_target_clade_stem = missing_taxa_list$include_target_clade_stem,
-                                                     exclude_subclades_stem = missing_taxa_list$exclude_subclades_stem,
-                                                     use_excluded_subclades = use_excluded_subclades,
-                                                     tracker = tracker, allowed_states = missing_taxa_list$allowed_states)
-  valid_fraction <- attr(no_branch_taxa, "valid_fraction")
-  excluded_taxa <- no_branch_taxa[no_branch_taxa$Cause == "excluded", , drop = FALSE]
-  if (nrow(excluded_taxa) > 0)
+  # Everything that depends on the map (the tracker of the states, the resolution of the allowed states, and the checks of the branches available) is prepared before any simulation,
+  # for each map: any problem stops the run at once, and the message states the map when several maps are used
+  prepare_map <- function (simmap_k)
   {
-    n_show <- min(nrow(excluded_taxa), 10)
-    stop(nrow(excluded_taxa), " taxa have no branch available for grafting: all branches of their target clade are excluded.\n",
-         paste0("  - ", excluded_taxa$Taxon_name[seq_len(n_show)], " (target clade tips: ", excluded_taxa$Target_clade[seq_len(n_show)], ")", collapse = "\n"),
-         if (nrow(excluded_taxa) > n_show) paste0("\n  ... and ", nrow(excluded_taxa) - n_show, " more") else "",
-         "\nAdjust 'include_target_clade_stem' (global or in missing_taxa_list), 'missing_taxa_list$Excluded_subclades' or 'exclude_subclades_stem' for these taxa.")
-  }
-  no_state_taxa <- no_branch_taxa[no_branch_taxa$Cause == "allowed_states", , drop = FALSE]
-  if (nrow(no_state_taxa) > 0)
-  {
-    n_show <- min(nrow(no_state_taxa), 10)
-    stop(nrow(no_state_taxa), " taxa have no branch available for grafting in their allowed states: none of the available branches of their target clade has a piece in these states.\n",
-         paste0("  - ", no_state_taxa$Taxon_name[seq_len(n_show)], " (target clade tips: ", no_state_taxa$Target_clade[seq_len(n_show)],
-                "; allowed states: ", vapply(missing_taxa_list$allowed_states[no_state_taxa$Taxon_name[seq_len(n_show)]], paste, character(1), collapse = ", "), ")", collapse = "\n"),
-         if (nrow(no_state_taxa) > n_show) paste0("\n  ... and ", nrow(no_state_taxa) - n_show, " more") else "",
-         "\nAdjust 'allowed_states' (global or in missing_taxa_list), or the constraints on the branches ('include_target_clade_stem', 'Excluded_subclades', 'exclude_subclades_stem') for these taxa.")
-  }
-
-  ## Warn (once) about the taxa with a very small share of valid branches in their allowed states
-  # 'uniform': fraction of the length of the available branches in allowed states. 'BD_clades': fraction of the time window of the divergence ages with a branch in allowed states
-  if (use_states)
-  {
-    share_in_states <- if (method == "uniform") valid_fraction else attr(no_branch_taxa, "time_coverage")
-    low_fraction <- which(!is.na(share_in_states) & share_in_states < min_valid_fraction)
-    if (length(low_fraction) > 0)
+    ## With a simmap: validate it, start following the states of the branches through grafting, and resolve the allowed states of each taxon
+    # The resolved list (one character vector per taxon, no NULL) replaces the item in the list, so it follows the taxa when they are reordered
+    tracker <- NULL
+    if (use_states)
     {
-      n_show <- min(length(low_fraction), 10)
-      low_taxa <- names(share_in_states)[low_fraction[order(share_in_states[low_fraction])][seq_len(n_show)]]
-      what_share <- if (method == "uniform") "of the length of their available branches in their allowed states" else "of the time window of their divergence ages covered by available branches in their allowed states"
-      what_effect <- if (method == "uniform") "their grafting positions are concentrated on a small part of their target clade" else "their divergence ages will be concentrated on a narrow time window, or many ages will need to be redrawn"
-      warning(length(low_fraction), " taxa have less than ", format(100 * min_valid_fraction), "% ", what_share, " ",
-              "('min_valid_fraction' = ", min_valid_fraction, "): ", what_effect, ".\n",
-              paste0("  - ", low_taxa, " (target clade tips: ", vapply(missing_taxa_list$Target_clade[low_taxa], paste, character(1), collapse = ", "),
-                     "; ", sprintf("%.2f%%", 100 * share_in_states[low_taxa]), " in allowed states)", collapse = "\n"),
-              if (length(low_fraction) > n_show) paste0("\n  ... and ", length(low_fraction) - n_show, " more") else "",
-              call. = FALSE)
+      tracker <- start_state_tracking(phy = phy, simmap = simmap_k)
+      if (treat_states_as_ranges)
+      {
+        # Allowed ranges are resolved into the acceptable states (the states containing an allowed range), used to restrict grafting, and the candidate ranges of each state
+        resolved <- resolve_allowed_ranges(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
+                                           states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
+        missing_taxa_list$allowed_states <- resolved$allowed_states # Allowed states adjusted to the ones observed in the simmap
+        missing_taxa_list$range_candidates <- resolved$range_candidates # List of ranges that can be inherited by the taxa, based on which allowed state it is grafted on
+        tracker <- extend_tracker_states(tracker = tracker, extra_states = resolved$inherited_states) # Ranges inherited that are not states of the simmap (need to be added to update the next allowed states)
+      } else {
+        missing_taxa_list$allowed_states <- resolve_allowed_states(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
+                                                                   states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
+      }
     }
+
+    ## Check upfront that every taxon has at least one branch available for grafting (and, with a simmap, a piece of branch in its allowed states)
+    # Better to stop before grafting than in the middle of a long run
+    no_branch_taxa <- find_taxa_without_allowed_branch(phy = phy, missing_taxa_list = missing_taxa_list,
+                                                       include_target_clade_stem = missing_taxa_list$include_target_clade_stem,
+                                                       exclude_subclades_stem = missing_taxa_list$exclude_subclades_stem,
+                                                       use_excluded_subclades = use_excluded_subclades,
+                                                       tracker = tracker, allowed_states = missing_taxa_list$allowed_states)
+    valid_fraction <- attr(no_branch_taxa, "valid_fraction")
+    excluded_taxa <- no_branch_taxa[no_branch_taxa$Cause == "excluded", , drop = FALSE]
+    if (nrow(excluded_taxa) > 0)
+    {
+      n_show <- min(nrow(excluded_taxa), 10)
+      stop(nrow(excluded_taxa), " taxa have no branch available for grafting: all branches of their target clade are excluded.\n",
+           paste0("  - ", excluded_taxa$Taxon_name[seq_len(n_show)], " (target clade tips: ", excluded_taxa$Target_clade[seq_len(n_show)], ")", collapse = "\n"),
+           if (nrow(excluded_taxa) > n_show) paste0("\n  ... and ", nrow(excluded_taxa) - n_show, " more") else "",
+           "\nAdjust 'include_target_clade_stem' (global or in missing_taxa_list), 'missing_taxa_list$Excluded_subclades' or 'exclude_subclades_stem' for these taxa.")
+    }
+    no_state_taxa <- no_branch_taxa[no_branch_taxa$Cause == "allowed_states", , drop = FALSE]
+    if (nrow(no_state_taxa) > 0)
+    {
+      n_show <- min(nrow(no_state_taxa), 10)
+      stop(nrow(no_state_taxa), " taxa have no branch available for grafting in their allowed states: none of the available branches of their target clade has a piece in these states.\n",
+           paste0("  - ", no_state_taxa$Taxon_name[seq_len(n_show)], " (target clade tips: ", no_state_taxa$Target_clade[seq_len(n_show)],
+                  "; allowed states: ", vapply(missing_taxa_list$allowed_states[no_state_taxa$Taxon_name[seq_len(n_show)]], paste, character(1), collapse = ", "), ")", collapse = "\n"),
+           if (nrow(no_state_taxa) > n_show) paste0("\n  ... and ", nrow(no_state_taxa) - n_show, " more") else "",
+           "\nAdjust 'allowed_states' (global or in missing_taxa_list), or the constraints on the branches ('include_target_clade_stem', 'Excluded_subclades', 'exclude_subclades_stem') for these taxa.")
+    }
+
+    ## Warn (once) about the taxa with a very small share of valid branches in their allowed states
+    # 'uniform': fraction of the length of the available branches in allowed states. 'BD_clades': fraction of the time window of the divergence ages with a branch in allowed states
+    if (use_states)
+    {
+      share_in_states <- if (method == "uniform") valid_fraction else attr(no_branch_taxa, "time_coverage")
+      low_fraction <- which(!is.na(share_in_states) & share_in_states < min_valid_fraction)
+      if (length(low_fraction) > 0)
+      {
+        n_show <- min(length(low_fraction), 10)
+        low_taxa <- names(share_in_states)[low_fraction[order(share_in_states[low_fraction])][seq_len(n_show)]]
+        what_share <- if (method == "uniform") "of the length of their available branches in their allowed states" else "of the time window of their divergence ages covered by available branches in their allowed states"
+        what_effect <- if (method == "uniform") "their grafting positions are concentrated on a small part of their target clade" else "their divergence ages will be concentrated on a narrow time window, or many ages will need to be redrawn"
+        warning(length(low_fraction), " taxa have less than ", format(100 * min_valid_fraction), "% ", what_share, " ",
+                "('min_valid_fraction' = ", min_valid_fraction, "): ", what_effect, ".\n",
+                paste0("  - ", low_taxa, " (target clade tips: ", vapply(missing_taxa_list$Target_clade[low_taxa], paste, character(1), collapse = ", "),
+                       "; ", sprintf("%.2f%%", 100 * share_in_states[low_taxa]), " in allowed states)", collapse = "\n"),
+                if (length(low_fraction) > n_show) paste0("\n  ... and ", length(low_fraction) - n_show, " more") else "",
+                call. = FALSE)
+      }
+    }
+
+    list(tracker = tracker, missing_taxa_list = missing_taxa_list)
   }
+  prepared_maps <- lapply(seq_along(simmap_input$maps), function (k)
+  {
+    with_map_context(prepare_map(simmap_input$maps[[k]]), map_name = simmap_input$names[k])
+  })
 
   ### ---- Simulations ---- ###
 
-  # Function to produce one simulation = one grafted phylogeny, from the backbone, the tracker for states prepared above, and the associated seed and index
-  simulate_one <- function (sim_seed, sim_index, verbose_sim)
+  # Function to produce one simulation = one grafted phylogeny, from the backbone, the tracker for states and the list of taxa of a map (prepared above), and the associated seed and index
+  simulate_one <- function (tracker, missing_taxa_list, map_name, sim_seed, sim_index, verbose_sim)
   {
     phy <- phy
-    tracker <- tracker
-    missing_taxa_list <- missing_taxa_list
     verbose <- verbose_sim
     # With several simulations, the progress messages state the simulation they belong to
-    sim_label <- if (nb_simulations > 1) paste0(" - Simulation n\u00b0", sim_index) else ""
-    temp_file_path <- temp_file_path_simulation(temp_file_path = temp_file_path, index = sim_index, multiple = nb_simulations > 1)
+    # (and the map, if the maps of a 'multiSimmap' are used)
+    sim_label <- paste0(if (!is.null(map_name)) paste0(" - Map ", map_name), if (nb_simulations > 1) paste0(" - Simulation n\u00b0", sim_index), collapse = "")
+    temp_file_path <- temp_file_path_simulation(temp_file_path = temp_file_path, index = sim_index, multiple = nb_simulations > 1, map_name = map_name)
 
     ## Set seed of the simulation, for the duration of the simulation only (the global RNG state is restored on exit)
     set_local_seed(sim_seed)
@@ -1124,7 +1182,9 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   }
 
   ## Run the simulations for the given nb of iterations, and forcing rule
-  phy_all_sims <- run_simulations(simulate_one = simulate_one, nb_simulations = nb_simulations, force_simulations = force_simulations, seed = seed, verbose = verbose)
+  # With a 'multiSimmap': a list with the simulations of each map (see Details)
+  phy_all_sims <- run_maps(simulate_one = simulate_one, prepared = prepared_maps, map_names = simmap_input$names, multiple = simmap_input$multiple,
+                           nb_simulations = nb_simulations, force_simulations = force_simulations, seed = seed, verbose = verbose)
 
   # Return output
   return(phy_all_sims)

@@ -882,8 +882,8 @@ test_that("graft_missing_taxa() stops or warns on invalid 'simmap', 'allowed_sta
   names(mtl_unnamed$allowed_states) <- NULL
   expect_error(graft_missing_taxa(toy$phy, mtl_unnamed, simmap = simmap, method = "uniform", verbose = FALSE), "must be named after 'Taxon_name'")
 
-  # Several maps, and a simmap of another tree
-  expect_error(graft(simmap = structure(list(simmap, simmap), class = c("multiSimmap", "multiPhylo")), allowed_states = "A"), "multiSimmap")
+  # A plain list of maps (a 'multiSimmap' is accepted: see test-multiple_simmaps.R), and a simmap of another tree
+  expect_error(graft(simmap = list(simmap, simmap), allowed_states = "A"), "not a plain list of maps")
   other <- make_toy_simmap(make_toy_phy(n_tips = 20, seed = 99))
   expect_error(graft(simmap = other, allowed_states = "A"), "tips|topology|branch lengths")
 
