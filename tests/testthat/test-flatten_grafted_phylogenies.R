@@ -133,11 +133,25 @@ test_that("flatten_grafted_phylogenies() accepts a multiPhylo or a phylo (alread
   single <- graft_missing_taxa(toy$phy, mtl, method = "uniform", verbose = FALSE, seed = 4)
   multi <- graft_missing_taxa(toy$phy, mtl, method = "uniform", nb_simulations = 3, verbose = FALSE, seed = 4)
 
+  # A phylo stays a phylo: unchanged by default
   flat1 <- flatten_grafted_phylogenies(single)
-  expect_s3_class(flat1, "multiPhylo")
-  expect_equal(names(flat1), "sim_1")
-  expect_true(is.na(attr(flat1, "phylogenies")$map))
-  expect_equal(attr(flat1, "phylogenies")$seed, 4L)
+  expect_s3_class(flat1, "phylo")
+  expect_false(inherits(flat1, "multiPhylo"))
+  expect_identical(flat1, single)
+  expect_equal(attr(flat1, "seed"), 4L)
+  # The only possible action is to remove the simmap
+  with_simmap <- suppressWarnings(graft_missing_taxa(toy$phy, mtl, simmap = make_toy_simmap(toy$phy), allowed_states = c("A", "B", "C"), method = "uniform", verbose = FALSE, seed = 4))
+  expect_s3_class(with_simmap$simmap, "simmap")
+  expect_s3_class(flatten_grafted_phylogenies(with_simmap)$simmap, "simmap")
+  no_simmap <- flatten_grafted_phylogenies(with_simmap, keep_simmap = FALSE)
+  expect_s3_class(no_simmap, "phylo")
+  expect_null(no_simmap$simmap)
+  expect_equal(no_simmap$edge.length, with_simmap$edge.length)
+  expect_equal(attr(no_simmap, "seed"), 4L)
+  expect_s3_class(with_simmap$simmap, "simmap") # the input is not modified
+  # Selections that cannot apply to a phylogeny without a map
+  expect_error(flatten_grafted_phylogenies(single, maps = "map_1"), "'maps' cannot be used")
+  expect_error(flatten_grafted_phylogenies(single, simulations = 2), "No phylogeny left")
 
   flat3 <- flatten_grafted_phylogenies(multi)
   expect_equal(names(flat3), c("sim_1", "sim_2", "sim_3"))

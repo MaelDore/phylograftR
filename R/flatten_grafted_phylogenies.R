@@ -31,6 +31,7 @@
 #' @param phy_grafted The output of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
 #'   a list with one element per stochastic map (each a `"phylo"` or a `"multiPhylo"`), a `"multiPhylo"`, or a `"phylo"`.
 #'   A `"multiPhylo"` or a `"phylo"` object is already flat, but the function can still be used to select a subset of phylogenies and remove their associated simmaps if requested.
+#'   A `"phylo"` is returned as a `"phylo"` (the only possible action is then to remove its `$simmap`).
 #' @param maps Character vector. Names of the maps to keep (the names of the elements of the list, as in the column `map` of the attribute `"phylogenies"`).
 #'   Default is `NULL`, which keeps all the maps. The function stops if some names are not found.
 #' @param simulations Integer vector. Indices of the simulations to keep (the numbers in the names `"sim_k"` of the phylogenies, which are the same in each map:
@@ -45,7 +46,8 @@
 #' Each phylogeny keeps its attributes `"map"` and `"seed"`. When `maps` and `simulations` are used, the selection is applied to all the phylogenies together:
 #' the phylogenies kept are the ones from the maps in `maps` and with the simulation index in `simulations`.
 #'
-#' @return An object of class `"multiPhylo"` with all the phylogenies kept, with the following attributes:
+#' @return For a `"phylo"` as `phy_grafted`, the phylogeny (class `"phylo"`), with its `$simmap` removed if `keep_simmap = FALSE` (otherwise unchanged).
+#'   Otherwise, an object of class `"multiPhylo"` with all the phylogenies kept, with the following attributes:
 #'  * `"phylogenies"`: data.frame with one row per phylogeny, in the order of the object, with the columns `name`, `map` (`NA` if no map was used), `simulation` (index of the simulation) and `seed` (`NA` if unknown).
 #'  * `"seeds"`: named integer vector with the seed of each phylogeny (`NULL` if the seeds are unknown, i.e., if the grafting was run with `seed = NULL`).
 #'  * `"failed"`: data.frame with the simulations that failed in the maps kept, with the columns `map`, `seed` and `reason` (0 row if none). Not filtered by `simulations`.
@@ -98,10 +100,10 @@
 #' # The map, simulation and seed of each phylogeny are stored as an attribute
 #' attr(grafted_phys, "phylogenies")
 #'
-#' # --- Flatten the output, subset, anr remove simmaps all-at-once --- #
+#' # --- Flatten the output, subset, and remove simmaps all-at-once --- #
 #'
 #' # Keep the first simulation of two maps only, without the simmaps (to save memory)
-#' grafted_subset <- flatten_grafted_phylogenies(grafted, maps = c("map_1", "map_3"),
+#' grafted_subset <- flatten_grafted_phylogenies(grafted_list, maps = c("map_1", "map_3"),
 #'                                               simulations = 1, keep_simmap = FALSE)
 #' attr(grafted_subset, "phylogenies")
 #'
@@ -111,7 +113,7 @@
 #'
 
 
-flatten_grafted_phylogenies <- function (x, # Output of the grafting functions: list of maps (phylo or multiPhylo), multiPhylo or phylo
+flatten_grafted_phylogenies <- function (phy_grafted, # Output of the grafting functions: list of maps (phylo or multiPhylo), multiPhylo or phylo
                                          maps = NULL, # Names of the maps to keep. NULL: all
                                          simulations = NULL, # Indices of the simulations to keep. NULL: all
                                          keep_simmap = TRUE) # Keep the $simmap of the phylogenies?
@@ -134,25 +136,25 @@ flatten_grafted_phylogenies <- function (x, # Output of the grafting functions: 
 
   ### ---- List the phylogenies, with their names and the information on the failures ---- ###
 
-  listed <- list_grafted_phylogenies(x, arg = "x")
+  listed <- list_grafted_phylogenies(phy_grafted, arg = "phy_grafted")
   n_phylos <- length(listed$phylos)
 
   # Extract names of the phylogenies, as in the input (and names of the maps of a list)
   map_names <- NULL
   if (listed$is_list)
   {
-    map_names <- names(x)
-    if (is.null(map_names) || anyNA(map_names) || any(map_names == "")) { map_names <- paste0("map_", seq_along(x)) }
+    map_names <- names(phy_grafted)
+    if (is.null(map_names) || anyNA(map_names) || any(map_names == "")) { map_names <- paste0("map_", seq_along(phy_grafted)) }
   }
-  phylo_names <- if (inherits(x, "phylo"))
+  phylo_names <- if (inherits(phy_grafted, "phylo"))
   {
     if (is.na(listed$map[1])) "sim_1" else listed$map[1]
-  } else if (inherits(x, "multiPhylo")) {
-    if (is.null(names(x))) paste0("sim_", listed$simulation) else names(x)
+  } else if (inherits(phy_grafted, "multiPhylo")) {
+    if (is.null(names(phy_grafted))) paste0("sim_", listed$simulation) else names(phy_grafted)
   } else {
-    unlist(lapply(seq_along(x), function (k)
+    unlist(lapply(seq_along(phy_grafted), function (k)
     {
-      el <- x[[k]]
+      el <- phy_grafted[[k]]
       if (inherits(el, "phylo")) { map_names[k] }
       else if (is.null(names(el))) { paste0(map_names[k], "_sim_", seq_along(el)) }
       else { names(el) }
@@ -173,10 +175,10 @@ flatten_grafted_phylogenies <- function (x, # Output of the grafting functions: 
     data.frame(map = rep(map, nrow(f)), seed = as.integer(f$seed), reason = f$reason, stringsAsFactors = FALSE)
   }
   if (listed$is_list) {
-    failed <- do.call(rbind, c(list(empty_failed), lapply(seq_along(x), function (k) failed_of(x[[k]], map_names[k]))))
-    failed_maps <- attr(x, "failed_maps")
+    failed <- do.call(rbind, c(list(empty_failed), lapply(seq_along(phy_grafted), function (k) failed_of(phy_grafted[[k]], map_names[k]))))
+    failed_maps <- attr(phy_grafted, "failed_maps")
   } else {
-    failed <- failed_of(x, if (n_phylos > 0) listed$map[1] else NA_character_)
+    failed <- failed_of(phy_grafted, if (n_phylos > 0) listed$map[1] else NA_character_)
     failed_maps <- NULL
   }
   if (is.null(failed_maps)) { failed_maps <- data.frame(map = character(0), reason = character(0), stringsAsFactors = FALSE) }
@@ -220,6 +222,9 @@ flatten_grafted_phylogenies <- function (x, # Output of the grafting functions: 
   rownames(table_phylos) <- NULL
   seeds <- if (all(is.na(table_phylos$seed))) NULL else stats::setNames(table_phylos$seed, table_phylos$name)
   rownames(failed) <- NULL; rownames(failed_maps) <- NULL
+
+  # A single phylogeny stays a single phylogeny
+  if (inherits(phy_grafted, "phylo")) { return(phylos[[1]]) }
 
   structure(phylos, class = "multiPhylo", phylogenies = table_phylos, seeds = seeds, failed = failed, failed_maps = failed_maps)
 }
