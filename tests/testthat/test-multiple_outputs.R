@@ -29,10 +29,16 @@ test_that("list_grafted_phylogenies() lists the phylogenies, their maps, simulat
   multi <- graft_missing_taxa(toy$phy, mtl, method = "uniform", nb_simulations = 3, verbose = FALSE, seed = 4)
 
   l1 <- list_grafted_phylogenies(single)
-  expect_equal(l1$map, "map_1"); expect_equal(l1$simulation, 1); expect_equal(l1$seed, 4L); expect_false(l1$is_list)
+  expect_true(is.na(l1$map)); expect_equal(l1$simulation, 1); expect_equal(l1$seed, 4L); expect_false(l1$is_list)
 
   l3 <- list_grafted_phylogenies(multi)
-  expect_equal(l3$map, rep("map_1", 3)); expect_equal(l3$simulation, 1:3); expect_equal(l3$seed, unname(attr(multi, "seeds"))); expect_false(l3$is_list)
+  expect_equal(l3$map, rep(NA_character_, 3)); expect_equal(l3$simulation, 1:3); expect_equal(l3$seed, unname(attr(multi, "seeds"))); expect_false(l3$is_list)
+
+  # A single simmap without name: map_1, and no map (NA) without simmap
+  one_map <- suppressWarnings(graft_missing_taxa(toy$phy, mtl, simmap = make_toy_simmap(toy$phy), allowed_states = c("A", "B", "C"), method = "uniform", verbose = FALSE, seed = 4))
+  expect_equal(list_grafted_phylogenies(one_map)$map, "map_1")
+  no_simmap_output <- one_map; no_simmap_output$simmap <- NULL
+  expect_true(is.na(list_grafted_phylogenies(no_simmap_output)$map))
 
   # A multiPhylo with failed simulations: the index of the simulation is the one of the names
   gap <- multi[c(1, 3)]
@@ -122,7 +128,10 @@ test_that("check_grafting_constraints() with a single phylogeny keeps its result
   expect_s3_class(res, "data.frame")
   expect_equal(names(res)[1:4], c("map", "simulation", "seed", "Taxon_name"))
   expect_equal(nrow(res), 5)
-  expect_equal(unique(res$map), "map_1"); expect_equal(unique(res$simulation), 1); expect_equal(unique(res$seed), 4L)
+  expect_true(all(is.na(res$map))); expect_equal(unique(res$simulation), 1); expect_equal(unique(res$seed), 4L)
+  # With a single simmap without name: map_1
+  with_simmap <- suppressWarnings(graft_missing_taxa(toy$phy, mtl, simmap = make_toy_simmap(toy$phy), allowed_states = c("A", "B", "C"), method = "uniform", verbose = FALSE, seed = 4))
+  expect_equal(unique(check_grafting_constraints(with_simmap, toy$phy, mtl, verbose = FALSE)$map), "map_1")
   expect_true(attr(res, "all_ok"))
   expect_equal(attr(res, "phylogenies")$n_failed, 0)
   # Same verbose summary as before
@@ -139,7 +148,7 @@ test_that("check_grafting_constraints() with a multiPhylo merges the simulations
   expect_equal(nrow(res), 15)
   expect_equal(res$simulation, rep(1:3, each = 5))
   expect_equal(res$seed, rep(unname(attr(multi, "seeds")), each = 5))
-  expect_equal(unique(res$map), "map_1")
+  expect_true(all(is.na(res$map)))
   expect_equal(res$Taxon_name, rep(mtl$Taxon_name, 3))
   expect_true(attr(res, "all_ok"))
   expect_true(attr(res, "backbone_preserved"))
@@ -152,7 +161,7 @@ test_that("check_grafting_constraints() with a multiPhylo merges the simulations
     expect_equal(res[res$simulation == j, "target_position"], alone$target_position)
   }
   out <- capture.output(check_grafting_constraints(multi, toy$phy, mtl, verbose = TRUE))
-  expect_match(paste(out, collapse = "\n"), "3 phylogenies checked \\(1 map\\(s\\)\\), 5 taxa each.*respecting all the constraints: 3/3.*All constraints respected")
+  expect_match(paste(out, collapse = "\n"), "3 phylogenies checked \\(no map\\), 5 taxa each.*respecting all the constraints: 3/3.*All constraints respected")
   # One summary only
   expect_equal(sum(grepl("phylogenies checked", out)), 1)
 })
@@ -207,13 +216,13 @@ test_that("check_grafting_constraints() with several phylogenies reports the vio
   failing <- attr(res, "phylogenies")
   expect_true(any(!failing$all_ok))
   text <- paste(capture.output(check_grafting_constraints(multi, toy$phy, mtl_other, verbose = TRUE)), collapse = "\n")
-  expect_match(text, "Phylogenies with violations:.*map map_1, simulation [0-9].*taxa failed")
+  expect_match(text, "Phylogenies with violations:.*no map, simulation [0-9].*taxa failed")
   expect_match(text, "Some constraints NOT respected")
   expect_error(check_grafting_constraints(multi, toy$phy, mtl_other, stop_on_failure = TRUE, verbose = FALSE),
-               "Some grafting constraints are not respected in [0-9]+ of 3 phylogenies:\n  - map map_1, simulation [0-9]")
+               "Some grafting constraints are not respected in [0-9]+ of 3 phylogenies:\n  - no map, simulation [0-9]")
 
   # Arguments on the states need the simmap of each phylogeny: the error names the phylogeny
-  expect_error(check_grafting_constraints(multi, toy$phy, mtl, allowed_states = "A", verbose = FALSE), "Map 'map_1', simulation 1: 'allowed_states' can only be used")
+  expect_error(check_grafting_constraints(multi, toy$phy, mtl, allowed_states = "A", verbose = FALSE), "Phylogeny, simulation 1: 'allowed_states' can only be used")
   expect_error(check_grafting_constraints("a", toy$phy, mtl), "must be a phylogeny")
 
   # The warnings about the inputs are sent once

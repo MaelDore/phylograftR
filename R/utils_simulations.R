@@ -397,7 +397,7 @@ with_unique_warnings <- function (expr)
 #'
 #' @return A list with the elements `phylos` (list of phylogenies, in the order of the input), `map` (name of the map of each phylogeny), `simulation` (integer index of the simulation of each phylogeny:
 #'   the index in the name `"sim_k"` or `"<map>_sim_k"` of a `"multiPhylo"`, otherwise its position, 1 for a single phylogeny), `seed` (integer, `NA` if unknown) and `is_list` (whether `x` is a list of maps).
-#'   The map is the name of the list of maps, otherwise the attribute `"map"` of the phylogeny, otherwise `"map_1"`.
+#'   The map is the name of the list of maps, or `"map_1"` if the phylogeny has a single `$simmap` without name, otherwise `NA` (no map was used).
 #'
 
 list_grafted_phylogenies <- function (x, arg = "phy_grafted")
@@ -411,7 +411,8 @@ list_grafted_phylogenies <- function (x, arg = "phy_grafted")
   add <- function (phy, default_map, forced_map = NULL, index = 1L)
   {
     phylos[[length(phylos) + 1]] <<- phy
-    map <<- c(map, if (!is.null(forced_map)) forced_map else if (!is.null(attr(phy, "map"))) attr(phy, "map") else default_map)
+    # Name of the map: the name in the list of maps, otherwise the attribute "map" of the phylogeny, otherwise "map_1" if the phylogeny has the simmap of a single map, otherwise NA (no map used)
+    map <<- c(map, if (!is.null(forced_map)) forced_map else if (!is.null(attr(phy, "map"))) attr(phy, "map") else if (!is.null(phy$simmap)) default_map else NA_character_)
     simulation <<- c(simulation, index)
   }
   bad <- function () stop("'", arg, "' must be a phylogeny (class 'phylo'), a set of phylogenies (class 'multiPhylo'), or a list of them with one element per map (output of the grafting functions with a 'multiSimmap').")

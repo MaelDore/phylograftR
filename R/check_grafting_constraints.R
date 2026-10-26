@@ -229,7 +229,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
   ## Several phylogenies: checked one by one, the warnings about the inputs are sent once
   results <- with_unique_warnings(lapply(seq_len(n_phylos), function (k)
   {
-    one(listed$phylos[[k]], verbose = FALSE, stop_on_failure = FALSE, who = paste0("Map '", listed$map[k], "', simulation ", listed$simulation[k]))
+    one(listed$phylos[[k]], verbose = FALSE, stop_on_failure = FALSE, who = paste0(if (is.na(listed$map[k])) "Phylogeny" else paste0("Map '", listed$map[k], "'"), ", simulation ", listed$simulation[k]))
   }))
 
   # Summary table of the phylogenies
@@ -273,7 +273,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
     n_taxa <- nrow(results[[1]])
     check_states <- !all(is.na(all_rows$states_ok))
     check_ranges <- !all(is.na(all_rows$ranges_ok))
-    n_maps <- length(unique(listed$map))
+    n_maps <- length(unique(stats::na.omit(listed$map)))
     deviation <- suppressWarnings(max(vapply(results, function (r) attr(r, "max_branch_length_deviation_relative"), numeric(1)), na.rm = TRUE))
     backbone_msg <- if (!check_backbone) { "not checked" } else {
       paste0("preserved in ", sum(table_phylos$backbone_preserved %in% TRUE), "/", n_phylos, " phylogenies, branch lengths shifted by max ",
@@ -281,7 +281,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
     }
     violating <- which(!table_phylos$all_ok)
     n_show <- min(length(violating), 10)
-    cat(paste0(n_phylos, " phylogenies checked (", n_maps, " map(s)), ", n_taxa, " taxa each\n",
+    cat(paste0(n_phylos, " phylogenies checked (", if (n_maps == 0) "no map" else paste0(n_maps, " map(s)"), "), ", n_taxa, " taxa each\n",
                "  - Phylogenies respecting all the constraints: ", sum(table_phylos$all_ok), "/", n_phylos, "\n",
                "  Violations, over all the phylogenies (number of taxa x phylogenies):\n",
                "  - Missing from the grafted tree: ", sum(!all_rows$in_tree), "\n",
@@ -291,7 +291,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                if (check_ranges) paste0("  - Range not in graft-point state: ", sum(all_rows$ranges_ok %in% FALSE), "\n") else "",
                "  - Backbone: ", backbone_msg, "\n",
                if (length(violating) > 0) paste0("  Phylogenies with violations:\n",
-                                                 paste0("    - map ", table_phylos$map[violating[seq_len(n_show)]], ", simulation ", table_phylos$simulation[violating[seq_len(n_show)]],
+                                                 paste0("    - ", ifelse(is.na(table_phylos$map[violating[seq_len(n_show)]]), "no map", paste0("map ", table_phylos$map[violating[seq_len(n_show)]])), ", simulation ", table_phylos$simulation[violating[seq_len(n_show)]],
                                                         if (!all(is.na(table_phylos$seed))) paste0(" (seed ", table_phylos$seed[violating[seq_len(n_show)]], ")") else "",
                                                         ": ", table_phylos$n_failed[violating[seq_len(n_show)]], " taxa failed",
                                                         ifelse(table_phylos$backbone_preserved[violating[seq_len(n_show)]] %in% FALSE, ", backbone NOT preserved", ""), collapse = "\n"),
@@ -304,7 +304,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
     violating <- which(!table_phylos$all_ok)
     n_show <- min(length(violating), 10)
     stop("Some grafting constraints are not respected in ", length(violating), " of ", n_phylos, " phylogenies:\n",
-         paste0("  - map ", table_phylos$map[violating[seq_len(n_show)]], ", simulation ", table_phylos$simulation[violating[seq_len(n_show)]], ": ",
+         paste0("  - ", ifelse(is.na(table_phylos$map[violating[seq_len(n_show)]]), "no map", paste0("map ", table_phylos$map[violating[seq_len(n_show)]])), ", simulation ", table_phylos$simulation[violating[seq_len(n_show)]], ": ",
                 table_phylos$n_failed[violating[seq_len(n_show)]], " taxa failed; backbone preserved = ", table_phylos$backbone_preserved[violating[seq_len(n_show)]], collapse = "\n"),
          if (length(violating) > n_show) paste0("\n  ... and ", length(violating) - n_show, " more") else "")
   }
