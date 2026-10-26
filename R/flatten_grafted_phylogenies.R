@@ -31,7 +31,6 @@
 #' @param phy_grafted The output of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
 #'   a list with one element per stochastic map (each a `"phylo"` or a `"multiPhylo"`), a `"multiPhylo"`, or a `"phylo"`.
 #'   A `"multiPhylo"` or a `"phylo"` object is already flat, but the function can still be used to select a subset of phylogenies and remove their associated simmaps if requested.
-#'   A `"phylo"` is returned as a `"phylo"` (the only possible action is then to remove its `$simmap`).
 #' @param maps Character vector. Names of the maps to keep (the names of the elements of the list, as in the column `map` of the attribute `"phylogenies"`).
 #'   Default is `NULL`, which keeps all the maps. The function stops if some names are not found.
 #' @param simulations Integer vector. Indices of the simulations to keep (the numbers in the names `"sim_k"` of the phylogenies, which are the same in each map:
@@ -46,8 +45,8 @@
 #' Each phylogeny keeps its attributes `"map"` and `"seed"`. When `maps` and `simulations` are used, the selection is applied to all the phylogenies together:
 #' the phylogenies kept are the ones from the maps in `maps` and with the simulation index in `simulations`.
 #'
-#' @return For a `"phylo"` as `phy_grafted`, the phylogeny (class `"phylo"`), with its `$simmap` removed if `keep_simmap = FALSE` (otherwise unchanged).
-#'   Otherwise, an object of class `"multiPhylo"` with all the phylogenies kept, with the following attributes:
+#' @return If `phy_grafted` is an object of class `"phylo"`, the output is also a phylogeny, with its `$simmap` removed if `keep_simmap = FALSE` (otherwise unchanged).
+#'   Otherwise, the output is an object of class `"multiPhylo"` with all the phylogenies selected, and the following attributes:
 #'  * `"phylogenies"`: data.frame with one row per phylogeny, in the order of the object, with the columns `name`, `map` (`NA` if no map was used), `simulation` (index of the simulation) and `seed` (`NA` if unknown).
 #'  * `"seeds"`: named integer vector with the seed of each phylogeny (`NULL` if the seeds are unknown, i.e., if the grafting was run with `seed = NULL`).
 #'  * `"failed"`: data.frame with the simulations that failed in the maps kept, with the columns `map`, `seed` and `reason` (0 row if none). Not filtered by `simulations`.
