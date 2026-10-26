@@ -77,8 +77,11 @@
 #' had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
 #' if (had_seed) old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
 #' set.seed(118)
-#' toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states, model = "ER", nsim = 3, message = FALSE)
-#' if (had_seed) assign(".Random.seed", old_seed, envir = globalenv()) else rm(".Random.seed", envir = globalenv())
+#' toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states,
+#'                                          model = "ER", nsim = 3, message = FALSE)
+#' if (had_seed)
+#' { assign(".Random.seed", old_seed, envir = globalenv())
+#' } else { rm(".Random.seed", envir = globalenv()) }
 #'
 #' # --- Graft missing taxa --- #
 #'
@@ -87,7 +90,8 @@
 #' grafted_list <- graft_missing_taxa(phy = toy_backbone,
 #'                               missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
 #'                               simmap = toy_multiSimmap, allowed_states = c("blue", "green"),
-#'                               method = "BD_clades", nb_simulations = 2, verbose = FALSE, seed = 1234)
+#'                               method = "BD_clades", nb_simulations = 2,
+#'                               verbose = FALSE, seed = 1234)
 #' names(grafted_list)
 #' str(grafted_list, 2)
 #'
@@ -106,7 +110,8 @@
 #'                                               simulations = 1, keep_simmap = FALSE)
 #' attr(grafted_subset, "phylogenies")
 #'
-#' # Use the set of phylogenies with functions that expect a multiPhylo, e.g., to compute the tree heights
+#' # Use the set of phylogenies with functions that expect a multiPhylo,
+#' # e.g., to compute the tree heights.
 #' sapply(grafted_phys, function (x) max(ape::node.depth.edgelength(x)))
 #'
 #'

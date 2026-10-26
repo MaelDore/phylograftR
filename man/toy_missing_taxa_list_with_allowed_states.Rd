@@ -36,14 +36,15 @@ system.file("extdata", "toy_missing_taxa_with_allowed_states.csv", package = "ph
 
 # Graft with the toy simmap
 # Taxa with taxon-level states follow their specific constraints.
-# Taxa without taxon-level states follow the global argument and can only be grafted on "blue" or "green" branches.
+# Taxa without taxon-level states follow the global argument
+# and can only be grafted on "blue" or "green" branches.
 data(toy_backbone)
 data(toy_simmap)
 
 grafted_phy <- graft_missing_taxa(phy = toy_backbone,
-                                  missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
-                                  simmap = toy_simmap, allowed_states = c("blue", "green"),
-                                  verbose = FALSE, seed = 1234)
+    missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
+    simmap = toy_simmap, allowed_states = c("blue", "green"),
+    verbose = FALSE, seed = 1234)
 
 # Plot the updated simmap
 plot(grafted_phy$simmap, fsize = 0.5, ftype = "i",
@@ -52,8 +53,11 @@ plot(grafted_phy$simmap, fsize = 0.5, ftype = "i",
 # Inspect final states of each grafted taxon
 taxon_names <- toy_missing_taxa_list_with_allowed_states$Taxon_name
 tip_edges <- match(match(taxon_names, grafted_phy$tip.label), grafted_phy$edge[, 2])
-taxon_states <- setNames(object = vapply(grafted_phy$simmap$maps[tip_edges], function (x) names(x)[1], character(1)), nm = taxon_names)
-# Should match with the allowed ranges. NULL default to "blue" or "green" based on the 'allowed_states' argument.
+taxon_states <- setNames(object = vapply(grafted_phy$simmap$maps[tip_edges],
+                                         function (x) names(x)[1], character(1)),
+                         nm = taxon_names)
+# Should match with the allowed ranges.
+# NULL default to "blue" or "green" based on the 'allowed_states' argument.
 taxon_states
 toy_missing_taxa_list_with_allowed_states$allowed_states
 

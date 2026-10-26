@@ -453,7 +453,8 @@ check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
 # The grafting is stochastic: several simulations can be run at once from the same backbone and list
 # (a "multiPhylo" named sim_1, sim_2, ...; sim_1 is the same as a single run with the same seed)
 grafted_phys <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
-                                    method = "uniform", nb_simulations = 3, verbose = FALSE, seed = 1234)
+                                   method = "uniform", nb_simulations = 3,
+                                   verbose = FALSE, seed = 1234)
 names(grafted_phys)
 # Seeds of the simulations, to reproduce each phylogeny alone
 attr(grafted_phys, "seeds")
@@ -488,7 +489,8 @@ data(toy_backbone)
 data(toy_simmap)
 data(toy_missing_taxa_list_with_allowed_states)
 
-# This missing_taxa_list has the item 'allowed_states', with the states where each taxon can be grafted
+# This missing_taxa_list has the item 'allowed_states',
+# with the states where each taxon can be grafted
 # (NULL for the taxa without a specific value).
 toy_missing_taxa_list_with_allowed_states$allowed_states
 
@@ -496,27 +498,29 @@ toy_missing_taxa_list_with_allowed_states$allowed_states
 # The taxa without taxon-level states use the global 'allowed_states' argument:
 # here they can only be grafted on "blue" or "green" sections of the branches
 grafted_phy_states <- graft_missing_taxa(phy = toy_backbone,
-                                         missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
-                                         simmap = toy_simmap, allowed_states = c("blue", "green"),
-                                         method = "BD_clades", verbose = FALSE, seed = 1234)
+   missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
+   simmap = toy_simmap, allowed_states = c("blue", "green"),
+   method = "BD_clades", verbose = FALSE, seed = 1234)
 
 # Plot output phylogeny with colored grafts
 plot(grafted_phy_states, cex = 0.7,
      edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
      tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
 
-# The updated simmap is in the output: the grafted taxa are in the state of the point where they were grafted
+# The updated simmap is in the output:
+# the grafted taxa are in the state of the point where they were grafted.
 plot(grafted_phy_states$simmap, fsize = 0.5, ftype = "i",
      colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 
-# States of the grafted taxa: "Genus_a_sp1" and "Genus_c_sp2" can be "red" thanks to their taxon-level states,
-# but the taxa using the global states cannot
-phytools::getStates(grafted_phy_states$simmap, type = "tips")[toy_missing_taxa_list_with_allowed_states$Taxon_name]
+# States of the grafted taxa: "Genus_a_sp1" and "Genus_c_sp2" can be "red"
+# thanks to their taxon-level states, but the taxa using the global states cannot.
+all_states <- phytools::getStates(grafted_phy_states$simmap, type = "tips")
+all_states[toy_missing_taxa_list_with_allowed_states$Taxon_name]
 
+# --- Use several stochastic maps (alternative hypotheses of trait evolution) as constraints --- #
 
-# --- Use several stochastic maps (alternative hypotheses of trait evolution) as attribute-based constraints --- #
-
-# A 'multiSimmap' gives several stochastic maps of the same trait: the grafting is run with each of them.
+# A 'multiSimmap' gives several stochastic maps of the same trait:
+# the grafting is run with each of them.
 # Here, 3 maps are simulated from the states of the tips of the toy simmap.
 tip_states <- phytools::getStates(toy_simmap, type = "tips")
 
@@ -524,14 +528,17 @@ tip_states <- phytools::getStates(toy_simmap, type = "tips")
 had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
 if (had_seed) old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
 set.seed(118)
-toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states, model = "ER", nsim = 3, message = FALSE)
-if (had_seed) assign(".Random.seed", old_seed, envir = globalenv()) else rm(".Random.seed", envir = globalenv())
+toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states,
+                                         model = "ER", nsim = 3, message = FALSE)
+if (had_seed)
+{ assign(".Random.seed", old_seed, envir = globalenv())
+} else { rm(".Random.seed", envir = globalenv()) }
 
 # Graft using constraints from all 3 simmaps X 2 simulations per simmap
 grafted_phys_maps <- graft_missing_taxa(phy = toy_backbone,
-                                        missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
-                                        simmap = toy_multiSimmap, allowed_states = c("blue", "green"),
-                                        method = "BD_clades", nb_simulations = 2, verbose = FALSE, seed = 1234)
+    missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
+    simmap = toy_multiSimmap, allowed_states = c("blue", "green"),
+    method = "BD_clades", nb_simulations = 2, verbose = FALSE, seed = 1234)
 
 # Inspect output:
 # A list with one element per simmap, each a multiPhylo with the simulations of the map

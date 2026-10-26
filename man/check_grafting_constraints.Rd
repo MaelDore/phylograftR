@@ -193,7 +193,8 @@ check_results_multi <- check_grafting_constraints(phy_grafted = grafted_phys, ph
 # and the summary is printed once for all the phylogenies
 head(check_results_multi[, c("map", "simulation", "seed", "Taxon_name", "ok")])
 
-# An additional attribute provide a summary per phylogeny: number of taxa that failed, backbone preserved, all constraints respected
+# An additional attribute provide a summary per phylogeny:
+# number of taxa that failed, backbone preserved, all constraints respected
 attr(check_results_multi, "phylogenies")
 
 

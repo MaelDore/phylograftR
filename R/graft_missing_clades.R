@@ -360,12 +360,14 @@
 #'
 #' # The updated simmap is in the output: the new grafted clades branch from the "green" segments
 #' # of the stem branches of their sister clades, and each newly grafted clades are entirely "green"
-#' plot(grafted_phy_states$simmap, col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+#' plot(grafted_phy_states$simmap,
+#'      col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 #'
 #'
-#' # --- Use several stochastic maps (alternative hypotheses of trait evolution) as attribute-based constraints --- #
+#' # --- Use several stochastic maps (alternative hypotheses of trait evolution) as constraints --- #
 #'
-#' # A 'multiSimmap' gives several stochastic maps of the same trait: the grafting is run with each of them.
+#' # A 'multiSimmap' gives several stochastic maps of the same trait:
+#' # the grafting is run with each of them.
 #' # Here, 3 maps are simulated from the states of the tips of the toy simmap.
 #' tip_states <- phytools::getStates(toy_simmap, type = "tips")
 #'
@@ -373,8 +375,11 @@
 #' had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
 #' if (had_seed) old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
 #' set.seed(118)
-#' toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states, model = "ER", nsim = 3, message = FALSE)
-#' if (had_seed) assign(".Random.seed", old_seed, envir = globalenv()) else rm(".Random.seed", envir = globalenv())
+#' toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states,
+#'                                          model = "ER", nsim = 3, message = FALSE)
+#' if (had_seed)
+#' { assign(".Random.seed", old_seed, envir = globalenv())
+#' } else { rm(".Random.seed", envir = globalenv()) }
 #'
 #' # Graft using constraints from all 3 simmaps X 2 simulations per simmap
 #' grafted_phys_maps <- graft_missing_clades(phy = toy_backbone,

@@ -40,7 +40,8 @@ system.file("extdata", "toy_missing_taxa_with_allowed_ranges.csv", package = "ph
 
 # Graft with the toy simmap of ranges, treating the states as ranges
 # Taxa with taxon-level ranges follow their specific constraints.
-# Taxa without taxon-level ranges follow the global argument and can only be grafted on branches in a range containing "A" or "B".
+# Taxa without taxon-level ranges follow the global argument
+# and can only be grafted on branches in a range containing "A" or "B".
 data(toy_backbone)
 data(toy_simmap_ranges)
 
@@ -51,13 +52,17 @@ grafted_phy <- graft_missing_taxa(phy = toy_backbone,
                                   verbose = FALSE, seed = 1234)
 
 # Plot the updated simmap
-plot(grafted_phy$simmap, col = c("A" = "gold", "B" = "dodgerblue", "AB" = "limegreen", "BC" = "firebrick2"))
+plot(grafted_phy$simmap,
+     col = c("A" = "gold", "B" = "dodgerblue", "AB" = "limegreen", "BC" = "firebrick2"))
 
 # Inspect range inherited by each grafted taxon (state of its terminal branch in the updated simmap)
 taxon_names <- toy_missing_taxa_list_with_allowed_ranges$Taxon_name
 tip_edges <- match(match(taxon_names, grafted_phy$tip.label), grafted_phy$edge[, 2])
-taxon_ranges <- setNames(object = vapply(grafted_phy$simmap$maps[tip_edges], function (x) names(x)[1], character(1)), nm = taxon_names)
-# Should match with the allowed ranges. NULL default to "A" or "B" based on the 'allowed_ranges' argument.
+taxon_ranges <- setNames(object = vapply(grafted_phy$simmap$maps[tip_edges],
+                                         function (x) names(x)[1], character(1)),
+                         nm = taxon_names)
+# Should match with the allowed ranges. NULL default to "A" or "B"
+# based on the 'allowed_ranges' argument.
 taxon_ranges
 toy_missing_taxa_list_with_allowed_ranges$allowed_states
 
