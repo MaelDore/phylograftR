@@ -495,7 +495,7 @@ for (name in c("taxa", "clades"))
 
 ## ---- Other functions ---- ##
 
-test_that("a list of maps of several traits is usable with identify_grafted() and flatten_grafted_phylogenies(), and is explicitly not supported by check_grafting_constraints()",
+test_that("a list of maps of several traits is usable with identify_grafted() and flatten_grafted_phylogenies(), and check_grafting_constraints()",
 {
   toy <- toy_setup()
   mtl <- traits_missing_taxa(toy)
@@ -504,10 +504,12 @@ test_that("a list of maps of several traits is usable with identify_grafted() an
   # The grafted tips and branches are identified
   expect_equal(sum(out$grafted_tips), length(mtl$Taxon_name))
   expect_equal(out$tip.label[out$grafted_tips], out$tip.label[out$tip.label %in% mtl$Taxon_name])
-  # check_grafting_constraints(): informative stop with the simmaps, works without them
-  expect_error(check_grafting_constraints(out, toy$phy, mtl, verbose = FALSE), "several traits.*not supported yet")
+  # check_grafting_constraints(): works with the simmaps (see the dedicated tests below), and without them
+  checked <- check_grafting_constraints(out, toy$phy, mtl, allowed_states = list("B", NULL), verbose = FALSE)
+  expect_true(all(checked$ok))
   checked <- check_grafting_constraints(drop_simmap(out), toy$phy, mtl, verbose = FALSE)
-  expect_true(all(checked$grafted_ok | is.na(checked$grafted_ok) | TRUE))
+  expect_true(all(checked$ok))
+  expect_true(all(is.na(checked$states_ok)))
   # Flatten: the simmaps can be dropped
   flat <- flatten_grafted_phylogenies(out, keep_simmap = FALSE)
   expect_null(flat$simmap)
@@ -558,4 +560,150 @@ test_that("import_missing_taxa_list() reads the allowed states of several traits
   # With one trait (a character vector of states): the usual error with a list
   imported$allowed_states$X1 <- list("A", "high")
   expect_error(graft_missing_taxa(toy$phy, imported, simmap = maps$color, method = "uniform", verbose = FALSE), "given as a list \\(one element per trait\\)")
+})
+
+
+## ---- check_grafting_constraints() with several traits ---- ##
+
+test_that("check_grafting_constraints() checks the states of each trait and of all the traits together",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_taxa(toy)
+  maps <- make_period_traits(toy$phy)
+  grafted <- graft_missing_taxa(toy$phy, mtl, simmap = maps, allowed_states = list("B", "high"), method = "uniform", verbose = FALSE, seed = 1)
+  taxa <- mtl$Taxon_name
+
+  # Same constraints as for the grafting: all respected, with one column per trait after the joint 'states_ok'
+  res <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("B", "high"), verbose = FALSE)
+  expect_true(all(res$ok))
+  expect_true(attr(res, "all_ok"))
+  expect_true(all(res$states_ok))
+  expect_true(all(res$states_ok_color))
+  expect_true(all(res$states_ok_elevation))
+  cols <- names(res)
+  expect_equal(cols[match("states_ok", cols) + 0:2], c("states_ok", "states_ok_color", "states_ok_elevation"))
+  expect_equal(attr(res, "trait_names"), c("color", "elevation"))
+
+  # Positional or named allowed states are equivalent; NULL = all the states of the trait
+  expect_equal(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list(elevation = "high", color = "B"), verbose = FALSE), res)
+  expect_true(all(check_grafting_constraints(grafted, toy$phy, mtl, verbose = FALSE)$states_ok))
+  expect_true(all(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list(NULL, "high"), verbose = FALSE)$ok))
+
+  # A violation on one trait only: the joint column and the trait column are FALSE, the other trait is TRUE
+  res_bad <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("A", "high"), verbose = FALSE)
+  expect_false(any(res_bad$states_ok))
+  expect_false(any(res_bad$states_ok_color))
+  expect_true(all(res_bad$states_ok_elevation))
+  expect_false(any(res_bad$ok))
+  expect_false(attr(res_bad, "all_ok"))
+
+  # The violating trait is named in the summary (counts per trait) and in the description of the failed taxa
+  txt <- paste(capture.output(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("A", "high"), verbose = TRUE)), collapse = "\n")
+  expect_match(txt, "Allowed states violated:\\s+5 \\(color: 5, elevation: 0\\)")
+  expect_match(txt, "color: B \\(allowed: A\\)")
+  expect_false(grepl("elevation: high", txt, fixed = TRUE))
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("A", "high"), verbose = FALSE, stop_on_failure = TRUE), "color: B \\(allowed: A\\)")
+  txt_ok <- paste(capture.output(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("B", "high"), verbose = TRUE)), collapse = "\n")
+  expect_match(txt_ok, "Allowed states violated:\\s+0 \\(color: 0, elevation: 0\\)")
+
+  # Violations on both traits
+  res_both <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("A", "low"), verbose = FALSE)
+  expect_false(any(res_both$states_ok_color)); expect_false(any(res_both$states_ok_elevation))
+})
+
+test_that("check_grafting_constraints() resolves the taxon-level allowed states of each trait as the grafting functions do",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_taxa(toy)
+  maps <- make_period_traits(toy$phy)
+  taxa <- mtl$Taxon_name
+  # X1: color A or B, elevation high; X2: all colors, elevation low or high; the others use the global value (color B)
+  allowed <- stats::setNames(vector("list", length(taxa)), taxa)
+  allowed$X1 <- list(c("A", "B"), "high")
+  allowed$X2 <- list(NULL, c("low", "high"))
+  mtl$allowed_states <- allowed
+  grafted <- graft_missing_taxa(toy$phy, mtl, simmap = maps, allowed_states = list("B", NULL), method = "uniform", verbose = FALSE, seed = 1)
+  res <- check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("B", NULL), verbose = FALSE)
+  expect_true(all(res$ok))
+  # Same with the text syntax of the tables
+  mtl_text <- mtl
+  mtl_text$allowed_states <- stats::setNames(list("A,B;high", ";low,high", NA, NA, NA), taxa)
+  expect_equal(check_grafting_constraints(grafted, toy$phy, mtl_text, allowed_states = list("B", NULL), verbose = FALSE), res)
+  # The taxon-level value replaces the global one (it is not intersected): X1 can be in "A" even if the global value is "B"
+  expect_equal(taxa_states(grafted$simmap$color, "X1") %in% c("A", "B"), TRUE)
+  # A taxon-level value that the grafted state does not respect is a violation of this taxon and trait only
+  mtl_strict <- mtl
+  mtl_strict$allowed_states$X3 <- list("A", NULL)
+  res_strict <- check_grafting_constraints(grafted, toy$phy, mtl_strict, allowed_states = list("B", NULL), verbose = FALSE)
+  expect_equal(res_strict$Taxon_name[!res_strict$ok], "X3")
+  expect_false(res_strict$states_ok_color[res_strict$Taxon_name == "X3"])
+  expect_true(all(res_strict$states_ok_elevation))
+})
+
+test_that("check_grafting_constraints() uses the names of the traits, or trait_1, trait_2... if the traits are not named, and detects the states modified in a map",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_taxa(toy)
+  maps <- make_period_traits(toy$phy)
+  unnamed <- graft_missing_taxa(toy$phy, mtl, simmap = unname(maps), allowed_states = list("B", NULL), method = "uniform", verbose = FALSE, seed = 1)
+  res <- check_grafting_constraints(unnamed, toy$phy, mtl, allowed_states = list("B", NULL), verbose = FALSE)
+  expect_true(all(c("states_ok_trait_1", "states_ok_trait_2") %in% names(res)))
+  expect_true(all(res$ok))
+  # Simmap without names in the grafted phylogeny (names removed afterwards): same default
+  grafted <- graft_missing_taxa(toy$phy, mtl, simmap = maps, allowed_states = list("B", NULL), method = "uniform", verbose = FALSE, seed = 1)
+  renamed <- grafted; names(renamed$simmap) <- NULL
+  expect_true(all(c("states_ok_trait_1", "states_ok_trait_2") %in% names(check_grafting_constraints(renamed, toy$phy, mtl, verbose = FALSE))))
+  # A modified state on the terminal branch of a taxon is detected for its trait only
+  bad <- grafted
+  tip_edge <- match(match("X2", bad$tip.label), bad$edge[, 2])
+  names(bad$simmap$elevation$maps[[tip_edge]]) <- "low"
+  res_bad <- check_grafting_constraints(bad, toy$phy, mtl, allowed_states = list("B", "high"), verbose = FALSE)
+  expect_equal(res_bad$Taxon_name[!res_bad$ok], "X2")
+  expect_true(res_bad$states_ok_color[res_bad$Taxon_name == "X2"])
+  expect_false(res_bad$states_ok_elevation[res_bad$Taxon_name == "X2"])
+  # A simmap with the wrong number of branches
+  bad$simmap$color$maps <- bad$simmap$color$maps[-1]
+  expect_error(check_grafting_constraints(bad, toy$phy, mtl, verbose = FALSE), "simmap of trait 'color'.*one map per branch")
+})
+
+test_that("check_grafting_constraints() stops with several traits and ranges, or with allowed states that are not given per trait or not in the maps",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_taxa(toy)
+  maps <- make_period_traits(toy$phy)
+  grafted <- graft_missing_taxa(toy$phy, mtl, simmap = maps, allowed_states = list("B", NULL), method = "uniform", verbose = FALSE, seed = 1)
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, treat_states_as_ranges = TRUE, verbose = FALSE), "not supported with the maps of several traits")
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "B", verbose = FALSE), "for each trait")
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("B", "Z"), verbose = FALSE), "Z")
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list(habitat = "B"), verbose = FALSE), "not in 'simmap'")
+  expect_error(check_grafting_constraints(drop_simmap(grafted), toy$phy, mtl, allowed_states = list("B", NULL), verbose = FALSE), "can only be used if")
+})
+
+test_that("check_grafting_constraints() checks several traits with several simulations and with paired multiSimmaps, and one trait is unchanged",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_taxa(toy)
+  maps <- make_period_traits(toy$phy)
+  # Several simulations of one run
+  sims <- graft_missing_taxa(toy$phy, mtl, simmap = maps, allowed_states = list("B", NULL), method = "uniform", verbose = FALSE, seed = 1, nb_simulations = 3)
+  res <- check_grafting_constraints(sims, toy$phy, mtl, allowed_states = list("B", NULL), verbose = FALSE)
+  expect_equal(nrow(res), 3 * length(mtl$Taxon_name))
+  expect_true(all(res$ok))
+  expect_true(all(c("states_ok_color", "states_ok_elevation") %in% names(res)))
+  txt <- paste(capture.output(check_grafting_constraints(sims, toy$phy, mtl, allowed_states = list("A", NULL), verbose = TRUE)), collapse = "\n")
+  expect_match(txt, "\\(color: 15, elevation: 0\\)")
+  # Paired multiSimmaps: one data.frame per map
+  pairs <- lapply(list(c(20, 10), c(15, 8)), function (ages) make_period_traits(toy$phy, ages[1], ages[2]))
+  multi <- graft_missing_taxa(toy$phy, mtl, simmap = list(color = as_multi(lapply(pairs, function (x) x$color)), elevation = as_multi(lapply(pairs, function (x) x$elevation))),
+                              allowed_states = list("B", NULL), method = "uniform", verbose = FALSE, seed = 1, nb_simulations = 2)
+  res_multi <- check_grafting_constraints(multi, toy$phy, mtl, allowed_states = list("B", NULL), verbose = FALSE)
+  expect_type(res_multi, "list")
+  expect_length(res_multi, 2)
+  expect_true(all(vapply(res_multi, function (r) all(r$ok) && "states_ok_elevation" %in% names(r), logical(1))))
+  # A single trait: no per-trait columns
+  one <- graft_missing_taxa(toy$phy, mtl, simmap = maps$color, allowed_states = "B", method = "uniform", verbose = FALSE, seed = 1)
+  res_one <- check_grafting_constraints(one, toy$phy, mtl, allowed_states = "B", verbose = FALSE)
+  expect_false(any(grepl("^states_ok_", names(res_one))))
+  expect_null(attr(res_one, "trait_names"))
+  expect_false(grepl("color:", paste(capture.output(check_grafting_constraints(one, toy$phy, mtl, allowed_states = "B", verbose = TRUE)), collapse = "\n"), fixed = TRUE))
 })

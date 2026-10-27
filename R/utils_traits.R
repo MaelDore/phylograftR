@@ -402,26 +402,21 @@ normalize_trait_states <- function (value, trait_names, who)
 }
 
 
-#' @title Resolve the allowed states of each taxon with the maps of several traits
+#' @title Resolve the allowed states of each trait for each taxon
 #'
-#' @description Equivalent of `resolve_allowed_states()` for a composite simmap. For each taxon, the allowed states of each trait are the states of `missing_taxa_list$allowed_states`
-#'   for this trait if provided, otherwise the global `allowed_states` for this trait, otherwise all the states of the trait (no restriction).
-#'   A taxon-level value replaces the global one (no intersection), trait by trait.
-#'   The allowed composite states are the composite states observed on the backbone whose state of each trait is allowed.
-#'   The function stops if a state is not in the map of its trait, or if no composite state is allowed for a taxon.
+#' @description For each taxon, the allowed states of each trait are the states of `missing_taxa_list$allowed_states` for this trait if provided,
+#'   otherwise the global `allowed_states` for this trait, otherwise all the states of the trait (no restriction). A taxon-level value replaces the global one (no intersection), trait by trait.
+#'   The function stops if a state is not in the states of its trait. Used by `resolve_trait_allowed_states()` (grafting, on the composite simmap) and by `check_grafting_constraints()` (check, trait by trait).
 #'
-#' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of the allowed states of each taxon (see `normalize_trait_states()`): `missing_taxa_list$allowed_states`.
-#' @param allowed_states `NULL`, or list with one element per trait (see `normalize_trait_states()`). The global `allowed_states` argument.
-#' @param traits The element `traits` returned by `merge_trait_simmaps()`.
-#' @param composite_states Character vector. Composite states of the merged simmap.
-#' @param taxon_names Character vector. `missing_taxa_list$Taxon_name`.
+#' @param traits List with `names` (trait names) and `states` (list of the states of each trait, named after the traits).
+#' @inheritParams resolve_trait_allowed_states
 #'
 #' @noRd
 #'
-#' @return A list named after `taxon_names`, with the allowed composite states (character vector) of each taxon.
+#' @return A list named after `taxon_names`, each element a list named after the traits with the allowed states (character vector) of the trait.
 #'
 
-resolve_trait_allowed_states <- function (allowed_states_taxa = NULL, allowed_states = NULL, traits, composite_states, taxon_names)
+resolve_trait_state_sets <- function (allowed_states_taxa = NULL, allowed_states = NULL, traits, taxon_names)
 {
   trait_names <- traits$names
   n_traits <- length(trait_names)
@@ -447,6 +442,48 @@ resolve_trait_allowed_states <- function (allowed_states_taxa = NULL, allowed_st
     stop("'missing_taxa_list$allowed_states' must have the same length as 'Taxon_name' (", length(allowed_states_taxa), " vs ", n_taxa, ").")
   }
 
+  sets_all <- vector("list", n_taxa)
+  names(sets_all) <- taxon_names
+  for (i in seq_len(n_taxa))
+  {
+    who <- paste0("'missing_taxa_list$allowed_states' of taxon '", taxon_names[i], "'")
+    spec <- normalize_trait_states(if (is.null(allowed_states_taxa)) NULL else allowed_states_taxa[[i]], trait_names, who = who)
+    check_trait_states(spec, who)
+    sets_all[[i]] <- stats::setNames(lapply(seq_len(n_traits), function (t)
+    {
+      if (!is.null(spec[[t]])) spec[[t]] else if (!is.null(global[[t]])) global[[t]] else traits$states[[t]]
+    }), trait_names)
+  }
+  sets_all
+}
+
+
+#' @title Resolve the allowed states of each taxon with the maps of several traits
+#'
+#' @description Equivalent of `resolve_allowed_states()` for a composite simmap. For each taxon, the allowed states of each trait are the states of `missing_taxa_list$allowed_states`
+#'   for this trait if provided, otherwise the global `allowed_states` for this trait, otherwise all the states of the trait (no restriction).
+#'   A taxon-level value replaces the global one (no intersection), trait by trait.
+#'   The allowed composite states are the composite states observed on the backbone whose state of each trait is allowed.
+#'   The function stops if a state is not in the map of its trait, or if no composite state is allowed for a taxon.
+#'
+#' @param allowed_states_taxa `NULL`, or list (named after `Taxon_name`) of the allowed states of each taxon (see `normalize_trait_states()`): `missing_taxa_list$allowed_states`.
+#' @param allowed_states `NULL`, or list with one element per trait (see `normalize_trait_states()`). The global `allowed_states` argument.
+#' @param traits The element `traits` returned by `merge_trait_simmaps()`.
+#' @param composite_states Character vector. Composite states of the merged simmap.
+#' @param taxon_names Character vector. `missing_taxa_list$Taxon_name`.
+#'
+#' @noRd
+#'
+#' @return A list named after `taxon_names`, with the allowed composite states (character vector) of each taxon.
+#'
+
+resolve_trait_allowed_states <- function (allowed_states_taxa = NULL, allowed_states = NULL, traits, composite_states, taxon_names)
+{
+  trait_names <- traits$names
+  n_traits <- length(trait_names)
+  n_taxa <- length(taxon_names)
+  sets_all <- resolve_trait_state_sets(allowed_states_taxa = allowed_states_taxa, allowed_states = allowed_states, traits = traits, taxon_names = taxon_names)
+
   # State of each trait in each composite state
   parts <- matrix(unlist(strsplit(composite_states, traits$sep, fixed = TRUE)), ncol = n_traits, byrow = TRUE)
 
@@ -454,13 +491,7 @@ resolve_trait_allowed_states <- function (allowed_states_taxa = NULL, allowed_st
   names(resolved) <- taxon_names
   for (i in seq_len(n_taxa))
   {
-    who <- paste0("'missing_taxa_list$allowed_states' of taxon '", taxon_names[i], "'")
-    spec <- normalize_trait_states(if (is.null(allowed_states_taxa)) NULL else allowed_states_taxa[[i]], trait_names, who = who)
-    check_trait_states(spec, who)
-    sets <- lapply(seq_len(n_traits), function (t)
-    {
-      if (!is.null(spec[[t]])) spec[[t]] else if (!is.null(global[[t]])) global[[t]] else traits$states[[t]]
-    })
+    sets <- sets_all[[i]]
     allowed <- Reduce(`&`, lapply(seq_len(n_traits), function (t) parts[, t] %in% sets[[t]]))
     if (!any(allowed))
     {
