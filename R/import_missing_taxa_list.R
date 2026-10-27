@@ -63,6 +63,8 @@
 #'   or [`phylograftR::graft_missing_clades()`][graft_missing_clades]), separated by commas. It is accepted with both `Target_clade` and `Sister_clade`.
 #'   Ex: `"blue, green"`. Blank cells and `NA` have no taxon-level value, so the global `allowed_states` argument of the grafting function is used for the taxon.
 #'   States are matched exactly with the states of the `simmap` (e.g., case matters) when grafting, and so cannot contain commas.
+#'   If the `simmap` argument is a list of the maps of several traits, give the states of each trait separated by semicolons, in the order of the traits (e.g., `"A1, A2; ; C3"` for
+#'   three traits: no states for the second trait, so the global `allowed_states` of the trait, or all its states, are used), or name the traits (e.g., `"habitat = A1, A2 ; elevation = C3"`).
 #'   The names of the states are not checked here as the `simmap` is not provided: the grafting function checks them.
 #'
 #' Optional columns that do not match items in `missing_taxa_list` can be used to provide names of clades:
@@ -237,6 +239,8 @@ import_missing_taxa_list <- function (file, # Path to the table
 #'    or [`phylograftR::graft_missing_clades()`][graft_missing_clades]), separated by commas. It is accepted with both `Target_clade` and `Sister_clade`.
 #'    Ex: `"blue, green"`. Blank cells and `NA` have no taxon-level value, so the global `allowed_states` argument of the grafting function is used for the taxon.
 #'    States are matched exactly with the states of the `simmap` (e.g., case matters) when grafting, and so cannot contain commas.
+#'    If the `simmap` argument is a list of the maps of several traits, give the states of each trait separated by semicolons, in the order of the traits (e.g., `"A1, A2;; C3"` for
+#'    three traits: no states for the second trait, so the global `allowed_states` of the trait, or all its states, are used), or name the traits (e.g., `"habitat=A1,A2; elevation=C3"`).
 #'    The names of the states are not checked here as the `simmap` is not provided: the grafting function checks them.
 #'
 #' Optional columns that do not match items in `missing_taxa_list` can be used to provide names of clades:
@@ -637,7 +641,8 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
     allowed_states <- vector("list", n_taxa)
     for (i in which(!is.na(data$allowed_states)))
     {
-      allowed_states[[i]] <- parse_states(data$allowed_states[i], label_taxon(i), "allowed_states")
+      # Several traits ("A1,A2; ;C3" or "habitat = A1,A2 ; elevation = C3"): a list with the states of each trait
+      allowed_states[[i]] <- if (grepl("[;=]", data$allowed_states[i])) parse_trait_states_cell(data$allowed_states[i], paste0("'allowed_states' of ", label_taxon(i))) else parse_states(data$allowed_states[i], label_taxon(i), "allowed_states")
     }
   }
 

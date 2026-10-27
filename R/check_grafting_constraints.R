@@ -372,6 +372,12 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
   allowed_states_taxa <- NULL
   if (check_states)
   {
+    if (is.list(simmap_grafted) && !inherits(simmap_grafted, "simmap") && length(simmap_grafted) > 0 && all(vapply(simmap_grafted, inherits, logical(1), what = "simmap")))
+    {
+      stop("'phy_grafted$simmap' is a list of maps of several traits: checking the states of several traits is not supported yet by check_grafting_constraints().\n",
+           "Check the other constraints with 'phy_grafted$simmap <- NULL' (or flatten_grafted_phylogenies(keep_simmap = FALSE)), or check each trait with its own map (e.g., with phy_grafted$simmap <- phy_grafted$simmap$<trait>) ",
+           "and the allowed states of the trait.")
+    }
     if (!inherits(simmap_grafted, "simmap") || is.null(simmap_grafted$maps) || length(simmap_grafted$maps) != nrow(phy_grafted$edge))
     {
       stop("'phy_grafted$simmap' must be a stochastic character map (class 'simmap') of the grafted phylogeny, with one map per branch.")

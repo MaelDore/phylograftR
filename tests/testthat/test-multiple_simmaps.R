@@ -33,7 +33,7 @@ same_phylo <- function (x, y) { isTRUE(all.equal(x, y, tolerance = 0)) }
 
 test_that("check_simmap_input() lists the maps, names them, and rejects what is not a map or a multiSimmap",
 {
-  expect_equal(check_simmap_input(NULL), list(maps = list(NULL), names = NULL, multiple = FALSE))
+  expect_equal(check_simmap_input(NULL), list(maps = list(NULL), names = NULL, multiple = FALSE, traits = NULL))
   toy <- toy_setup()
   one <- make_toy_simmap(toy$phy)
   single <- check_simmap_input(one)
@@ -56,8 +56,7 @@ test_that("check_simmap_input() lists the maps, names them, and rejects what is 
   expect_error(check_simmap_input(as_multi_simmap(list(one, one), c("a", "a"))), "different names.*Duplicated names: a")
   expect_error(check_simmap_input(as_multi_simmap(list(one, one), c("a", ""))), "named and others are not.*2")
   expect_error(check_simmap_input(as_multi_simmap(list())), "without any map")
-  expect_error(check_simmap_input(list(one, one)), "not a plain list of maps.*several traits are not supported yet")
-  expect_error(check_simmap_input(list(as_multi_simmap(list(one, one)), as_multi_simmap(list(one, one)))), "not a plain list of maps")
+  expect_error(check_simmap_input(list(one)), "list of 1 element.*several traits")
   expect_error(check_simmap_input(toy$phy), "must be a stochastic character map of class 'simmap'")
   expect_error(check_simmap_input("map"), "must be a stochastic character map of class 'simmap'")
 })
@@ -259,7 +258,7 @@ for (name in names(graft_with_maps))
     expect_error(run(as_multi_simmap(maps, c("first", "young", "third")), nb_simulations = 5), "Map 'young':.*'C'")
     expect_error(run(as_multi_simmap(maps)), "Map 'map_2':.*'C'")
     expect_equal(calls, 0)
-    expect_error(run(list(maps[[1]], maps[[3]])), "not a plain list of maps")
+    expect_error(run(list(maps[[1]], maps[[3]])), "must be given for each trait") # A plain list is the maps of several traits
     expect_error(run(as_multi_simmap(maps[c(1, 3)], c("a", "a"))), "different names")
   })
 

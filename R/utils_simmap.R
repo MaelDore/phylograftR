@@ -148,6 +148,11 @@ match_edges_between_trees <- function (phy, other)
 
 check_allowed_states <- function (allowed_states, states, who = "'allowed_states'")
 {
+  if (is.list(allowed_states))
+  {
+    stop("The states in ", who, " are given as a list (one element per trait), but 'simmap' is the map of a single trait. ",
+         "Provide a character vector of states, or a list of the maps of the traits in 'simmap'.")
+  }
   if (!is.character(allowed_states) || anyNA(allowed_states) || length(allowed_states) == 0)
   {
     stop("The states in ", who, " must be a non-empty character vector without NA.")
@@ -418,8 +423,8 @@ resolve_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_states =
 
 warn_if_simmap_unused <- function (allowed_states_taxa = NULL, allowed_states = NULL, return_simmap = TRUE)
 {
-  given_in_list <- any(vapply(allowed_states_taxa, function (x) length(x) > 0 && !all(is.na(x)), logical(1)))
-  if (!return_simmap && is.null(allowed_states) && !given_in_list)
+  given_in_list <- any(vapply(allowed_states_taxa, function (x) length(unlist(x)) > 0 && !all(is.na(unlist(x))), logical(1))) # (a list of states per trait with several traits)
+  if (!return_simmap && length(unlist(allowed_states)) == 0 && !given_in_list)
   {
     warning("A 'simmap' is provided without any allowed states (neither the global 'allowed_states' argument nor 'missing_taxa_list$allowed_states') and 'return_simmap = FALSE': ",
             "the simmap does not restrict grafting and is not returned, so it has no effect.\n",

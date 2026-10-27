@@ -217,52 +217,32 @@ run_simulations <- function (simulate_one, nb_simulations, force_simulations, se
 
 #' @title Check the `simmap` argument of the grafting functions
 #'
-#' @description Accepts `NULL`, a single stochastic character map (`"simmap"`) or a set of maps of the same trait (`"multiSimmap"`). A plain list of maps is not accepted
-#'   (it is reserved for the maps of several traits). The maps are only listed here: each map is validated against the backbone when it is prepared (see `utils_simmap.R`).
+#' @description Accepts `NULL`, a single stochastic character map (`"simmap"`), a set of maps of the same trait (`"multiSimmap"`), or a plain list of the maps of several traits
+#'   (one element per trait, each a `"simmap"` or a `"multiSimmap"`; see `check_trait_maps()`). The maps are only listed here: each map is validated against the backbone
+#'   when it is prepared (see `utils_simmap.R`).
 #'
-#' @param simmap `NULL`, a `"simmap"` or a `"multiSimmap"`.
+#' @param simmap `NULL`, a `"simmap"`, a `"multiSimmap"` or a list of them (several traits).
 #'
 #' @noRd
 #'
-#' @return A list with the elements `maps` (list of maps, `list(NULL)` without `simmap`), `names` (names of the maps: the names of the `"multiSimmap"` if it has some,
-#'   otherwise `"map_1"`, `"map_2"`, ...; `NULL` for a single map or no map) and `multiple` (`TRUE` for a `"multiSimmap"`, even with one map: the output is then a list with one element per map).
+#' @return A list with the elements `maps` (list of maps, `list(NULL)` without `simmap`; with several traits, each map is a list of the simmaps of the traits, class `"phylograftR_trait_maps"`),
+#'   `names` (names of the maps: the names of the `"multiSimmap"` if it has some, otherwise `"map_1"`, `"map_2"`, ...; `NULL` for a single map or no map),
+#'   `multiple` (`TRUE` for a `"multiSimmap"`, even with one map: the output is then a list with one element per map) and `traits` (names of the traits, `NULL` for a single trait).
 #'
 
 check_simmap_input <- function (simmap)
 {
-  if (is.null(simmap)) { return(list(maps = list(NULL), names = NULL, multiple = FALSE)) }
+  if (is.null(simmap)) { return(list(maps = list(NULL), names = NULL, multiple = FALSE, traits = NULL)) }
   if (inherits(simmap, "multiSimmap"))
   {
-    maps <- unclass(simmap)
-    attributes(maps) <- list(names = names(simmap))
-    if (length(maps) == 0) { stop("'simmap' is a 'multiSimmap' without any map.") }
-    map_names <- names(maps)
-    if (is.null(map_names) || all(is.na(map_names) | map_names == ""))
-    {
-      map_names <- paste0("map_", seq_along(maps))
-    } else {
-      unnamed <- which(is.na(map_names) | map_names == "")
-      if (length(unnamed) > 0)
-      {
-        stop("Some maps of 'simmap' are named and others are not (maps n\u00b0", paste(unnamed, collapse = ", "), "): name all the maps or none of them.")
-      }
-      duplicated_names <- unique(map_names[duplicated(map_names)])
-      if (length(duplicated_names) > 0)
-      {
-        stop("The maps of 'simmap' must have different names. Duplicated names: ", paste(duplicated_names, collapse = ", "), ".")
-      }
-    }
-    names(maps) <- NULL
-    return(list(maps = maps, names = map_names, multiple = TRUE))
+    got <- get_multisimmap_maps(simmap)
+    map_names <- if (is.null(got$names)) paste0("map_", seq_along(got$maps)) else got$names
+    return(list(maps = got$maps, names = map_names, multiple = TRUE, traits = NULL))
   }
-  if (inherits(simmap, "simmap")) { return(list(maps = list(simmap), names = NULL, multiple = FALSE)) }
-  if (is.list(simmap) && !inherits(simmap, "phylo"))
-  {
-    stop("'simmap' must be a single stochastic character map (class 'simmap') or a set of maps of the same trait (class 'multiSimmap'), not a plain list of maps.\n",
-         "Maps of several traits are not supported yet. To use maps of the same trait, build a 'multiSimmap', e.g., with phytools::make.simmap(nsim = ...) or ",
-         "'structure(list_of_maps, class = c(\"multiSimmap\", \"multiPhylo\"))'.")
-  }
-  stop("'simmap' must be a stochastic character map of class 'simmap', as returned by phytools::make.simmap() or phytools::sim.history(), or a set of maps of class 'multiSimmap'.")
+  if (inherits(simmap, "simmap")) { return(list(maps = list(simmap), names = NULL, multiple = FALSE, traits = NULL)) }
+  if (is.list(simmap) && !inherits(simmap, "phylo")) { return(check_trait_maps(simmap)) }
+  stop("'simmap' must be a stochastic character map of class 'simmap', as returned by phytools::make.simmap() or phytools::sim.history(), a set of maps of the same trait of class 'multiSimmap', ",
+       "or a list of the maps of several traits.")
 }
 
 

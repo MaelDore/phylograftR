@@ -375,9 +375,9 @@ test_that("build_missing_taxa_list() checks the allowed_states column like the t
   expect_error(build_missing_taxa_list(d, phy), "empty state")
   d$allowed_states <- c(NA, "blue, blue", NA)
   expect_error(build_missing_taxa_list(d, phy), "'allowed_states' of 'X2' \\(row 2\\) has repeated states \\(blue\\)")
-  # Semicolons are not separators: the cell is one state, kept as written
+  # Semicolons separate the traits (maps of several traits, see test-multiple_traits.R): one element per trait
   d$allowed_states <- c("blue; green", NA, NA)
-  expect_identical(build_quiet(d)$allowed_states$X1, "blue; green")
+  expect_identical(build_quiet(d)$allowed_states$X1, list("blue", "green"))
 })
 
 test_that("build_missing_taxa_list() checks the names of the excluded subclades of a taxon",

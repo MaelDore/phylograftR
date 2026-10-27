@@ -321,3 +321,104 @@
 #' colSums(toy_simmap_ranges$mapped.edge)
 #'
 "toy_simmap_ranges"
+
+
+##### 5/ Toy datasets for a second trait: simmap and list of missing taxa with allowed states of elevation #####
+
+#' @title Toy stochastic character map of elevation states
+#'
+#' @description Stochastic character map (simmap) of [`phylograftR::toy_backbone`][toy_backbone] with two elevation states, `"high"` and `"low"`,
+#'   to combine with [`phylograftR::toy_simmap`][toy_simmap] (color) as examples of attribute-based constraints applied on two traits at once,
+#'   with `simmap = list(color = toy_simmap, elevation = toy_simmap_elevation)`.
+#'
+#'   It was simulated with `phytools::sim.history()` from a root in state `"low"`, with equal transition rates between the two states (0.04 per unit of time).
+#'   Among the first 1000 seeds, the one used (94) is the first giving a map that is balanced and compatible with the constraints of
+#'   [`phylograftR::toy_missing_taxa_list_with_allowed_traits`][toy_missing_taxa_list_with_allowed_traits] used with [`phylograftR::toy_simmap`][toy_simmap]
+#'   (at least one branch in the allowed states of each taxon):
+#'   * The two states cover similar shares of the total branch length (54% `"low"` and 46% `"high"`).
+#'   * A moderate number of transitions: 12 changes of state, along 9 of the 58 branches (no branch has more than 4 pieces).
+#'   * `"high"` is found in 18 of the 30 tips and `"low"` in 12.
+#'
+#' @usage data(toy_simmap_elevation)
+#' @format An object of classes `"simmap"` and `"phylo"` (see `phytools::make.simmap()`), with the same tips, topology and branch lengths as
+#'   [`phylograftR::toy_backbone`][toy_backbone], and the additional elements `$maps` (for each branch, the duration spent in each state,
+#'   from the rootward node to the tipward node), `$mapped.edge` (total duration per state and branch), `$node.states` and `$states` (states of the nodes and tips).
+#'
+#' @seealso Associated missing_taxa_list object to combine with colors: [`phylograftR::toy_missing_taxa_list_with_allowed_traits`][toy_missing_taxa_list_with_allowed_traits].
+#' Simmap of colors: [`phylograftR::toy_simmap`][toy_simmap].
+#' Grafting function: [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
+#'
+#' @examples
+#' # Import the data
+#' data(toy_simmap_elevation)
+#'
+#' # Plot the map
+#' plot(toy_simmap_elevation, colors = c(high = "darkorange", low = "steelblue"), fsize = 0.7, ftype = "i")
+#'
+#' # Duration spent in each state (sum on all the branches)
+#' colSums(toy_simmap_elevation$mapped.edge)
+#'
+"toy_simmap_elevation"
+
+
+#' @title Toy list of missing taxa, with allowed states of two traits: colors and elevation
+#'
+#' @description Same as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], with the extra item `$allowed_states` covering the states of two traits,
+#'   [`phylograftR::toy_simmap`][toy_simmap] (`"blue"`, `"green"`, `"red"`) and [`phylograftR::toy_simmap_elevation`][toy_simmap_elevation] (`"high"`, `"low"`),
+#'   in which each taxon can be grafted. It is used to showcase the grafting constrained by several traits at once
+#'   (see Several traits in Details section of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]).
+#'
+#'   It is the output of [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] applied to the table
+#'   `system.file("extdata", "toy_missing_taxa_with_allowed_traits.csv", package = "phylograftR")`.
+#'   In the column `allowed_states`, the states of the traits are separated by semicolons
+#'   (in the order of the maps provided in `simmap`: the color, then the elevation), and the states of a trait by commas. Open that file to see the different syntaxes:
+#'   * `"red;"`: the color is `"red"`, and the elevation has no taxon-level value (the global value is used).
+#'   * `"blue, green;high"`: color `"blue"` or `"green"`, and elevation `"high"`.
+#'   * `";low"`: no taxon-level value for the color, elevation `"low"`.
+#'   * `"elevation=high"`: traits named, so the color can be omitted (it has no taxon-level value).
+#'   * Blank cell: no taxon-level value for any trait, so the global `allowed_states` argument is used for both.
+#'
+#' @usage data(toy_missing_taxa_list_with_allowed_traits)
+#' @format A named list with the same 7 taxa and items as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], and the extra item:
+#'  * `$allowed_states` List (one element per taxon, named after the taxa) of lists with the states of each trait (one element per trait, `NULL` for a trait without taxon-level value),
+#'    or `NULL` to use the global `allowed_states` argument for all the traits. `"Genus_a_sp1"`: `list("red", NULL)`; `"Genus_b_sp1"`: `list(c("blue", "green"), "high")`;
+#'    `"Genus_b_sp2"`: `list(NULL, "low")`; `"Genus_c_sp2"`: `list(elevation = "high")`; the others: `NULL`.
+#'
+#' @seealso Simmap for colors: [`phylograftR::toy_simmap`][toy_simmap]. Simmap for elevation: [`phylograftR::toy_simmap_elevation`][toy_simmap_elevation].
+#'   Missing taxa list for colors only: [`phylograftR::toy_missing_taxa_list_with_allowed_states`][toy_missing_taxa_list_with_allowed_states].
+#'   Grafting function: [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list].
+#'
+#' @examples
+#' # Import the list
+#' data(toy_missing_taxa_list_with_allowed_traits)
+#' toy_missing_taxa_list_with_allowed_traits$allowed_states
+#'
+#' # Compare to the initial '.csv' file
+#' system.file("extdata", "toy_missing_taxa_with_allowed_traits.csv", package = "phylograftR")
+#'
+#' # Graft with the maps of the two traits. The global 'allowed_states' has one element per trait:
+#' # grafting on "blue" or "green" branches for the color, and no restriction for the elevation (NULL).
+#' data(toy_backbone)
+#' data(toy_simmap)
+#' data(toy_simmap_elevation)
+#'
+#' grafted_phy <- graft_missing_taxa(phy = toy_backbone,
+#'     missing_taxa_list = toy_missing_taxa_list_with_allowed_traits,
+#'     simmap = list(color = toy_simmap, elevation = toy_simmap_elevation),
+#'     allowed_states = list(c("blue", "green"), NULL),
+#'     verbose = FALSE, seed = 1234)
+#'
+#' # One updated simmap per trait
+#' names(grafted_phy$simmap)
+#'
+#' # State of each grafted taxon for each trait: should match the allowed states
+#' taxon_names <- toy_missing_taxa_list_with_allowed_traits$Taxon_name
+#' taxon_states <- sapply(grafted_phy$simmap, function (simmap)
+#' {
+#'   tip_edges <- match(match(taxon_names, simmap$tip.label), simmap$edge[, 2])
+#'   setNames(vapply(simmap$maps[tip_edges], function (x) names(x)[1], character(1)), taxon_names)
+#' })
+#' taxon_states
+#' toy_missing_taxa_list_with_allowed_traits$allowed_states
+#'
+"toy_missing_taxa_list_with_allowed_traits"
