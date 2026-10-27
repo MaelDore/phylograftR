@@ -62,7 +62,7 @@ get_multisimmap_maps <- function (simmap, who = "'simmap'")
 #' @noRd
 #'
 #' @return As `check_simmap_input()`: a list with the elements `maps` (list with one element per map of class `"phylograftR_trait_maps"`:
-#'   a list of the simmaps of the traits named after the traits), `names`, `multiple` and `traits` (names of the traits).
+#'   a list of the simmaps of the traits named after the traits), `names`, `multiple`, `traits` (names of the traits) and `traits_named` (whether the traits were named in the input, otherwise `trait_1`, `trait_2`, ... were used).
 #'
 
 check_trait_maps <- function (simmap)
@@ -74,7 +74,8 @@ check_trait_maps <- function (simmap)
          "For a single trait, provide the 'simmap' (or the 'multiSimmap') itself, not a list.")
   }
   trait_names <- names(simmap)
-  if (is.null(trait_names) || all(is.na(trait_names) | trait_names == ""))
+  traits_named <- !(is.null(trait_names) || all(is.na(trait_names) | trait_names == ""))
+  if (!traits_named)
   {
     trait_names <- paste0("trait_", seq_len(n_traits))
   } else {
@@ -150,7 +151,7 @@ check_trait_maps <- function (simmap)
   {
     structure(stats::setNames(lapply(trait_maps, function (x) x[[k]]), trait_names), class = "phylograftR_trait_maps")
   })
-  list(maps = maps, names = map_names, multiple = multiple, traits = trait_names)
+  list(maps = maps, names = map_names, multiple = multiple, traits = trait_names, traits_named = traits_named)
 }
 
 
@@ -409,14 +410,18 @@ normalize_trait_states <- function (value, trait_names, who)
 #'   The function stops if a state is not in the states of its trait. Used by `resolve_trait_allowed_states()` (grafting, on the composite simmap) and by `check_grafting_constraints()` (check, trait by trait).
 #'
 #' @param traits List with `names` (trait names) and `states` (list of the states of each trait, named after the traits).
+#' @param range_trait `NULL`, or integer: the position of the trait treated as biogeographic ranges (`treat_states_as_ranges`). Its allowed values are ranges, checked with
+#'   `validate_range_coding()` and `check_allowed_areas()` instead of being states of the map (a range can be allowed without being a state of the map),
+#'   and when the range trait has no allowed values (neither taxon-level nor global) its element is `NULL` (not all the states: no allowed ranges means that the lineage inherits the whole state).
 #' @inheritParams resolve_trait_allowed_states
 #'
 #' @noRd
 #'
-#' @return A list named after `taxon_names`, each element a list named after the traits with the allowed states (character vector) of the trait.
+#' @return A list named after `taxon_names`, each element a list named after the traits with the allowed states (character vector) of the trait
+#'   (`NULL` for the range trait if it has no allowed ranges).
 #'
 
-resolve_trait_state_sets <- function (allowed_states_taxa = NULL, allowed_states = NULL, traits, taxon_names)
+resolve_trait_state_sets <- function (allowed_states_taxa = NULL, allowed_states = NULL, traits, taxon_names, range_trait = NULL)
 {
   trait_names <- traits$names
   n_traits <- length(trait_names)
@@ -426,7 +431,15 @@ resolve_trait_state_sets <- function (allowed_states_taxa = NULL, allowed_states
   {
     for (t in seq_len(n_traits))
     {
-      if (!is.null(spec[[t]])) { check_allowed_states(spec[[t]], traits$states[[t]], who = paste0(who, " (trait '", trait_names[t], "')")) }
+      if (is.null(spec[[t]])) { next }
+      who_t <- paste0(who, " (trait '", trait_names[t], "')")
+      if (!is.null(range_trait) && t == range_trait)
+      {
+        validate_range_coding(spec[[t]], who = who_t)
+        check_allowed_areas(spec[[t]], traits$states[[t]], who = who_t)
+      } else {
+        check_allowed_states(spec[[t]], traits$states[[t]], who = who_t)
+      }
     }
   }
 
@@ -451,7 +464,7 @@ resolve_trait_state_sets <- function (allowed_states_taxa = NULL, allowed_states
     check_trait_states(spec, who)
     sets_all[[i]] <- stats::setNames(lapply(seq_len(n_traits), function (t)
     {
-      if (!is.null(spec[[t]])) spec[[t]] else if (!is.null(global[[t]])) global[[t]] else traits$states[[t]]
+      if (!is.null(spec[[t]])) spec[[t]] else if (!is.null(global[[t]])) global[[t]] else if (!is.null(range_trait) && t == range_trait) NULL else traits$states[[t]]
     }), trait_names)
   }
   sets_all
@@ -503,4 +516,149 @@ resolve_trait_allowed_states <- function (allowed_states_taxa = NULL, allowed_st
     resolved[[i]] <- composite_states[allowed]
   }
   resolved
+}
+
+
+
+#' @title Which trait is treated as biogeographic ranges?
+#'
+#' @description Validates the argument `treat_states_as_ranges` when the maps of several traits are provided: a logical vector with one value per trait
+#'   (positional, or named after the traits, in any order), with at most one `TRUE`: the trait treated as ranges. A single `FALSE` is accepted as a shorthand for no range trait.
+#'   A single `TRUE` is ambiguous with several traits and stops, listing the names of the traits.
+#'
+#' @param treat_states_as_ranges Logical vector. The argument `treat_states_as_ranges`.
+#' @param trait_names Character vector. Names of the traits (`trait_1`, `trait_2`, ... if the maps were not named).
+#' @param traits_named Logical. Whether the traits were named by the user. If not, the logical vector can only be positional.
+#'
+#' @noRd
+#'
+#' @return `NULL` if no trait is treated as ranges, otherwise the position of the range trait (integer, in the order of `trait_names`).
+#'
+
+resolve_range_trait <- function (treat_states_as_ranges, trait_names, traits_named = TRUE)
+{
+  n_traits <- length(trait_names)
+  v <- treat_states_as_ranges
+  example <- paste0("c(", paste0(if (traits_named) paste0(trait_names, " = ") else "", c("TRUE", rep("FALSE", n_traits - 1)), collapse = ", "), ")")
+  if (!is.logical(v) || length(v) == 0 || anyNA(v))
+  {
+    stop("'treat_states_as_ranges' must be TRUE or FALSE, or with the maps of several traits a logical vector with one value per trait (e.g., ", example, "), without NA.")
+  }
+  if (length(v) == 1)
+  {
+    if (!v) { return(NULL) }
+    stop("'treat_states_as_ranges = TRUE' is ambiguous with the maps of several traits (", paste0("'", trait_names, "'", collapse = ", "), "): ",
+         "give a logical vector with one value per trait, with TRUE for the trait to treat as biogeographic ranges, e.g., ", example, ".")
+  }
+  if (length(v) != n_traits)
+  {
+    stop("'treat_states_as_ranges' must have one value per trait (", n_traits, " traits: ", paste0("'", trait_names, "'", collapse = ", "), ") but has ", length(v), ".")
+  }
+  v_names <- names(v)
+  if (!is.null(v_names) && any(v_names != "" & !is.na(v_names)))
+  {
+    if (!traits_named)
+    {
+      stop("'treat_states_as_ranges' is named but the traits of 'simmap' are not: name the list of maps (names must then match exactly), or give an unnamed vector (positional).")
+    }
+    if (anyNA(v_names) || any(v_names == "")) { stop("Some values of 'treat_states_as_ranges' are named and others are not: name all the values or none of them.") }
+    if (anyDuplicated(v_names) || !setequal(v_names, trait_names))
+    {
+      stop("The names of 'treat_states_as_ranges' must be exactly the names of the traits of 'simmap' (", paste0("'", trait_names, "'", collapse = ", "), "), each once, in any order. ",
+           "Names given: ", paste0("'", v_names, "'", collapse = ", "), ".")
+    }
+    v <- v[trait_names]
+  }
+  v <- unname(v)
+  if (sum(v) > 1)
+  {
+    stop("Only one trait can be treated as biogeographic ranges with 'treat_states_as_ranges', but ", sum(v), " are TRUE (", paste0("'", trait_names[v], "'", collapse = ", "), ").")
+  }
+  if (!any(v)) { return(NULL) }
+  which(v)
+}
+
+
+#' @title Resolve the allowed states of each taxon with the maps of several traits, one of them treated as biogeographic ranges
+#'
+#' @description Equivalent of `resolve_allowed_ranges()` for a composite simmap with one range trait and other (normal) traits.
+#'   The range logic is run on the states of the range trait alone (`resolve_allowed_ranges()`, so its messages and warnings concern the ranges, prefixed by the name of the trait),
+#'   then lifted to the composite states: a composite state is acceptable for a taxon if the range part is acceptable and the states of the other traits are allowed (exact match, as in
+#'   `resolve_trait_allowed_states()`). The candidates of a composite state are the composite states with each candidate range and the states of the other traits of the state (the other traits
+#'   are inherited from the point where the taxon is grafted). The composite states with an inherited range that are not observed on the backbone are the inherited states
+#'   (to add to the tracker with `extend_tracker_states()`). The function stops if no observed composite state is acceptable for a taxon.
+#'
+#' @inheritParams resolve_trait_allowed_states
+#' @param range_trait Integer. Position of the trait treated as ranges.
+#'
+#' @noRd
+#'
+#' @return As `resolve_allowed_ranges()`, with composite states: a list with `allowed_states` (acceptable composite states of each taxon: observed, then inherited),
+#'   `range_candidates` (for each taxon, a list named after its acceptable composite states with the composite states that can be inherited) and `inherited_states` (sorted).
+#'
+
+resolve_trait_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_states = NULL, traits, composite_states, taxon_names, range_trait)
+{
+  trait_names <- traits$names
+  n_traits <- length(trait_names)
+  n_taxa <- length(taxon_names)
+  sep <- traits$sep
+  other <- setdiff(seq_len(n_traits), range_trait)
+  sets_all <- resolve_trait_state_sets(allowed_states_taxa = allowed_states_taxa, allowed_states = allowed_states, traits = traits, taxon_names = taxon_names, range_trait = range_trait)
+
+  split_composite <- function (x) { matrix(unlist(strsplit(x, sep, fixed = TRUE)), ncol = n_traits, byrow = TRUE) }
+  parts <- split_composite(composite_states)
+
+  # Range logic on the range trait alone (the allowed ranges are already resolved, taxon-level or global: NULL = no allowed ranges)
+  prefix <- paste0("Range trait '", trait_names[range_trait], "': ")
+  ranges_taxa <- stats::setNames(lapply(sets_all, function (s) s[[range_trait]]), taxon_names)
+  resolved <- tryCatch(
+    withCallingHandlers(resolve_allowed_ranges(allowed_states_taxa = ranges_taxa, allowed_states = NULL, states = unique(parts[, range_trait]), taxon_names = taxon_names),
+                        warning = function (w) { warning(prefix, conditionMessage(w), call. = FALSE); invokeRestart("muffleWarning") }),
+    error = function (e) stop(prefix, conditionMessage(e), call. = FALSE))
+
+  # Composite states made of a composite state with another range (the states of the other traits are kept)
+  with_ranges <- function (composite_parts, ranges)
+  {
+    m <- matrix(rep(composite_parts, each = length(ranges)), nrow = length(ranges)) # composite_parts: the parts of one composite state (vector)
+    m[, range_trait] <- ranges
+    apply(m, 1, paste, collapse = sep)
+  }
+  # Composite states of a set (rows of 'states_parts') acceptable for a taxon: states of the other traits allowed, and acceptable range
+  acceptable_in <- function (states_parts, i)
+  {
+    ok <- states_parts[, range_trait] %in% resolved$allowed_states[[i]]
+    for (t in other) { ok <- ok & states_parts[, t] %in% sets_all[[i]][[t]] }
+    which(ok)
+  }
+  candidates_of <- function (state_parts, i) { with_ranges(state_parts, resolved$range_candidates[[i]][[state_parts[range_trait]]]) }
+
+  # Ranges inherited by the lineages grafted on the observed composite states: composite states that are not observed on the backbone
+  inherited <- character(0)
+  for (i in seq_len(n_taxa))
+  {
+    obs <- acceptable_in(parts, i)
+    if (length(obs) == 0)
+    {
+      stop("No combination of the allowed states of taxon '", taxon_names[i], "' is found on the maps: ",
+           paste0(trait_names, " = ", vapply(seq_len(n_traits), function (t) { v <- sets_all[[i]][[t]]; if (is.null(v)) "all the states" else paste(v, collapse = ", ") }, character(1)), collapse = "; "), ".\n",
+           "Combinations of states found on the maps (", paste(trait_names, collapse = " | "), "): ",
+           paste0("'", utils::head(composite_states, 10), "'", collapse = ", "), if (length(composite_states) > 10) ", ..." else "", ".")
+    }
+    for (k in obs) { inherited <- union(inherited, candidates_of(parts[k, ], i)) }
+  }
+  inherited <- sort(setdiff(inherited, composite_states), method = "radix")
+
+  # Acceptable composite states and candidates among the observed and the inherited composite states
+  all_states <- c(composite_states, inherited)
+  all_parts <- split_composite(all_states)
+  acceptable <- candidates <- vector("list", n_taxa)
+  names(acceptable) <- names(candidates) <- taxon_names
+  for (i in seq_len(n_taxa))
+  {
+    keep <- acceptable_in(all_parts, i)
+    acceptable[[i]] <- all_states[keep]
+    candidates[[i]] <- stats::setNames(lapply(keep, function (k) candidates_of(all_parts[k, ], i)), all_states[keep])
+  }
+  list(allowed_states = acceptable, range_candidates = candidates, inherited_states = inherited)
 }

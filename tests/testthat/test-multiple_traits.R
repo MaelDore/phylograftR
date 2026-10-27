@@ -451,8 +451,9 @@ for (name in c("taxa", "clades"))
     original <- run_simulations
     local_mocked_bindings(run_simulations = function (...) { calls <<- calls + 1; original(...) })
 
-    # Ranges are not supported with several traits
-    expect_error(graft_traits(toy, simmap = maps, treat_states_as_ranges = TRUE), "not supported with the maps of several traits")
+    # Ranges with several traits: not yet supported by graft_missing_clades(), a single TRUE is ambiguous in graft_missing_taxa()
+    if (name == "taxa") { expect_error(graft_traits(toy, simmap = maps, treat_states_as_ranges = TRUE), "ambiguous with the maps of several traits") }
+    else { expect_error(graft_traits(toy, simmap = maps, treat_states_as_ranges = TRUE), "not supported with the maps of several traits") }
     # Allowed states of a single trait, or of the wrong structure
     expect_error(graft_traits(toy, simmap = maps, allowed_states = c("A", "low")), "must be given for each trait")
     expect_error(graft_traits(toy, simmap = maps, allowed_states = list("A")), "1 element\\(s\\) but there are 2 traits")
@@ -706,4 +707,207 @@ test_that("check_grafting_constraints() checks several traits with several simul
   expect_false(any(grepl("^states_ok_", names(res_one))))
   expect_null(attr(res_one, "trait_names"))
   expect_false(grepl("color:", paste(capture.output(check_grafting_constraints(one, toy$phy, mtl, allowed_states = "B", verbose = TRUE)), collapse = "\n"), fixed = TRUE))
+})
+
+
+## ---- Ranges: one trait treated as biogeographic ranges, with other traits (graft_missing_taxa) ---- ##
+
+## Toy traits: ranges "A" (before the age 'age_r') then "AB", and an elevation "low" (before 'age_e') then "high" (state combinations: A|low, AB|low, AB|high)
+make_range_traits <- function (phy, age_r = 20, age_e = 10)
+{
+  list(biogeo = relabel_maps(make_young_state_simmap(phy, age_r), c(A = "A", B = "AB")), elevation = relabel_maps(make_young_state_simmap(phy, age_e), c(A = "low", B = "high")))
+}
+graft_ranges <- function (toy, maps, ..., mtl = NULL)
+{
+  suppressWarnings(graft_missing_taxa(toy$phy, if (is.null(mtl)) traits_missing_taxa(toy) else mtl, simmap = maps, method = "uniform", verbose = FALSE, ...))
+}
+state_of <- function (grafted, trait, taxa) taxa_states(grafted$simmap[[trait]], taxa)
+parent_state_of <- function (simmap, taxa)
+{
+  vapply(taxa, function (taxon)
+  {
+    tip_edge <- match(match(taxon, simmap$tip.label), simmap$edge[, 2])
+    parent_edge <- match(simmap$edge[tip_edge, 1], simmap$edge[, 2])
+    x <- names(simmap$maps[[parent_edge]]); x[length(x)]
+  }, character(1))
+}
+
+test_that("resolve_range_trait() validates the logical vector of treat_states_as_ranges: positional or named, one TRUE at most",
+{
+  traits <- c("biogeo", "color", "elevation")
+  # No range trait
+  expect_null(resolve_range_trait(FALSE, traits))
+  expect_null(resolve_range_trait(c(FALSE, FALSE, FALSE), traits))
+  expect_null(resolve_range_trait(c(biogeo = FALSE, color = FALSE, elevation = FALSE), traits))
+  # Positional, named in any order
+  expect_equal(resolve_range_trait(c(FALSE, TRUE, FALSE), traits), 2L)
+  expect_equal(resolve_range_trait(c(color = FALSE, elevation = FALSE, biogeo = TRUE), traits), 1L)
+  expect_equal(resolve_range_trait(c(FALSE, FALSE, TRUE), traits, traits_named = FALSE), 3L)
+  # A single TRUE is ambiguous and lists the traits
+  expect_error(resolve_range_trait(TRUE, traits), "ambiguous.*'biogeo', 'color', 'elevation'.*c\\(biogeo = TRUE, color = FALSE, elevation = FALSE\\)")
+  expect_error(resolve_range_trait(TRUE, c("trait_1", "trait_2"), traits_named = FALSE), "c\\(TRUE, FALSE\\)")
+  # Invalid vectors
+  expect_error(resolve_range_trait(c(TRUE, FALSE), traits), "one value per trait \\(3 traits.*but has 2")
+  expect_error(resolve_range_trait(c(TRUE, NA, FALSE), traits), "without NA")
+  expect_error(resolve_range_trait("A", traits), "must be TRUE or FALSE")
+  expect_error(resolve_range_trait(c(TRUE, TRUE, FALSE), traits), "Only one trait.*'biogeo', 'color'")
+  expect_error(resolve_range_trait(c(biogeo = TRUE, color = FALSE, habitat = FALSE), traits), "exactly the names of the traits")
+  expect_error(resolve_range_trait(c(biogeo = TRUE, color = FALSE, color = FALSE), traits), "exactly the names of the traits")
+  expect_error(resolve_range_trait(stats::setNames(c(TRUE, FALSE, FALSE), c("biogeo", "", "elevation")), traits), "named and others are not")
+  expect_error(resolve_range_trait(c(trait_1 = TRUE, trait_2 = FALSE), c("trait_1", "trait_2"), traits_named = FALSE), "named but the traits of 'simmap' are not")
+})
+
+test_that("check_simmap_input() tells whether the traits were named",
+{
+  toy <- toy_setup()
+  maps <- make_range_traits(toy$phy)
+  expect_true(check_simmap_input(maps)$traits_named)
+  expect_false(check_simmap_input(unname(maps))$traits_named)
+})
+
+test_that("resolve_trait_allowed_ranges() lifts the ranges of the range trait to the composite states, keeping the states of the other traits",
+{
+  traits <- list(names = c("biogeo", "elevation"), states = list(biogeo = c("A", "AB"), elevation = c("low", "high")), sep = "|")
+  composite <- c("A|low", "AB|low", "AB|high")
+  taxa <- c("X1", "X2", "X3")
+  # X1: range A and elevation high, X2: range A only (any elevation), X3: nothing (no restriction)
+  allowed <- list(X1 = list("A", "high"), X2 = list("A", NULL), X3 = NULL)
+  res <- resolve_trait_allowed_ranges(allowed_states_taxa = allowed, allowed_states = NULL, traits = traits, composite_states = composite, taxon_names = taxa, range_trait = 1)
+  expect_equal(res$inherited_states, c("A|high"))
+  expect_equal(res$allowed_states$X1, c("AB|high", "A|high"))
+  expect_equal(res$range_candidates$X1, list(`AB|high` = "A|high", `A|high` = "A|high"))
+  expect_equal(res$allowed_states$X2, c("A|low", "AB|low", "AB|high", "A|high"))
+  expect_equal(res$range_candidates$X2, list(`A|low` = "A|low", `AB|low` = "A|low", `AB|high` = "A|high", `A|high` = "A|high"))
+  # No restriction: all the composite states acceptable, each its own candidate (the lineage inherits the whole state of the branch)
+  # (the inherited state "A|high" is also acceptable: the lineages grafted in this state exist for the following taxa)
+  expect_equal(res$allowed_states$X3, c(composite, "A|high"))
+  expect_equal(res$range_candidates$X3, list(`A|low` = "A|low", `AB|low` = "AB|low", `AB|high` = "AB|high", `A|high` = "A|high"))
+  # Global values, replaced by the taxon-level values
+  res_g <- resolve_trait_allowed_ranges(allowed_states_taxa = list(X1 = NULL, X2 = list(NULL, "low"), X3 = NULL), allowed_states = list("A", "high"), traits = traits,
+                                        composite_states = composite, taxon_names = taxa, range_trait = 1)
+  expect_equal(res_g$allowed_states$X1, c("AB|high", "A|high"))
+  expect_equal(res_g$allowed_states$X2, c("A|low", "AB|low"))
+  expect_equal(res_g$range_candidates$X2, list(`A|low` = "A|low", `AB|low` = "A|low"))
+  # The range trait in another position
+  traits_2 <- list(names = c("elevation", "biogeo"), states = list(elevation = c("low", "high"), biogeo = c("A", "AB")), sep = "|")
+  res_2 <- resolve_trait_allowed_ranges(allowed_states_taxa = list(X1 = list("high", "A")), allowed_states = NULL, traits = traits_2,
+                                        composite_states = c("low|A", "low|AB", "high|AB"), taxon_names = "X1", range_trait = 2)
+  expect_equal(res_2$allowed_states$X1, c("high|AB", "high|A"))
+  expect_equal(res_2$inherited_states, "high|A")
+  # No observed combination: informative stop
+  expect_error(resolve_trait_allowed_ranges(allowed_states_taxa = list(X1 = list("A", "high")), allowed_states = NULL, traits = traits, composite_states = c("A|low", "AB|low"),
+                                            taxon_names = "X1", range_trait = 1), "No combination of the allowed states of taxon 'X1'.*biogeo = A; elevation = high")
+  # A range contained in no state, or an area that is not in the map, stop naming the range trait
+  expect_error(resolve_trait_allowed_ranges(allowed_states_taxa = list(X1 = list("C", NULL)), allowed_states = NULL, traits = traits, composite_states = composite,
+                                            taxon_names = "X1", range_trait = 1), "areas.*\\(trait 'biogeo'\\)")
+  expect_error(resolve_trait_allowed_ranges(allowed_states_taxa = list(X1 = list("B", NULL)), allowed_states = NULL, traits = traits, composite_states = c("A|low"),
+                                            taxon_names = "X1", range_trait = 1), "Range trait 'biogeo':.*areas")
+  expect_warning(resolve_trait_allowed_ranges(allowed_states_taxa = list(X1 = list(c("A", "B"), NULL)), allowed_states = NULL, traits = list(names = traits$names, states = list(biogeo = c("A", "AB", "B"), elevation = traits$states$elevation), sep = "|"),
+                                              composite_states = c("A|low", "AB|low"), taxon_names = "X1", range_trait = 1), "Range trait 'biogeo':.*not states of the simmap")
+})
+
+test_that("graft_missing_taxa() treats one trait as ranges and the other traits as exact states: ranges inherited, the other traits kept from the graft point",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_taxa(toy)
+  taxa <- mtl$Taxon_name
+  maps <- make_range_traits(toy$phy)
+  ranges <- c(biogeo = TRUE, elevation = FALSE)
+
+  # Allowed range "A" and elevation "high": taxa are grafted on AB|high, and inherit "A" and "high" ("A|high" is not observed on the backbone)
+  grafted <- graft_ranges(toy, maps, treat_states_as_ranges = ranges, allowed_states = list("A", "high"), seed = 1)
+  expect_s3_class(grafted, "phylo")
+  expect_equal(names(grafted$simmap), c("biogeo", "elevation"))
+  expect_true(all(state_of(grafted, "biogeo", taxa) == "A"))
+  expect_true(all(state_of(grafted, "elevation", taxa) == "high"))
+  expect_true(all(range_in_states_pairwise(state_of(grafted, "biogeo", taxa), parent_state_of(grafted$simmap$biogeo, taxa))))
+  expect_true(all(parent_state_of(grafted$simmap$elevation, taxa) == "high"))
+  # Both simmaps are valid on the grafted tree
+  for (trait in names(grafted$simmap)) { expect_equal(length(grafted$simmap[[trait]]$maps), nrow(grafted$edge)); expect_s3_class(grafted$simmap[[trait]], "simmap") }
+  expect_equal(grafted$simmap$biogeo$edge.length, grafted$edge.length)
+
+  # Positional or named in any order: the same result
+  same <- function (a, b) { expect_equal(a$edge, b$edge); expect_equal(a$simmap$biogeo$maps, b$simmap$biogeo$maps); expect_equal(a$simmap$elevation$maps, b$simmap$elevation$maps) }
+  same(grafted, graft_ranges(toy, maps, treat_states_as_ranges = c(TRUE, FALSE), allowed_states = list("A", "high"), seed = 1))
+  same(grafted, graft_ranges(toy, maps, treat_states_as_ranges = c(elevation = FALSE, biogeo = TRUE), allowed_states = list(elevation = "high", biogeo = "A"), seed = 1))
+  same(grafted, graft_ranges(toy, rev(maps), treat_states_as_ranges = c(elevation = FALSE, biogeo = TRUE), allowed_states = list(elevation = "high", biogeo = "A"), seed = 1))
+  # Unnamed traits: positional only
+  unnamed <- graft_ranges(toy, unname(maps), treat_states_as_ranges = c(TRUE, FALSE), allowed_states = list("A", "high"), seed = 1)
+  expect_equal(names(unnamed$simmap), c("trait_1", "trait_2"))
+  expect_equal(unnamed$simmap$trait_1$maps, grafted$simmap$biogeo$maps)
+
+  # Without ranges, the states are matched exactly: "A" cannot be grafted on "AB"
+  expect_error(graft_ranges(toy, maps, treat_states_as_ranges = FALSE, allowed_states = list("A", "high"), seed = 1), "No combination")
+
+  # Taxon-level values (list or text) replace the global ones: same results
+  mtl_list <- mtl; mtl_list$allowed_states <- stats::setNames(list(list("A", "high"), NULL, NULL, NULL, NULL), taxa)
+  mtl_text <- mtl; mtl_text$allowed_states <- stats::setNames(list("A;high", NA, NA, NA, NA), taxa)
+  with_list <- graft_ranges(toy, maps, mtl = mtl_list, treat_states_as_ranges = ranges, allowed_states = list(NULL, "high"), seed = 3)
+  with_text <- graft_ranges(toy, maps, mtl = mtl_text, treat_states_as_ranges = ranges, allowed_states = list(NULL, "high"), seed = 3)
+  same(with_list, with_text)
+  expect_equal(state_of(with_list, "biogeo", "X1"), c(X1 = "A"))
+  expect_true(all(state_of(with_list, "elevation", taxa) == "high"))
+
+  # No allowed ranges: the lineage inherits the whole state, the result is the one without ranges (same seed)
+  free <- graft_ranges(toy, maps, treat_states_as_ranges = ranges, allowed_states = list(NULL, "high"), seed = 5)
+  plain <- graft_ranges(toy, maps, allowed_states = list("AB", "high"), seed = 5)
+  expect_true(same_tree(free, plain))
+  expect_equal(free$simmap$biogeo$maps, plain$simmap$biogeo$maps)
+  expect_true(all(state_of(free, "biogeo", taxa) == "AB"))
+  # FALSE alone is the default, and a vector of FALSE too
+  expect_true(same_tree(plain, graft_ranges(toy, maps, treat_states_as_ranges = c(FALSE, FALSE), allowed_states = list("AB", "high"), seed = 5)))
+})
+
+test_that("graft_missing_taxa() with ranges and traits: an allowed range that is not a state of the map is inherited and added to the simmap of the range trait, with a warning naming the trait",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_taxa(toy)
+  taxa <- mtl$Taxon_name
+  maps <- make_range_traits(toy$phy)
+  # "B" is not a state of the range map, but is contained in "AB"
+  maps$biogeo <- relabel_maps(make_young_state_simmap(toy$phy, 20), c(A = "A", B = "AB"))
+  mtl_b <- mtl
+  expect_warning(grafted <- graft_missing_taxa(toy$phy, mtl_b, simmap = maps, treat_states_as_ranges = c(TRUE, FALSE), allowed_states = list("B", "high"), method = "uniform", verbose = FALSE, seed = 1),
+                 "Range trait 'biogeo' ?:|trait_1|Range trait", fixed = FALSE)
+  expect_true(all(state_of(grafted, "biogeo", taxa) == "B"))
+  expect_true("B" %in% colnames(grafted$simmap$biogeo$mapped.edge))
+  expect_false("B" %in% colnames(maps$biogeo$mapped.edge))
+  expect_true(all(state_of(grafted, "elevation", taxa) == "high"))
+  # No state of the elevation allows the taxa: informative stop
+  expect_error(graft_ranges(toy, maps, treat_states_as_ranges = c(TRUE, FALSE), allowed_states = list("A", "Z"), seed = 1), "\\(trait 'elevation'\\).*'Z'")
+  # An area that is not in the map
+  expect_error(graft_ranges(toy, maps, treat_states_as_ranges = c(TRUE, FALSE), allowed_states = list("D", NULL), seed = 1), "areas.*\\(trait 'biogeo'\\)")
+  # A trait with states that are not coded as ranges cannot be the range trait
+  expect_error(graft_ranges(toy, maps, treat_states_as_ranges = c(FALSE, TRUE), seed = 1), "Range trait 'elevation'")
+})
+
+test_that("graft_missing_taxa() with ranges and traits: several simulations, paired multiSimmaps, BD_clades, and invalid arguments",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_taxa(toy)
+  taxa <- mtl$Taxon_name
+  maps <- make_range_traits(toy$phy)
+  ranges <- c(biogeo = TRUE, elevation = FALSE)
+  # Several simulations
+  sims <- graft_ranges(toy, maps, treat_states_as_ranges = ranges, allowed_states = list("A", "high"), nb_simulations = 3, seed = 2)
+  expect_s3_class(sims, "multiPhylo")
+  for (g in sims) { expect_true(all(state_of(g, "biogeo", taxa) == "A")); expect_true(all(state_of(g, "elevation", taxa) == "high")) }
+  # Paired multiSimmaps: one result per pair
+  pairs <- lapply(list(c(20, 10), c(15, 8)), function (ages) make_range_traits(toy$phy, ages[1], ages[2]))
+  multi <- graft_ranges(toy, list(biogeo = as_multi(lapply(pairs, function (x) x$biogeo), c("p", "q")), elevation = as_multi(lapply(pairs, function (x) x$elevation), c("p", "q"))),
+                        treat_states_as_ranges = ranges, allowed_states = list("A", "high"), seed = 2)
+  expect_equal(names(multi), c("p", "q"))
+  for (k in c("p", "q")) { expect_true(all(state_of(multi[[k]], "biogeo", taxa) == "A")); expect_true(all(state_of(multi[[k]], "elevation", taxa) == "high")) }
+  # BD_clades
+  bd <- suppressWarnings(graft_missing_taxa(toy$phy, mtl, simmap = maps, treat_states_as_ranges = ranges, allowed_states = list("A", "high"), method = "BD_clades", verbose = FALSE, seed = 4))
+  expect_true(all(state_of(bd, "biogeo", taxa) == "A"))
+  expect_true(all(state_of(bd, "elevation", taxa) == "high"))
+  # Taxa grafted on the lineages of taxa grafted before: the inherited ("A|high") branches are available for the next grafts (no restriction of the elevation, any range)
+  # Invalid arguments stop before any simulation
+  expect_error(graft_ranges(toy, maps, treat_states_as_ranges = c(TRUE, TRUE)), "Only one trait")
+  expect_error(graft_ranges(toy, maps, treat_states_as_ranges = c(TRUE, FALSE, FALSE)), "one value per trait")
+  expect_error(graft_ranges(toy, maps, treat_states_as_ranges = c(color = TRUE, elevation = FALSE)), "exactly the names")
+  expect_error(graft_ranges(toy, unname(maps), treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE)), "named but the traits of 'simmap' are not")
+  expect_error(graft_ranges(toy, maps$biogeo, treat_states_as_ranges = c(TRUE, FALSE)), "must be TRUE or FALSE")
+  expect_error(graft_missing_taxa(toy$phy, mtl, treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE), method = "uniform", verbose = FALSE), "must be TRUE or FALSE")
 })

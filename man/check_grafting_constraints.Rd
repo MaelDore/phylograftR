@@ -40,14 +40,17 @@ If no \verb{$Excluded_subclades} item is found in \code{missing_taxa_list}, a wa
 (a taxon sister to an excluded subclade is then a violation). Excluded subclades with a value in \code{missing_taxa_list$exclude_subclades_stem} use it instead
 (\code{NA} or no item: this global value is used). Default is \code{TRUE}.}
 
-\item{allowed_states}{Character vector. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: the states in which grafting is allowed. This is the default for all taxa:
-taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. Only used if \code{phy_grafted} has a \verb{$simmap} item
-(the updated simmap returned by \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} with a \code{simmap}).
+\item{allowed_states}{Character vector. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: the states in which grafting is allowed.
+This is the default for all taxa: taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead.
+Only used if \code{phy_grafted} has a \verb{$simmap} item (the updated simmap returned by \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} with a \code{simmap}).
+If the \verb{$simmap} item is a list of the simmaps of several traits (grafting constrained with several traits), \code{allowed_states} is a list with one element per trait
+(in the order of the traits, or named after the traits; \code{NULL} = all the states of the trait), and the taxon-level values of \code{missing_taxa_list$allowed_states}
+are given per trait as in the grafting functions (see 'Several traits' in Details).
 The function stops if some states are not in the \code{simmap}. Default is \code{NULL} (all states allowed for the taxa without a taxon-level value).}
 
 \item{treat_states_as_ranges}{Logical. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: whether the states of the \code{simmap} and the allowed states are treated as biogeographic ranges:
 an allowed range enables grafting on branch pieces in any range that contains it: \code{"A"} can be grafted on \code{"A"}, \code{"AB"} and \code{"ABC"}, whereas \code{"AB"} can be grafted on \code{"AB"} and \code{"ABC"} but not \code{"A"}.
-Only used if \code{phy_grafted} has a \verb{$simmap} item, otherwise the function stops if \code{TRUE}.
+Only used if \code{phy_grafted} has a \verb{$simmap} item, otherwise the function stops if \code{TRUE}. Not supported yet if the \verb{$simmap} item covers several traits (the function stops).
 States / ranges are coded as in BioGeoBEARS (see the Details section "Biogeographic ranges as states").
 The function stops if the states of the \code{simmap} or the allowed states are not correctly coded, or if an area of the allowed states is not in the \code{simmap}.
 Default is \code{FALSE} (states are matched exactly).}
@@ -80,6 +83,9 @@ The function returns a data.frame with one row per taxon in \code{missing_taxa_l
 (\code{missing_taxa_list$allowed_states} of the taxon if provided, otherwise the global \code{allowed_states} argument; all the states if neither is provided).
 With \code{treat_states_as_ranges = TRUE}, the state of the terminal branch of the taxon (the range it inherited) must be one of its allowed ranges (any range if the taxon has no allowed states).
 \code{NA} if \code{phy_grafted} has no \verb{$simmap}.
+With the maps of several traits, \code{TRUE} if the taxon was grafted in an allowed state for all the traits.
+\item \verb{$states_ok_<trait>}: Logical. Only with the maps of several traits (one column per trait, named after the traits): whether the taxon was grafted in one of its allowed states for this trait.
+Used to find which trait is violated when \verb{$states_ok} is \code{FALSE}.
 \item \verb{$ranges_ok}: Logical. Only checked with \code{treat_states_as_ranges = TRUE} and a \verb{$simmap} item: whether the range inherited by the taxon is contained in the state of the lineage at the graft point
 (see the Details section "Biogeographic ranges as states"). \code{NA} if not checked, or if the taxon is grafted at the root (no parent lineage).
 This differs from \verb{$states_ok} that checks only the validity of the terminal tip state. Here, the validity of the inherited range is assessed against the range of the backbone lineage it was grafted on.
@@ -97,6 +103,7 @@ the deviations are the maximum over the phylogenies, and \code{"all_ok"} is \cod
 \item \code{"max_branch_length_deviation_relative"}: Numeric. Same, relative to the depth of the backbone.
 \item \code{"backbone_preserved"}: Logical. Whether both topology and branch lengths are preserved, within \code{tolerance} (\code{NA} if \code{check_backbone = FALSE}).
 \item \code{"all_ok"}: Logical. Whether all taxa respect their constraints and the backbone is preserved (if checked).
+\item \code{"trait_names"}: Character vector. Names of the traits checked (only with the maps of several traits, otherwise \code{NULL}).
 \item \code{"phylogenies"}: data.frame with one row per phylogeny checked (columns \code{map}, \code{simulation}, \code{seed}, \code{n_failed} (number of taxa that failed), \code{backbone_preserved} and \code{all_ok}).
 }
 
@@ -128,6 +135,18 @@ As in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}, if t
 
 Branches of the backbone are matched between the pruned grafted phylogeny and the backbone by the set of tips they subtend.
 Branch lengths are considered preserved if the maximum deviation, relative to the depth of the backbone, is lower than \code{tolerance}.
+\subsection{Several traits}{
+
+If the grafting used several traits as constraints, the grafting functions return a \verb{$simmap} item that is a list of simmaps, one per trait, named after the traits,
+(or \code{"trait_1"}, \code{"trait_2"}, ... if the input was not named). Then this function checks the validity of states trait by trait:
+the states of the terminal branch of the taxon in the simmap of each trait must be allowed for this trait.
+The allowed states of each taxon and trait are resolved as in the grafting functions: the value of \code{missing_taxa_list$allowed_states} for this trait if provided,
+otherwise the global \code{allowed_states} for this trait, otherwise all the states of the trait (see \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}).
+\verb{$states_ok_<trait>} gives the result for each trait, and \verb{$states_ok} is \code{TRUE} only if all traits are allowed.
+With \code{verbose = TRUE}, the number of violations is also given for each trait.
+\code{treat_states_as_ranges = TRUE} is not supported yet with several traits (the function stops).
+}
+
 \subsection{Several grafted phylogenies}{
 
 The phylogenies are checked one by one against the same \code{phy_backbone} and \code{missing_taxa_list}. When \code{allowed_states} or \code{treat_states_as_ranges} are used,

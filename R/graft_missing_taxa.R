@@ -84,7 +84,12 @@
 #'   If `TRUE`, an allowed range enables grafting on branch pieces in any range that contains it: `"A"` can be grafted on `"A"`, `"AB"` and `"ABC"`,
 #'   whereas `"AB"` can be grafted on `"AB"` and `"ABC"` but not `"A"`.
 #'
-#'   See 'Biogeographic ranges as states' in Details section. Default is `FALSE` (states are matched exactly).
+#'   If stochastic maps of several traits are provided (a list in `simmap`), you must provide a logical vector with one value per trait,
+#'   with at most one `TRUE` to define the trait treated as biogeographic ranges, the other traits being matched exactly.
+#'   The vector is positional (e.g., `c(FALSE, TRUE, FALSE)`: the second trait is the range trait) or named after the traits, in any order (e.g., `c(biogeo = TRUE, color = FALSE, elevation = FALSE)`).
+#'   A single `FALSE` is accepted with several traits (no range trait), but a single `TRUE` stops.
+#'
+#'   See 'Biogeographic ranges as states' and 'Several traits' in Details section. Default is `FALSE` (states are matched exactly).
 #' @param return_simmap Logical. Only used with a `simmap`, and silently ignored without it. Whether to add the updated `simmap` to the output, in `$simmap` (see 'Value').
 #'   Default is `TRUE`.
 #' @param min_valid_fraction Numeric between 0 and 1. Only used with a `simmap`. Threshold below which a warning lists the taxa for inspection,
@@ -342,7 +347,15 @@
 #' With a list of `"multiSimmap"` provided as `simmap`, the maps of the traits are paired: the grafting is run with the map 1 of every trait, then the map 2 of every trait, and so on.
 #' All the traits must therefore have the same number of maps to be associated in a given grafting process.
 #'
-#' **Limit.** `treat_states_as_ranges = TRUE` is not yet supported with several traits (the function stops).
+#' One of the traits can be treated as biogeographic ranges combined with any number of other traits. Use a logical vector in `treat_states_as_ranges`
+#' to define which of the trait is to be treated as biogeographic ranges for inheritance.
+#' The range logic is the one of 'Biogeographic ranges as states' for the range trait:
+#' its allowed values for grafting are any ranges that encompass the allowed range.
+#' For instance, a missing taxon allowed in `"A;high"` can be grafted on branch pieces in `"A;high"`, `"AB;high"` or `"ABC;high"`,
+#' whereas a missing taxon allowed in `"AB;high"` only can be grafted on branch pieces in `"AB;high"` or `"ABC;high"`.
+#'
+#' The other traits are matched exactly, and are inherited as they are from the point where the taxon is grafted: with `"AB"` and `"high"` at the graft point and the allowed range `"A"`,
+#' the taxon inherits `"A"` and `"high"`. Only one trait can be treated as ranges to prevent inflation of the number of combined allowed states to consider.
 #'
 #' ### Sampling fraction and unsampled species
 #'
@@ -643,15 +656,17 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     {
       stop("'return_simmap' must be TRUE or FALSE")
     }
-    if (!is.logical(treat_states_as_ranges) || length(treat_states_as_ranges) != 1 || is.na(treat_states_as_ranges))
+    # 'treat_states_as_ranges': TRUE or FALSE for a single map (or no map), with the maps of several traits a logical vector with one value per trait (one TRUE at most: the range trait)
+    range_trait <- NULL # Position of the trait treated as ranges (several traits)
+    if (is.null(simmap_input$traits))
     {
-      stop("'treat_states_as_ranges' must be TRUE or FALSE")
-    }
-    if (treat_states_as_ranges && !is.null(simmap_input$traits))
-    {
-      stop("'treat_states_as_ranges = TRUE' is not supported with the maps of several traits ('simmap' is a list of maps): the states of a trait cannot be treated as ranges when ",
-           "combined with other traits. Use 'treat_states_as_ranges = FALSE', or provide the map of a single trait.\n",
-           "To provide multiple stochastic maps of a single trait (like geogrpahic ranges), use a multiSimmap instead of a list of simmaps.")
+      if (!is.logical(treat_states_as_ranges) || length(treat_states_as_ranges) != 1 || is.na(treat_states_as_ranges))
+      {
+        stop("'treat_states_as_ranges' must be TRUE or FALSE (a logical vector with one value per trait is used with the maps of several traits)")
+      }
+    } else {
+      range_trait <- resolve_range_trait(treat_states_as_ranges, trait_names = simmap_input$traits, traits_named = simmap_input$traits_named)
+      treat_states_as_ranges <- FALSE # With several traits, the range trait is handled through 'range_trait'
     }
     if (!is.numeric(max_age_redraws) || length(max_age_redraws) != 1 || is.na(max_age_redraws) || max_age_redraws < 1 || max_age_redraws != round(max_age_redraws))
     {
@@ -825,8 +840,18 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         merged <- merge_trait_simmaps(phy = phy, trait_maps = simmap_k)
         tracker <- start_state_tracking(phy = phy, simmap = merged$simmap)
         tracker$traits <- merged$traits # To split the updated simmap in one simmap per trait at the end
-        missing_taxa_list$allowed_states <- resolve_trait_allowed_states(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
-                                                                         traits = merged$traits, composite_states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
+        if (is.null(range_trait))
+        {
+          missing_taxa_list$allowed_states <- resolve_trait_allowed_states(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
+                                                                           traits = merged$traits, composite_states = tracker$states, taxon_names = missing_taxa_list$Taxon_name)
+        } else {
+          # One trait is treated as biogeographic ranges: acceptable composite states, candidate ranges to inherit (the other traits are inherited as they are) and inherited composite states
+          resolved <- resolve_trait_allowed_ranges(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states, traits = merged$traits,
+                                                   composite_states = tracker$states, taxon_names = missing_taxa_list$Taxon_name, range_trait = range_trait)
+          missing_taxa_list$allowed_states <- resolved$allowed_states
+          missing_taxa_list$range_candidates <- resolved$range_candidates
+          tracker <- extend_tracker_states(tracker = tracker, extra_states = resolved$inherited_states)
+        }
       } else if (treat_states_as_ranges) {
         tracker <- start_state_tracking(phy = phy, simmap = simmap_k)
         # Allowed ranges are resolved into the acceptable states (the states containing an allowed range), used to restrict grafting, and the candidate ranges of each state
