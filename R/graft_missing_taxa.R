@@ -573,6 +573,36 @@
 #' names(grafted_phy_traits$simmap)
 #'
 #'
+#' # --- Constraints from biogeographic ranges and another trait at once --- #
+#'
+#' # One of the traits can be treated as biogeographic ranges:
+#' # the allowed ranges do not have to match exactly the range of target stem branch pieces,
+#' # any allowed range comprised in a target range is valid (e.g., "A" can be grafted on "AB").
+#' # Here, the first trait holds ranges.
+#'
+#' # Load datasets
+#' data(toy_simmap_ranges) # Ranges simmap
+#' data(toy_missing_taxa_list_with_ranges_and_elevation) # Taxon-level constraints
+#' toy_missing_taxa_list_with_ranges_and_elevation$allowed_states
+#'
+#' # Global 'allowed_states': ranges containing "A" or "B", no restriction on the elevation.
+#' grafted_phy_ranges_traits <- graft_missing_taxa(phy = toy_backbone,
+#'     missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
+#'     simmap = list(biogeo = toy_simmap_ranges, elevation = toy_simmap_elevation),
+#'     allowed_states = list(c("A", "B"), NULL),
+#'     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE),
+#'     verbose = FALSE, seed = 1234)
+#'
+#' # '$simmap' is a list of updated simmaps, one per trait: ranges, and elevation
+#' names(grafted_phy_ranges_traits$simmap)
+#'
+#' # Check the constraints of both traits (columns 'states_ok_<trait>' and 'ranges_ok')
+#' check_grafting_constraints(phy_grafted = grafted_phy_ranges_traits, phy_backbone = toy_backbone,
+#'     missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
+#'     allowed_states = list(c("A", "B"), NULL),
+#'     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE))
+#'
+#'
 
 
 graft_missing_taxa <- function (phy, # Backbone phylogeny

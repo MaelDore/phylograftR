@@ -383,7 +383,7 @@
 #' data(toy_simmap)
 #'
 #' # List the missing taxa to graft
-#' missing_clades_list_states <- list(
+#' missing_clades_list <- list(
 #'    Taxon_name = c("M1", "M2", "M3", "M4", "M5"),
 #'    Sister_clade = list(M1 = c("t26", "t18"), M2 = c("t26", "t18"), M3 = c("t26", "t18"),
 #'                        M4 = "t14", M5 = "t14"))
@@ -395,7 +395,7 @@
 #'    # The stem branch from the "bottom" clade shifts from "green" to "red"
 #'    # The terminal (stem) branch of "t14" shift from "green" to "red" too
 #' grafted_phy_states <- graft_missing_clades(phy = toy_backbone,
-#'                                            missing_taxa_list = missing_clades_list_states,
+#'                                            missing_taxa_list = missing_clades_list,
 #'                                            simmap = toy_simmap, allowed_states = "green",
 #'                                            verbose = FALSE, seed = 1234)
 #'
@@ -429,7 +429,7 @@
 #'
 #' # Graft using constraints from all 3 simmaps X 2 simulations per simmap
 #' grafted_phys_maps <- graft_missing_clades(phy = toy_backbone,
-#'                                          missing_taxa_list = missing_clades_list_states,
+#'                                          missing_taxa_list = missing_clades_list,
 #'                                          simmap = toy_multiSimmap, allowed_states = "green",
 #'                                          nb_simulations = 2, verbose = FALSE, seed = 1234)
 #'
@@ -444,13 +444,13 @@
 #'
 #' # --- Constraints from several traits at once --- #
 #'
-#' Load the simmap for the second trait: 'toy_simmap_elevation' has two states: "high" and "low".
+#' # Load the simmap for the second trait: 'toy_simmap_elevation' has two states: "high" and "low".
 #' data(toy_simmap_elevation)
 #'
 #' # Provide the maps of the traits as a list
 #' # The global 'allowed_states' has one element per trait (here, "green" color and "low" elevation).
 #' grafted_phy_traits <- graft_missing_clades(phy = toy_backbone,
-#'                                            missing_taxa_list = missing_clades_list_states,
+#'                                            missing_taxa_list = missing_clades_list,
 #'                                            simmap = list(color = toy_simmap,
 #'                                                          elevation = toy_simmap_elevation),
 #'                                            allowed_states = list("green", "low"),
@@ -459,10 +459,36 @@
 #' # '$simmap' is a list of updated simmaps, one per trait
 #' names(grafted_phy_traits$simmap)
 #'
-#' # Newly grafted taxa can only be grafted and harbor the allowed state in each trait
+#' # Newly grafted clades can only be grafted and harbor the allowed state in each trait
 #' plot(grafted_phy_traits$simmap[[1]]) # Only 'green'
 #' plot(grafted_phy_traits$simmap[[2]]) # Only 'low'
 #'
+#'
+#' # --- Constraints from biogeographic ranges and another trait at once --- #
+#'
+#' # One of the traits can be treated as biogeographic ranges:
+#' # the allowed ranges do not have to match exactly the range of target stem branch pieces,
+#' # any allowed range comprised in a target range is valid (e.g., "A" can be grafted on "AB").
+#' # Here, the first trait holds ranges.
+#'
+#' # Load the range simmap
+#' data(toy_simmap_ranges)
+#'
+#' # The clades are grafted on stem branch pieces in ranges containing "A" or "B", and in elevation "low"
+#' grafted_phy_ranges_traits <- graft_missing_clades(phy = toy_backbone,
+#'     missing_taxa_list = missing_clades_list,
+#'     simmap = list(biogeo = toy_simmap_ranges, elevation = toy_simmap_elevation),
+#'     allowed_states = list(c("A", "B"), "low"),
+#'     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE),
+#'     verbose = FALSE, seed = 1234)
+#'
+#' # '$simmap' is a list of updated simmaps, one per trait: ranges, and elevation
+#' names(grafted_phy_ranges_traits$simmap)
+#'
+#' # Newly grafted clades can only harbor the allowed state/range in each trait
+#' # They can be grafted on range that encompasses their allowed range (here, "AB")
+#' plot(grafted_phy_traits$simmap[[1]]) # Grafted on "A", "B", or "AB", but inherit only "A" or "B".
+#' plot(grafted_phy_traits$simmap[[2]]) # Only 'low'
 #'
 
 

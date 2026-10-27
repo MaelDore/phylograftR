@@ -328,8 +328,8 @@
 #' @title Toy stochastic character map of elevation states
 #'
 #' @description Stochastic character map (simmap) of [`phylograftR::toy_backbone`][toy_backbone] with two elevation states, `"high"` and `"low"`,
-#'   to combine with [`phylograftR::toy_simmap`][toy_simmap] (color) as examples of attribute-based constraints applied on two traits at once,
-#'   with `simmap = list(color = toy_simmap, elevation = toy_simmap_elevation)`.
+#'   to combine with [`phylograftR::toy_simmap`][toy_simmap] (color) or [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges] (biogeographic ranges)
+#'   as examples of attribute-based constraints applied on two traits at once.
 #'
 #'   It was simulated with `phytools::sim.history()` from a root in state `"low"`, with equal transition rates between the two states (0.04 per unit of time).
 #'   Among the first 1000 seeds, the one used (94) is the first giving a map that is balanced and compatible with the constraints of
@@ -422,3 +422,83 @@
 #' toy_missing_taxa_list_with_two_traits$allowed_states
 #'
 "toy_missing_taxa_list_with_two_traits"
+
+
+#' @title Toy list of missing taxa, with allowed states of two traits: biogeographic ranges and elevation
+#'
+#' @description Same as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], with the extra item `$allowed_states` covering the states of two traits,
+#'   the biogeographic ranges of [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges] (`"A"`, `"B"`, `"AB"`, `"BC"`) and the elevation of
+#'   [`phylograftR::toy_simmap_elevation`][toy_simmap_elevation] (`"high"`, `"low"`), in which each taxon can be grafted.
+#'   It is used to showcase the grafting constrained by a range trait and a 'normal' trait at once,
+#'   with `treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE)`
+#'   (see the Details section "Biogeographic ranges as states" of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]).
+#'
+#'   It is the output of [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] applied to the table
+#'   `system.file("extdata", "toy_missing_taxa_with_ranges_and_elevation.csv", package = "phylograftR")`.
+#'   In the column `allowed_states`, the states of the traits are separated by semicolons
+#'   (in the order of the maps provided in `simmap`: the ranges, then the elevation), and the states of a trait by commas. Open that file to see the different syntaxes:
+#'   * `"A;high"`: the range is `"A"`, and the elevation is `"high"`.
+#'   * `"B, BC;"`: the range is `"B"` or `"BC"`, and the elevation has no taxon-level value (the global value is used).
+#'   * `"elevation=low"`: traits named, so the ranges can be omitted (they have no taxon-level value).
+#'   * `"biogeo=A, BC; elevation=high"`: all the traits named, in any order.
+#'   * Blank cell: no taxon-level value for any trait, so the global `allowed_states` argument is used for both.
+#'
+#'   The names of the traits (`biogeo` and `elevation`) must match the names of the maps provided in `simmap` to use the syntax with names.
+#'
+#' @usage data(toy_missing_taxa_list_with_ranges_and_elevation)
+#' @format A named list with the same 7 taxa and items as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], and the extra item:
+#'  * `$allowed_states` List (one element per taxon, named after the taxa) of lists with the states of each trait (one element per trait, `NULL` for a trait without taxon-level value),
+#'    or `NULL` to use the global `allowed_states` argument for all the traits. `"Genus_a_sp1"`: `list("A", "high")`; `"Genus_b_sp1"`: `list(c("B", "BC"), NULL)`;
+#'    `"Genus_b_sp2"`: `list(elevation = "low")`; `"Genus_c_sp2"`: `list(biogeo = c("A", "BC"), elevation = "high")`; the others: `NULL`.
+#'
+#' @seealso Simmap for ranges: [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges]. Simmap for elevation: [`phylograftR::toy_simmap_elevation`][toy_simmap_elevation].
+#'   Missing taxa list with ranges alone: [`phylograftR::toy_missing_taxa_list_with_allowed_ranges`][toy_missing_taxa_list_with_allowed_ranges].
+#'   Missing taxa list with two non-biogeographic traits: [`phylograftR::toy_missing_taxa_list_with_two_traits`][toy_missing_taxa_list_with_two_traits].
+#'   Import function: [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list].
+#'
+#' @examples
+#' # Import the list
+#' data(toy_missing_taxa_list_with_ranges_and_elevation)
+#' toy_missing_taxa_list_with_ranges_and_elevation$allowed_states
+#'
+#' # Compare to the initial '.csv' file
+#' system.file("extdata", "toy_missing_taxa_with_ranges_and_elevation.csv", package = "phylograftR")
+#'
+#' # Graft with the maps of the two traits. The first trait is treated as ranges,
+#' # the second as 'normal', non-biogeographic states.
+#' # Taxa without taxon-level states can be grafted on branches in a range containing "A" or "B" (global value),
+#' # whatever the elevation (NULL).
+#'
+#' # Load datasets
+#' data(toy_backbone)
+#' data(toy_simmap_ranges)
+#' data(toy_simmap_elevation)
+#'
+#' # Graft with constraints from elevation states and biogeographic ranges
+#' grafted_phy <- graft_missing_taxa(phy = toy_backbone,
+#'     missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
+#'     simmap = list(biogeo = toy_simmap_ranges, elevation = toy_simmap_elevation),
+#'     allowed_states = list(c("A", "B"), NULL),
+#'     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE),
+#'     verbose = FALSE, seed = 1234)
+#'
+#' # Result stores one updated simmap per trait
+#' names(grafted_phy$simmap)
+#'
+#' # State of each grafted taxon for each trait: should match the allowed states
+#' taxon_names <- toy_missing_taxa_list_with_ranges_and_elevation$Taxon_name
+#' taxon_states <- sapply(grafted_phy$simmap, function (simmap)
+#' {
+#'   tip_edges <- match(match(taxon_names, simmap$tip.label), simmap$edge[, 2])
+#'   setNames(vapply(simmap$maps[tip_edges], function (x) names(x)[1], character(1)), taxon_names)
+#' })
+#' taxon_states
+#' toy_missing_taxa_list_with_ranges_and_elevation$allowed_states
+#'
+#' # Check that all the grafted taxa respect their constraints, trait by trait
+#' check_grafting_constraints(grafted_phy,
+#'     missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
+#'     allowed_states = list(c("A", "B"), NULL),
+#'     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE))
+#'
+"toy_missing_taxa_list_with_ranges_and_elevation"

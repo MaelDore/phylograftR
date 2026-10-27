@@ -208,6 +208,36 @@
 #' attr(check_results_multi, "phylogenies")
 #'
 #'
+#' # --- Check the constraints from several traits, with biogeographic ranges --- #
+#'
+#' # With the stochastic maps of several traits used to assign grafting constraints,
+#' # 'allowed_states' has one element per trait,
+#' # and 'treat_states_as_ranges' is a logical vector with one value per trait
+#' # used to identify which trait was treated as biogeographic ranges.
+#'
+#' # Load datasets
+#' data(toy_backbone)
+#' data(toy_simmap_ranges)
+#' data(toy_simmap_elevation)
+#' data(toy_missing_taxa_list_with_ranges_and_elevation)
+#'
+#' # Graft phylogeny using elevation and biogeographic ranges as constraints
+#' grafted_phy_traits <- graft_missing_taxa(phy = toy_backbone,
+#'     missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
+#'     simmap = list(biogeo = toy_simmap_ranges, elevation = toy_simmap_elevation),
+#'     allowed_states = list(c("A", "B"), NULL),
+#'     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE),
+#'     verbose = FALSE, seed = 1234)
+#'
+#' # The result has the joint columns 'states_ok' and 'ranges_ok' (ranges of the 'range trait'),
+#' # and the column 'states_ok_<trait>' for each trait. The summary details the failures per trait.
+#' check_traits <- check_grafting_constraints(phy_grafted = grafted_phy_traits, phy_backbone = toy_backbone,
+#'     missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
+#'     allowed_states = list(c("A", "B"), NULL),
+#'     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE))
+#' check_traits[, c("Taxon_name", "states_ok", "states_ok_biogeo", "states_ok_elevation", "ranges_ok", "ok")]
+#'
+#'
 
 
 check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
