@@ -32,12 +32,14 @@
 #'   This is the default for all taxa: taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead.
 #'   Only used if `phy_grafted` has a `$simmap` item (the updated simmap returned by [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] with a `simmap`).
 #'   If the `$simmap` item is a list of the simmaps of several traits (grafting constrained with several traits), `allowed_states` is a list with one element per trait
-#'   (in the order of the traits, or named after the traits; `NULL` = all the states of the trait), and the taxon-level values of `missing_taxa_list$allowed_states`
+#'   (in the order of the traits, or named after the traits; `NULL` = all the states of the trait, or any range for the trait treated as ranges), and the taxon-level values of `missing_taxa_list$allowed_states`
 #'   are given per trait as in the grafting functions (see 'Several traits' in Details).
 #'   The function stops if some states are not in the `simmap`. Default is `NULL` (all states allowed for the taxa without a taxon-level value).
 #' @param treat_states_as_ranges Logical. Same as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]: whether the states of the `simmap` and the allowed states are treated as biogeographic ranges:
 #'   an allowed range enables grafting on branch pieces in any range that contains it: `"A"` can be grafted on `"A"`, `"AB"` and `"ABC"`, whereas `"AB"` can be grafted on `"AB"` and `"ABC"` but not `"A"`.
-#'   Only used if `phy_grafted` has a `$simmap` item, otherwise the function stops if `TRUE`. Not supported yet if the `$simmap` item covers several traits (the function stops).
+#'   Only used if `phy_grafted` has a `$simmap` item, otherwise the function stops if `TRUE`.
+#'   With a `$simmap` item that is a list of the simmaps of several traits, takes a logical vector with one value per trait, with at most one `TRUE` to identify
+#'   the trait treated as ranges (positional, or named after the traits in any order, as in the grafting functions; a single `FALSE` is accepted, a single `TRUE` stops).
 #'   States / ranges are coded as in BioGeoBEARS (see the Details section "Biogeographic ranges as states").
 #'   The function stops if the states of the `simmap` or the allowed states are not correctly coded, or if an area of the allowed states is not in the `simmap`.
 #'   Default is `FALSE` (states are matched exactly).
@@ -68,7 +70,7 @@
 #'      With the maps of several traits, `TRUE` if the taxon was grafted in an allowed state for all the traits.
 #' * `$states_ok_<trait>`: Logical. Only with the maps of several traits (one column per trait, named after the traits): whether the taxon was grafted in one of its allowed states for this trait.
 #'      Used to find which trait is violated when `$states_ok` is `FALSE`.
-#' * `$ranges_ok`: Logical. Only checked with `treat_states_as_ranges = TRUE` and a `$simmap` item: whether the range inherited by the taxon is contained in the state of the lineage at the graft point
+#' * `$ranges_ok`: Logical. Only checked with `treat_states_as_ranges = TRUE` (or a range trait with several traits) and a `$simmap` item: whether the range inherited by the taxon is contained in the state of the lineage at the graft point
 #'      (see the Details section "Biogeographic ranges as states"). `NA` if not checked, or if the taxon is grafted at the root (no parent lineage).
 #'      This differs from `$states_ok` that checks only the validity of the terminal tip state. Here, the validity of the inherited range is assessed against the range of the backbone lineage it was grafted on.
 #' * `$ok`: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
@@ -85,6 +87,7 @@
 #' * `"backbone_preserved"`: Logical. Whether both topology and branch lengths are preserved, within `tolerance` (`NA` if `check_backbone = FALSE`).
 #' * `"all_ok"`: Logical. Whether all taxa respect their constraints and the backbone is preserved (if checked).
 #' * `"trait_names"`: Character vector. Names of the traits checked (only with the maps of several traits, otherwise `NULL`).
+#' * `"range_trait"`: Character string. Name of the trait treated as ranges (only with the maps of several traits, otherwise `NULL`).
 #' * `"phylogenies"`: data.frame with one row per phylogeny checked (columns `map`, `simulation`, `seed`, `n_failed` (number of taxa that failed), `backbone_preserved` and `all_ok`).
 #'
 #' Attributes are accessed with `attr(x = output, which = "attribute_name")`.
@@ -121,7 +124,11 @@
 #' otherwise the global `allowed_states` for this trait, otherwise all the states of the trait (see [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]).
 #' `$states_ok_<trait>` gives the result for each trait, and `$states_ok` is `TRUE` only if all traits are allowed.
 #' With `verbose = TRUE`, the number of violations is also given for each trait.
-#' `treat_states_as_ranges = TRUE` is not supported yet with several traits (the function stops).
+#'
+#' With a trait treated as ranges (`treat_states_as_ranges`, one `TRUE` in the vector), the checks of 'Biogeographic ranges as states' are performed on this trait:
+#' `$states_ok_<trait>` is `TRUE` if the range inherited is one of the allowed ranges (any range if the taxon has no allowed ranges),
+#' and `$ranges_ok` is `TRUE` if the range inherited is contained in the state of the lineage of this trait at the graft point.
+#' The other traits are checked as exact matches. The attribute `"range_trait"` gives the name of the range trait.
 #'
 #' ### Several grafted phylogenies
 #'
@@ -234,7 +241,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
       stop_on_failure = stop_on_failure, verbose = verbose))
   }
   add_columns <- function (res, k) { cbind(map = listed$map[k], simulation = listed$simulation[k], seed = listed$seed[k], res, stringsAsFactors = FALSE) }
-  copy_attributes <- function (res, from) { for (a in c("topology_preserved", "max_branch_length_deviation", "max_branch_length_deviation_relative", "backbone_preserved", "all_ok", "trait_names")) { attr(res, a) <- attr(from, a) }; res }
+  copy_attributes <- function (res, from) { for (a in c("topology_preserved", "max_branch_length_deviation", "max_branch_length_deviation_relative", "backbone_preserved", "all_ok", "trait_names", "range_trait")) { attr(res, a) <- attr(from, a) }; res }
 
   if (n_phylos == 1 && !listed$is_list)
   {
@@ -270,6 +277,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
     attr(res, "backbone_preserved") <- if (check_backbone) all(vapply(parts, function (r) isTRUE(attr(r, "backbone_preserved")), logical(1))) else NA
     attr(res, "all_ok") <- all(vapply(parts, function (r) isTRUE(attr(r, "all_ok")), logical(1)))
     attr(res, "trait_names") <- attr(parts[[1]], "trait_names")
+    attr(res, "range_trait") <- attr(parts[[1]], "range_trait")
     attr(res, "phylogenies") <- table_phylos[ks, , drop = FALSE]
     rownames(attr(res, "phylogenies")) <- NULL
     res
@@ -359,9 +367,11 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
   ## 1.1/ Prepare inputs ####
 
   # States: arguments on the states require the updated simmap in the grafted phylogeny (the states are not checked otherwise)
-  if (!is.logical(treat_states_as_ranges) || length(treat_states_as_ranges) != 1 || is.na(treat_states_as_ranges))
+  # (with the maps of several traits, 'treat_states_as_ranges' is a logical vector with one value per trait, validated with the traits)
+  simmap_is_traits <- is.list(phy_grafted$simmap) && !inherits(phy_grafted$simmap, "simmap") && length(phy_grafted$simmap) > 0 && all(vapply(phy_grafted$simmap, inherits, logical(1), what = "simmap"))
+  if (!simmap_is_traits && (!is.logical(treat_states_as_ranges) || length(treat_states_as_ranges) != 1 || is.na(treat_states_as_ranges)))
   {
-    stop("'treat_states_as_ranges' must be TRUE or FALSE.")
+    stop("'treat_states_as_ranges' must be TRUE or FALSE", if (is.null(phy_grafted$simmap)) "." else " (a logical vector with one value per trait is used with the maps of several traits).")
   }
   if (is.null(phy_grafted$simmap) && (!is.null(allowed_states) || treat_states_as_ranges))
   {
@@ -396,21 +406,20 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
   # States: only checked if the grafted phylogeny has the updated simmap. The states of each taxon are resolved as in the grafting functions
   simmap_grafted <- phy_grafted$simmap
   check_states <- !is.null(simmap_grafted)
-  check_ranges <- check_states && treat_states_as_ranges # Check the ranges inherited
+  check_ranges <- check_states && !simmap_is_traits && treat_states_as_ranges # Check the ranges inherited
+  range_trait <- NULL # Position of the trait treated as ranges (several traits)
+  range_map <- NULL # Simmap of the ranges (the simmap itself, or the simmap of the range trait with several traits)
   allowed_states_taxa <- NULL
   trait_names <- NULL # Names of the traits if the simmap is a list of the simmaps of several traits
   allowed_sets_taxa <- NULL # Allowed states of each trait for each taxon (several traits)
   if (check_states)
   {
     # Maps of several traits: a list of simmaps (one per trait). The states are checked trait by trait
-    if (is.list(simmap_grafted) && !inherits(simmap_grafted, "simmap") && length(simmap_grafted) > 0 && all(vapply(simmap_grafted, inherits, logical(1), what = "simmap")))
+    if (simmap_is_traits)
     {
-      if (treat_states_as_ranges)
-      {
-        stop("'treat_states_as_ranges = TRUE' is not supported with the maps of several traits ('phy_grafted$simmap' is a list of simmaps): the ranges cannot be checked with several traits yet.")
-      }
       trait_names <- names(simmap_grafted)
-      if (is.null(trait_names) || anyNA(trait_names) || any(trait_names == "")) { trait_names <- paste0("trait_", seq_along(simmap_grafted)) }
+      traits_named <- !(is.null(trait_names) || anyNA(trait_names) || any(trait_names == ""))
+      if (!traits_named) { trait_names <- paste0("trait_", seq_along(simmap_grafted)) }
       if (anyDuplicated(trait_names)) { stop("The names of the traits in 'phy_grafted$simmap' must be unique.") }
       names(simmap_grafted) <- trait_names
       for (t in trait_names)
@@ -425,8 +434,17 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
         st <- colnames(sm$mapped.edge)
         if (is.null(st)) sort(unique(unlist(lapply(sm$maps, names)))) else st
       })
+      # Trait treated as ranges (logical vector, one value per trait, one TRUE at most): its allowed values are ranges (the range inherited must be one of them, no restriction if none)
+      range_trait <- resolve_range_trait(treat_states_as_ranges, trait_names = trait_names, traits_named = traits_named)
+      treat_states_as_ranges <- FALSE
+      if (!is.null(range_trait))
+      {
+        check_ranges <- TRUE
+        range_map <- simmap_grafted[[range_trait]]
+        validate_range_coding(trait_states[[range_trait]], who = paste0("the simmap of trait '", trait_names[range_trait], "' of 'phy_grafted'"))
+      }
       allowed_sets_taxa <- resolve_trait_state_sets(allowed_states_taxa = missing_taxa_list$allowed_states, allowed_states = allowed_states,
-                                                    traits = list(names = trait_names, states = trait_states), taxon_names = taxa_names)
+                                                    traits = list(names = trait_names, states = trait_states), taxon_names = taxa_names, range_trait = range_trait)
     } else {
     if (!inherits(simmap_grafted, "simmap") || is.null(simmap_grafted$maps) || length(simmap_grafted$maps) != nrow(phy_grafted$edge))
     {
@@ -435,6 +453,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
     }
     if (is.null(trait_names))
     {
+    range_map <- simmap_grafted
     states_simmap <- colnames(simmap_grafted$mapped.edge)
     if (is.null(states_simmap)) { states_simmap <- sort(unique(unlist(lapply(simmap_grafted$maps, names)))) }
     if (check_ranges)
@@ -618,7 +637,9 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
         # Each trait: the states of the terminal branch in the simmap of the trait must be allowed for this trait
         for (t in trait_names)
         {
-          res[[paste0("states_ok_", t)]][i] <- all(names(simmap_grafted[[t]]$maps[[tip_edge]]) %in% allowed_sets_taxa[[i]][[t]])
+          # (the range trait without allowed ranges (NULL) inherits any range)
+          set_t <- allowed_sets_taxa[[i]][[t]]
+          res[[paste0("states_ok_", t)]][i] <- is.null(set_t) || all(names(simmap_grafted[[t]]$maps[[tip_edge]]) %in% set_t)
         }
         res$states_ok[i] <- all(unlist(res[i, paste0("states_ok_", trait_names)]))
       } else {
@@ -628,11 +649,11 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
       ## Range inherited: it must be contained in the state of the lineage at the graft point
       if (check_ranges)
       {
-        inherited_range <- names(simmap_grafted$maps[[tip_edge]])[1]
+        inherited_range <- names(range_map$maps[[tip_edge]])[1]
         parent_edge <- match(phy_grafted$edge[tip_edge, 1], phy_grafted$edge[, 2]) # Branch above the node where the taxon is attached (NA at the root)
         while (!is.na(parent_edge))
         {
-          parent_map_states <- names(simmap_grafted$maps[[parent_edge]])
+          parent_map_states <- names(range_map$maps[[parent_edge]])
           graft_point_state[i] <- parent_map_states[length(parent_map_states)] # State at the tipward end of the branch
           # Go up through branches that only lead to missing taxa and are in the range inherited (the clade or lineage the taxon is grafted on)
           child_node <- phy_grafted$edge[parent_edge, 2]
@@ -713,6 +734,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
   attr(res, "backbone_preserved") <- backbone_preserved
   attr(res, "all_ok") <- all_ok
   attr(res, "trait_names") <- trait_names
+  attr(res, "range_trait") <- if (is.null(range_trait)) NULL else trait_names[range_trait]
 
   # Describe the taxa that failed (max 10), for the summary and the error message
   describe_failures <- function ()
@@ -735,7 +757,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
                                                     paste(names(simmap_grafted$maps[[match(match(taxa_names[i], phy_grafted$tip.label), phy_grafted$edge[, 2])]]), collapse = ", "),
                                                     "; allowed: ", paste(allowed_states_taxa[[i]], collapse = ", "), ")"),
               if (isFALSE(res$ranges_ok[i])) paste0("inherited a range that is not contained in the state of the graft point (",
-                                                   names(simmap_grafted$maps[[match(match(taxa_names[i], phy_grafted$tip.label), phy_grafted$edge[, 2])]])[1],
+                                                   names(range_map$maps[[match(match(taxa_names[i], phy_grafted$tip.label), phy_grafted$edge[, 2])]])[1],
                                                    " not in ", graft_point_state[i], ")")), collapse = "; ")
     }, character(1))
     paste0("\n  Failed taxa:\n", paste0("    - ", taxa_names[failed[seq_len(n_show)]], ": ", reason, collapse = "\n"),

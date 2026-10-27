@@ -672,7 +672,7 @@ test_that("check_grafting_constraints() stops with several traits and ranges, or
   mtl <- traits_missing_taxa(toy)
   maps <- make_period_traits(toy$phy)
   grafted <- graft_missing_taxa(toy$phy, mtl, simmap = maps, allowed_states = list("B", NULL), method = "uniform", verbose = FALSE, seed = 1)
-  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, treat_states_as_ranges = TRUE, verbose = FALSE), "not supported with the maps of several traits")
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, treat_states_as_ranges = TRUE, verbose = FALSE), "ambiguous with the maps of several traits")
   expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = "B", verbose = FALSE), "for each trait")
   expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("B", "Z"), verbose = FALSE), "Z")
   expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list(habitat = "B"), verbose = FALSE), "not in 'simmap'")
@@ -1025,4 +1025,100 @@ test_that("graft_missing_clades() with ranges and traits: inherited ranges that 
   # A single trait: TRUE treats the map as ranges (unchanged)
   single <- graft_clades_ranges(toy, maps$biogeo, treat_states_as_ranges = TRUE, allowed_states = "A", seed = 1)
   expect_true(all(taxa_states(single$simmap, taxa) == "A"))
+})
+
+
+## ---- check_grafting_constraints() with one trait treated as ranges and other traits ---- ##
+
+test_that("check_grafting_constraints() checks the range trait (ranges inherited, ranges_ok) and the other traits (exact states)",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_taxa(toy)
+  taxa <- mtl$Taxon_name
+  maps <- make_range_traits(toy$phy)
+  ranges <- c(biogeo = TRUE, elevation = FALSE)
+  grafted <- graft_ranges(toy, maps, treat_states_as_ranges = ranges, allowed_states = list("A", "high"), seed = 1)
+  chk <- function (g, ..., allowed = list("A", "high"), treat = ranges) check_grafting_constraints(g, toy$phy, mtl, allowed_states = allowed, treat_states_as_ranges = treat, verbose = FALSE, ...)
+
+  res <- chk(grafted)
+  expect_true(all(res$ok)); expect_true(attr(res, "all_ok"))
+  expect_true(all(res$states_ok_biogeo)); expect_true(all(res$states_ok_elevation)); expect_true(all(res$states_ok))
+  expect_true(all(res$ranges_ok %in% TRUE))
+  expect_equal(attr(res, "range_trait"), "biogeo")
+  expect_equal(attr(res, "trait_names"), c("biogeo", "elevation"))
+  cols <- names(res)
+  expect_equal(cols[match("states_ok", cols) + 0:3], c("states_ok", "states_ok_biogeo", "states_ok_elevation", "ranges_ok"))
+
+  # Positional, named in any order, unnamed traits: the same
+  expect_equal(chk(grafted, treat = c(TRUE, FALSE)), res)
+  expect_equal(chk(grafted, treat = c(elevation = FALSE, biogeo = TRUE), allowed = list(elevation = "high", biogeo = "A")), res)
+  unnamed <- graft_ranges(toy, unname(maps), treat_states_as_ranges = c(TRUE, FALSE), allowed_states = list("A", "high"), seed = 1)
+  res_unnamed <- chk(unnamed, treat = c(TRUE, FALSE))
+  expect_true(all(res_unnamed$ok)); expect_equal(attr(res_unnamed, "range_trait"), "trait_1")
+  # No allowed ranges: any range accepted for the range trait. With the exact states (no ranges), the range "A" inherited from "AB" is not a state allowed "AB"... but the states are checked as exact states
+  expect_true(all(chk(grafted, allowed = list(NULL, "high"))$ok))
+  expect_true(all(chk(grafted, allowed = NULL)$ok))
+  # Without treating the trait as ranges, "A" is also a valid exact state: the same check passes, with no ranges_ok
+  res_exact <- chk(grafted, treat = FALSE)
+  expect_true(all(res_exact$ok)); expect_true(all(is.na(res_exact$ranges_ok))); expect_null(attr(res_exact, "range_trait"))
+
+  # A range inherited that is not allowed: only the range trait is violated
+  bad_range <- chk(grafted, allowed = list("B", "high"))
+  expect_false(any(bad_range$states_ok_biogeo)); expect_true(all(bad_range$states_ok_elevation)); expect_false(any(bad_range$ok))
+  txt <- paste(capture.output(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("B", "high"), treat_states_as_ranges = ranges, verbose = TRUE)), collapse = "\n")
+  expect_match(txt, "Allowed states violated:\\s+5 \\(biogeo: 5, elevation: 0\\)")
+  expect_match(txt, "biogeo: A \\(allowed: B\\)")
+  # Another trait not allowed
+  bad_trait <- chk(grafted, allowed = list("A", "low"))
+  expect_true(all(bad_trait$states_ok_biogeo)); expect_false(any(bad_trait$states_ok_elevation))
+
+  # A range inherited that is not contained in the state at the graft point: ranges_ok FALSE for this taxon, the states of the range trait are still allowed
+  bad <- grafted
+  tip_edge <- match(match("X2", bad$tip.label), bad$edge[, 2])
+  names(bad$simmap$biogeo$maps[[tip_edge]]) <- "BC"
+  res_bad <- chk(bad, allowed = list(NULL, "high"))
+  expect_equal(res_bad$Taxon_name[!res_bad$ok], "X2")
+  expect_false(res_bad$ranges_ok[res_bad$Taxon_name == "X2"])
+  expect_true(res_bad$states_ok_biogeo[res_bad$Taxon_name == "X2"])
+  expect_match(paste(capture.output(check_grafting_constraints(bad, toy$phy, mtl, allowed_states = list(NULL, "high"), treat_states_as_ranges = ranges, verbose = TRUE)), collapse = "\n"),
+               "Range not in graft-point state:\\s+1")
+  expect_error(chk(bad, allowed = list(NULL, "high"), stop_on_failure = TRUE), "not contained in the state of the graft point \\(BC not in")
+})
+
+test_that("check_grafting_constraints() validates treat_states_as_ranges with several traits, and checks several simulations, paired multiSimmaps",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_taxa(toy)
+  taxa <- mtl$Taxon_name
+  maps <- make_range_traits(toy$phy)
+  ranges <- c(biogeo = TRUE, elevation = FALSE)
+  grafted <- graft_ranges(toy, maps, treat_states_as_ranges = ranges, allowed_states = list("A", "high"), seed = 1)
+  chk <- function (g, treat, ..., mt = mtl) check_grafting_constraints(g, toy$phy, mt, allowed_states = list("A", "high"), treat_states_as_ranges = treat, verbose = FALSE, ...)
+  expect_error(chk(grafted, TRUE), "ambiguous with the maps of several traits")
+  expect_error(chk(grafted, c(TRUE, TRUE)), "Only one trait")
+  expect_error(chk(grafted, c(TRUE, FALSE, FALSE)), "one value per trait")
+  expect_error(chk(grafted, c(color = TRUE, elevation = FALSE)), "exactly the names")
+  expect_error(chk(grafted, c(FALSE, TRUE)), "Range trait|trait 'elevation'")
+  expect_error(check_grafting_constraints(grafted, toy$phy, mtl, allowed_states = list("D", NULL), treat_states_as_ranges = ranges, verbose = FALSE), "areas.*\\(trait 'biogeo'\\)")
+  # FALSE: no ranges, the states are checked as exact states ("A" is a state of the map)
+  expect_true(all(chk(grafted, FALSE)$ok))
+  # No simmap: the vector is not valid
+  expect_error(check_grafting_constraints(drop_simmap(grafted), toy$phy, mtl, treat_states_as_ranges = ranges, verbose = FALSE), "must be TRUE or FALSE")
+  # A single trait: TRUE or FALSE, unchanged
+  one <- graft_ranges(toy, maps$biogeo, treat_states_as_ranges = TRUE, allowed_states = "A", seed = 1)
+  res_one <- check_grafting_constraints(one, toy$phy, mtl, allowed_states = "A", treat_states_as_ranges = TRUE, verbose = FALSE)
+  expect_true(all(res_one$ok)); expect_false(any(grepl("^states_ok_", names(res_one)))); expect_null(attr(res_one, "range_trait"))
+
+  # Several simulations and paired multiSimmaps
+  sims <- graft_ranges(toy, maps, treat_states_as_ranges = ranges, allowed_states = list("A", "high"), nb_simulations = 3, seed = 2)
+  res_sims <- chk(sims, ranges)
+  expect_equal(nrow(res_sims), 3 * length(taxa)); expect_true(all(res_sims$ok)); expect_equal(attr(res_sims, "range_trait"), "biogeo")
+  txt <- paste(capture.output(check_grafting_constraints(sims, toy$phy, mtl, allowed_states = list("B", "high"), treat_states_as_ranges = ranges, verbose = TRUE)), collapse = "\n")
+  expect_match(txt, "\\(biogeo: 15, elevation: 0\\)")
+  pairs <- lapply(list(c(20, 10), c(15, 8)), function (ages) make_range_traits(toy$phy, ages[1], ages[2]))
+  multi <- graft_ranges(toy, list(biogeo = as_multi(lapply(pairs, function (x) x$biogeo), c("p", "q")), elevation = as_multi(lapply(pairs, function (x) x$elevation), c("p", "q"))),
+                        treat_states_as_ranges = ranges, allowed_states = list("A", "high"), seed = 2)
+  res_multi <- chk(multi, ranges)
+  expect_equal(names(res_multi), c("p", "q"))
+  expect_true(all(vapply(res_multi, function (r) all(r$ok) && attr(r, "range_trait") == "biogeo", logical(1))))
 })
