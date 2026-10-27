@@ -9,3 +9,5 @@ README.html
 
 R_temp/*
 /Claude_outputs/*
+
+R/_benchmark_ranges_traits.R

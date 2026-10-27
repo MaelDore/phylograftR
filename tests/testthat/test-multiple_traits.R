@@ -911,3 +911,29 @@ test_that("graft_missing_taxa() with ranges and traits: several simulations, pai
   expect_error(graft_ranges(toy, maps$biogeo, treat_states_as_ranges = c(TRUE, FALSE)), "must be TRUE or FALSE")
   expect_error(graft_missing_taxa(toy$phy, mtl, treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE), method = "uniform", verbose = FALSE), "must be TRUE or FALSE")
 })
+
+
+test_that("resolve_trait_allowed_ranges() gives each taxon the result it would have alone (taxa with the same allowed states share the computation)",
+{
+  traits <- list(names = c("biogeo", "elevation"), states = list(biogeo = c("A", "AB", "BC"), elevation = c("low", "high")), sep = "|")
+  composite <- c("A|low", "AB|low", "AB|high", "BC|high", "BC|low")
+  specs <- list(list("A", "high"), list("B", NULL), NULL, list("A", "high"), list(NULL, "low"), list("B", NULL), list("A", "high"))
+  taxa <- paste0("X", seq_along(specs))
+  names(specs) <- taxa
+  together <- suppressWarnings(resolve_trait_allowed_ranges(specs, NULL, traits, composite, taxa, range_trait = 1))
+  # Taxa with identical specifications have identical results
+  expect_identical(together$allowed_states$X1, together$allowed_states$X4)
+  expect_identical(together$range_candidates$X1, together$range_candidates$X7)
+  expect_identical(together$range_candidates$X2, together$range_candidates$X6)
+  expect_false(identical(together$allowed_states$X1, together$allowed_states$X2))
+  # Each taxon alone: same acceptable states and candidates (the inherited states are shared by all the taxa, so they are compared on the states of each taxon alone)
+  for (i in seq_along(specs))
+  {
+    alone <- suppressWarnings(resolve_trait_allowed_ranges(specs[i], NULL, traits, composite, taxa[i], range_trait = 1))
+    expect_true(all(alone$allowed_states[[1]] %in% together$allowed_states[[i]]))
+    expect_equal(together$range_candidates[[i]][names(alone$range_candidates[[1]])], alone$range_candidates[[1]])
+    expect_true(all(alone$inherited_states %in% together$inherited_states))
+  }
+  expect_equal(names(together$allowed_states), taxa)
+  expect_equal(names(together$range_candidates), taxa)
+})

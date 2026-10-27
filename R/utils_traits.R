@@ -634,9 +634,17 @@ resolve_trait_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_st
   candidates_of <- function (state_parts, i) { with_ranges(state_parts, resolved$range_candidates[[i]][[state_parts[range_trait]]]) }
 
   # Ranges inherited by the lineages grafted on the observed composite states: composite states that are not observed on the backbone
+  # Taxa with the same allowed states (same acceptable ranges, candidates and allowed states of the other traits) have the same results: computed once per signature
+  signature <- vapply(seq_len(n_taxa), function (i)
+  {
+    paste(c(resolved$allowed_states[[i]], "##", unlist(lapply(other, function (t) c(sets_all[[i]][[t]], "##"))), "##", unlist(resolved$range_candidates[[i]])), collapse = "\r")
+  }, character(1))
   inherited <- character(0)
+  done <- character(0)
   for (i in seq_len(n_taxa))
   {
+    if (signature[i] %in% done) { next }
+    done <- c(done, signature[i])
     obs <- acceptable_in(parts, i)
     if (length(obs) == 0)
     {
@@ -654,11 +662,16 @@ resolve_trait_allowed_ranges <- function (allowed_states_taxa = NULL, allowed_st
   all_parts <- split_composite(all_states)
   acceptable <- candidates <- vector("list", n_taxa)
   names(acceptable) <- names(candidates) <- taxon_names
+  cache <- list()
   for (i in seq_len(n_taxa))
   {
-    keep <- acceptable_in(all_parts, i)
-    acceptable[[i]] <- all_states[keep]
-    candidates[[i]] <- stats::setNames(lapply(keep, function (k) candidates_of(all_parts[k, ], i)), all_states[keep])
+    if (is.null(cache[[signature[i]]]))
+    {
+      keep <- acceptable_in(all_parts, i)
+      cache[[signature[i]]] <- list(acceptable = all_states[keep], candidates = stats::setNames(lapply(keep, function (k) candidates_of(all_parts[k, ], i)), all_states[keep]))
+    }
+    acceptable[[i]] <- cache[[signature[i]]]$acceptable
+    candidates[[i]] <- cache[[signature[i]]]$candidates
   }
   list(allowed_states = acceptable, range_candidates = candidates, inherited_states = inherited)
 }
