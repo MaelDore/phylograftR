@@ -65,17 +65,17 @@ for (method in c("uniform", "BD_clades"))
     data(toy_simmap_elevation, package = "phylograftR")
     data(toy_missing_taxa_list_with_allowed_traits, package = "phylograftR")
     expect_no_warning(grafted <- graft_missing_taxa(toy_backbone, toy_missing_taxa_list_with_allowed_traits,
-                                                    simmap = list(habitat = toy_simmap, elevation = toy_simmap_elevation),
+                                                    simmap = list(color = toy_simmap, elevation = toy_simmap_elevation),
                                                     allowed_states = list(c("blue", "green"), NULL), method = method, verbose = FALSE, seed = 1234))
-    expect_equal(names(grafted$simmap), c("habitat", "elevation"))
+    expect_equal(names(grafted$simmap), c("color", "elevation"))
     taxa <- toy_missing_taxa_list_with_allowed_traits$Taxon_name
-    habitat <- taxa_states_in(grafted$simmap$habitat, taxa)
+    color <- taxa_states_in(grafted$simmap$color, taxa)
     elevation <- taxa_states_in(grafted$simmap$elevation, taxa)
-    expect_equal(unname(habitat["Genus_a_sp1"]), "red")
-    expect_true(habitat["Genus_b_sp1"] %in% c("blue", "green") && elevation["Genus_b_sp1"] == "high")
-    expect_true(elevation["Genus_b_sp2"] == "low" && habitat["Genus_b_sp2"] %in% c("blue", "green"))
+    expect_equal(unname(color["Genus_a_sp1"]), "red")
+    expect_true(color["Genus_b_sp1"] %in% c("blue", "green") && elevation["Genus_b_sp1"] == "high")
+    expect_true(elevation["Genus_b_sp2"] == "low" && color["Genus_b_sp2"] %in% c("blue", "green"))
     expect_equal(unname(elevation["Genus_c_sp2"]), "high")
-    # Taxa without taxon-level states: the global value for the habitat
-    expect_true(all(habitat[c("Genus_a_sp2", "Genus_a_sp3", "Genus_c_sp1")] %in% c("blue", "green")))
+    # Taxa without taxon-level states: the global value for the color
+    expect_true(all(color[c("Genus_a_sp2", "Genus_a_sp3", "Genus_c_sp1")] %in% c("blue", "green")))
   })
 }

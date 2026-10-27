@@ -299,7 +299,7 @@ split_trait_simmap <- function (simmap, traits)
 #'
 #' @description Converts a text such as `"A1,A2;;C3"` (the states of different traits separated by `;`, the states of a trait by `,`) into a list with one element per trait.
 #'   A trait without states (empty field) gives `NULL` (the global value is used, see `resolve_trait_allowed_states()`).
-#'   The traits can be named: `"habitat=A1,A2; elevation=C3"` (all the fields or none).
+#'   The traits can be named: `"color=A1,A2; elevation=C3"` (all the fields or none).
 #'
 #' @param cell Character string.
 #' @param who Character string. Describes where the text comes from, for the messages.

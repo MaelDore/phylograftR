@@ -160,7 +160,7 @@ stopifnot(all(unlist(toy_missing_taxa_list_with_allowed_states$allowed_states) %
 ##### 6b/ Create a second trait (simmap) and a table of missing taxa with allowed states of two traits #####
 
 # Second trait: 'toy_simmap_elevation', two states "high" and "low" simulated from a root in "low" with equal rates (0.04), on the toy backbone.
-# The map is used with 'toy_simmap' (the first trait: habitat) as the maps of two traits: simmap = list(habitat = toy_simmap, elevation = toy_simmap_elevation).
+# The map is used with 'toy_simmap' (the first trait: color) as the maps of two traits: simmap = list(color = toy_simmap, elevation = toy_simmap_elevation).
 # The seed is the first one (among 1 to 1000) for which
 #  * the map is balanced: each state covers between 42% and 58% of the total length of the branches, 15% to 30% of the branches include a change of state,
 #    no branch has more than 4 pieces, and each state is found in 10 to 20 of the 30 tips,
@@ -189,7 +189,7 @@ is_balanced_simmap_elevation <- function (simmap)
     all(tips_per_state >= 10) && all(tips_per_state <= 20)
 }
 
-# Table of missing taxa: same as in 2/, with the column 'allowed_states' giving the states of the two traits (habitat, then elevation) separated by semicolons,
+# Table of missing taxa: same as in 2/, with the column 'allowed_states' giving the states of the two traits (color, then elevation) separated by semicolons,
 # the states of a trait separated by commas. Blank states have no taxon-level value for the trait (the global argument is used). Traits can be named (e.g., "elevation=high").
 # Different syntaxes are used on purpose to showcase them. Blank cells (NA) use the global 'allowed_states' for both traits.
 
@@ -208,7 +208,7 @@ runs_without_warning <- function (simmap)
   all(vapply(c("uniform", "BD_clades"), function (method)
   {
     result <- tryCatch(withCallingHandlers(
-      phylograftR::graft_missing_taxa(toy_backbone, toy_missing_taxa_list_with_allowed_traits, simmap = list(habitat = toy_simmap, elevation = simmap),
+      phylograftR::graft_missing_taxa(toy_backbone, toy_missing_taxa_list_with_allowed_traits, simmap = list(color = toy_simmap, elevation = simmap),
                                       allowed_states = list(c("blue", "green"), NULL), method = method, seed = 1234, verbose = FALSE),
       warning = function (w) stop("warning")), error = function (e) NULL)
     !is.null(result)

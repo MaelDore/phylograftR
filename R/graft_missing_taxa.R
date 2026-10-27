@@ -550,7 +550,7 @@
 #' # Each taxon can only be grafted on branch pieces in allowed states for both traits.
 #' grafted_phy_traits <- graft_missing_taxa(phy = toy_backbone,
 #'     missing_taxa_list = toy_missing_taxa_list_with_allowed_traits,
-#'     simmap = list(habitat = toy_simmap, elevation = toy_simmap_elevation),
+#'     simmap = list(color = toy_simmap, elevation = toy_simmap_elevation),
 #'     allowed_states = list(c("blue", "green"), NULL),
 #'     verbose = FALSE, seed = 1234)
 #'

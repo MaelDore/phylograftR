@@ -35,11 +35,11 @@ relabel_maps <- function (simmap, mapping)
   simmap
 }
 
-## Toy traits with states in all the lineages: "habitat" is "A" before the age 'age_h' and "B" after, "elevation" is "low" before the age 'age_e' and "high" after
+## Toy traits with states in all the lineages: "color" is "A" before the age 'age_h' and "B" after, "elevation" is "low" before the age 'age_e' and "high" after
 # (the combination "B|high" is found on every terminal branch, and the combinations of the three periods on most lineages)
 make_period_traits <- function (phy, age_h = 20, age_e = 10)
 {
-  list(habitat = make_young_state_simmap(phy, age_h), elevation = relabel_maps(make_young_state_simmap(phy, age_e), c(A = "low", B = "high")))
+  list(color = make_young_state_simmap(phy, age_h), elevation = relabel_maps(make_young_state_simmap(phy, age_e), c(A = "low", B = "high")))
 }
 
 ## State of each taxon in the simmap of a trait (the grafted branch is entirely in the state inherited)
@@ -74,7 +74,7 @@ test_that("check_simmap_input() lists the maps of several traits, pairs them, an
   expect_s3_class(out$maps[[1]], "phylograftR_trait_maps")
   expect_equal(names(out$maps[[1]]), c("trait_1", "trait_2"))
   expect_identical(out$maps[[1]]$trait_2, two)
-  expect_equal(check_simmap_input(list(habitat = one, elevation = two))$traits, c("habitat", "elevation"))
+  expect_equal(check_simmap_input(list(color = one, elevation = two))$traits, c("color", "elevation"))
 
   # multiSimmap: the maps are paired (map k of every trait together), names map_1... by default
   m1 <- as_multi(list(one, one, one))
@@ -125,10 +125,10 @@ test_that("parse_trait_states_cell() splits the traits on ';' and the states on 
   expect_equal(parse_trait_states_cell("A1;"), list("A1", NULL))
   expect_equal(parse_trait_states_cell("A1;;"), list("A1", NULL, NULL))
   # Named traits
-  expect_equal(parse_trait_states_cell("habitat=A1,A2; elevation=C3"), list(habitat = c("A1", "A2"), elevation = "C3"))
-  expect_equal(parse_trait_states_cell("habitat=A1; elevation="), list(habitat = "A1", elevation = NULL))
+  expect_equal(parse_trait_states_cell("color=A1,A2; elevation=C3"), list(color = c("A1", "A2"), elevation = "C3"))
+  expect_equal(parse_trait_states_cell("color=A1; elevation="), list(color = "A1", elevation = NULL))
   # Errors
-  expect_error(parse_trait_states_cell("habitat=A1; C3"), "mixes named and unnamed traits")
+  expect_error(parse_trait_states_cell("color=A1; C3"), "mixes named and unnamed traits")
   expect_error(parse_trait_states_cell("=A1; elevation=C3"), "without name")
   expect_error(parse_trait_states_cell("a=A1; a=C3"), "repeated traits.*a")
   expect_error(parse_trait_states_cell("A1,,A2;B1"), "empty state")
@@ -139,26 +139,26 @@ test_that("parse_trait_states_cell() splits the traits on ';' and the states on 
 
 test_that("normalize_trait_states() gives one element per trait, from a list (positional or named), a text, or nothing",
 {
-  traits <- c("habitat", "elevation", "diet")
+  traits <- c("color", "elevation", "diet")
   empty <- stats::setNames(vector("list", 3), traits)
   expect_equal(normalize_trait_states(NULL, traits, "x"), empty)
   expect_equal(normalize_trait_states(NA, traits, "x"), empty)
   expect_equal(normalize_trait_states(list(), traits, "x"), empty)
   # Positional: NULL, empty vectors and NA have no states
-  expect_equal(normalize_trait_states(list(c("A1", "A2"), NULL, "C3"), traits, "x"), list(habitat = c("A1", "A2"), elevation = NULL, diet = "C3"))
-  expect_equal(normalize_trait_states(list(c("A1", "A1"), character(0), NA), traits, "x"), list(habitat = "A1", elevation = NULL, diet = NULL))
+  expect_equal(normalize_trait_states(list(c("A1", "A2"), NULL, "C3"), traits, "x"), list(color = c("A1", "A2"), elevation = NULL, diet = "C3"))
+  expect_equal(normalize_trait_states(list(c("A1", "A1"), character(0), NA), traits, "x"), list(color = "A1", elevation = NULL, diet = NULL))
   # Named: the traits absent have no states, any order
-  expect_equal(normalize_trait_states(list(diet = "C3", habitat = "A1"), traits, "x"), list(habitat = "A1", elevation = NULL, diet = "C3"))
+  expect_equal(normalize_trait_states(list(diet = "C3", color = "A1"), traits, "x"), list(color = "A1", elevation = NULL, diet = "C3"))
   # Text
-  expect_equal(normalize_trait_states("A1,A2;;C3", traits, "x"), list(habitat = c("A1", "A2"), elevation = NULL, diet = "C3"))
-  expect_equal(normalize_trait_states("diet=C3; habitat=A1", traits, "x"), list(habitat = "A1", elevation = NULL, diet = "C3"))
+  expect_equal(normalize_trait_states("A1,A2;;C3", traits, "x"), list(color = c("A1", "A2"), elevation = NULL, diet = "C3"))
+  expect_equal(normalize_trait_states("diet=C3; color=A1", traits, "x"), list(color = "A1", elevation = NULL, diet = "C3"))
   # Errors
-  expect_error(normalize_trait_states(c("A1", "A2"), traits, "taxon X1"), "taxon X1 must be given for each trait.*habitat, elevation, diet")
+  expect_error(normalize_trait_states(c("A1", "A2"), traits, "taxon X1"), "taxon X1 must be given for each trait.*color, elevation, diet")
   expect_error(normalize_trait_states("A1", traits, "x"), "must be given for each trait")
   expect_error(normalize_trait_states(list("A1", "B1"), traits, "taxon X1"), "taxon X1 have 2 element\\(s\\) but there are 3 traits")
-  expect_error(normalize_trait_states(list(habitat = "A1", size = "B"), traits, "x"), "traits that are not in 'simmap': 'size'")
-  expect_error(normalize_trait_states(list(habitat = "A1", "B"), traits, "x"), "name some traits but not all")
-  expect_error(normalize_trait_states(list(habitat = "A1", habitat = "B"), traits, "x"), "repeat traits.*habitat")
+  expect_error(normalize_trait_states(list(color = "A1", size = "B"), traits, "x"), "traits that are not in 'simmap': 'size'")
+  expect_error(normalize_trait_states(list(color = "A1", "B"), traits, "x"), "name some traits but not all")
+  expect_error(normalize_trait_states(list(color = "A1", color = "B"), traits, "x"), "repeat traits.*color")
   expect_error(normalize_trait_states(list("A1", 2, NULL), traits, "x"), "character vectors")
   expect_error(normalize_trait_states(1:3, traits, "x"), "must be given for each trait|must be a list")
 })
@@ -172,12 +172,12 @@ test_that("merge_trait_simmaps() cuts the branches at the change points of all t
   phy <- label_backbone_nodes(toy$phy)$phy
   one <- make_toy_simmap(toy$phy, seed = 1)
   two <- make_trait2_simmap(toy$phy, seed = 2)
-  merged <- merge_trait_simmaps(phy = phy, trait_maps = list(habitat = one, elevation = two))
+  merged <- merge_trait_simmaps(phy = phy, trait_maps = list(color = one, elevation = two))
   simmap <- merged$simmap
 
   expect_s3_class(simmap, "simmap")
-  expect_equal(merged$traits$names, c("habitat", "elevation"))
-  expect_equal(merged$traits$states, list(habitat = c("A", "B", "C"), elevation = c("high", "low", "mid")))
+  expect_equal(merged$traits$names, c("color", "elevation"))
+  expect_equal(merged$traits$states, list(color = c("A", "B", "C"), elevation = c("high", "low", "mid")))
   expect_equal(merged$traits$sep, "|")
   expect_true(all(grepl("^[ABC]\\|(high|low|mid)$", unlist(lapply(simmap$maps, names)))))
   # The branches keep their length and the pieces sum to it
@@ -185,9 +185,9 @@ test_that("merge_trait_simmaps() cuts the branches at the change points of all t
   expect_equal(unname(rowSums(simmap$mapped.edge)), simmap$edge.length, tolerance = 1e-9)
 
   # At any point of any branch, the state of each trait is the one of its own map: compare the total time in each state
-  for (t in c("habitat", "elevation"))
+  for (t in c("color", "elevation"))
   {
-    original <- list(habitat = one, elevation = two)[[t]]
+    original <- list(color = one, elevation = two)[[t]]
     split_maps <- split_trait_simmap(simmap, merged$traits)[[t]]
     expect_equal(split_maps$mapped.edge[, colnames(original$mapped.edge)], original$mapped.edge, ignore_attr = TRUE, tolerance = 1e-8)
   }
@@ -238,10 +238,10 @@ test_that("merge_trait_simmaps() stops for a trait whose simmap does not match t
   one <- make_toy_simmap(toy$phy, seed = 1)
   two <- make_trait2_simmap(toy$phy)
   other <- make_toy_simmap(make_toy_phy(n_tips = 20, seed = 99))
-  expect_error(merge_trait_simmaps(phy, list(habitat = one, elevation = other)), "^Trait 'elevation': ")
-  expect_error(merge_trait_simmaps(phy, list(habitat = other, elevation = two)), "^Trait 'habitat': ")
+  expect_error(merge_trait_simmaps(phy, list(color = one, elevation = other)), "^Trait 'elevation': ")
+  expect_error(merge_trait_simmaps(phy, list(color = other, elevation = two)), "^Trait 'color': ")
   bad <- relabel_simmap(two, c(low = "l|ow", mid = "mid", high = "high"))
-  expect_error(merge_trait_simmaps(phy, list(habitat = one, elevation = bad)), "Trait 'elevation'.*cannot contain '\\|'.*'l\\|ow'")
+  expect_error(merge_trait_simmaps(phy, list(color = one, elevation = bad)), "Trait 'elevation'.*cannot contain '\\|'.*'l\\|ow'")
 })
 
 test_that("split_trait_simmap() gives back the simmap of each trait, merging the adjacent pieces in the same state",
@@ -250,9 +250,9 @@ test_that("split_trait_simmap() gives back the simmap of each trait, merging the
   phy <- label_backbone_nodes(toy$phy)$phy
   one <- make_toy_simmap(toy$phy, seed = 1)
   two <- make_trait2_simmap(toy$phy)
-  merged <- merge_trait_simmaps(phy, list(habitat = one, elevation = two))
+  merged <- merge_trait_simmaps(phy, list(color = one, elevation = two))
   split <- split_trait_simmap(merged$simmap, merged$traits)
-  expect_equal(names(split), c("habitat", "elevation"))
+  expect_equal(names(split), c("color", "elevation"))
   for (t in names(split))
   {
     expect_s3_class(split[[t]], "simmap")
@@ -264,10 +264,10 @@ test_that("split_trait_simmap() gives back the simmap of each trait, merging the
   }
   # The maps are those of the original simmaps (pieces of the same state merged)
   original_maps <- function (simmap) lapply(simmap$maps, function (m) { r <- rle(names(m)); stats::setNames(as.numeric(tapply(m, rep(seq_along(r$lengths), r$lengths), sum)), r$values) })
-  expect_equal(split$habitat$maps, original_maps(one), tolerance = 1e-8)
+  expect_equal(split$color$maps, original_maps(one), tolerance = 1e-8)
   expect_equal(split$elevation$maps, original_maps(two), tolerance = 1e-8)
   # The states of the columns of mapped.edge are the states of the trait
-  expect_equal(colnames(split$habitat$mapped.edge), c("A", "B", "C"))
+  expect_equal(colnames(split$color$mapped.edge), c("A", "B", "C"))
   expect_equal(colnames(split$elevation$mapped.edge), c("high", "low", "mid"))
 })
 
@@ -276,7 +276,7 @@ test_that("split_trait_simmap() gives back the simmap of each trait, merging the
 
 test_that("resolve_trait_allowed_states() gives the composite states with an allowed state for every trait",
 {
-  traits <- list(names = c("habitat", "elevation"), states = list(habitat = c("A", "B"), elevation = c("high", "low")), sep = "|")
+  traits <- list(names = c("color", "elevation"), states = list(color = c("A", "B"), elevation = c("high", "low")), sep = "|")
   composite <- c("A|high", "A|low", "B|high")   # The combination B|low is not found on the maps
   resolve <- function (...) resolve_trait_allowed_states(traits = traits, composite_states = composite, taxon_names = c("X1", "X2", "X3"), ...)
 
@@ -285,7 +285,7 @@ test_that("resolve_trait_allowed_states() gives the composite states with an all
   # Global: a NULL element does not restrict the trait
   expect_equal(resolve(allowed_states = list("A", NULL)), list(X1 = c("A|high", "A|low"), X2 = c("A|high", "A|low"), X3 = c("A|high", "A|low")))
   expect_equal(resolve(allowed_states = list(NULL, "high")), list(X1 = c("A|high", "B|high"), X2 = c("A|high", "B|high"), X3 = c("A|high", "B|high")))
-  expect_equal(resolve(allowed_states = list(habitat = "B")), list(X1 = "B|high", X2 = "B|high", X3 = "B|high"))
+  expect_equal(resolve(allowed_states = list(color = "B")), list(X1 = "B|high", X2 = "B|high", X3 = "B|high"))
   expect_equal(resolve(allowed_states = list("A", "low"))$X1, "A|low")
   # Taxon-level: replaces the global value of the trait it gives, the trait with NULL (or absent) uses the global value
   taxa <- list(X1 = list("B", NULL), X2 = list(NULL, "low"), X3 = NULL)
@@ -297,9 +297,9 @@ test_that("resolve_trait_allowed_states() gives the composite states with an all
                list(X1 = "B|high", X2 = c("A|low"), X3 = "A|low"))
 
   # Errors: unknown state (naming the trait), no combination found, wrong structure
-  expect_error(resolve(allowed_states = list("C", NULL)), "global 'allowed_states' argument \\(trait 'habitat'\\).*'C'.*'A', 'B'")
+  expect_error(resolve(allowed_states = list("C", NULL)), "global 'allowed_states' argument \\(trait 'color'\\).*'C'.*'A', 'B'")
   expect_error(resolve(allowed_states_taxa = list(X1 = NULL, X2 = list(NULL, "mid"), X3 = NULL)), "taxon 'X2'.*\\(trait 'elevation'\\).*'mid'")
-  expect_error(resolve(allowed_states = list("B", "low")), "No combination of the allowed states of taxon 'X1'.*habitat = B; elevation = low.*A\\|high")
+  expect_error(resolve(allowed_states = list("B", "low")), "No combination of the allowed states of taxon 'X1'.*color = B; elevation = low.*A\\|high")
   expect_error(resolve(allowed_states = c("A", "high")), "must be given for each trait")
   expect_error(resolve(allowed_states_taxa = list(X1 = c("A", "high"), X2 = NULL, X3 = NULL)), "taxon 'X1'.*must be given for each trait")
   expect_error(resolve(allowed_states_taxa = list(X1 = NULL)), "same length as 'Taxon_name'")
@@ -321,17 +321,17 @@ for (name in c("taxa", "clades"))
   test_that(paste0("graft_missing_", name, "(): several traits, the grafting is restricted to the points with an allowed state in every trait, and $simmap is a list of simmaps named after the traits"),
   {
     toy <- toy_setup()
-    habitat <- make_toy_simmap(toy$phy, seed = 1)
+    color <- make_toy_simmap(toy$phy, seed = 1)
     elevation <- make_trait2_simmap(toy$phy, seed = 2)
     taxa <- names_all
     for (seed in 1:4)
     {
-      out <- graft_traits(toy, simmap = list(habitat = habitat, elevation = elevation), allowed_states = list(c("A", "B"), c("low", "mid")), seed = seed)
+      out <- graft_traits(toy, simmap = list(color = color, elevation = elevation), allowed_states = list(c("A", "B"), c("low", "mid")), seed = seed)
       expect_s3_class(out, "phylo")
       expect_type(out$simmap, "list")
-      expect_equal(names(out$simmap), c("habitat", "elevation"))
-      expect_s3_class(out$simmap$habitat, "simmap"); expect_s3_class(out$simmap$elevation, "simmap")
-      expect_true(all(taxa_states(out$simmap$habitat, taxa) %in% c("A", "B")))
+      expect_equal(names(out$simmap), c("color", "elevation"))
+      expect_s3_class(out$simmap$color, "simmap"); expect_s3_class(out$simmap$elevation, "simmap")
+      expect_true(all(taxa_states(out$simmap$color, taxa) %in% c("A", "B")))
       expect_true(all(taxa_states(out$simmap$elevation, taxa) %in% c("low", "mid")))
       # Each simmap is a map of the grafted tree
       for (t in names(out$simmap))
@@ -348,20 +348,20 @@ for (name in c("taxa", "clades"))
   test_that(paste0("graft_missing_", name, "(): several traits, the backbone keeps the states of each trait and a taxon inherits the state of each trait at the graft point"),
   {
     toy <- toy_setup()
-    habitat <- make_toy_simmap(toy$phy, seed = 1)
+    color <- make_toy_simmap(toy$phy, seed = 1)
     elevation <- make_trait2_simmap(toy$phy, seed = 2)
-    out <- graft_traits(toy, simmap = list(habitat = habitat, elevation = elevation), allowed_states = list(c("A", "B", "C"), NULL), seed = 3)
+    out <- graft_traits(toy, simmap = list(color = color, elevation = elevation), allowed_states = list(c("A", "B", "C"), NULL), seed = 3)
     backbone <- toy$phy$tip.label
     # The states of the backbone tips are unchanged
-    expect_equal(taxa_states_tip_end <- vapply(backbone, function (tip) { m <- out$simmap$habitat$maps[[match(match(tip, out$tip.label), out$edge[, 2])]]; names(m)[length(m)] }, character(1)),
-                 vapply(backbone, function (tip) { m <- habitat$maps[[match(match(tip, habitat$tip.label), habitat$edge[, 2])]]; names(m)[length(m)] }, character(1)))
+    expect_equal(taxa_states_tip_end <- vapply(backbone, function (tip) { m <- out$simmap$color$maps[[match(match(tip, out$tip.label), out$edge[, 2])]]; names(m)[length(m)] }, character(1)),
+                 vapply(backbone, function (tip) { m <- color$maps[[match(match(tip, color$tip.label), color$edge[, 2])]]; names(m)[length(m)] }, character(1)))
     # The grafted taxa inherit the state of the lineage at the graft point, for each trait (independent computation)
     for (taxon in names_all)
     {
       if (name == "taxa") { in_missing <- traits_missing_taxa(toy) } else { in_missing <- traits_missing_clades(toy) }
-      state_h <- state_at_graft(out, habitat, taxon, in_missing$Taxon_name)
+      state_h <- state_at_graft(out, color, taxon, in_missing$Taxon_name)
       state_e <- state_at_graft(out, elevation, taxon, in_missing$Taxon_name)
-      if (!is.na(state_h)) expect_equal(unname(taxa_states(out$simmap$habitat, taxon)), state_h)
+      if (!is.na(state_h)) expect_equal(unname(taxa_states(out$simmap$color, taxon)), state_h)
       if (!is.na(state_e)) expect_equal(unname(taxa_states(out$simmap$elevation, taxon)), state_e)
     }
   })
@@ -369,16 +369,16 @@ for (name in c("taxa", "clades"))
   test_that(paste0("graft_missing_", name, "(): a trait without restriction gives the same grafting as the other trait alone, and the same simmap for this trait"),
   {
     toy <- toy_setup()
-    habitat <- make_toy_simmap(toy$phy, seed = 1)
+    color <- make_toy_simmap(toy$phy, seed = 1)
     constant <- relabel_simmap(make_toy_simmap(toy$phy, seed = 1), c(A = "z", B = "z", C = "z")) # A trait with a single state everywhere
     constant$maps <- lapply(constant$maps, function (m) stats::setNames(sum(m), "z"))
     constant$mapped.edge <- matrix(constant$edge.length, ncol = 1, dimnames = list(rownames(constant$mapped.edge), "z"))
     for (seed in 1:3)
     {
-      single <- graft_traits(toy, simmap = habitat, allowed_states = c("A", "B"), seed = seed)
-      several <- graft_traits(toy, simmap = list(habitat = habitat, other = constant), allowed_states = list(c("A", "B"), NULL), seed = seed)
+      single <- graft_traits(toy, simmap = color, allowed_states = c("A", "B"), seed = seed)
+      several <- graft_traits(toy, simmap = list(color = color, other = constant), allowed_states = list(c("A", "B"), NULL), seed = seed)
       expect_true(same_tree(single, several))
-      expect_equal(several$simmap$habitat$maps, single$simmap$maps, tolerance = 1e-8)
+      expect_equal(several$simmap$color$maps, single$simmap$maps, tolerance = 1e-8)
       expect_equal(unname(unlist(lapply(several$simmap$other$maps, names))), rep("z", nrow(out_edges <- several$edge)))
     }
   })
@@ -391,17 +391,17 @@ for (name in c("taxa", "clades"))
     n <- length(missing$Taxon_name)
     spec <- stats::setNames(vector("list", n), missing$Taxon_name)
     # Taxa grafted together as a missing clade share their states: the first two taxa have the same value
-    spec[[1]] <- list("B", NULL)               # habitat B, elevation: global
+    spec[[1]] <- list("B", NULL)               # color B, elevation: global
     spec[[2]] <- if (name == "taxa") list(elevation = "high") else list("B", NULL)  # elevation high (taxa), same as the first (clades)
-    spec[[3]] <- "B;high"                      # habitat B and elevation high
+    spec[[3]] <- "B;high"                      # color B and elevation high
     missing$allowed_states <- spec
     for (seed in 1:3)
     {
       out <- graft_traits(toy, simmap = maps, allowed_states = list(c("A", "B"), c("low", "high")), seed = seed, missing = missing)
       taxa <- missing$Taxon_name
-      expect_equal(unname(taxa_states(out$simmap$habitat, taxa[1])), "B")
+      expect_equal(unname(taxa_states(out$simmap$color, taxa[1])), "B")
       if (name == "taxa") expect_equal(unname(taxa_states(out$simmap$elevation, taxa[2])), "high")
-      expect_equal(unname(taxa_states(out$simmap$habitat, taxa[3])), "B")
+      expect_equal(unname(taxa_states(out$simmap$color, taxa[3])), "B")
       expect_equal(unname(taxa_states(out$simmap$elevation, taxa[3])), "high")
     }
   })
@@ -410,34 +410,34 @@ for (name in c("taxa", "clades"))
   {
     toy <- toy_setup()
     pairs <- lapply(list(c(20, 10), c(15, 8), c(25, 12)), function (ages) make_period_traits(toy$phy, ages[1], ages[2]))
-    habitats <- lapply(pairs, function (x) x$habitat)
+    colors <- lapply(pairs, function (x) x$color)
     elevations <- lapply(pairs, function (x) x$elevation)
     allowed <- if (name == "taxa") list(c("A", "B"), "high") else list(c("A", "B"), c("low", "high")) # (the stem branches of sister clades can be old)
-    out <- graft_traits(toy, simmap = list(habitat = as_multi(habitats), elevation = as_multi(elevations)), allowed_states = allowed, seed = 11)
+    out <- graft_traits(toy, simmap = list(color = as_multi(colors), elevation = as_multi(elevations)), allowed_states = allowed, seed = 11)
     # One element per pair (3 and not 9), named map_1, map_2, map_3
     expect_equal(names(out), c("map_1", "map_2", "map_3"))
     expect_equal(nrow(attr(out, "failed_maps")), 0)
     for (k in 1:3)
     {
-      single <- graft_traits(toy, simmap = list(habitat = habitats[[k]], elevation = elevations[[k]]), allowed_states = allowed, seed = 11)
+      single <- graft_traits(toy, simmap = list(color = colors[[k]], elevation = elevations[[k]]), allowed_states = allowed, seed = 11)
       expect_true(same_tree(out[[k]], single))
-      expect_equal(out[[k]]$simmap$habitat$maps, single$simmap$habitat$maps)
+      expect_equal(out[[k]]$simmap$color$maps, single$simmap$color$maps)
       expect_equal(out[[k]]$simmap$elevation$maps, single$simmap$elevation$maps)
       expect_equal(attr(out[[k]], "map"), paste0("map_", k))
       if (name == "taxa") expect_true(all(taxa_states(out[[k]]$simmap$elevation, names_all) == "high"))
     }
     # With several simulations: a multiPhylo per pair, named <map>_sim_k
-    several <- graft_traits(toy, simmap = list(habitat = as_multi(habitats, c("a", "b", "c")), elevation = as_multi(elevations, c("a", "b", "c"))),
+    several <- graft_traits(toy, simmap = list(color = as_multi(colors, c("a", "b", "c")), elevation = as_multi(elevations, c("a", "b", "c"))),
                             allowed_states = allowed, nb_simulations = 2, seed = 11)
     expect_equal(names(several), c("a", "b", "c"))
     expect_s3_class(several$b, "multiPhylo")
     expect_equal(names(several$b), c("b_sim_1", "b_sim_2"))
-    expect_equal(names(several$b[[2]]$simmap), c("habitat", "elevation"))
+    expect_equal(names(several$b[[2]]$simmap), c("color", "elevation"))
     expect_equal(attr(several$c[[1]], "map"), "c")
     # A single simmap for each trait: one phylogeny, not a list
-    expect_s3_class(graft_traits(toy, simmap = list(habitats[[1]], elevations[[1]]), seed = 1), "phylo")
+    expect_s3_class(graft_traits(toy, simmap = list(colors[[1]], elevations[[1]]), seed = 1), "phylo")
     # A multiSimmap with a single map: a list of one element
-    one_pair <- graft_traits(toy, simmap = list(as_multi(habitats[1]), elevations[[1]]), seed = 1)
+    one_pair <- graft_traits(toy, simmap = list(as_multi(colors[1]), elevations[[1]]), seed = 1)
     expect_equal(names(one_pair), "map_1")
   })
 
@@ -445,7 +445,7 @@ for (name in c("taxa", "clades"))
   {
     toy <- toy_setup()
     maps <- make_period_traits(toy$phy)
-    habitat <- make_toy_simmap(toy$phy, seed = 1)
+    color <- make_toy_simmap(toy$phy, seed = 1)
     elevation <- make_trait2_simmap(toy$phy, seed = 2)
     calls <- 0
     original <- run_simulations
@@ -456,22 +456,22 @@ for (name in c("taxa", "clades"))
     # Allowed states of a single trait, or of the wrong structure
     expect_error(graft_traits(toy, simmap = maps, allowed_states = c("A", "low")), "must be given for each trait")
     expect_error(graft_traits(toy, simmap = maps, allowed_states = list("A")), "1 element\\(s\\) but there are 2 traits")
-    expect_error(graft_traits(toy, simmap = maps, allowed_states = list(c("A", "low"), NULL)), "\\(trait 'habitat'\\).*'low'")
+    expect_error(graft_traits(toy, simmap = maps, allowed_states = list(c("A", "low"), NULL)), "\\(trait 'color'\\).*'low'")
     expect_error(graft_traits(toy, simmap = maps, allowed_states = list("A", "C")), "\\(trait 'elevation'\\).*'C'")
     expect_error(graft_traits(toy, simmap = maps, allowed_states = list(size = "A")), "traits that are not in 'simmap': 'size'")
     # No combination of states on the maps: the states exist in each trait, but never together
-    # (habitat "A" before the age 20, elevation "high" after the age 10)
-    expect_error(graft_traits(toy, simmap = maps, allowed_states = list("A", "high")), "No combination of the allowed states.*habitat = A; elevation = high")
+    # (color "A" before the age 20, elevation "high" after the age 10)
+    expect_error(graft_traits(toy, simmap = maps, allowed_states = list("A", "high")), "No combination of the allowed states.*color = A; elevation = high")
     # A map that does not match the backbone, naming the trait
     other <- make_toy_simmap(make_toy_phy(n_tips = 20, seed = 99))
-    expect_error(graft_traits(toy, simmap = list(habitat = habitat, elevation = other)), "Trait 'elevation'")
+    expect_error(graft_traits(toy, simmap = list(color = color, elevation = other)), "Trait 'elevation'")
     # A map of a pair that does not match: the message names the map and the trait
-    expect_error(graft_traits(toy, simmap = list(habitat = as_multi(list(habitat, habitat)), elevation = as_multi(list(elevation, other)))), "Map 'map_2': Trait 'elevation'")
+    expect_error(graft_traits(toy, simmap = list(color = as_multi(list(color, color)), elevation = as_multi(list(elevation, other)))), "Map 'map_2': Trait 'elevation'")
     expect_equal(calls, 0)
     # Unequal numbers of maps
-    expect_error(graft_traits(toy, simmap = list(habitat = as_multi(list(habitat, habitat)), elevation = as_multi(list(elevation)))), "same number of maps")
+    expect_error(graft_traits(toy, simmap = list(color = as_multi(list(color, color)), elevation = as_multi(list(elevation)))), "same number of maps")
     # A list of states with the map of a single trait
-    expect_error(graft_traits(toy, simmap = habitat, allowed_states = list("A", "B")), "list \\(one element per trait\\), but 'simmap' is the map of a single trait")
+    expect_error(graft_traits(toy, simmap = color, allowed_states = list("A", "B")), "list \\(one element per trait\\), but 'simmap' is the map of a single trait")
     expect_equal(calls, 0)
   })
 
@@ -488,7 +488,7 @@ for (name in c("taxa", "clades"))
     unrestricted <- graft_traits(toy, simmap = maps, seed = 5)
     plain <- graft_traits(toy, seed = 5)
     expect_true(same_tree(unrestricted, plain))
-    expect_equal(names(unrestricted$simmap), c("habitat", "elevation"))
+    expect_equal(names(unrestricted$simmap), c("color", "elevation"))
   })
 }
 
@@ -514,7 +514,7 @@ test_that("a list of maps of several traits is usable with identify_grafted() an
   expect_s3_class(flatten_grafted_phylogenies(out), "phylo")
   # With paired multiSimmaps
   pairs <- lapply(list(c(20, 10), c(15, 8)), function (ages) make_period_traits(toy$phy, ages[1], ages[2]))
-  multi <- graft_missing_taxa(toy$phy, mtl, simmap = list(habitat = as_multi(lapply(pairs, function (x) x$habitat)), elevation = as_multi(lapply(pairs, function (x) x$elevation))),
+  multi <- graft_missing_taxa(toy$phy, mtl, simmap = list(color = as_multi(lapply(pairs, function (x) x$color)), elevation = as_multi(lapply(pairs, function (x) x$elevation))),
                               allowed_states = list("B", NULL), method = "uniform", verbose = FALSE, seed = 1, nb_simulations = 2)
   flat <- flatten_grafted_phylogenies(multi, keep_simmap = FALSE)
   expect_s3_class(flat, "multiPhylo")
@@ -535,27 +535,27 @@ test_that("import_missing_taxa_list() reads the allowed states of several traits
     path
   }
   import <- function (allowed_states) suppressMessages(import_missing_taxa_list(write_table(allowed_states), phy = toy$phy, verbose = FALSE))
-  imported <- import(c("A, B;;high", "habitat=B; elevation=low, high", NA, "C"))
+  imported <- import(c("A, B;;high", "color=B; elevation=low, high", NA, "C"))
   expect_equal(imported$allowed_states$X1, list(c("A", "B"), NULL, "high"))
-  expect_equal(imported$allowed_states$X2, list(habitat = "B", elevation = c("low", "high")))
+  expect_equal(imported$allowed_states$X2, list(color = "B", elevation = c("low", "high")))
   expect_null(imported$allowed_states$X3)
   expect_equal(imported$allowed_states$X4, "C") # One trait: unchanged
   expect_error(import(c("A,,B;low", NA, NA, NA)), "empty state")
-  expect_error(import(c("habitat=A; low", NA, NA, NA)), "mixes named and unnamed")
+  expect_error(import(c("color=A; low", NA, NA, NA)), "mixes named and unnamed")
 
   # Used with the maps of two traits
   maps <- make_period_traits(toy$phy)
-  imported <- import(c("A, B;high", "habitat=B; elevation=low, high", NA, "B;"))
+  imported <- import(c("A, B;high", "color=B; elevation=low, high", NA, "B;"))
   imported$Excluded_subclades <- NULL
   out <- graft_missing_taxa(toy$phy, imported, simmap = maps, method = "uniform", verbose = FALSE, seed = 1)
-  expect_true(unname(taxa_states(out$simmap$habitat, "X1")) %in% c("A", "B"))
+  expect_true(unname(taxa_states(out$simmap$color, "X1")) %in% c("A", "B"))
   expect_equal(unname(taxa_states(out$simmap$elevation, "X1")), "high")
-  expect_equal(unname(taxa_states(out$simmap$habitat, "X2")), "B")
-  expect_equal(unname(taxa_states(out$simmap$habitat, "X4")), "B")
+  expect_equal(unname(taxa_states(out$simmap$color, "X2")), "B")
+  expect_equal(unname(taxa_states(out$simmap$color, "X4")), "B")
   # A taxon with 3 fields with two traits
   imported$allowed_states$X1 <- list("A", NULL, "high")
   expect_error(graft_missing_taxa(toy$phy, imported, simmap = maps, method = "uniform", verbose = FALSE), "taxon 'X1'.*3 element\\(s\\) but there are 2 traits")
   # With one trait (a character vector of states): the usual error with a list
   imported$allowed_states$X1 <- list("A", "high")
-  expect_error(graft_missing_taxa(toy$phy, imported, simmap = maps$habitat, method = "uniform", verbose = FALSE), "given as a list \\(one element per trait\\)")
+  expect_error(graft_missing_taxa(toy$phy, imported, simmap = maps$color, method = "uniform", verbose = FALSE), "given as a list \\(one element per trait\\)")
 })
