@@ -76,8 +76,10 @@
 #'   Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the `simmap`.
 #'   The function stops if some states are not in the `simmap`, or if `allowed_states` is provided without a `simmap`.
 #'   With `treat_states_as_ranges = TRUE`, a range that is not a state of the `simmap` is accepted if it is contained in some of them (e.g., `"A"` can be allowed if `"AB"` is found on the `simmap`).
-#'   With the maps of several traits (a list in `simmap`), a list with one element per trait, in the order of the traits or named after them: the states allowed for each trait,
-#'   with `NULL` for no restriction on a trait, e.g., `list(c("blue", "green"), NULL, "high")` (see 'Several traits' in Details section).
+#'
+#'   With the maps of several traits (a list in `simmap`), you must provide a list with one element per trait, in the order of the traits or named after them.
+#'   In each element, the states allowed for each trait are named, with `NULL` for no restriction on a trait, e.g., `list(c("blue", "green"), NULL, "high")`
+#'   (see 'Several traits' in Details section).
 #'   Default is `NULL` (all states allowed).
 #' @param treat_states_as_ranges Logical. Only used with a `simmap`. Whether the states of the `simmap` are biogeographic ranges to be treated as sets of areas, rather than as unrelated states.
 #'   Ranges must be coded as in `BioGeoBEARS`: one capital letter per area, and the letters of a multi-area range in alphabetical order (e.g., `"A"`, `"AB"`, `"ABC"`).
@@ -347,8 +349,8 @@
 #' With a list of `"multiSimmap"` provided as `simmap`, the maps of the traits are paired: the grafting is run with the map 1 of every trait, then the map 2 of every trait, and so on.
 #' All the traits must therefore have the same number of maps to be associated in a given grafting process.
 #'
-#' One of the traits can be treated as biogeographic ranges combined with any number of other traits. Use a logical vector in `treat_states_as_ranges`
-#' to define which of the trait is to be treated as biogeographic ranges for inheritance.
+#' One of the traits can be treated as biogeographic ranges combined with any number of other traits.
+#' Use a logical vector in `treat_states_as_ranges` to define which of the trait is to be treated as biogeographic ranges for inheritance.
 #' The range logic is the one of 'Biogeographic ranges as states' for the range trait:
 #' its allowed values for grafting are any ranges that encompass the allowed range.
 #' For instance, a missing taxon allowed in `"A;high"` can be grafted on branch pieces in `"A;high"`, `"AB;high"` or `"ABC;high"`,

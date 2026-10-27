@@ -451,9 +451,8 @@ for (name in c("taxa", "clades"))
     original <- run_simulations
     local_mocked_bindings(run_simulations = function (...) { calls <<- calls + 1; original(...) })
 
-    # Ranges with several traits: not yet supported by graft_missing_clades(), a single TRUE is ambiguous in graft_missing_taxa()
-    if (name == "taxa") { expect_error(graft_traits(toy, simmap = maps, treat_states_as_ranges = TRUE), "ambiguous with the maps of several traits") }
-    else { expect_error(graft_traits(toy, simmap = maps, treat_states_as_ranges = TRUE), "not supported with the maps of several traits") }
+    # Ranges with several traits: a single TRUE is ambiguous
+    expect_error(graft_traits(toy, simmap = maps, treat_states_as_ranges = TRUE), "ambiguous with the maps of several traits")
     # Allowed states of a single trait, or of the wrong structure
     expect_error(graft_traits(toy, simmap = maps, allowed_states = c("A", "low")), "must be given for each trait")
     expect_error(graft_traits(toy, simmap = maps, allowed_states = list("A")), "1 element\\(s\\) but there are 2 traits")
@@ -936,4 +935,94 @@ test_that("resolve_trait_allowed_ranges() gives each taxon the result it would h
   }
   expect_equal(names(together$allowed_states), taxa)
   expect_equal(names(together$range_candidates), taxa)
+})
+
+
+## ---- Ranges: one trait treated as biogeographic ranges, with other traits (graft_missing_clades) ---- ##
+
+graft_clades_ranges <- function (toy, maps, ..., mtl = NULL)
+{
+  suppressWarnings(graft_missing_clades(toy$phy, if (is.null(mtl)) traits_missing_clades(toy) else mtl, simmap = maps, verbose = FALSE, ...))
+}
+
+test_that("graft_missing_clades() treats one trait as ranges and the other traits as exact states: the whole clade inherits one range, the other traits are kept from the graft point",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_clades(toy)
+  taxa <- mtl$Taxon_name
+  maps <- make_range_traits(toy$phy, 20, 0.3) # elevation: "high" only in the youngest part, so "low" is available on the stems
+  ranges <- c(biogeo = TRUE, elevation = FALSE)
+
+  # Allowed range "A" and elevation "low": the clades are grafted on A|low or AB|low, inherit "A" and "low"
+  grafted <- graft_clades_ranges(toy, maps, treat_states_as_ranges = ranges, allowed_states = list("A", "low"), seed = 1)
+  expect_s3_class(grafted, "phylo")
+  expect_equal(names(grafted$simmap), c("biogeo", "elevation"))
+  expect_true(all(state_of(grafted, "biogeo", taxa) == "A"))
+  expect_true(all(state_of(grafted, "elevation", taxa) == "low"))
+  expect_true(all(range_in_states_pairwise(state_of(grafted, "biogeo", taxa), parent_state_of(grafted$simmap$biogeo, taxa))))
+  expect_true(all(parent_state_of(grafted$simmap$elevation, taxa) == "low"))
+  for (trait in names(grafted$simmap)) { expect_equal(length(grafted$simmap[[trait]]$maps), nrow(grafted$edge)); expect_equal(grafted$simmap[[trait]]$edge.length, grafted$edge.length) }
+
+  # Positional, named in any order (and maps in another order): the same result
+  same <- function (a, b) { expect_equal(a$edge, b$edge); expect_equal(a$simmap$biogeo$maps, b$simmap$biogeo$maps); expect_equal(a$simmap$elevation$maps, b$simmap$elevation$maps) }
+  same(grafted, graft_clades_ranges(toy, maps, treat_states_as_ranges = c(TRUE, FALSE), allowed_states = list("A", "low"), seed = 1))
+  same(grafted, graft_clades_ranges(toy, rev(maps), treat_states_as_ranges = c(elevation = FALSE, biogeo = TRUE), allowed_states = list(elevation = "low", biogeo = "A"), seed = 1))
+  unnamed <- graft_clades_ranges(toy, unname(maps), treat_states_as_ranges = c(TRUE, FALSE), allowed_states = list("A", "low"), seed = 1)
+  expect_equal(names(unnamed$simmap), c("trait_1", "trait_2"))
+
+  # Without ranges the states are matched exactly: the stems of the sister clades have no piece in the combination A|low (A is only found in the oldest part of the tree)
+  expect_error(graft_clades_ranges(toy, maps, allowed_states = list("A", "low"), seed = 1), "no piece of the stem branch of their sister clade in their allowed states")
+
+  # Taxon-level allowed states (list or text), clades grafted together share them
+  mtl_list <- mtl; mtl_list$allowed_states <- stats::setNames(list(list("A", "low"), list("A", "low"), NULL, NULL), taxa)
+  mtl_text <- mtl; mtl_text$allowed_states <- stats::setNames(list("A;low", "A;low", NA, NA), taxa)
+  with_list <- graft_clades_ranges(toy, maps, mtl = mtl_list, treat_states_as_ranges = ranges, seed = 3)
+  with_text <- graft_clades_ranges(toy, maps, mtl = mtl_text, treat_states_as_ranges = ranges, seed = 3)
+  same(with_list, with_text)
+  expect_true(all(state_of(with_list, "biogeo", c("M1", "M2")) == "A"))
+  expect_true(all(state_of(with_list, "elevation", c("M1", "M2")) == "low"))
+  # M1 and M2 have the same sister clade: different allowed ranges stop, naming the ranges inherited
+  mtl_bad <- mtl; mtl_bad$allowed_states <- stats::setNames(list(list("A", "low"), list("AB", "low"), NULL, NULL), taxa)
+  expect_error(graft_clades_ranges(toy, maps, mtl = mtl_bad, treat_states_as_ranges = ranges, seed = 3), "different allowed states.*ranges inherited")
+
+  # No allowed ranges: the clade inherits the whole state, the result is the one without ranges (same seed)
+  free <- graft_clades_ranges(toy, maps, treat_states_as_ranges = ranges, seed = 5)
+  plain <- graft_clades_ranges(toy, maps, seed = 5)
+  expect_true(same_tree(free, plain))
+  expect_equal(free$simmap$biogeo$maps, plain$simmap$biogeo$maps)
+  expect_true(same_tree(plain, graft_clades_ranges(toy, maps, treat_states_as_ranges = c(FALSE, FALSE), seed = 5)))
+})
+
+test_that("graft_missing_clades() with ranges and traits: inherited ranges that are not states, several simulations, paired multiSimmaps and invalid arguments",
+{
+  toy <- toy_setup()
+  mtl <- traits_missing_clades(toy)
+  taxa <- mtl$Taxon_name
+  maps <- make_range_traits(toy$phy, 20, 0.3) # elevation: "high" only in the youngest part, so "low" is available on the stems
+  ranges <- c(biogeo = TRUE, elevation = FALSE)
+  # "B" is not a state of the range map, but is contained in "AB": inherited and added to the states of the range simmap, with a warning naming the range trait
+  expect_warning(grafted <- graft_missing_clades(toy$phy, mtl, simmap = maps, treat_states_as_ranges = ranges, allowed_states = list("B", "low"), verbose = FALSE, seed = 1), "Range trait 'biogeo'")
+  expect_true(all(state_of(grafted, "biogeo", taxa) == "B"))
+  expect_true("B" %in% colnames(grafted$simmap$biogeo$mapped.edge))
+  expect_true(all(state_of(grafted, "elevation", taxa) == "low"))
+  # Several simulations
+  sims <- graft_clades_ranges(toy, maps, treat_states_as_ranges = ranges, allowed_states = list("A", "low"), nb_simulations = 3, seed = 2)
+  expect_s3_class(sims, "multiPhylo")
+  for (g in sims) { expect_true(all(state_of(g, "biogeo", taxa) == "A")); expect_true(all(state_of(g, "elevation", taxa) == "low")) }
+  # Paired multiSimmaps
+  pairs <- lapply(list(c(20, 0.3), c(15, 0.2)), function (ages) make_range_traits(toy$phy, ages[1], ages[2]))
+  multi <- graft_clades_ranges(toy, list(biogeo = as_multi(lapply(pairs, function (x) x$biogeo), c("p", "q")), elevation = as_multi(lapply(pairs, function (x) x$elevation), c("p", "q"))),
+                               treat_states_as_ranges = ranges, allowed_states = list("A", "low"), seed = 2)
+  expect_equal(names(multi), c("p", "q"))
+  for (k in c("p", "q")) { expect_true(all(state_of(multi[[k]], "biogeo", taxa) == "A")); expect_true(all(state_of(multi[[k]], "elevation", taxa) == "low")) }
+  # Invalid arguments
+  expect_error(graft_clades_ranges(toy, maps, treat_states_as_ranges = c(TRUE, TRUE)), "Only one trait")
+  expect_error(graft_clades_ranges(toy, maps, treat_states_as_ranges = c(color = TRUE, elevation = FALSE)), "exactly the names")
+  expect_error(graft_clades_ranges(toy, unname(maps), treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE)), "named but the traits of 'simmap' are not")
+  expect_error(graft_clades_ranges(toy, maps, treat_states_as_ranges = c(TRUE, FALSE), allowed_states = list("D", NULL)), "areas.*\\(trait 'biogeo'\\)")
+  expect_error(graft_clades_ranges(toy, maps, treat_states_as_ranges = c(TRUE, FALSE), allowed_states = list("A", "Z")), "\\(trait 'elevation'\\).*'Z'")
+  expect_error(graft_clades_ranges(toy, maps$biogeo, treat_states_as_ranges = c(TRUE, FALSE)), "must be TRUE or FALSE")
+  # A single trait: TRUE treats the map as ranges (unchanged)
+  single <- graft_clades_ranges(toy, maps$biogeo, treat_states_as_ranges = TRUE, allowed_states = "A", seed = 1)
+  expect_true(all(taxa_states(single$simmap, taxa) == "A"))
 })
