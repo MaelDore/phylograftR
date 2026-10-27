@@ -15,6 +15,8 @@
 #   * Seeds: the first simulation uses the 'seed' argument itself (it is the same phylogeny as a run with a single simulation), and the seeds of the other
 #     simulations are drawn from a stream started by 'seed' (see `derive_simulation_seeds()`). Each simulation can thus be reproduced alone with its seed,
 #     and the first simulations of a longer run are the same as the ones of a shorter run.
+#   * Parallel computation: the simulations (of all the maps) are independent tasks that can be run with the 'future' package (see `run_attempts()`).
+#     The seed of a simulation only depends on its index, so the results are the same as when run sequentially.
 #   * Failures: a failure specific to a simulation (stochastic: raised with `stop_simulation_failure()`) skips this simulation with a warning,
 #     whereas any other error (inputs, validation, a problem that would affect all the simulations) stops the whole run.
 
@@ -113,70 +115,230 @@ temp_file_path_simulation <- function (temp_file_path, index, multiple, map_name
 }
 
 
-#' @title Run the simulations of a grafting function
+#' @title Check the `parallel` argument
 #'
-#' @description Run a simulation function once per simulation, with the seeds of `derive_simulation_seeds()`, and gather the grafted phylogenies.
+#' @description Stops if `parallel` is not `NULL`, `TRUE` or `FALSE`.
 #'
-#'   With one simulation (and without `force_simulations`), the phylogeny is returned as it is and every error is raised as it is.
-#'   With several simulations, the warnings sent by the simulations are gathered and sent once at the end, and a failure specific to a simulation
-#'   (error of class `"phylograftR_simulation_error"`, see `stop_simulation_failure()`) skips the simulation.
-#'   With `force_simulations`, new seeds are tried until `nb_simulations` phylogenies are obtained, up to `10 * nb_simulations` attempts.
-#'
-#' @param simulate_one Function with 3 arguments: `sim_seed` (seed of the simulation, `NULL` to use the random number generator of the session), `sim_index` (index of the attempt)
-#'   and `verbose_sim` (whether the simulation displays its progress). Returns one grafted phylogeny.
-#' @param nb_simulations Integer. Number of simulations requested.
-#' @param force_simulations Logical. Whether to try new seeds until `nb_simulations` simulations are obtained.
-#' @param seed `NULL`, or integer. Seed of the run.
-#' @param allow_empty Logical. If `TRUE`, no simulation obtained does not stop the function: an empty object of class `"phylograftR_no_simulation"` with the attribute `"failed"` is returned (used to drop a map, see `run_maps()`).
-#' @param verbose Logical. Whether the simulations display their progress (passed to `simulate_one()` as `verbose_sim`).
+#' @param parallel `NULL`, `TRUE` or `FALSE`.
 #'
 #' @noRd
 #'
-#' @return With `nb_simulations = 1`, a phylogeny (with the attribute `"seed"`, its seed, unless `seed` is `NULL`). Otherwise a `"multiPhylo"` object with the phylogenies named `"sim_1"`, `"sim_2"`, ...
-#'   (the index of the simulation, so some can be missing if simulations failed, or consecutive numbers with `force_simulations`), with the attributes:
-#'  * `"seeds"`: named vector with the seeds of the phylogenies (`NULL` if `seed` is `NULL`).
-#'  * `"failed"`: data.frame with the columns `seed` and `reason` of the simulations that failed (0 row if none).
+#' @return `NULL` (invisibly).
 #'
 
-run_simulations <- function (simulate_one, nb_simulations, force_simulations, seed, verbose = FALSE, allow_empty = FALSE)
+check_parallel <- function (parallel)
 {
-  several <- nb_simulations > 1
-  max_attempts <- if (force_simulations) 10 * nb_simulations else nb_simulations
-  seeds <- derive_simulation_seeds(seed, max_attempts)
-  verbose_sim <- verbose
-
-  results <- list()
-  failures <- list()
-  warnings_sent <- character(0)
-  attempt <- 0
-  while (length(results) < nb_simulations && attempt < max_attempts)
+  if (!is.null(parallel) && (!is.logical(parallel) || length(parallel) != 1 || is.na(parallel)))
   {
-    attempt <- attempt + 1
-    sim_seed <- if (is.null(seeds)) NULL else seeds[attempt]
+    stop("'parallel' must be NULL (use the 'future' plan if one is set), TRUE or FALSE.")
+  }
+  invisible(NULL)
+}
 
-    run <- function () simulate_one(sim_seed = sim_seed, sim_index = attempt, verbose_sim = verbose_sim)
-    if (several || force_simulations)
-    {
-      # Warnings are gathered, to be sent once at the end
-      collect_warnings <- function (w) { warnings_sent <<- c(warnings_sent, conditionMessage(w)); invokeRestart("muffleWarning") }
-      out <- tryCatch(withCallingHandlers(run(), warning = collect_warnings), phylograftR_simulation_error = function (e) e)
-    } else {
-      out <- tryCatch(run(), phylograftR_simulation_error = function (e) e)
-    }
 
-    if (inherits(out, "phylograftR_simulation_error"))
+#' @title Are the packages used for the parallel computation available?
+#'
+#' @description The packages `future` and `future.apply` are only suggested. A function of its own, so tests can mock it.
+#'
+#' @noRd
+#'
+#' @return Logical.
+#'
+
+have_parallel_packages <- function ()
+{
+  requireNamespace("future", quietly = TRUE) && requireNamespace("future.apply", quietly = TRUE)
+}
+
+
+#' @title Decide whether the tasks are run in parallel
+#'
+#' @description Rules (see the `parallel` argument of the grafting functions):
+#'  * `FALSE`: sequential.
+#'  * `NULL`: parallel if the packages `future` and `future.apply` are available, a `future` plan with several workers is set, and there are several tasks. Otherwise sequential, silently.
+#'  * `TRUE`: same as `NULL`, but stops if the packages are missing or if no plan is set (nothing to run on), and warns if there is a single task (run sequentially).
+#'
+#' @param parallel `NULL`, `TRUE` or `FALSE`.
+#' @param n_tasks Integer. Number of tasks (simulations) to run.
+#'
+#' @noRd
+#'
+#' @return Logical. Whether to run the tasks with `future`.
+#'
+
+resolve_parallel <- function (parallel, n_tasks)
+{
+  if (isFALSE(parallel)) { return(FALSE) }
+  if (!have_parallel_packages())
+  {
+    if (isTRUE(parallel))
     {
-      failures[[length(failures) + 1]] <- list(seed = if (is.null(sim_seed)) NA else sim_seed, reason = conditionMessage(out), condition = out)
-    } else {
-      # The seed of the simulation is kept with the phylogeny
-      if (!is.null(sim_seed)) { attr(out, "seed") <- as.integer(sim_seed) }
-      results[[length(results) + 1]] <- out
-      names(results)[length(results)] <- paste0("sim_", if (force_simulations) length(results) else attempt)
+      stop("'parallel = TRUE' requires the packages 'future' and 'future.apply', which are not installed: install.packages(c(\"future\", \"future.apply\")). ",
+           "Use 'parallel = FALSE' to run sequentially.", call. = FALSE)
     }
+    return(FALSE)
+  }
+  if (inherits(future::plan(), "sequential"))
+  {
+    if (isTRUE(parallel))
+    {
+      stop("'parallel = TRUE' needs a 'future' plan with several workers, set before the call, e.g., future::plan(future::multisession, workers = 4). ",
+           "Use 'parallel = FALSE' to run sequentially.", call. = FALSE)
+    }
+    return(FALSE)
+  }
+  if (n_tasks < 2)
+  {
+    if (isTRUE(parallel)) { warning("'parallel = TRUE' has no effect with a single simulation to run: it is run sequentially.", call. = FALSE) }
+    return(FALSE)
+  }
+  TRUE
+}
+
+
+#' @title Apply a function to a list of tasks, sequentially or with `future`
+#'
+#' @description `lapply()`, or `future.apply::future_lapply()` (with the plan set by the user), which returns the same list. The messages, the warnings and the printed output
+#'   of the workers are relayed by `future` to the main session when the tasks are collected. Each task sets its own seed (with `set_local_seed()`, which restores the random number generator),
+#'   so `future` must not manage the random numbers (`future.seed = FALSE`), the results are then the same as when run sequentially.
+#'   Without seed (`seeded = FALSE`), `future` provides parallel-safe random number streams.
+#'
+#' @param tasks List of tasks.
+#' @param FUN Function applied to each task.
+#' @param use_future Logical. Whether to use `future`.
+#' @param seeded Logical. Whether each task sets its own seed.
+#'
+#' @noRd
+#'
+#' @return List with the result of each task, in the order of `tasks`.
+#'
+
+apply_tasks <- function (tasks, FUN, use_future, seeded)
+{
+  if (!use_future || length(tasks) < 2) { return(lapply(tasks, FUN)) }
+  future.apply::future_lapply(tasks, FUN, future.seed = if (seeded) FALSE else TRUE)
+}
+
+
+#' @title Run the attempts (simulations) of one or several maps
+#'
+#' @description Runs the simulations of each map as ONE flat set of independent tasks (a task is a map x an attempt), sequentially or in parallel (see `apply_tasks()`).
+#'   The seed of an attempt only depends on the index of the attempt, so the results are the same whatever the way the tasks are run.
+#'   With `force_simulations`, the attempts are run in rounds: first `nb_simulations` attempts per map, then as many new attempts (with the next seeds) as simulations missing,
+#'   and so on up to `10 * nb_simulations` attempts per map. A round only runs the attempts that the sequential rule (try new seeds until `nb_simulations` are obtained) would run, so the result is the same.
+#'
+#'   A task catches the failures specific to a simulation (error of class `"phylograftR_simulation_error"`, returned as a value), and gathers the warnings of the simulation if `collect` is `TRUE`
+#'   (returned as a character vector, to be sent once by `summarise_simulations()`). The errors and the warnings that are not gathered carry the name of the map (see `with_map_context()`).
+#'   In parallel, the output and the messages printed by the simulations are relayed by `future` when the tasks are collected, and each task prints one line when it is done.
+#'
+#' @param simulate_attempt Function with 3 arguments: `k` (index of the map), `sim_seed` and `sim_index`. Returns one grafted phylogeny.
+#' @param n_maps Integer. Number of maps.
+#' @param map_names `NULL` (a single map, or no map), or names of the maps (used in the messages).
+#' @param nb_simulations,force_simulations See `run_simulations()`.
+#' @param seeds `NULL`, or vector with the seed of each attempt (see `derive_simulation_seeds()`).
+#' @param collect Logical. Whether to gather the warnings of the simulations.
+#' @param parallel,verbose See `resolve_parallel()` and `run_simulations()`.
+#'
+#' @noRd
+#'
+#' @return A list with one element per map: a list with the elements `results` (named list of the phylogenies obtained), `failures` (list of failed attempts, with `seed`, `reason` and `condition`),
+#'   `warnings` (warnings gathered) and `attempt` (index of the last attempt run).
+#'
+
+run_attempts <- function (simulate_attempt, n_maps, map_names, nb_simulations, force_simulations, seeds, collect, parallel, verbose)
+{
+  max_attempts <- if (force_simulations) 10 * nb_simulations else nb_simulations
+  use_future <- resolve_parallel(parallel, n_tasks = n_maps * nb_simulations)
+  if (use_future && verbose)
+  {
+    cat(paste0(Sys.time(), " - Running ", n_maps * nb_simulations, " simulation(s) in parallel on ", future::nbrOfWorkers(), " worker(s) (plan: ", setdiff(class(future::plan()), c("FutureStrategy", "tweaked"))[1], ")\n"))
   }
 
+  run_task <- function (task)
+  {
+    k <- task$map
+    attempt <- task$attempt
+    map_name <- if (is.null(map_names)) NULL else map_names[k]
+    sim_seed <- if (is.null(seeds)) NULL else seeds[attempt]
+    if (verbose && !use_future && !is.null(map_name) && attempt == 1) { cat(paste0(Sys.time(), " - Map ", map_name, " (", k, "/", n_maps, ")\n")) }
+
+    warnings_sent <- character(0)
+    collect_warnings <- function (w) { warnings_sent <<- c(warnings_sent, conditionMessage(w)); invokeRestart("muffleWarning") }
+    run <- function () simulate_attempt(k = k, sim_seed = sim_seed, sim_index = attempt)
+    out <- with_map_context(
+      if (collect) { tryCatch(withCallingHandlers(run(), warning = collect_warnings), phylograftR_simulation_error = function (e) e)
+      } else { tryCatch(run(), phylograftR_simulation_error = function (e) e) },
+      map_name)
+
+    if (verbose && use_future)
+    {
+      cat(paste0(Sys.time(), " - Simulation ", task$id, "/", task$total, " done (", if (!is.null(map_name)) paste0("map ", map_name, ", "), "simulation n°", attempt, ")\n"))
+    }
+    list(out = out, warnings = warnings_sent, seed = sim_seed)
+  }
+
+  state <- lapply(seq_len(n_maps), function (k) list(results = list(), failures = list(), warnings = character(0), attempt = 0))
+  repeat
+  {
+    # Attempts to run in this round: the ones still needed by each map
+    tasks <- list()
+    for (k in seq_len(n_maps))
+    {
+      n_run <- min(nb_simulations - length(state[[k]]$results), max_attempts - state[[k]]$attempt)
+      if (n_run > 0) { tasks <- c(tasks, lapply(state[[k]]$attempt + seq_len(n_run), function (a) list(map = k, attempt = a))) }
+    }
+    if (length(tasks) == 0) { break }
+    for (i in seq_along(tasks)) { tasks[[i]]$id <- i; tasks[[i]]$total <- length(tasks) }
+
+    outcomes <- apply_tasks(tasks, run_task, use_future = use_future, seeded = !is.null(seeds))
+
+    # Gather the outcomes, in the order of the attempts of each map
+    for (i in seq_along(tasks))
+    {
+      k <- tasks[[i]]$map
+      outcome <- outcomes[[i]]
+      s <- state[[k]]
+      s$attempt <- tasks[[i]]$attempt
+      s$warnings <- c(s$warnings, outcome$warnings)
+      if (inherits(outcome$out, "phylograftR_simulation_error"))
+      {
+        s$failures[[length(s$failures) + 1]] <- list(seed = if (is.null(outcome$seed)) NA else outcome$seed, reason = conditionMessage(outcome$out), condition = outcome$out)
+      } else {
+        phy <- outcome$out
+        # The seed of the simulation is kept with the phylogeny
+        if (!is.null(outcome$seed)) { attr(phy, "seed") <- as.integer(outcome$seed) }
+        s$results[[length(s$results) + 1]] <- phy
+        names(s$results)[length(s$results)] <- paste0("sim_", if (force_simulations) length(s$results) else s$attempt)
+      }
+      state[[k]] <- s
+    }
+  }
+  state
+}
+
+
+#' @title Summarise the simulations obtained for a map
+#'
+#' @description Sends the warnings of the simulations (each distinct message once), and the warning or the error if fewer simulations than requested were obtained,
+#'   and builds the output of a map (see `run_simulations()`).
+#'
+#' @param state Element of the output of `run_attempts()` for the map.
+#' @param nb_simulations,force_simulations,seeds,allow_empty See `run_simulations()` and `run_attempts()`.
+#'
+#' @noRd
+#'
+#' @return See `run_simulations()`.
+#'
+
+summarise_simulations <- function (state, nb_simulations, force_simulations, seeds, allow_empty)
+{
+  several <- nb_simulations > 1
+  results <- state$results
+  failures <- state$failures
+  attempt <- state$attempt
+
   # Warnings of the simulations, once
-  for (message in unique(warnings_sent)) { warning(message, call. = FALSE) }
+  for (message in unique(state$warnings)) { warning(message, call. = FALSE) }
 
   failed <- data.frame(seed = vapply(failures, function (f) as.numeric(f$seed), numeric(1)),
                        reason = vapply(failures, function (f) f$reason, character(1)), stringsAsFactors = FALSE)
@@ -212,6 +374,45 @@ run_simulations <- function (simulate_one, nb_simulations, force_simulations, se
     seeds_obtained <- stats::setNames(seeds[used], names(results))
   }
   structure(results, class = "multiPhylo", seeds = seeds_obtained, failed = failed)
+}
+
+
+#' @title Run the simulations of a grafting function
+#'
+#' @description Run a simulation function once per simulation, with the seeds of `derive_simulation_seeds()`, and gather the grafted phylogenies.
+#'
+#'   With one simulation (and without `force_simulations`), the phylogeny is returned as it is and every error is raised as it is.
+#'   With several simulations, the warnings sent by the simulations are gathered and sent once at the end, and a failure specific to a simulation
+#'   (error of class `"phylograftR_simulation_error"`, see `stop_simulation_failure()`) skips the simulation.
+#'   With `force_simulations`, new seeds are tried until `nb_simulations` phylogenies are obtained, up to `10 * nb_simulations` attempts.
+#'   The simulations can be run in parallel (see `run_attempts()`).
+#'
+#' @param simulate_one Function with 3 arguments: `sim_seed` (seed of the simulation, `NULL` to use the random number generator of the session), `sim_index` (index of the attempt)
+#'   and `verbose_sim` (whether the simulation displays its progress). Returns one grafted phylogeny.
+#' @param nb_simulations Integer. Number of simulations requested.
+#' @param force_simulations Logical. Whether to try new seeds until `nb_simulations` simulations are obtained.
+#' @param seed `NULL`, or integer. Seed of the run.
+#' @param allow_empty Logical. If `TRUE`, no simulation obtained does not stop the function: an empty object of class `"phylograftR_no_simulation"` with the attribute `"failed"` is returned (used to drop a map, see `run_maps()`).
+#' @param verbose Logical. Whether the simulations display their progress (passed to `simulate_one()` as `verbose_sim`).
+#' @param parallel `NULL`, `TRUE` or `FALSE`. Whether to run the simulations in parallel with `future` (see `resolve_parallel()`). Default is `FALSE`.
+#'
+#' @noRd
+#'
+#' @return With `nb_simulations = 1`, a phylogeny (with the attribute `"seed"`, its seed, unless `seed` is `NULL`). Otherwise a `"multiPhylo"` object with the phylogenies named `"sim_1"`, `"sim_2"`, ...
+#'   (the index of the simulation, so some can be missing if simulations failed, or consecutive numbers with `force_simulations`), with the attributes:
+#'  * `"seeds"`: named vector with the seeds of the phylogenies (`NULL` if `seed` is `NULL`).
+#'  * `"failed"`: data.frame with the columns `seed` and `reason` of the simulations that failed (0 row if none).
+#'
+
+run_simulations <- function (simulate_one, nb_simulations, force_simulations, seed, verbose = FALSE, allow_empty = FALSE, parallel = FALSE)
+{
+  max_attempts <- if (force_simulations) 10 * nb_simulations else nb_simulations
+  seeds <- derive_simulation_seeds(seed, max_attempts)
+  simulate_attempt <- function (k, sim_seed, sim_index) simulate_one(sim_seed = sim_seed, sim_index = sim_index, verbose_sim = verbose)
+
+  state <- run_attempts(simulate_attempt = simulate_attempt, n_maps = 1, map_names = NULL, nb_simulations = nb_simulations, force_simulations = force_simulations,
+                        seeds = seeds, collect = nb_simulations > 1 || force_simulations, parallel = parallel, verbose = verbose)
+  summarise_simulations(state[[1]], nb_simulations = nb_simulations, force_simulations = force_simulations, seeds = seeds, allow_empty = allow_empty)
 }
 
 
@@ -270,9 +471,9 @@ with_map_context <- function (expr, map_name)
 
 #' @title Run the simulations of each map
 #'
-#' @description Runs `run_simulations()` for each map prepared, and gathers the results.
+#' @description Runs the simulations of all the maps with `run_attempts()` (one flat set of tasks: the maps x the simulations, run in parallel if requested), then builds the output of each map.
 #'
-#'   Without `"multiSimmap"` (`multiple = FALSE`), this is `run_simulations()` on the single map (or no map).
+#'   Without `"multiSimmap"` (`multiple = FALSE`), this is the same as `run_simulations()` on the single map (or no map).
 #'   With a `"multiSimmap"`, each map has the same seeds (the maps are compared with the same random draws) and the result is a list with one element per map, named after the map:
 #'   a phylogeny if `nb_simulations = 1`, otherwise a `"multiPhylo"` (as in `run_simulations()`) named `"<map>_sim_1"`, `"<map>_sim_2"`, ...
 #'   A map with no simulation obtained is dropped with a warning, and the function stops if no map gives a simulation.
@@ -281,7 +482,7 @@ with_map_context <- function (expr, map_name)
 #' @param prepared List with one element per map, each a list with the elements `tracker` and `missing_taxa_list`.
 #' @param map_names Names of the maps (`NULL` if `multiple = FALSE`).
 #' @param multiple Logical. Whether `simmap` was a `"multiSimmap"`.
-#' @param nb_simulations,force_simulations,seed,verbose See `run_simulations()`.
+#' @param nb_simulations,force_simulations,seed,verbose,parallel See `run_simulations()`.
 #'
 #' @noRd
 #'
@@ -289,33 +490,34 @@ with_map_context <- function (expr, map_name)
 #'   (data.frame with the columns `map` and `reason` of the maps dropped, 0 row if none). Each phylogeny has the attributes `"seed"` and `"map"`.
 #'
 
-run_maps <- function (simulate_one, prepared, map_names, multiple, nb_simulations, force_simulations, seed, verbose = FALSE)
+run_maps <- function (simulate_one, prepared, map_names, multiple, nb_simulations, force_simulations, seed, verbose = FALSE, parallel = FALSE)
 {
-  run_map <- function (k)
-  {
-    name <- if (multiple) map_names[k] else NULL
-    simulate_map <- function (sim_seed, sim_index, verbose_sim)
-    {
-      simulate_one(tracker = prepared[[k]]$tracker, missing_taxa_list = prepared[[k]]$missing_taxa_list, map_name = name,
-                   sim_seed = sim_seed, sim_index = sim_index, verbose_sim = verbose_sim)
-    }
-    run_simulations(simulate_one = simulate_map, nb_simulations = nb_simulations, force_simulations = force_simulations, seed = seed, verbose = verbose, allow_empty = multiple)
-  }
-  if (!multiple) { return(run_map(1)) }
-
   n_maps <- length(prepared)
-  if (n_maps * nb_simulations > 1000)
+  if (multiple && n_maps * nb_simulations > 1000)
   {
     warning(n_maps, " maps x ", nb_simulations, " simulations = ", n_maps * nb_simulations, " grafted phylogenies will be produced (more than 1000): ",
             "this can take a long time and use a lot of memory.", call. = FALSE)
+  }
+
+  max_attempts <- if (force_simulations) 10 * nb_simulations else nb_simulations
+  seeds <- derive_simulation_seeds(seed, max_attempts)
+  simulate_attempt <- function (k, sim_seed, sim_index)
+  {
+    simulate_one(tracker = prepared[[k]]$tracker, missing_taxa_list = prepared[[k]]$missing_taxa_list, map_name = if (multiple) map_names[k] else NULL,
+                 sim_seed = sim_seed, sim_index = sim_index, verbose_sim = verbose)
+  }
+  state <- run_attempts(simulate_attempt = simulate_attempt, n_maps = n_maps, map_names = if (multiple) map_names else NULL, nb_simulations = nb_simulations,
+                        force_simulations = force_simulations, seeds = seeds, collect = nb_simulations > 1 || force_simulations, parallel = parallel, verbose = verbose)
+  if (!multiple)
+  {
+    return(summarise_simulations(state[[1]], nb_simulations = nb_simulations, force_simulations = force_simulations, seeds = seeds, allow_empty = FALSE))
   }
 
   results <- list()
   failed_maps <- list()
   for (k in seq_len(n_maps))
   {
-    if (verbose) { cat(paste0(Sys.time(), " - Map ", map_names[k], " (", k, "/", n_maps, ")\n")) }
-    out <- with_map_context(run_map(k), map_names[k])
+    out <- with_map_context(summarise_simulations(state[[k]], nb_simulations = nb_simulations, force_simulations = force_simulations, seeds = seeds, allow_empty = TRUE), map_names[k])
     if (inherits(out, "phylograftR_no_simulation"))
     {
       reasons <- unique(attr(out, "failed")$reason)

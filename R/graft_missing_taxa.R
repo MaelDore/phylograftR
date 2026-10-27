@@ -137,6 +137,10 @@
 #'   See the section 'Multiple simulations' for the output, the seeds and the failures.
 #' @param force_simulations Logical. Whether to try new seeds until `nb_simulations` grafted phylogenies are obtained, up to `10 * nb_simulations` attempts
 #'   (see 'Multiple simulations' in Details section). If `FALSE`, the simulations that fail are skipped. Default is `FALSE`.
+#' @param parallel Logical or `NULL`. Whether to run the simulations in parallel, with the packages `future` and `future.apply` (they must be installed separately from phylograftR).
+#'   Default is `NULL`: the simulations are run in parallel if the user set a `future` plan with several workers beforehand (e.g., `future::plan(future::multisession, workers = 4)`), and sequentially otherwise.
+#'   `FALSE` forces a sequential run, even if a plan is set. `TRUE` execute the `future` plan, but stops with an informative error if the packages are not installed or no plan is set.
+#'   See 'Parallel computation' in Details section for recommendations on whether parallelization is useful in your case.
 #' @param seed Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
 #'   is restored on exit. Set to `NULL` to use the random number generator of the session. Default is `1234`.
 #'   With several simulations, it is the master seed: the first simulation uses `seed`, and the seeds of the other simulations are derived from it (see 'Multiple simulations').
@@ -380,6 +384,22 @@
 #' the number of backbone species plus species to graft of the clade, or if a clade has fewer unsampled species than the sum of the clades with
 #' a `total_richness` provided nested within it.
 #' With `method = "uniform"`, no diversification model is used: `total_richness_per_clades` is only used to derive the `sampling_fraction_df` table (a warning is issued).
+#'
+#' ### Parallel computation
+#'
+#' The simulations based on the different stochastic maps and seeds are independent, so they can be run in parallel with the package `future` and `future.apply`.
+#' Both packages must be installed independently from phylograftR (they are only suggested).
+#'
+#' The grafting function does not manage the workers: you must set a plan beforehand, e.g., `future::plan(future::multisession, workers = 4)`,
+#' and reset it afterwards with `future::plan(future::sequential)`. With the default `parallel = NULL`, the function uses the plan if there is one, `parallel = FALSE` ignores it.
+#' All the `P * nb_simulations` simulations (with `P` stochastic maps per trait) are run as one set of tasks, so the workers are used evenly.
+#'
+#' The output is exactly the same as without parallelization.
+#' The messages, warnings and printed output of the simulations are relayed to the session when the tasks are collected (so they appear after the simulations, not live),
+#' and with `verbose = TRUE` one line is printed when each simulation is done.
+#'
+#' Setting up the workers and sending the data to them has a cost, so parallelization only pays off with many simulations (or maps) or with a long computation per simulation.
+#' As an example, with .... give example based on our config...
 #'
 #'
 #' @importFrom ape Ntip branching.times extract.clade getMRCA is.ultrametric
@@ -626,12 +646,14 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
                                 nb_simulations = 1, # Number of grafted phylogenies to produce in the same run (a multiPhylo if > 1)
                                 force_simulations = FALSE, # If TRUE, try new seeds until nb_simulations phylogenies are obtained (up to 10 x nb_simulations attempts)
+                                parallel = NULL, # NULL: run in parallel if a 'future' plan with several workers is set; FALSE: sequential; TRUE: parallel (stops if not possible). Packages 'future' and 'future.apply' (suggested)
                                 seed = 1234)
 {
   ### ---- Check input validity ---- ###
   {
     ## Check 'nb_simulations' and 'force_simulations'
     check_nb_simulations(nb_simulations = nb_simulations, force_simulations = force_simulations)
+    check_parallel(parallel)
 
     ## Check 'method'
     if (!(method %in% c("uniform", "BD_clades")))
@@ -1322,7 +1344,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
   ## Run the simulations for the given nb of iterations, and forcing rule
   # With a 'multiSimmap': a list with the simulations of each map (see Details)
   phy_all_sims <- run_maps(simulate_one = simulate_one, prepared = prepared_maps, map_names = simmap_input$names, multiple = simmap_input$multiple,
-                           nb_simulations = nb_simulations, force_simulations = force_simulations, seed = seed, verbose = verbose)
+                           nb_simulations = nb_simulations, force_simulations = force_simulations, seed = seed, verbose = verbose, parallel = parallel)
 
   # Return output
   return(phy_all_sims)

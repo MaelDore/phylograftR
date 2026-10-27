@@ -21,6 +21,8 @@ Imports:
     TreeSim (>= 2.4),
     utils
 Suggests: 
+    future (>= 1.33.1),
+    future.apply (>= 1.11.1),
     readxl (>= 1.5.0.1),
     testthat (>= 3.3.2),
     writexl (>= 2.0.1)
