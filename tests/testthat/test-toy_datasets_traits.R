@@ -34,20 +34,20 @@ test_that("toy_simmap_elevation is a valid simmap of toy_backbone with two state
 })
 
 ## Test that the .csv and the dataset are the same, with the syntaxes of the several traits
-test_that("toy_missing_taxa_list_with_allowed_traits is the import of its .csv, the toy list of missing taxa with allowed states of two traits",
+test_that("toy_missing_taxa_list_with_two_traits is the import of its .csv, the toy list of missing taxa with allowed states of two traits",
 {
   data(toy_backbone, package = "phylograftR")
   data(toy_missing_taxa_list, package = "phylograftR")
-  data(toy_missing_taxa_list_with_allowed_traits, package = "phylograftR")
-  path <- system.file("extdata", "toy_missing_taxa_with_allowed_traits.csv", package = "phylograftR")
+  data(toy_missing_taxa_list_with_two_traits, package = "phylograftR")
+  path <- system.file("extdata", "toy_missing_taxa_with_two_traits.csv", package = "phylograftR")
   expect_true(nzchar(path))
   imported <- import_missing_taxa_list(path, phy = toy_backbone, verbose = FALSE)
-  expect_equal(imported, toy_missing_taxa_list_with_allowed_traits)
+  expect_equal(imported, toy_missing_taxa_list_with_two_traits)
   # The same other items as toy_missing_taxa_list
   other_items <- setdiff(names(toy_missing_taxa_list), "allowed_states")
-  expect_equal(toy_missing_taxa_list_with_allowed_traits[other_items], toy_missing_taxa_list[other_items])
+  expect_equal(toy_missing_taxa_list_with_two_traits[other_items], toy_missing_taxa_list[other_items])
   # The documented allowed states
-  states <- toy_missing_taxa_list_with_allowed_traits$allowed_states
+  states <- toy_missing_taxa_list_with_two_traits$allowed_states
   expect_equal(states$Genus_a_sp1, list("red", NULL))
   expect_equal(states$Genus_b_sp1, list(c("blue", "green"), "high"))
   expect_equal(states$Genus_b_sp2, list(NULL, "low"))
@@ -63,12 +63,12 @@ for (method in c("uniform", "BD_clades"))
     data(toy_backbone, package = "phylograftR")
     data(toy_simmap, package = "phylograftR")
     data(toy_simmap_elevation, package = "phylograftR")
-    data(toy_missing_taxa_list_with_allowed_traits, package = "phylograftR")
-    expect_no_warning(grafted <- graft_missing_taxa(toy_backbone, toy_missing_taxa_list_with_allowed_traits,
+    data(toy_missing_taxa_list_with_two_traits, package = "phylograftR")
+    expect_no_warning(grafted <- graft_missing_taxa(toy_backbone, toy_missing_taxa_list_with_two_traits,
                                                     simmap = list(color = toy_simmap, elevation = toy_simmap_elevation),
                                                     allowed_states = list(c("blue", "green"), NULL), method = method, verbose = FALSE, seed = 1234))
     expect_equal(names(grafted$simmap), c("color", "elevation"))
-    taxa <- toy_missing_taxa_list_with_allowed_traits$Taxon_name
+    taxa <- toy_missing_taxa_list_with_two_traits$Taxon_name
     color <- taxa_states_in(grafted$simmap$color, taxa)
     elevation <- taxa_states_in(grafted$simmap$elevation, taxa)
     expect_equal(unname(color["Genus_a_sp1"]), "red")

@@ -542,14 +542,14 @@
 #' # Load the simmap for the second trait: 'toy_simmap_elevation' has two states: "high" and "low".
 #' data(toy_simmap_elevation)
 #' # Load missing taxa list with '$allowed_states' covering both color and elevation traits
-#' data(toy_missing_taxa_list_with_allowed_traits)
+#' data(toy_missing_taxa_list_with_two_traits)
 #' # NULL means no restriction for this taxon, for the given trait.
-#' toy_missing_taxa_list_with_allowed_traits$allowed_states
+#' toy_missing_taxa_list_with_two_traits$allowed_states
 #'
 #' # Global 'allowed_states': "blue" or "green" for colors, no restriction on the elevation.
 #' # Each taxon can only be grafted on branch pieces in allowed states for both traits.
 #' grafted_phy_traits <- graft_missing_taxa(phy = toy_backbone,
-#'     missing_taxa_list = toy_missing_taxa_list_with_allowed_traits,
+#'     missing_taxa_list = toy_missing_taxa_list_with_two_traits,
 #'     simmap = list(color = toy_simmap, elevation = toy_simmap_elevation),
 #'     allowed_states = list(c("blue", "green"), NULL),
 #'     verbose = FALSE, seed = 1234)

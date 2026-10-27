@@ -8,8 +8,8 @@
 # Run from the root of the package, after loading it (devtools::load_all() or devtools::install()).
 # Produces:
 #  * data/toy_backbone.rda, data/toy_missing_taxa_list.rda, data/toy_total_richness_per_clades.rda, data/toy_simmap.rda, data/toy_missing_taxa_list_with_allowed_states.rda,
-#    data/toy_simmap_elevation.rda, data/toy_missing_taxa_list_with_allowed_traits.rda
-#  * inst/extdata/toy_missing_taxa.csv, inst/extdata/toy_total_richness.csv, inst/extdata/toy_missing_taxa_with_allowed_states.csv, inst/extdata/toy_missing_taxa_with_allowed_traits.csv
+#    data/toy_simmap_elevation.rda, data/toy_missing_taxa_list_with_two_traits.rda
+#  * inst/extdata/toy_missing_taxa.csv, inst/extdata/toy_total_richness.csv, inst/extdata/toy_missing_taxa_with_allowed_states.csv, inst/extdata/toy_missing_taxa_with_two_traits.csv
 
 
 ##### 1/ Create backbone phylogeny #####
@@ -194,13 +194,13 @@ is_balanced_simmap_elevation <- function (simmap)
 # Different syntaxes are used on purpose to showcase them. Blank cells (NA) use the global 'allowed_states' for both traits.
 
 # Rewrite toy_missing_taxa_table to adjust allowed_states for two traits
-toy_missing_taxa_with_allowed_traits_table <- toy_missing_taxa_table
-toy_missing_taxa_with_allowed_traits_table$allowed_states <- c("red;", NA, NA, "blue, green;high", ";low", NA, "elevation=high")
-utils::write.csv(toy_missing_taxa_with_allowed_traits_table, file = "inst/extdata/toy_missing_taxa_with_allowed_traits.csv", row.names = FALSE, na = "")
+toy_missing_taxa_with_two_traits_table <- toy_missing_taxa_table
+toy_missing_taxa_with_two_traits_table$allowed_states <- c("red;", NA, NA, "blue, green;high", ";low", NA, "elevation=high")
+utils::write.csv(toy_missing_taxa_with_two_traits_table, file = "inst/extdata/toy_missing_taxa_with_two_traits.csv", row.names = FALSE, na = "")
 
 # Import from the .csv
-toy_missing_taxa_list_with_allowed_traits <- phylograftR::import_missing_taxa_list(
-  file = "inst/extdata/toy_missing_taxa_with_allowed_traits.csv", phy = toy_backbone)
+toy_missing_taxa_list_with_two_traits <- phylograftR::import_missing_taxa_list(
+  file = "inst/extdata/toy_missing_taxa_with_two_traits.csv", phy = toy_backbone)
 
 # Run grafting
 runs_without_warning <- function (simmap)
@@ -208,7 +208,7 @@ runs_without_warning <- function (simmap)
   all(vapply(c("uniform", "BD_clades"), function (method)
   {
     result <- tryCatch(withCallingHandlers(
-      phylograftR::graft_missing_taxa(toy_backbone, toy_missing_taxa_list_with_allowed_traits, simmap = list(color = toy_simmap, elevation = simmap),
+      phylograftR::graft_missing_taxa(toy_backbone, toy_missing_taxa_list_with_two_traits, simmap = list(color = toy_simmap, elevation = simmap),
                                       allowed_states = list(c("blue", "green"), NULL), method = method, seed = 1234, verbose = FALSE),
       warning = function (w) stop("warning")), error = function (e) NULL)
     !is.null(result)
@@ -236,4 +236,4 @@ save(toy_total_richness_per_clades, file = "data/toy_total_richness_per_clades.r
 save(toy_simmap, file = "data/toy_simmap.rda", compress = "gzip", version = 2)
 save(toy_missing_taxa_list_with_allowed_states, file = "data/toy_missing_taxa_list_with_allowed_states.rda", compress = "gzip", version = 2)
 save(toy_simmap_elevation, file = "data/toy_simmap_elevation.rda", compress = "gzip", version = 2)
-save(toy_missing_taxa_list_with_allowed_traits, file = "data/toy_missing_taxa_list_with_allowed_traits.rda", compress = "gzip", version = 2)
+save(toy_missing_taxa_list_with_two_traits, file = "data/toy_missing_taxa_list_with_two_traits.rda", compress = "gzip", version = 2)
