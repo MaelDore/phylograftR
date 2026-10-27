@@ -58,6 +58,8 @@ and must match the names of the values of \code{exclude_subclades_stem} of the t
 \item \verb{$allowed_states}: (Optional) List (named after \verb{$Taxon_name}) of character vectors. For each taxon, the states of the \code{simmap} in which it can be grafted.
 It overrides the global argument \code{allowed_states} for this taxon. \code{NULL} or \code{NA} use the global argument.
 Only used with a \code{simmap}. For example, \code{allowed_states = list(X1 = c("blue", "green"), X2 = NULL)}.
+With the maps of several traits, each element is a list with the states of each trait (\code{NULL}: no taxon-level value for the trait), e.g.,
+\code{list(X1 = list(c("blue", "green"), "high"), X2 = list(NULL, "low"))} (see 'Several traits' in Details section).
 }}
 
 \item{include_target_clade_stem}{Logical. Whether the stem branch of target clades is available for grafting. This is the default for all taxa:
@@ -80,16 +82,21 @@ For a single-tip excluded subclade, the terminal branch is the only branch of th
 \item{simmap}{(Optional) A stochastic character map of the backbone, of class \code{"simmap"} (e.g., from \code{phytools::make.simmap()} or \code{phytools::sim.history()}),
 or a set of maps of the same trait, of class \code{"multiSimmap"} (e.g., from \code{phytools::make.simmap(nsim = 10)}), used as alternative hypotheses of the evolution of a species attribute
 (e.g., a trait or a range) with discrete states along the branches of \code{phy}.
-It must have the same tips, topology and branch lengths as \code{phy}. With a \code{simmap}, taxa can only be grafted on the parts of the branches
-that are in their allowed states (see \code{allowed_states}).
 
-See 'Species attributes' and 'Multiple stochastic maps' in Details section. Default is \code{NULL} (no restriction for grafting based on states).}
+Alternatively, you can provide a list of \code{"simmap"} and/or \code{"multiSimmap"} objects, one per trait, that contains the maps of several traits used together as constraints.
+All maps must have the same tips, topology and branch lengths as \code{phy}.
+With a \code{simmap}, missing taxa can only be grafted on the parts of the branches that are in their allowed states (see \code{allowed_states}).
+Each grafted taxa inherits the state(s) of the point of the branch piece where it is grafted.
+
+See 'Species attributes', 'Multiple stochastic maps' and 'Several traits' in Details section. Default is \code{NULL} (no restriction for grafting based on states).}
 
 \item{allowed_states}{Character vector. The states of \code{simmap} in which grafting is allowed. This is the default for all taxa:
 taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead. States are matched exactly with the states of the \code{simmap}, unless \code{treat_states_as_ranges = TRUE}.
 Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the \code{simmap}.
 The function stops if some states are not in the \code{simmap}, or if \code{allowed_states} is provided without a \code{simmap}.
 With \code{treat_states_as_ranges = TRUE}, a range that is not a state of the \code{simmap} is accepted if it is contained in some of them (e.g., \code{"A"} can be allowed if \code{"AB"} is found on the \code{simmap}).
+With the maps of several traits (a list in \code{simmap}), a list with one element per trait, in the order of the traits or named after them: the states allowed for each trait,
+with \code{NULL} for no restriction on a trait, e.g., \code{list(c("blue", "green"), NULL, "high")} (see 'Several traits' in Details section).
 Default is \code{NULL} (all states allowed).}
 
 \item{treat_states_as_ranges}{Logical. Only used with a \code{simmap}. Whether the states of the \code{simmap} are biogeographic ranges to be treated as sets of areas, rather than as unrelated states.
@@ -199,6 +206,7 @@ the pieces of the branches of the backbone keep their states (cut where taxa wer
 With \code{treat_states_as_ranges = TRUE}, the grafted branch is entirely in the range it inherited (see 'Biogeographic ranges as states' in Details section).
 This element can be plotted as any \code{simmap}, e.g., \code{plot(grafted_phy$simmap)}, or used to extract the states of the tips with \code{phytools::getStates(grafted_phy$simmap, type = "tips")}.
 It has the same exact topology and branch lengths as the grafted phylogeny.
+With the maps of several traits, \verb{$simmap} is a list of such simmaps, one per trait, named after the traits (see 'Several traits' in Details section).
 }
 
 With \code{nb_simulations > 1}, the function returns an object of class \code{"multiPhylo"} with one grafted phylogeny per simulation, named \code{"sim_1"}, \code{"sim_2"}, ...
@@ -377,6 +385,30 @@ A map for which no simulation could be obtained is dropped from the output with 
 With \code{save_temp = TRUE}, the temporary files get the suffix \code{"_map_<name>"} before the suffix of the simulation.
 }
 
+\subsection{Several traits}{
+
+The maps of several traits can be used at once to constrain grafting. \code{simmap} is then a list with one element per trait, each a \code{"simmap"} or a \code{"multiSimmap"}
+(e.g., \code{simmap = list(color = color_simmap, elevation = elevation_simmap)}). The elements can be named after the traits (all or none, with different names that cannot contain \verb{;}, \verb{,}, \code{=} or \code{|}),
+otherwise the traits are named \code{"trait_1"}, \code{"trait_2"}, ... All the maps must have the same tips, topology and branch lengths as the backbone \code{phy}.
+
+A taxon can only be grafted on the parts of the branches that are in one of its allowed states, for every trait.
+The allowed states are provided for each trait, in the order of the list of maps (or named after the traits):
+the global argument \code{allowed_states} is a list with one element per trait, e.g., \code{list(c("blue", "green"), NULL, "high")} for three traits,
+and \code{missing_taxa_list$allowed_states} has such a list for each taxon.
+A trait with \code{NULL} (or an empty vector, or \code{NA}) has no taxon-level value, so the global \code{allowed_states} of the trait is used for the taxon
+(a taxon-level value replaces the global one, trait by trait, as with a single trait).
+A trait with no states, neither at the taxon level nor globally, has all its states allowed (no restriction).
+Other traits can still be restricted: \code{list(NULL, "high")} only restricts the second trait.
+
+With \code{return_simmap = TRUE}, \verb{$simmap} is a list of updated simmaps, one per trait, named after the traits.
+In each simmap, a grafted branch is entirely in the state of each trait at the point where it was grafted (each trait is inherited from the lineage it was grafted on).
+
+With a list of \code{"multiSimmap"} provided as \code{simmap}, the maps of the traits are paired: the grafting is run with the map 1 of every trait, then the map 2 of every trait, and so on.
+All the traits must therefore have the same number of maps to be associated in a given grafting process.
+
+\strong{Limit.} \code{treat_states_as_ranges = TRUE} is not yet supported with several traits (the function stops).
+}
+
 \subsection{Sampling fraction and unsampled species}{
 
 Under \code{method = "BD_clades"}, the birth-death model of a clade is fitted with the sampling fraction
@@ -448,6 +480,7 @@ grafted_phy_uniform <- graft_missing_taxa(phy = phy, missing_taxa_list = missing
 check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
                            missing_taxa_list = missing_taxa_list)
 
+
 # --- Produce several grafted phylogenies --- #
 
 # The grafting is stochastic: several simulations can be run at once from the same backbone and list
@@ -467,6 +500,7 @@ plot(grafted_phys[[2]], cex = 0.7, main = "Sim #2") # sim_2
 plot(grafted_phys[[3]], cex = 0.7, main = "Sim #3") # sim_3
 par(old_par)
 
+
 # --- Account for unsampled species --- #
 
 # Account for unsampled species with the total richness of the clades.
@@ -480,6 +514,7 @@ grafted_phy_richness <- graft_missing_taxa(phy = phy, missing_taxa_list = missin
                                            method = "BD_clades", verbose = FALSE, seed = 1234)
 # Sampling fraction of the clades in the grafted phylogeny
 grafted_phy_richness$sampling_fraction_df
+
 
 # --- Apply attribute-based exclusions --- #
 
@@ -517,6 +552,7 @@ plot(grafted_phy_states$simmap, fsize = 0.5, ftype = "i",
 all_states <- phytools::getStates(grafted_phy_states$simmap, type = "tips")
 all_states[toy_missing_taxa_list_with_allowed_states$Taxon_name]
 
+
 # --- Use several stochastic maps (alternative hypotheses of trait evolution) as constraints --- #
 
 # A 'multiSimmap' gives several stochastic maps of the same trait:
@@ -547,6 +583,27 @@ names(grafted_phys_maps$map_2)
 # The map and the seed of a phylogeny
 attr(grafted_phys_maps$map_2[[1]], "map")
 attr(grafted_phys_maps$map_2[[1]], "seed")
+
+
+# --- Constraints from several traits at once --- #
+
+# Load the simmap for the second trait: 'toy_simmap_elevation' has two states: "high" and "low".
+data(toy_simmap_elevation)
+# Load missing taxa list with '$allowed_states' covering both color and elevation traits
+data(toy_missing_taxa_list_with_two_traits)
+# NULL means no restriction for this taxon, for the given trait.
+toy_missing_taxa_list_with_two_traits$allowed_states
+
+# Global 'allowed_states': "blue" or "green" for colors, no restriction on the elevation.
+# Each taxon can only be grafted on branch pieces in allowed states for both traits.
+grafted_phy_traits <- graft_missing_taxa(phy = toy_backbone,
+    missing_taxa_list = toy_missing_taxa_list_with_two_traits,
+    simmap = list(color = toy_simmap, elevation = toy_simmap_elevation),
+    allowed_states = list(c("blue", "green"), NULL),
+    verbose = FALSE, seed = 1234)
+
+# '$simmap' is a list of updated simmaps, one per trait
+names(grafted_phy_traits$simmap)
 
 
 }

@@ -89,6 +89,8 @@ Ex: \code{"FALSE; TRUE; TRUE"}.
 or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}), separated by commas. It is accepted with both \code{Target_clade} and \code{Sister_clade}.
 Ex: \code{"blue, green"}. Blank cells and \code{NA} have no taxon-level value, so the global \code{allowed_states} argument of the grafting function is used for the taxon.
 States are matched exactly with the states of the \code{simmap} (e.g., case matters) when grafting, and so cannot contain commas.
+If the \code{simmap} argument is a list of the maps of several traits, give the states of each trait separated by semicolons, in the order of the traits (e.g., \code{"A1, A2; ; C3"} for
+three traits: no states for the second trait, so the global \code{allowed_states} of the trait, or all its states, are used), or name the traits (e.g., \code{"color = A1, A2 ; elevation = C3"}).
 The names of the states are not checked here as the \code{simmap} is not provided: the grafting function checks them.
 }
 
