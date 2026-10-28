@@ -203,6 +203,9 @@ resolve_parallel <- function (parallel, n_tasks)
 #'   so `future` must not manage the random numbers (`future.seed = FALSE`), the results are then the same as when run sequentially.
 #'   Without seed (`seeded = FALSE`), `future` provides parallel-safe random number streams.
 #'
+#'   The globals are not scanned (`future.globals = FALSE`): the function is sent with its environment, and the internal functions of the package are found by the workers in the installed package
+#'   (`future.packages`). Otherwise `future` would export each internal function used by the simulations as a separate object (about 50 messages per worker, about 1 s per worker).
+#'
 #' @param tasks List of tasks.
 #' @param FUN Function applied to each task.
 #' @param use_future Logical. Whether to use `future`.
@@ -216,7 +219,7 @@ resolve_parallel <- function (parallel, n_tasks)
 apply_tasks <- function (tasks, FUN, use_future, seeded)
 {
   if (!use_future || length(tasks) < 2) { return(lapply(tasks, FUN)) }
-  future.apply::future_lapply(tasks, FUN, future.seed = if (seeded) FALSE else TRUE)
+  future.apply::future_lapply(tasks, FUN, future.seed = if (seeded) FALSE else TRUE, future.globals = FALSE, future.packages = "phylograftR")
 }
 
 

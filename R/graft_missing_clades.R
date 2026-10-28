@@ -317,8 +317,9 @@
 #' The messages, warnings and printed output of the simulations are relayed to the session when the tasks are collected (so they appear after the simulations, not live),
 #' and with `verbose = TRUE` one line is printed when each simulation is done.
 #'
-#' Setting up the workers and sending the data to them has a cost, so parallelization only pays off with many simulations (or maps) or with a long computation per simulation.
-#' As an example, with .... give example based on our config...
+#' Setting up the workers and sending the data to them has a time cost, so parallelization only pays off with large backbone phylogenies, or many simulations or maps.
+#' As a rule of thumb, use parallel computation when the sequential run would last more than a minute or so, i.e., for large backbone phylogenies (500 tips or more) and several grafted phylogenies
+#' (`nb_maps * nb_simulations`), or for 50 or more grafted phylogenies on small backbones.
 #'
 #'
 #' @importFrom ape bind.tree branching.times extract.clade is.ultrametric

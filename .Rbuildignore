@@ -9,6 +9,7 @@
 
 Claude_outputs/*
 R/_benchmark_ranges_traits.R
+R/_benchmark_parallel.R
 
 ^R_temp/*
 ^data-raw$
