@@ -31,14 +31,16 @@
 #'   All the `contMap`s of a list must be built on the same phylogeny (same tips, topology, branch lengths and order of the edges).
 #'   A list is named after the names of the `contMap`s, with `map_1`, `map_2`, ... if no names are provided.
 #' @param breaks Numeric vector. The interior cut points between the bins, in the units of the trait. Values lower than the first
-#'   cut point belong to the first state, and so on. They must be provided in increasing order and lie within the range of the trait values (see Details).
+#'   cut point belong to the first state, and so on. They must be provided in increasing order, be different values, and lie within the range of the trait values (see Details).
+#'   If not, a warning is sent and the cut points are sorted and/or the duplicated values removed.
 #'   Exactly one of `breaks`, `n_bins` and `probs` arguments must be provided.
 #' @param n_bins Integer, at least 2. The number of bins of equal width over the range of the trait values observed at the tips. Exactly one of `breaks`, `n_bins` and `probs` arguments must be provided.
-#' @param probs Numeric vector with values strictly between 0 and 1. The quantile levels, computed on the trait values observed at the tips, at which to cut the bins
+#' @param probs Numeric vector with values strictly between 0 and 1. The quantile levels, computed on the trait values observed at the tips, at which to cut the bins.
+#'   They must be provided in increasing order and be different values, otherwise a warning is sent and they are sorted and/or the duplicated values removed
 #'   (e.g., `c(1/3, 2/3)` for three bins of equal numbers of tips). Exactly one of `breaks`, `n_bins` and `probs` arguments must be provided.
 #' @param states Character vector. The names of the states, from the bin with the lowest values to the bin with the highest values.
 #'   Its length must match the number of bins: the number of interior cut points + 1.
-#' @param min_segment Numeric between 0 (included) and 1 (excluded). The minimum duration of a segment of a branch, as a proportion of the depth of the tree (root age). Default is `0.01`.
+#' @param min_segment_proportion Numeric between 0 (included) and 1 (excluded). The minimum duration of a segment of a branch, as a proportion of the depth of the tree (root age). Default is `0.01`.
 #'   Shorter segments are merged into their longest neighbour on the branch (see Details for why this may matter). Use `0` to keep every crossing of a cut point.
 #' @param verbose Logical. Whether to print the progress of the conversion (every 10% of the `contMap`s) when a list of several `contMap`s is provided. Default is `TRUE`.
 #'
@@ -68,18 +70,21 @@
 #' between the minimum and the maximum of the values of all the `contMap`s. A cut point beyond this range is an error.
 #' A cut point equal to the minimum or the maximum is ignored with a warning, because it would define an empty bin.
 #'
+#' The cut points must be in increasing order and different values. This is checked for the three arguments, including the cut points derived from `n_bins` and `probs`
+#' (e.g., many tips sharing the same value can give identical quantiles). Unsorted cut points are sorted, and duplicated values are removed, with an informative warning.
+#'
 #' The number of `states` must be equal to the number of bins (the number of cut points + 1, after the cut points equal to the boundaries were ignored).
+#' Removing cut points reduces the number of bins, so `states` must match the number of bins left.
 #'
 #' ### Short segments
 #'
 #' When using `contMap`s derived from continuous stochastic mapping processes such as the one featured in the `contsimmap` R package,
 #' trait values can wander around a cut point: the trait evolutionary history can crosses the threshold several times over short distances,
 #' resulting in tiny segments alternating states.
-#' Segments shorter than `min_segment` times the depth of the tree are merged, from the shortest to the longest, into their longest neighbour on the same branch.
-#' A branch shorter than this minimum cannot change state: it has only one state, the most represented along the branch
-#' (for a terminal branch, the state of the tip, so that the states of the tips always match the tip data).
-#' On a terminal branch, the last segment (at the tip) is never merged away to ensure tip states matched with observed tip data.
-#' Setting `min_segment = 0` keeps all the crossings.
+#' Segments shorter than `min_segment_proportion` times the depth of the tree are merged, from the shortest to the longest, into their longest neighbour on the same branch.
+#' A branch shorter than the minimum length gets a single state: the one with the longest total duration, or the state of the tip for a terminal branch.
+#' On a terminal branch, the segment at the tip is never merged away to ensure tip states matched with observed tip data.
+#' Setting `min_segment_proportion = 0` keeps all the crossings.
 #'
 #' This is not an issue for `contMap` featuring linear interpolation of ancestral trait values as in [`phytools::contMap()`][phytools::contMap],
 #' since trait values can only vary monotonously along branches (i.e., decrease, increase, or remain stable, but not a combination of two),
@@ -88,7 +93,7 @@
 #' ### Cautions for interpretation
 #'
 #' * The resulting `simmap`s is/are a discretization of the reconstructed trait to constrain the grafting of missing taxa.
-#'   It is not a stochastic map of a discrete trait: the number of transitions depends on the resolution of the `contMap` and on `min_segment`
+#'   It is not a stochastic map of a discrete trait: the number of transitions depends on the resolution of the `contMap` and on `min_segment_proportion`
 #'   and should not be interpreted as a rate of evolution of discrete states.
 #'
 #' * Nodes with reconstructed values close to a cut point have uncertain states. Providing a list of `contMap`s
@@ -173,12 +178,12 @@
 #'
 #' # --- Discretize multiple continuous stochastic maps --- #
 #'
-#' \dontrun{ # Requires suggested packaged
-#' ## The suggested R packages 'deepSTRAPP' and 'contsimmap' are needed for this example to work.
+#' \dontrun{ # Requires one package not available on CRAN
+#' ## The R packages 'deepSTRAPP' (on CRAN) and 'contsimmap' (not on CRAN) are needed for this example to work.
 #' if (requireNamespace("deepSTRAPP", quietly = TRUE) && requireNamespace("contsimmap", quietly = TRUE))
 #' {
 #'  # Use phytools::anc.ML() to extract the evolutionary rate = sigma²
-#'  BM_fit <- phytools::anc.ML(tree = rescaled_phylo,
+#'  BM_fit <- phytools::anc.ML(tree = toy_backbone,
 #'                             x = tip_data,
 #'                             model = "BM")
 #'  # Extract evolutionary rate = sigma²
@@ -198,7 +203,7 @@
 #'
 #'  # Convert multiple contMaps at once into corresponding simmaps
 #'  # using quantiles of the tip values
-#'  my_multiSimmap <- convert_contMap_to_simmap(contMaps_list, probs = c(1/3, 2/3),
+#'  my_multiSimmap <- convert_contMap_to_simmap(my_contMaps_list, probs = c(1/3, 2/3),
 #'                                              states = c("low", "medium", "high"))
 #'
 #'  # Plot the resulting simmaps describing different evolutionary histories simulated
@@ -219,7 +224,7 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
                                        n_bins = NULL, # Number of bins of equal width over the range of the tip values
                                        probs = NULL, # Quantile levels of the tip values
                                        states, # Names of the states, from the lowest to the highest values
-                                       min_segment = 0.01, # Minimum duration of a segment, as a proportion of the root age
+                                       min_segment_proportion = 0.01, # Minimum duration of a segment, as a proportion of the root age
                                        verbose = TRUE) # Print the progress across the contMaps
 {
   ## 1/ Check the inputs ####
@@ -260,10 +265,10 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
     stop("'states' must be a character vector of at least two unique non-empty names, from the lowest to the highest trait values.")
   }
 
-  # min_segment
-  if (!is.numeric(min_segment) || length(min_segment) != 1 || is.na(min_segment) || min_segment < 0 || min_segment >= 1)
+  # min_segment_proportion
+  if (!is.numeric(min_segment_proportion) || length(min_segment_proportion) != 1 || is.na(min_segment_proportion) || min_segment_proportion < 0 || min_segment_proportion >= 1)
   {
-    stop("'min_segment' must be a single number between 0 (included) and 1 (excluded).")
+    stop("'min_segment_proportion' must be a single number between 0 (included) and 1 (excluded).")
   }
 
   # verbose
@@ -291,17 +296,19 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
          " interior cut point(s) + 1) but ", length(states), " state(s) provided.")
   }
 
-  ## 3/ Convert each contMap ####
+  ## 3/ Convert each contMap into a simmap ####
 
   tree <- contMaps[[1]]$tree
   depth <- max(ape::node.depth.edgelength(tree))
-  min_len <- min_segment * depth
+  min_len <- min_segment_proportion * depth
   tip_edges <- tree$edge[, 2] <= ape::Ntip(tree)
   n_edges <- nrow(tree$edge)
   n_states <- length(states)
 
   simmaps <- vector("list", n_maps)
   last_pct <- 0
+
+  # Loop per map
   for (i in seq_len(n_maps))
   {
     maps_i <- contMaps[[i]]$tree$maps
@@ -357,7 +364,7 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
 
 #' @title Check the contMaps and their consistency
 #'
-#' @description Check that each `contMap` is well formed, and that all share the same tree (tips, topology, order of the edges, branch lengths).
+#' @description Check that each `contMap` has a valid structure, and that all share the same tree (tips, topology, order of the edges, branch lengths).
 #'
 #' @param contMaps List of objects of class `"contMap"`.
 #' @param tol Numeric. Relative tolerance (to the longest branch) for the comparison of the branch lengths. Default is `1e-6`.
@@ -410,7 +417,7 @@ check_contMaps <- function (contMaps, tol = 1e-6)
 
 #' @title Extract the trait values of a contMap
 #'
-#' @description Convert the colour indices of the segments of a `contMap` into trait values (the index `k` of `length(cols)` colours is
+#' @description Convert the colour indices of the segments of a `contMap` into trait values (the index `k` of `length(cols)` colors is
 #'   the value `lims[1] + k / (length(cols) - 1) * diff(lims)`), and estimate the values at the tips.
 #'   The value of a segment is its value at its middle, so the value at the tip is extrapolated from the last two segments of the terminal branch.
 #'
@@ -457,37 +464,14 @@ extract_contMap_values <- function (contMap)
 
 resolve_contMap_breaks <- function (breaks = NULL, n_bins = NULL, probs = NULL, tip_values, range_values)
 {
+  # Source of the cut points, used in the messages
   if (!is.null(breaks))
   {
     if (!is.numeric(breaks) || length(breaks) == 0 || anyNA(breaks) || !all(is.finite(breaks)))
     {
       stop("'breaks' must be a numeric vector of finite cut points.")
     }
-    if (anyDuplicated(breaks) > 0)
-    {
-      stop("'breaks' must not contain duplicated values.")
-    }
-    breaks <- sort(breaks)
-    tol <- sqrt(.Machine$double.eps) * diff(range_values)
-    outside <- breaks < range_values[1] - tol | breaks > range_values[2] + tol
-    if (any(outside))
-    {
-      stop("'breaks' must lie within the range of the trait values [", signif(range_values[1], 6), ", ", signif(range_values[2], 6), "].\n",
-           "Cut point(s) outside: ", paste(signif(breaks[outside], 6), collapse = ", "), ".")
-    }
-    on_boundary <- !outside & (abs(breaks - range_values[1]) <= tol | abs(breaks - range_values[2]) <= tol)
-    if (any(on_boundary))
-    {
-      warning("'breaks' equal to the minimum or the maximum of the trait values (", paste(signif(breaks[on_boundary], 6), collapse = ", "),
-              ") were ignored: only interior cut points are expected, as a cut point on a boundary defines an empty bin.\n",
-              "This is particularly important for lists of contMaps derived from stochastic histories, as ancestral values can vary beyond the values of the tips.",
-              call. = FALSE)
-      breaks <- breaks[!on_boundary]
-    }
-    if (length(breaks) == 0)
-    {
-      stop("No interior cut point left in 'breaks'. At least one cut point strictly within the range of the trait values is required.")
-    }
+    source <- "'breaks'"
   } else if (!is.null(n_bins)) {
     if (!is.numeric(n_bins) || length(n_bins) != 1 || is.na(n_bins) || n_bins < 2 || n_bins != round(n_bins))
     {
@@ -499,16 +483,60 @@ resolve_contMap_breaks <- function (breaks = NULL, n_bins = NULL, probs = NULL, 
       stop("The trait values at the tips are all equal: bins cannot be defined.")
     }
     breaks <- seq(tip_range[1], tip_range[2], length.out = n_bins + 1)[2:n_bins]
+    source <- "the cut points derived from 'n_bins'"
   } else {
-    if (!is.numeric(probs) || length(probs) == 0 || anyNA(probs) || any(probs <= 0) || any(probs >= 1) || anyDuplicated(probs) > 0)
+    if (!is.numeric(probs) || length(probs) == 0 || anyNA(probs) || any(probs <= 0) || any(probs >= 1))
     {
-      stop("'probs' must be a numeric vector of unique values strictly between 0 and 1.")
+      stop("'probs' must be a numeric vector of values strictly between 0 and 1.")
     }
-    breaks <- unname(stats::quantile(tip_values, probs = sort(probs), names = FALSE))
-    if (anyDuplicated(breaks) > 0 || any(breaks <= range_values[1]) || any(breaks >= range_values[2]))
+    if (is.unsorted(probs, strictly = FALSE))
     {
-      stop("The quantiles of the tip values in 'probs' do not define distinct interior cut points (many tips share the same value?). Use 'breaks' or fewer 'probs'.")
+      warning("'probs' must be provided in increasing order: they were sorted. The 'states' are assigned from the lowest to the highest values, i.e., following the sorted 'probs'.", call. = FALSE)
+      probs <- sort(probs)
     }
+    if (anyDuplicated(probs) > 0)
+    {
+      warning("'probs' must be different values: the duplicated values were removed.", call. = FALSE)
+      probs <- unique(probs)
+    }
+    breaks <- unname(stats::quantile(tip_values, probs = probs, names = FALSE))
+    source <- "the cut points derived from 'probs'"
+  }
+
+  # Increasing order and different values (for the three arguments)
+  if (is.unsorted(breaks, strictly = FALSE))
+  {
+    warning("The cut points must be provided in increasing order: ", source, " were sorted. The 'states' are assigned from the lowest to the highest values, i.e., following the sorted cut points.", call. = FALSE)
+    breaks <- sort(breaks)
+  }
+  if (anyDuplicated(breaks) > 0)
+  {
+    warning("The cut points must be different values: duplicated values among ", source, " (", paste(signif(breaks[duplicated(breaks)], 6), collapse = ", "),
+            ") were removed", if (source == "the cut points derived from 'probs'") " (many tips share the same value?)" else "",
+            ". Fewer bins than expected are defined: check the number of 'states'.", call. = FALSE)
+    breaks <- unique(breaks)
+  }
+
+  # Interior cut points
+  tol <- sqrt(.Machine$double.eps) * diff(range_values)
+  outside <- breaks < range_values[1] - tol | breaks > range_values[2] + tol
+  if (any(outside))
+  {
+    stop("The cut points must lie within the range of the trait values [", signif(range_values[1], 6), ", ", signif(range_values[2], 6), "].\n",
+         "Cut point(s) outside: ", paste(signif(breaks[outside], 6), collapse = ", "), ".")
+  }
+  on_boundary <- abs(breaks - range_values[1]) <= tol | abs(breaks - range_values[2]) <= tol
+  if (any(on_boundary))
+  {
+    warning("Cut points equal to the minimum or the maximum of the trait values (", paste(signif(breaks[on_boundary], 6), collapse = ", "),
+            ") were ignored: only interior cut points are expected, as a cut point on a boundary defines an empty bin.\n",
+            "This is particularly important for lists of contMaps derived from stochastic histories, as ancestral values can vary beyond the values of the tips.",
+            call. = FALSE)
+    breaks <- breaks[!on_boundary]
+  }
+  if (length(breaks) == 0)
+  {
+    stop("No interior cut point left. At least one cut point strictly within the range of the trait values is required.")
   }
   breaks
 }

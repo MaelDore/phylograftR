@@ -100,7 +100,7 @@ test_that("A single contMap gives a valid simmap with the requested states", {
 test_that("States follow the breaks in increasing order of the trait values", {
   toy <- toy_cm_setup()
   cm <- toy$cms[[1]]
-  sm <- convert_contMap_to_simmap(cm, breaks = mean(cm$lims) + c(-0.5, 0.5), states = states3, min_segment = 0)
+  sm <- convert_contMap_to_simmap(cm, breaks = mean(cm$lims) + c(-0.5, 0.5), states = states3, min_segment_proportion = 0)
   vals <- extract_contMap_values(cm)$values
   for (e in seq_along(sm$maps))
   {
@@ -114,7 +114,7 @@ test_that("States follow the breaks in increasing order of the trait values", {
 test_that("Tips keep the state of the tip data", {
   toy <- toy_cm_setup(n_tips = 30)
   cm <- toy$cms[[1]]
-  sm <- convert_contMap_to_simmap(cm, probs = c(1/3, 2/3), states = states3, min_segment = 0.05)
+  sm <- convert_contMap_to_simmap(cm, probs = c(1/3, 2/3), states = states3, min_segment_proportion = 0.05)
   vals <- extract_contMap_values(cm)$values
   tip_edges <- match(seq_len(ape::Ntip(cm$tree)), cm$tree$edge[, 2])
   last_state_new <- vapply(sm$maps[tip_edges], function (m) names(m)[length(m)], character(1))
@@ -122,12 +122,12 @@ test_that("Tips keep the state of the tip data", {
   expect_equal(last_state_new, last_state_orig)
 })
 
-test_that("min_segment removes the short segments and 0 keeps every crossing", {
+test_that("min_segment_proportion removes the short segments and 0 keeps every crossing", {
   toy <- toy_cm_setup(n_tips = 40)
   cm <- toy$cms[[1]]
-  sm_0 <- convert_contMap_to_simmap(cm, n_bins = 3, states = states3, min_segment = 0)
-  sm_1 <- convert_contMap_to_simmap(cm, n_bins = 3, states = states3, min_segment = 0.01)
-  sm_5 <- convert_contMap_to_simmap(cm, n_bins = 3, states = states3, min_segment = 0.2)
+  sm_0 <- convert_contMap_to_simmap(cm, n_bins = 3, states = states3, min_segment_proportion = 0)
+  sm_1 <- convert_contMap_to_simmap(cm, n_bins = 3, states = states3, min_segment_proportion = 0.01)
+  sm_5 <- convert_contMap_to_simmap(cm, n_bins = 3, states = states3, min_segment_proportion = 0.2)
   n_seg <- function (sm) sum(vapply(sm$maps, length, integer(1)))
   expect_gte(n_seg(sm_0), n_seg(sm_1))
   expect_gte(n_seg(sm_1), n_seg(sm_5))
@@ -153,7 +153,7 @@ test_that("Binning arguments produce the expected cut points", {
   expect_equal(attr(sm_n, "breaks"), seq(min(tips), max(tips), length.out = 5)[2:4])
 
   mid <- mean(cm$lims)
-  sm_b <- convert_contMap_to_simmap(cm, breaks = c(mid + 1, mid - 1), states = states3)
+  sm_b <- suppressWarnings(convert_contMap_to_simmap(cm, breaks = c(mid + 1, mid - 1), states = states3))
   expect_equal(attr(sm_b, "breaks"), c(mid - 1, mid + 1))
 })
 
@@ -196,21 +196,19 @@ test_that("breaks are checked against the range of the trait values", {
   expect_error(suppressWarnings(convert_contMap_to_simmap(cm, breaks = lims, states = c("a", "b"))), "No interior cut point")
 
   # Other invalid breaks
-  expect_error(convert_contMap_to_simmap(cm, breaks = c(0, 0), states = states3), "duplicated")
   expect_error(convert_contMap_to_simmap(cm, breaks = c(0, NA), states = states3), "finite")
   expect_error(convert_contMap_to_simmap(cm, breaks = "a", states = states3), "numeric")
 })
 
-test_that("n_bins, probs, min_segment and verbose are checked", {
+test_that("n_bins, probs, min_segment_proportion and verbose are checked", {
   toy <- toy_cm_setup()
   cm <- toy$cms[[1]]
   expect_error(convert_contMap_to_simmap(cm, n_bins = 1, states = c("a", "b")), "n_bins")
   expect_error(convert_contMap_to_simmap(cm, n_bins = 2.5, states = c("a", "b", "c")), "n_bins")
   expect_error(convert_contMap_to_simmap(cm, probs = c(0, 0.5), states = states3), "probs")
   expect_error(convert_contMap_to_simmap(cm, probs = c(0.5, 1), states = states3), "probs")
-  expect_error(convert_contMap_to_simmap(cm, probs = c(0.5, 0.5), states = states3), "probs")
-  expect_error(convert_contMap_to_simmap(cm, n_bins = 2, states = c("a", "b"), min_segment = 1), "min_segment")
-  expect_error(convert_contMap_to_simmap(cm, n_bins = 2, states = c("a", "b"), min_segment = -1), "min_segment")
+  expect_error(convert_contMap_to_simmap(cm, n_bins = 2, states = c("a", "b"), min_segment_proportion = 1), "min_segment_proportion")
+  expect_error(convert_contMap_to_simmap(cm, n_bins = 2, states = c("a", "b"), min_segment_proportion = -1), "min_segment_proportion")
   expect_error(convert_contMap_to_simmap(cm, n_bins = 2, states = c("a", "b"), verbose = NA), "verbose")
 })
 
@@ -325,4 +323,41 @@ test_that("The simmap and the multiSimmap from contMaps constrain the grafting",
                                       simmap = sms, allowed_states = c("blue", "green"),
                                       method = "BD_clades", verbose = FALSE, seed = 1234)
   expect_equal(names(grafted_multi), c("map_1", "map_2"))
+})
+
+
+# --- Increasing order and different values of the cut points ---
+
+test_that("Unsorted breaks are sorted with a warning", {
+  toy <- toy_cm_setup()
+  cm <- toy$cms[[1]]
+  mid <- mean(cm$lims)
+  expect_warning(sm <- convert_contMap_to_simmap(cm, breaks = c(mid + 1, mid - 1), states = states3), "increasing order")
+  expect_equal(attr(sm, "breaks"), c(mid - 1, mid + 1))
+  expect_no_warning(convert_contMap_to_simmap(cm, breaks = c(mid - 1, mid + 1), states = states3))
+})
+
+test_that("Duplicated breaks are removed with a warning", {
+  toy <- toy_cm_setup()
+  cm <- toy$cms[[1]]
+  mid <- mean(cm$lims)
+  expect_warning(sm <- convert_contMap_to_simmap(cm, breaks = c(mid, mid), states = c("a", "b")), "different values")
+  expect_equal(attr(sm, "breaks"), mid)
+  # Fewer bins than states: informative error after the warning
+  expect_error(suppressWarnings(convert_contMap_to_simmap(cm, breaks = c(mid, mid), states = states3)), "one name per bin")
+})
+
+test_that("Unsorted or duplicated probs are corrected with a warning", {
+  toy <- toy_cm_setup()
+  cm <- toy$cms[[1]]
+  expect_warning(sm <- convert_contMap_to_simmap(cm, probs = c(0.75, 0.25), states = states3), "increasing order")
+  expect_equal(attr(sm, "breaks"), attr(convert_contMap_to_simmap(cm, probs = c(0.25, 0.75), states = states3), "breaks"))
+  expect_warning(sm <- convert_contMap_to_simmap(cm, probs = c(0.5, 0.5), states = c("a", "b")), "different values")
+  expect_length(attr(sm, "breaks"), 1)
+})
+
+test_that("Identical quantiles (tied tip values) are removed with a warning", {
+  tied <- c(1, 1, 1, 1, 2, 3)
+  expect_warning(b <- resolve_contMap_breaks(probs = c(0.25, 0.5), tip_values = tied, range_values = c(0, 4)), "different values.*share the same value")
+  expect_equal(b, 1)
 })
