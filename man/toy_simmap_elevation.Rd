@@ -14,8 +14,8 @@ data(toy_simmap_elevation)
 }
 \description{
 Stochastic character map (simmap) of \code{\link[=toy_backbone]{phylograftR::toy_backbone}} with two elevation states, \code{"high"} and \code{"low"},
-to combine with \code{\link[=toy_simmap]{phylograftR::toy_simmap}} (color) as examples of attribute-based constraints applied on two traits at once,
-with \code{simmap = list(color = toy_simmap, elevation = toy_simmap_elevation)}.
+to combine with \code{\link[=toy_simmap]{phylograftR::toy_simmap}} (color) or \code{\link[=toy_simmap_ranges]{phylograftR::toy_simmap_ranges}} (biogeographic ranges)
+as examples of attribute-based constraints applied on two traits at once.
 
 It was simulated with \code{phytools::sim.history()} from a root in state \code{"low"}, with equal transition rates between the two states (0.04 per unit of time).
 Among the first 1000 seeds, the one used (94) is the first giving a map that is balanced and compatible with the constraints of

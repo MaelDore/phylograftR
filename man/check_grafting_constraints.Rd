@@ -44,13 +44,15 @@ If no \verb{$Excluded_subclades} item is found in \code{missing_taxa_list}, a wa
 This is the default for all taxa: taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead.
 Only used if \code{phy_grafted} has a \verb{$simmap} item (the updated simmap returned by \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} with a \code{simmap}).
 If the \verb{$simmap} item is a list of the simmaps of several traits (grafting constrained with several traits), \code{allowed_states} is a list with one element per trait
-(in the order of the traits, or named after the traits; \code{NULL} = all the states of the trait), and the taxon-level values of \code{missing_taxa_list$allowed_states}
+(in the order of the traits, or named after the traits; \code{NULL} = all the states of the trait, or any range for the trait treated as ranges), and the taxon-level values of \code{missing_taxa_list$allowed_states}
 are given per trait as in the grafting functions (see 'Several traits' in Details).
 The function stops if some states are not in the \code{simmap}. Default is \code{NULL} (all states allowed for the taxa without a taxon-level value).}
 
 \item{treat_states_as_ranges}{Logical. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: whether the states of the \code{simmap} and the allowed states are treated as biogeographic ranges:
 an allowed range enables grafting on branch pieces in any range that contains it: \code{"A"} can be grafted on \code{"A"}, \code{"AB"} and \code{"ABC"}, whereas \code{"AB"} can be grafted on \code{"AB"} and \code{"ABC"} but not \code{"A"}.
-Only used if \code{phy_grafted} has a \verb{$simmap} item, otherwise the function stops if \code{TRUE}. Not supported yet if the \verb{$simmap} item covers several traits (the function stops).
+Only used if \code{phy_grafted} has a \verb{$simmap} item, otherwise the function stops if \code{TRUE}.
+With a \verb{$simmap} item that is a list of the simmaps of several traits, takes a logical vector with one value per trait, with at most one \code{TRUE} to identify
+the trait treated as ranges (positional, or named after the traits in any order, as in the grafting functions; a single \code{FALSE} is accepted, a single \code{TRUE} stops).
 States / ranges are coded as in BioGeoBEARS (see the Details section "Biogeographic ranges as states").
 The function stops if the states of the \code{simmap} or the allowed states are not correctly coded, or if an area of the allowed states is not in the \code{simmap}.
 Default is \code{FALSE} (states are matched exactly).}
@@ -86,7 +88,7 @@ With \code{treat_states_as_ranges = TRUE}, the state of the terminal branch of t
 With the maps of several traits, \code{TRUE} if the taxon was grafted in an allowed state for all the traits.
 \item \verb{$states_ok_<trait>}: Logical. Only with the maps of several traits (one column per trait, named after the traits): whether the taxon was grafted in one of its allowed states for this trait.
 Used to find which trait is violated when \verb{$states_ok} is \code{FALSE}.
-\item \verb{$ranges_ok}: Logical. Only checked with \code{treat_states_as_ranges = TRUE} and a \verb{$simmap} item: whether the range inherited by the taxon is contained in the state of the lineage at the graft point
+\item \verb{$ranges_ok}: Logical. Only checked with \code{treat_states_as_ranges = TRUE} (or a range trait with several traits) and a \verb{$simmap} item: whether the range inherited by the taxon is contained in the state of the lineage at the graft point
 (see the Details section "Biogeographic ranges as states"). \code{NA} if not checked, or if the taxon is grafted at the root (no parent lineage).
 This differs from \verb{$states_ok} that checks only the validity of the terminal tip state. Here, the validity of the inherited range is assessed against the range of the backbone lineage it was grafted on.
 \item \verb{$ok}: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
@@ -104,6 +106,7 @@ the deviations are the maximum over the phylogenies, and \code{"all_ok"} is \cod
 \item \code{"backbone_preserved"}: Logical. Whether both topology and branch lengths are preserved, within \code{tolerance} (\code{NA} if \code{check_backbone = FALSE}).
 \item \code{"all_ok"}: Logical. Whether all taxa respect their constraints and the backbone is preserved (if checked).
 \item \code{"trait_names"}: Character vector. Names of the traits checked (only with the maps of several traits, otherwise \code{NULL}).
+\item \code{"range_trait"}: Character string. Name of the trait treated as ranges (only with the maps of several traits, otherwise \code{NULL}).
 \item \code{"phylogenies"}: data.frame with one row per phylogeny checked (columns \code{map}, \code{simulation}, \code{seed}, \code{n_failed} (number of taxa that failed), \code{backbone_preserved} and \code{all_ok}).
 }
 
@@ -144,7 +147,11 @@ The allowed states of each taxon and trait are resolved as in the grafting funct
 otherwise the global \code{allowed_states} for this trait, otherwise all the states of the trait (see \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}).
 \verb{$states_ok_<trait>} gives the result for each trait, and \verb{$states_ok} is \code{TRUE} only if all traits are allowed.
 With \code{verbose = TRUE}, the number of violations is also given for each trait.
-\code{treat_states_as_ranges = TRUE} is not supported yet with several traits (the function stops).
+
+With a trait treated as ranges (\code{treat_states_as_ranges}, one \code{TRUE} in the vector), the checks of 'Biogeographic ranges as states' are performed on this trait:
+\verb{$states_ok_<trait>} is \code{TRUE} if the range inherited is one of the allowed ranges (any range if the taxon has no allowed ranges),
+and \verb{$ranges_ok} is \code{TRUE} if the range inherited is contained in the state of the lineage of this trait at the graft point.
+The other traits are checked as exact matches. The attribute \code{"range_trait"} gives the name of the range trait.
 }
 
 \subsection{Several grafted phylogenies}{
@@ -215,6 +222,36 @@ head(check_results_multi[, c("map", "simulation", "seed", "Taxon_name", "ok")])
 # An additional attribute provide a summary per phylogeny:
 # number of taxa that failed, backbone preserved, all constraints respected
 attr(check_results_multi, "phylogenies")
+
+
+# --- Check the constraints from several traits, with biogeographic ranges --- #
+
+# With the stochastic maps of several traits used to assign grafting constraints,
+# 'allowed_states' has one element per trait,
+# and 'treat_states_as_ranges' is a logical vector with one value per trait
+# used to identify which trait was treated as biogeographic ranges.
+
+# Load datasets
+data(toy_backbone)
+data(toy_simmap_ranges)
+data(toy_simmap_elevation)
+data(toy_missing_taxa_list_with_ranges_and_elevation)
+
+# Graft phylogeny using elevation and biogeographic ranges as constraints
+grafted_phy_traits <- graft_missing_taxa(phy = toy_backbone,
+    missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
+    simmap = list(biogeo = toy_simmap_ranges, elevation = toy_simmap_elevation),
+    allowed_states = list(c("A", "B"), NULL),
+    treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE),
+    verbose = FALSE, seed = 1234)
+
+# The result has the joint columns 'states_ok' and 'ranges_ok' (ranges of the 'range trait'),
+# and the column 'states_ok_<trait>' for each trait. The summary details the failures per trait.
+check_traits <- check_grafting_constraints(phy_grafted = grafted_phy_traits, phy_backbone = toy_backbone,
+    missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
+    allowed_states = list(c("A", "B"), NULL),
+    treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE))
+check_traits[, c("Taxon_name", "states_ok", "states_ok_biogeo", "states_ok_elevation", "ranges_ok", "ok")]
 
 
 }

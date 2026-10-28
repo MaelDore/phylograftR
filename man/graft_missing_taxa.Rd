@@ -26,6 +26,7 @@ graft_missing_taxa(
   ultrametric_tol = .Machine$double.eps^0.5,
   nb_simulations = 1,
   force_simulations = FALSE,
+  parallel = NULL,
   seed = 1234
 )
 }
@@ -95,8 +96,10 @@ taxa with a value in \code{missing_taxa_list$allowed_states} use this specific v
 Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the \code{simmap}.
 The function stops if some states are not in the \code{simmap}, or if \code{allowed_states} is provided without a \code{simmap}.
 With \code{treat_states_as_ranges = TRUE}, a range that is not a state of the \code{simmap} is accepted if it is contained in some of them (e.g., \code{"A"} can be allowed if \code{"AB"} is found on the \code{simmap}).
-With the maps of several traits (a list in \code{simmap}), a list with one element per trait, in the order of the traits or named after them: the states allowed for each trait,
-with \code{NULL} for no restriction on a trait, e.g., \code{list(c("blue", "green"), NULL, "high")} (see 'Several traits' in Details section).
+
+With the maps of several traits (a list in \code{simmap}), you must provide a list with one element per trait, in the order of the traits or named after them.
+In each element, the states allowed for each trait are named, with \code{NULL} for no restriction on a trait, e.g., \code{list(c("blue", "green"), NULL, "high")}
+(see 'Several traits' in Details section).
 Default is \code{NULL} (all states allowed).}
 
 \item{treat_states_as_ranges}{Logical. Only used with a \code{simmap}. Whether the states of the \code{simmap} are biogeographic ranges to be treated as sets of areas, rather than as unrelated states.
@@ -104,7 +107,12 @@ Ranges must be coded as in \code{BioGeoBEARS}: one capital letter per area, and 
 If \code{TRUE}, an allowed range enables grafting on branch pieces in any range that contains it: \code{"A"} can be grafted on \code{"A"}, \code{"AB"} and \code{"ABC"},
 whereas \code{"AB"} can be grafted on \code{"AB"} and \code{"ABC"} but not \code{"A"}.
 
-See 'Biogeographic ranges as states' in Details section. Default is \code{FALSE} (states are matched exactly).}
+If stochastic maps of several traits are provided (a list in \code{simmap}), you must provide a logical vector with one value per trait,
+with at most one \code{TRUE} to define the trait treated as biogeographic ranges, the other traits being matched exactly.
+The vector is positional (e.g., \code{c(FALSE, TRUE, FALSE)}: the second trait is the range trait) or named after the traits, in any order (e.g., \code{c(biogeo = TRUE, color = FALSE, elevation = FALSE)}).
+A single \code{FALSE} is accepted with several traits (no range trait), but a single \code{TRUE} stops.
+
+See 'Biogeographic ranges as states' and 'Several traits' in Details section. Default is \code{FALSE} (states are matched exactly).}
 
 \item{return_simmap}{Logical. Only used with a \code{simmap}, and silently ignored without it. Whether to add the updated \code{simmap} to the output, in \verb{$simmap} (see 'Value').
 Default is \code{TRUE}.}
@@ -167,6 +175,11 @@ See the section 'Multiple simulations' for the output, the seeds and the failure
 
 \item{force_simulations}{Logical. Whether to try new seeds until \code{nb_simulations} grafted phylogenies are obtained, up to \code{10 * nb_simulations} attempts
 (see 'Multiple simulations' in Details section). If \code{FALSE}, the simulations that fail are skipped. Default is \code{FALSE}.}
+
+\item{parallel}{Logical or \code{NULL}. Whether to run the simulations in parallel, with the packages \code{future} and \code{future.apply} (they must be installed separately from phylograftR).
+Default is \code{NULL}: the simulations are run in parallel if the user set a \code{future} plan with several workers beforehand (e.g., \code{future::plan(future::multisession, workers = 4)}), and sequentially otherwise.
+\code{FALSE} forces a sequential run, even if a plan is set. \code{TRUE} execute the \code{future} plan, but stops with an informative error if the packages are not installed or no plan is set.
+See 'Parallel computation' in Details section for recommendations on whether parallelization is useful in your case.}
 
 \item{seed}{Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
 is restored on exit. Set to \code{NULL} to use the random number generator of the session. Default is \code{1234}.
@@ -406,7 +419,15 @@ In each simmap, a grafted branch is entirely in the state of each trait at the p
 With a list of \code{"multiSimmap"} provided as \code{simmap}, the maps of the traits are paired: the grafting is run with the map 1 of every trait, then the map 2 of every trait, and so on.
 All the traits must therefore have the same number of maps to be associated in a given grafting process.
 
-\strong{Limit.} \code{treat_states_as_ranges = TRUE} is not yet supported with several traits (the function stops).
+One of the traits can be treated as biogeographic ranges combined with any number of other traits.
+Use a logical vector in \code{treat_states_as_ranges} to define which of the trait is to be treated as biogeographic ranges for inheritance.
+The range logic is the one of 'Biogeographic ranges as states' for the range trait:
+its allowed values for grafting are any ranges that encompass the allowed range.
+For instance, a missing taxon allowed in \code{"A;high"} can be grafted on branch pieces in \code{"A;high"}, \code{"AB;high"} or \code{"ABC;high"},
+whereas a missing taxon allowed in \code{"AB;high"} only can be grafted on branch pieces in \code{"AB;high"} or \code{"ABC;high"}.
+
+The other traits are matched exactly, and are inherited as they are from the point where the taxon is grafted: with \code{"AB"} and \code{"high"} at the graft point and the allowed range \code{"A"},
+the taxon inherits \code{"A"} and \code{"high"}. Only one trait can be treated as ranges to prevent inflation of the number of combined allowed states to consider.
 }
 
 \subsection{Sampling fraction and unsampled species}{
@@ -430,6 +451,24 @@ The function stops, before any grafting, if \code{total_richness_per_clades} doe
 the number of backbone species plus species to graft of the clade, or if a clade has fewer unsampled species than the sum of the clades with
 a \code{total_richness} provided nested within it.
 With \code{method = "uniform"}, no diversification model is used: \code{total_richness_per_clades} is only used to derive the \code{sampling_fraction_df} table (a warning is issued).
+}
+
+\subsection{Parallel computation}{
+
+The simulations based on the different stochastic maps and seeds are independent, so they can be run in parallel with the package \code{future} and \code{future.apply}.
+Both packages must be installed independently from phylograftR (they are only suggested).
+
+The grafting function does not manage the workers: you must set a plan beforehand, e.g., \code{future::plan(future::multisession, workers = 4)},
+and reset it afterwards with \code{future::plan(future::sequential)}. With the default \code{parallel = NULL}, the function uses the plan if there is one, \code{parallel = FALSE} ignores it.
+All the \code{P * nb_simulations} simulations (with \code{P} stochastic maps per trait) are run as one set of tasks, so the workers are used evenly.
+
+The output is exactly the same as without parallelization.
+The messages, warnings and printed output of the simulations are relayed to the session when the tasks are collected (so they appear after the simulations, not live),
+and with \code{verbose = TRUE} one line is printed when each simulation is done.
+
+Setting up the workers and sending the data to them has a time cost, so parallelization only pays off with large backbone phylogenies, or many simulations or maps.
+As a rule of thumb, use parallel computation when the sequential run would last more than a minute or so, i.e., for large backbone phylogenies (500 tips or more) and several grafted phylogenies
+(\code{nb_maps * nb_simulations}), or for 50 or more grafted phylogenies on small backbones.
 }
 }
 \examples{
@@ -604,6 +643,36 @@ grafted_phy_traits <- graft_missing_taxa(phy = toy_backbone,
 
 # '$simmap' is a list of updated simmaps, one per trait
 names(grafted_phy_traits$simmap)
+
+
+# --- Constraints from biogeographic ranges and another trait at once --- #
+
+# One of the traits can be treated as biogeographic ranges:
+# the allowed ranges do not have to match exactly the range of target stem branch pieces,
+# any allowed range comprised in a target range is valid (e.g., "A" can be grafted on "AB").
+# Here, the first trait holds ranges.
+
+# Load datasets
+data(toy_simmap_ranges) # Ranges simmap
+data(toy_missing_taxa_list_with_ranges_and_elevation) # Taxon-level constraints
+toy_missing_taxa_list_with_ranges_and_elevation$allowed_states
+
+# Global 'allowed_states': ranges containing "A" or "B", no restriction on the elevation.
+grafted_phy_ranges_traits <- graft_missing_taxa(phy = toy_backbone,
+    missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
+    simmap = list(biogeo = toy_simmap_ranges, elevation = toy_simmap_elevation),
+    allowed_states = list(c("A", "B"), NULL),
+    treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE),
+    verbose = FALSE, seed = 1234)
+
+# '$simmap' is a list of updated simmaps, one per trait: ranges, and elevation
+names(grafted_phy_ranges_traits$simmap)
+
+# Check the constraints of both traits (columns 'states_ok_<trait>' and 'ranges_ok')
+check_grafting_constraints(phy_grafted = grafted_phy_ranges_traits, phy_backbone = toy_backbone,
+    missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
+    allowed_states = list(c("A", "B"), NULL),
+    treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE))
 
 
 }
