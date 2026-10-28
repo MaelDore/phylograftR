@@ -279,17 +279,21 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
 
   ## 2/ Extract the values and define the bins ####
 
+  # Get number of maps
   n_maps <- length(contMaps)
+  # Extract all values along all branches of all maps (requires back-conversion into the trait scale)
   all_values <- lapply(contMaps, extract_contMap_values)
-
-  # Tip values (averaged across maps)
+  # Extract tip values, averaged across maps
   tip_values <- rowMeans(do.call(cbind, lapply(all_values, function (x) x$tips)))
-
-  # Range of the trait values, pooled across maps
+  # Extract the max range of the trait values across all maps based on '$lims'
   range_values <- range(unlist(lapply(contMaps, function (x) x$lims)))
 
+  # Interior cut points: from 'breaks', or computed from the tip values ('n_bins', 'probs').
+  # Always sorted, distinct, and strictly within 'range_values' (warnings or errors otherwise)
   breaks <- resolve_contMap_breaks(breaks = breaks, n_bins = n_bins, probs = probs, tip_values = tip_values, range_values = range_values)
 
+  # Check that one state per bin is provided: k interior cut points define k + 1 bins.
+  # This is checked after the cut points are resolved, as some may have been removed (duplicates, boundaries)
   if (length(states) != length(breaks) + 1)
   {
     stop("'states' must have one name per bin, from the lowest to the highest values: ", length(breaks) + 1, " bins (", length(breaks),
@@ -298,38 +302,65 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
 
   ## 3/ Convert each contMap into a simmap ####
 
+  ## Compute tree-level stuff
+  # All the contMaps share the same tree (checked in check_contMaps()), so the quantities that depend on the tree are computed once.
+
   tree <- contMaps[[1]]$tree
+  # Depth of the tree = root age for an ultrametric tree = largest distance from the root to a tip
   depth <- max(ape::node.depth.edgelength(tree))
+  # Minimum accepted duration of a segment, in the units of the branch lengths (e.g., Myr)
   min_len <- min_segment_proportion * depth
+  # Identify which edges are terminal (end on a tip): their last segment is kept to preserve the tip state
   tip_edges <- tree$edge[, 2] <= ape::Ntip(tree)
   n_edges <- nrow(tree$edge)
   n_states <- length(states)
 
+  # Initiate the list of simmaps
   simmaps <- vector("list", n_maps)
+  # Initiate percentage of progress
   last_pct <- 0
 
-  # Loop per map
+  ## Loop per map
   for (i in seq_len(n_maps))
   {
+    # Original segments of the contMap: for each edge, a named vector with the duration of each segment from the root to the tip.
+    # The names are the colour indices, not the states
     maps_i <- contMaps[[i]]$tree$maps
+    # Trait values of the same segments: list (one element per edge) of numeric vectors of the same lengths as 'maps_i'
     values_i <- all_values[[i]]$values
+
+    # Initiate elements of the new simmap: '$maps' (segments per edge) and '$mapped.edge' (total duration per edge and state, as in phytools::make.simmap())
     new_maps <- vector("list", n_edges)
     mapped_edge <- matrix(0, nrow = n_edges, ncol = n_states,
                           dimnames = list(paste(tree$edge[, 1], tree$edge[, 2], sep = ","), states))
+
+    # Loop per edge
     for (e in seq_len(n_edges))
     {
+      # 1. Assign each segment to a bin: findInterval() counts the cut points <= value, so values below the first cut point give 0,
+      #    between the first and second give 1, ..., above the last give k. The + 1L turns it into a bin index from 1 to k + 1
+      #    (a value equal to a cut point goes to the bin above it).
+      # 2. discretise_edge() merges the neighbour segments of the same bin and removes the segments shorter than 'min_len'
       seg <- discretise_edge(lens = as.numeric(maps_i[[e]]), idx = findInterval(values_i[[e]], breaks) + 1L, min_len = min_len, terminal = tip_edges[e])
+
+      # New map of the edge: named vector of durations, named after the states (as in a simmap)
       new_map <- seg$lens
       names(new_map) <- states[seg$idx]
       new_maps[[e]] <- new_map
+
+      # Sum the durations per state in '$mapped.edge' (a state can occur in several segments of the same edge)
       for (j in seq_along(seg$idx)) { mapped_edge[e, seg$idx[j]] <- mapped_edge[e, seg$idx[j]] + seg$lens[j] }
     }
+
+    # Build the simmap: the tree of the contMap with the new maps elements.
+    # The tree structure (edges, branch lengths, tips) is unchanged
     simmap_i <- contMaps[[i]]$tree
     simmap_i$maps <- new_maps
     simmap_i$mapped.edge <- mapped_edge
     class(simmap_i) <- c("simmap", "phylo")
     simmaps[[i]] <- simmap_i
 
+    # Progress: message each time a new multiple of 10% of the maps is reached (only for lists of several contMaps)
     if (verbose && n_maps > 1)
     {
       pct <- floor(10 * i / n_maps) * 10
@@ -345,8 +376,10 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
 
   if (is_single)
   {
+    # One contMap in: one simmap out
     output <- simmaps[[1]]
   } else {
+    # A list in: a multiSimmap out, named after the list. Missing or empty names are replaced by map_1, map_2, ... (position in the list)
     map_names <- names(contMap)
     if (is.null(map_names)) { map_names <- rep("", n_maps) }
     map_names[is.na(map_names) | map_names == ""] <- paste0("map_", seq_len(n_maps))[is.na(map_names) | map_names == ""]
@@ -354,6 +387,7 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
     output <- simmaps
     class(output) <- c("multiSimmap", "multiPhylo")
   }
+  # In both cases, keep the cut points used, so that other values (e.g., of the missing taxa) can be binned the same way with findInterval()
   attr(output, "breaks") <- breaks
 
   return(output)
@@ -433,18 +467,29 @@ check_contMaps <- function (contMaps, tol = 1e-6)
 extract_contMap_values <- function (contMap)
 {
   tree <- contMap$tree
-  lims <- contMap$lims
-  n_cols <- length(contMap$cols)
+  lims <- contMap$lims # Range of the trait values mapped onto the colors
+  n_cols <- length(contMap$cols) # Number of colors = number of trait value levels (res + 1 in phytools::contMap())
+
+  # Color index k (0 to n_cols - 1, stored as the name of the segment) -> trait value: linear scale from lims[1] (k = 0) to lims[2] (k = n_cols - 1).
+  # The resolution of the values is therefore diff(lims) / (n_cols - 1)
   values <- lapply(tree$maps, function (seg) lims[1] + as.numeric(names(seg)) / (n_cols - 1) * (lims[2] - lims[1]))
-  tip_edges <- match(seq_along(tree$tip.label), tree$edge[, 2])
+
+  # Tip values. The value of a segment is the value at its middle, so the last segment of a terminal edge gives the value
+  # half a segment before the tip. The tip value is extrapolated linearly from the last two segments:
+  # slope between the middles of the last two segments = (v[k] - v[k - 1]) / ((s[k] + s[k - 1]) / 2),
+  # applied over the half-length of the last segment (s[k] / 2) = (v[k] - v[k - 1]) * s[k] / (s[k] + s[k - 1]).
+  # With a single segment, its value is used as it is.
+  tip_edges <- match(seq_along(tree$tip.label), tree$edge[, 2]) # Terminal edge of each tip, in the order of the tips
   tips <- vapply(tip_edges, function (e) {
-    v <- values[[e]]
-    s <- as.numeric(tree$maps[[e]])
-    k <- length(s)
+    v <- values[[e]] # Values of the segments of the edge
+    s <- as.numeric(tree$maps[[e]]) # Their durations
+    k <- length(s) # Index of the last segment (at the tip)
     if (k < 2) { return(v[k]) }
     v[k] + (v[k] - v[k - 1]) * s[k] / (s[k] + s[k - 1])
   }, numeric(1))
   names(tips) <- tree$tip.label
+
+  # Values are clipped to the range of the contMap (the extrapolation can overshoot it)
   list(values = values, tips = pmin(pmax(tips, lims[1]), lims[2]))
 }
 
@@ -560,40 +605,61 @@ resolve_contMap_breaks <- function (breaks = NULL, n_bins = NULL, probs = NULL, 
 
 discretise_edge <- function (lens, idx, min_len, terminal)
 {
+  # Merge consecutive segments with the same state index into a single segment (durations summed).
+  # rle() gives the runs of identical consecutive states: e.g., idx = c(1, 1, 2, 2, 2, 1) -> values c(1, 2, 1), lengths c(2, 3, 1)
   merge_equal <- function (lens, idx)
   {
     if (length(idx) < 2) { return(list(lens = lens, idx = idx)) }
     r <- rle(idx)
-    ends <- cumsum(r$lengths)
-    starts <- ends - r$lengths + 1
+    ends <- cumsum(r$lengths) # Position of the last segment of each run
+    starts <- ends - r$lengths + 1 # Position of the first segment of each run
     list(lens = vapply(seq_along(ends), function (k) sum(lens[starts[k]:ends[k]]), numeric(1)), idx = r$values)
   }
 
+  # Step 1: Merge the neighbours with the same state. This is all that is done if min_len = 0 (every crossing of a cut point is kept)
   seg <- merge_equal(lens, idx)
+
+  # Step 2: Remove the segments that are too short (only if there is a minimum, and several segments left)
   if (min_len > 0 && length(seg$idx) > 1)
   {
-    total <- sum(lens)
+    total <- sum(lens) # Length of the edge
+
+    # Case A: the whole edge is shorter than the minimum: it cannot change state, so it gets a single segment
     if (total < min_len)
     {
       if (terminal) {
+        # Terminal edge: the state of the tip (last original segment), so that the tip keeps the state of its data
         state <- idx[length(idx)]
       } else {
+        # Internal edge: the state with the longest total duration along the edge (the lowest state index in case of a tie)
         by_state <- tapply(lens, idx, sum)
         state <- as.integer(names(by_state)[which.max(by_state)])
       }
       return(list(lens = total, idx = state))
     }
+
+    # Case B: the edge is long enough to have several segments, but some of them may be too short.
+    # Merge them one at a time, the shortest first, until no short segment is left to merge.
+    # Merging only one segment per iteration matters: the neighbours it is merged into become longer, and may not need to be merged themselves.
     repeat
     {
-      k <- length(seg$idx)
-      if (k < 2) { break }
+      k <- length(seg$idx) # Current number of segments
+      if (k < 2) { break } # A single segment cannot be merged with anything
+
+      # Segments shorter than the minimum, except the last segment (at the tip) of a terminal edge, which is protected:
+      # other segments can be merged into it, but it is never absorbed, so the tip keeps its state
       mergeable <- seg$lens < min_len
       if (terminal) { mergeable[k] <- FALSE }
-      if (!any(mergeable)) { break }
+      if (!any(mergeable)) { break } # All remaining segments are long enough (or protected): done
+
+      # The shortest mergeable segment ...
       i <- which(mergeable)[which.min(seg$lens[mergeable])]
+      # ... is absorbed by its longest neighbour on the edge (the one rootward in case of a tie, as it comes first in 'neighbours').
+      # A segment at the end of the edge has a single neighbour
       neighbours <- c(if (i > 1) i - 1, if (i < k) i + 1)
       j <- neighbours[which.max(seg$lens[neighbours])]
-      seg$lens[j] <- seg$lens[j] + seg$lens[i]
+      seg$lens[j] <- seg$lens[j] + seg$lens[i] # The neighbour is extended over the absorbed segment (the state of the neighbour is kept)
+      # Remove the absorbed segment, and merge the neighbours that now have the same state (e.g., A-B-A: if B is absorbed, A and A are merged)
       seg <- merge_equal(seg$lens[-i], seg$idx[-i])
     }
   }

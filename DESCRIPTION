@@ -21,11 +21,14 @@ Imports:
     TreeSim (>= 2.4),
     utils
 Suggests: 
+    contsimmap (>= 0.1.0),
     deepSTRAPP (>= 1.1.0),
     future (>= 1.33.1),
     future.apply (>= 1.11.1),
     readxl (>= 1.5.0.1),
     testthat (>= 3.3.2),
     writexl (>= 2.0.1)
+Additional_repositories:
+    https://maeldore.github.io/drat
 Config/testthat/edition: 3
 LazyData: true
