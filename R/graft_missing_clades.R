@@ -88,19 +88,9 @@
 #'   See 'Sampling fraction and unsampled species' in Details section.
 #' @param ultrametric_tol Numeric. Tolerance used by `ape::is.ultrametric()` for the ultrametricity checks of the backbone and of the final phylogeny.
 #'   Default is `.Machine$double.eps^0.5`.
-#' @param verbose Logical. Whether to display progress. Messages print every 10 missing clades.
-#'   If computation is run in parallel, only a message is printed when each simulation is done. Default is `TRUE`.
-#' @param save_temp Logical. Whether to save the grafted phylogenies during the process, to recover from a crash or an interruption of long runs (see 'Temporary saves and resuming' in the Details section).
-#'   Each phylogeny (one per simulation and per stochastic map) has its own temporary file. Its progress is saved every `save_temp_every` missing clades, and the phylogeny is always saved once fully grafted. Default is `FALSE`.
-#' @param save_temp_every Integer or `NULL`. Frequency of the saves of the progress, in number of missing clades grafted (groups of taxa with the same sister clade). Only used if `save_temp = TRUE`.
-#'   Default is `NULL`: save each phylogeny only once fully grafted.
-#' @param temp_file_path Character string. Path of the `.rds` file used for the temporary saves. It must end with `.rds` and its directory must exist and be writable.
-#'   Default is `NULL`, which saves in `"temp_phy_from_grafting.rds"` in the working directory.
-#'   With several simulations and/or several stochastic maps, the path is a template:
-#'   the suffixes `"_map_<name>"` (several maps) and `"_sim_<k>"` (several simulations) are added before `".rds"`, in this order (e.g., `"temp_map_A_sim_2.rds"`).
-#'   See 'Temporary saves and resuming' in the Details section.
-#' @param resume Logical. Whether to resume an interrupted run from its temporary files, which must come from a run with the exact same arguments (see 'Temporary saves and resuming').
-#'   Needs `save_temp = TRUE`. Default is `FALSE`.
+#' @param seed Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
+#'   is restored on exit. Set to `NULL` to use the random number generator of the session. Default is `1234`.
+#'   With several simulations, it is the master seed: the first simulation uses `seed`, and the seeds of the other simulations are derived from it (see 'Multiple simulations').
 #' @param nb_simulations Integer. Number of simulations, i.e., of grafted phylogenies to produce in the same run, from the same backbone and `missing_taxa_list`.
 #'   The grafting is stochastic, so ideally downstream analyses should be run on a set of grafted phylogenies rather than on a single one. Default is `1`.
 #'   See 'Multiple simulations' in Details section for handling of the output, the seeds and the failures.
@@ -110,10 +100,21 @@
 #'   Default is `NULL`: the simulations are run in parallel if the user set a `future` plan with several workers beforehand (e.g., `future::plan(future::multisession, workers = 4)`), and sequentially otherwise.
 #'   `FALSE` forces a sequential run, even if a plan is set. `TRUE` execute the `future` plan, but stops with an informative error if the packages are not installed or no plan is set.
 #'   See 'Parallel computation' in Details section for recommendations on whether parallelization is useful in your case.
-#' @param seed Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
-#'   is restored on exit. Set to `NULL` to use the random number generator of the session. Default is `1234`.
-#'   With several simulations, it is the master seed: the first simulation uses `seed`, and the seeds of the other simulations are derived from it (see 'Multiple simulations').
-#'
+#' @param save_temp Logical. Whether to save the grafted phylogenies during the process, to recover from a crash or an interruption of long runs (see 'Temporary saves and resuming' in the Details section).
+#'   Each phylogeny (one per simulation and per stochastic map) has its own temporary file. Its progress is saved every `save_temp_every` missing clades, and the phylogeny is always saved once fully grafted. Default is `FALSE`.
+#' @param save_temp_every Integer or `NULL`. Frequency of the saves of the progress, in number of missing clades grafted (groups of taxa with the same sister clade). Only used if `save_temp = TRUE`.
+#'   Default is `NULL`: save each phylogeny only once fully grafted.
+#' @param temp_file_path Character string. Path of the `.rds` file used for the temporary saves. It must end with `.rds` and its directory must exist and be writable.
+#'   Default is `NULL`, which saves in `"temp_phy_from_grafting.rds"` in the working directory.
+#'   With several simulations and/or several stochastic maps, the path is a template:
+#'   the suffixes `"_map_<name>"` (several maps) and `"_sim_<k>"` (several simulations) are added before `".rds"`, in this order (e.g., `"temp_map_A_sim_2.rds"`).
+#'   See 'Temporary saves and resuming' in the Details section.
+#' @param clean_temp_files Logical. Whether to delete all the temporary files of the run once it is completed without stopping/crashing. Only used if `save_temp = TRUE`.
+#'   If the run crashes or is interrupted, nothing is deleted so it can be resumed. Use `FALSE` to keep the files. Default is `TRUE`.
+#' @param resume Logical. Whether to resume an interrupted run from its temporary files, which must come from a run with the exact same arguments (see 'Temporary saves and resuming').
+#'   Needs `save_temp = TRUE`. Default is `FALSE`.
+#' @param verbose Logical. Whether to display progress. Messages print every 10 missing clades.
+#'   If computation is run in parallel, only a message is printed when each simulation is done. Default is `TRUE`.
 #' @return The function returns an object of class `"phylo"`: the backbone phylogeny with the grafted taxa added as new tips.
 #'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
 #'
@@ -342,6 +343,10 @@
 #' Temporary files can be read with `readRDS()` and used to plot the grafted phylogeny in its current state.
 #' The object is a regular `"phylo"` with the attribute `"phylograftR_temp"` that stores what is needed to resume a run.
 #' Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with `$simmap`, `$grafted_tips`, etc.).
+#'
+#' With `clean_temp_files = TRUE` (default), all the temporary files of the run are deleted once the function returns without crashing.
+#' A run that crashes or is interrupted never deletes its files, so it can be resumed with `resume = TRUE`.
+#' Use `clean_temp_files = FALSE` to keep the files after a successful run.
 #'
 #' With `resume = TRUE`, the function must be called again with **exactly the same arguments** as the interrupted run.
 #' For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
@@ -573,22 +578,23 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
                                   min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model (the enclosing clade is used if the sister clade is smaller)
                                   total_richness_per_clades = NULL, # NULL, or list with Sister_clade = list(c(), ...) and total_richness = c(...) (NA allowed). Total number of species of the clades accounting for the unsampled species that are neither present in the backbone, nor grafted.
                                   ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
-                                  verbose = TRUE,
-                                  save_temp = FALSE, # Save the grafted phylogenies during the process (partial every 'save_temp_every' missing clades, and complete once fully grafted)
-                                  save_temp_every = NULL, # NULL: only save the complete phylogenies
-                                  temp_file_path = NULL, # Default = "temp_phy_from_grafting.rds" in the working directory
-                                  resume = FALSE, # Resume an interrupted run from its temporary files (same arguments)
+                                  seed = 1234,
                                   nb_simulations = 1, # Number of grafted phylogenies to produce in the same run (a multiPhylo if > 1)
                                   force_simulations = FALSE, # If TRUE, try new seeds until nb_simulations phylogenies are obtained (up to 10 x nb_simulations attempts)
                                   parallel = NULL, # NULL: run in parallel if a 'future' plan with several workers is set; FALSE: sequential; TRUE: parallel (stops if not possible). Packages 'future' and 'future.apply' (suggested)
-                                  seed = 1234)
+                                  save_temp = FALSE, # Save the grafted phylogenies during the process (partial every 'save_temp_every' missing clades, and complete once fully grafted)
+                                  save_temp_every = NULL, # NULL: only save the complete phylogenies
+                                  temp_file_path = NULL, # Default = "temp_phy_from_grafting.rds" in the working directory
+                                  clean_temp_files = TRUE, # Delete all the temporary files once the run is completed without crashing?
+                                  resume = FALSE, # Resume an interrupted run from its temporary files (same arguments)
+                                  verbose = TRUE)
 {
   ### ---- Check input validity ---- ###
   {
     ## Check 'nb_simulations' and 'force_simulations'
     check_nb_simulations(nb_simulations = nb_simulations, force_simulations = force_simulations)
     check_parallel(parallel)
-    check_save_temp(save_temp = save_temp, save_temp_every = save_temp_every, resume = resume)
+    check_save_temp(save_temp = save_temp, save_temp_every = save_temp_every, resume = resume, clean_temp_files = clean_temp_files)
 
     ## The backbone must be ultrametric (error otherwise). It is never modified: making it ultrametric is left to the user
     check_backbone_ultrametric(phy = phy, tol = ultrametric_tol)
@@ -1107,6 +1113,14 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
   # With a 'multiSimmap': a list with the simulations of each map
   phy_all_sims <- run_maps(simulate_one = simulate_one, prepared = prepared_maps, map_names = simmap_input$names, multiple = simmap_input$multiple,
                            nb_simulations = nb_simulations, force_simulations = force_simulations, seed = seed, verbose = verbose, parallel = parallel)
+
+  # Delete all the temporary files of the run: only reached if the run was completed without crashing (a crash keeps the files, so the run can be resumed)
+  if (save_temp && clean_temp_files)
+  {
+    removed_files <- remove_temp_files(temp_file_path = temp_file_path, map_names = simmap_input$names, map_tags = map_tags,
+                                       nb_simulations = nb_simulations, force_simulations = force_simulations)
+    if (verbose && length(removed_files) > 0) { cat(paste0(Sys.time(), " - ", length(removed_files), " temporary file(s) deleted\n")) }
+  }
 
   # Return output
   return(phy_all_sims)

@@ -26,14 +26,15 @@
 #' @title Check the arguments of the temporary saves
 #'
 #' @param save_temp,resume Logicals.
-#' @param save_temp_every `NULL` (only the completed phylogenies are saved), or a single positive whole number.
+#' @param save_temp_every `NULL` (default of the grafting functions: only the completed phylogenies are saved), or a single positive whole number.
+#' @param clean_temp_files Single logical. Whether the temporary files are deleted once the run is completed.
 #'
 #' @noRd
 #'
 #' @return `TRUE` (invisibly). Stops with an informative message otherwise.
 #'
 
-check_save_temp <- function (save_temp, save_temp_every, resume)
+check_save_temp <- function (save_temp, save_temp_every, resume, clean_temp_files = TRUE)
 {
   if (!is.logical(save_temp) || length(save_temp) != 1 || is.na(save_temp))
   {
@@ -47,6 +48,10 @@ check_save_temp <- function (save_temp, save_temp_every, resume)
   {
     stop("'save_temp_every' must be a single positive whole number (number of taxa, or of groups of taxa, grafted between two temporary saves), ",
          "or NULL to only save the phylogenies once fully grafted.")
+  }
+  if (!is.logical(clean_temp_files) || length(clean_temp_files) != 1 || is.na(clean_temp_files))
+  {
+    stop("'clean_temp_files' must be TRUE or FALSE.")
   }
   if (resume && !save_temp)
   {
@@ -350,4 +355,60 @@ read_resume_state <- function (path, signature)
   if (identical(state$status, "complete")) { return(list(status = "complete", phy = saved)) }
   saved$node.label <- state$node_labels
   list(status = "partial", phy = saved, state = state)
+}
+
+
+#' @title Paths of all the temporary files a run could write
+#'
+#' @description Rebuilds, from the arguments of the grafting function, the paths of the files of the simulations: one per map (if a `"multiSimmap"` is used) and per attempt
+#'   (up to `nb_simulations`, or `10 * nb_simulations` with `force_simulations`, as in `run_attempts()`), following `temp_file_path_simulation()`.
+#'
+#' @param temp_file_path Absolute path template, see `resolve_temp_file_path()`.
+#' @param map_names `NULL`, or names of the maps of the `"multiSimmap"`.
+#' @param map_tags Named character vector of the tags of the maps, see `temp_map_tags()`.
+#' @param nb_simulations,force_simulations Arguments of the grafting function.
+#'
+#' @return Character vector of paths (the `.part` files of the atomic writes are added). The files do not need to exist.
+#'
+#' @noRd
+temp_files_of_run <- function (temp_file_path, map_names, map_tags, nb_simulations, force_simulations)
+{
+  multiple <- nb_simulations > 1
+  max_attempts <- if (force_simulations) 10 * nb_simulations else nb_simulations
+  maps <- if (is.null(map_names)) list(NULL) else as.list(map_names)
+  paths <- unlist(lapply(maps, function (map_name)
+  {
+    vapply(seq_len(max_attempts), function (k)
+    {
+      temp_file_path_simulation(temp_file_path = temp_file_path, index = k, multiple = multiple, map_name = map_name,
+                                map_tag = if (is.null(map_name)) NULL else map_tags[[map_name]])
+    }, character(1))
+  }))
+  paths <- unique(paths)
+  c(paths, paste0(paths, ".part"))
+}
+
+
+#' @title Delete the temporary files of a completed run
+#'
+#' @description Deletes the files returned by `temp_files_of_run()` that exist. Nothing else is touched.
+#'   A warning lists the files that could not be deleted.
+#'
+#' @inheritParams temp_files_of_run
+#'
+#' @return The paths of the files deleted (invisibly).
+#'
+#' @noRd
+remove_temp_files <- function (temp_file_path, map_names, map_tags, nb_simulations, force_simulations)
+{
+  paths <- temp_files_of_run(temp_file_path = temp_file_path, map_names = map_names, map_tags = map_tags,
+                             nb_simulations = nb_simulations, force_simulations = force_simulations)
+  paths <- paths[file.exists(paths)]
+  if (length(paths) == 0) { return(invisible(character(0))) }
+  removed <- suppressWarnings(file.remove(paths))
+  if (any(!removed))
+  {
+    warning("Some temporary files could not be deleted: ", paste0("'", paths[!removed], "'", collapse = ", "), ".", call. = FALSE)
+  }
+  invisible(paths[removed])
 }

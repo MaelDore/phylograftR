@@ -143,14 +143,14 @@ for (name in names(graft_functions))
     graft <- graft_functions[[name]]
     dir <- tempfile("sims"); dir.create(dir)
     path <- file.path(dir, "temp.rds")
-    out <- graft(toy, nb_simulations = 2, save_temp = TRUE, save_temp_every = 1, temp_file_path = path, seed = 5)
+    out <- graft(toy, nb_simulations = 2, save_temp = TRUE, save_temp_every = 1, clean_temp_files = FALSE, temp_file_path = path, seed = 5)
     expect_setequal(list.files(dir), c("temp_sim_1.rds", "temp_sim_2.rds"))
     expect_s3_class(readRDS(file.path(dir, "temp_sim_2.rds")), "phylo")
 
     # With a single simulation, the path is used as it is
     dir1 <- tempfile("sim1"); dir.create(dir1)
     path1 <- file.path(dir1, "single.rds")
-    out1 <- graft(toy, nb_simulations = 1, save_temp = TRUE, save_temp_every = 1, temp_file_path = path1, seed = 5)
+    out1 <- graft(toy, nb_simulations = 1, save_temp = TRUE, save_temp_every = 1, clean_temp_files = FALSE, temp_file_path = path1, seed = 5)
     expect_equal(list.files(dir1), "single.rds")
     unlink(c(dir, dir1), recursive = TRUE)
   })

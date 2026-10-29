@@ -166,7 +166,7 @@ test_that("graft_missing_taxa() saves temporary phylogenies if requested",
   temp_file <- file.path(tempdir(), "temp_graft_taxa.rds")
   unlink(temp_file)
 
-  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", save_temp = TRUE, save_temp_every = 1, temp_file_path = temp_file, seed = 1)
+  quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", save_temp = TRUE, save_temp_every = 1, clean_temp_files = FALSE, temp_file_path = temp_file, seed = 1)
   expect_true(file.exists(temp_file))
   expect_s3_class(readRDS(temp_file), "phylo")
   unlink(temp_file)
@@ -749,7 +749,7 @@ test_that("graft_missing_taxa() saves temporary phylogenies with the original no
   on.exit(unlink(temp_file))
   for (method in c("uniform", "BD_clades"))
   {
-    quiet_graft(graft_missing_taxa, phy_labelled, mtl, method = method, seed = 1, save_temp = TRUE, save_temp_every = 1, temp_file_path = temp_file)
+    quiet_graft(graft_missing_taxa, phy_labelled, mtl, method = method, seed = 1, save_temp = TRUE, save_temp_every = 1, clean_temp_files = FALSE, temp_file_path = temp_file)
     saved <- readRDS(temp_file)
     expect_false(any(grepl("^bb", saved$node.label)))
     expect_setequal(saved$node.label[saved$node.label != ""], phy_labelled$node.label)

@@ -83,8 +83,8 @@ test_that("check_save_temp() validates save_temp, save_temp_every and resume", {
 
 test_that("The grafting functions check save_temp_every, before any grafting", {
   toy <- toy_setup()
-  expect_error(graft_missing_taxa(toy$phy, ts_taxa(toy), save_temp = TRUE, save_temp_every = 0, verbose = FALSE), "positive whole number")
-  expect_error(graft_missing_clades(toy$phy, ts_clades(toy), save_temp = TRUE, save_temp_every = 1.5, verbose = FALSE), "positive whole number")
+  expect_error(graft_missing_taxa(toy$phy, ts_taxa(toy), save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 0, verbose = FALSE), "positive whole number")
+  expect_error(graft_missing_clades(toy$phy, ts_clades(toy), save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1.5, verbose = FALSE), "positive whole number")
   expect_error(graft_missing_taxa(toy$phy, ts_taxa(toy), resume = TRUE, verbose = FALSE), "needs 'save_temp = TRUE'")
   expect_error(graft_missing_clades(toy$phy, ts_clades(toy), resume = TRUE, verbose = FALSE), "needs 'save_temp = TRUE'")
 })
@@ -95,25 +95,25 @@ test_that("A save_temp_every larger than the number of taxa / groups gives one w
   path <- new_temp_path()
 
   # Uniform: 5 taxa
-  expect_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = TRUE, save_temp_every = 6, temp_file_path = path, verbose = FALSE),
+  expect_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 6, temp_file_path = path, verbose = FALSE),
                  "larger than the number of taxa to graft \\(5\\).*once fully grafted")
-  expect_no_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = TRUE, save_temp_every = 5, temp_file_path = path, verbose = FALSE))
-  expect_no_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = TRUE, save_temp_every = NULL, temp_file_path = path, verbose = FALSE))
+  expect_no_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 5, temp_file_path = path, verbose = FALSE))
+  expect_no_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = NULL, temp_file_path = path, verbose = FALSE))
   # Not sent without save_temp
   expect_no_warning(graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = FALSE, save_temp_every = 100, verbose = FALSE))
 
   # BD_clades: the unit is the group of taxa (same target clade, stem availability and allowed states)
   n_groups <- length(group_and_order_clades(toy$phy, mtl$Target_clade, include_target_clade_stem = rep(TRUE, 5))$group_clade_tips)
-  expect_warning(graft_missing_taxa(toy$phy, mtl, method = "BD_clades", save_temp = TRUE, save_temp_every = n_groups + 1, temp_file_path = path, verbose = FALSE),
+  expect_warning(graft_missing_taxa(toy$phy, mtl, method = "BD_clades", save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = n_groups + 1, temp_file_path = path, verbose = FALSE),
                  paste0("larger than the number of groups of taxa to graft \\(", n_groups, "\\)"))
-  expect_no_warning(graft_missing_taxa(toy$phy, mtl, method = "BD_clades", save_temp = TRUE, save_temp_every = n_groups, temp_file_path = path, verbose = FALSE))
+  expect_no_warning(graft_missing_taxa(toy$phy, mtl, method = "BD_clades", save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = n_groups, temp_file_path = path, verbose = FALSE))
 
   # Missing clades
   mcl <- ts_clades(toy)
   n_clade_groups <- length(group_and_order_clades(toy$phy, mcl$Sister_clade)$group_clade_tips)
-  expect_warning(graft_missing_clades(toy$phy, mcl, save_temp = TRUE, save_temp_every = n_clade_groups + 1, temp_file_path = path, verbose = FALSE),
+  expect_warning(graft_missing_clades(toy$phy, mcl, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = n_clade_groups + 1, temp_file_path = path, verbose = FALSE),
                  paste0("larger than the number of missing clades to graft \\(", n_clade_groups, "\\)"))
-  expect_no_warning(graft_missing_clades(toy$phy, mcl, save_temp = TRUE, save_temp_every = NULL, temp_file_path = path, verbose = FALSE))
+  expect_no_warning(graft_missing_clades(toy$phy, mcl, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = NULL, temp_file_path = path, verbose = FALSE))
   unlink(dirname(path), recursive = TRUE)
 })
 
@@ -123,7 +123,7 @@ test_that("The warning on save_temp_every is sent once, even with several simula
   path <- new_temp_path()
   warnings_sent <- character(0)
   withCallingHandlers(
-    graft_missing_taxa(toy$phy, ts_taxa(toy), simmap = ts_multi_simmap(maps, c("a", "b")), method = "uniform", nb_simulations = 2, save_temp = TRUE, save_temp_every = 50,
+    graft_missing_taxa(toy$phy, ts_taxa(toy), simmap = ts_multi_simmap(maps, c("a", "b")), method = "uniform", nb_simulations = 2, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 50,
                        temp_file_path = path, verbose = FALSE, parallel = FALSE),
     warning = function (w) { warnings_sent <<- c(warnings_sent, conditionMessage(w)); invokeRestart("muffleWarning") })
   expect_equal(sum(grepl("save_temp_every", warnings_sent)), 1)
@@ -156,7 +156,7 @@ test_that("Maps with the same sanitised name get distinct files, map first then 
   maps <- lapply(1:3, function (k) make_toy_simmap(toy$phy, seed = k))
   path <- new_temp_path()
   out <- graft_missing_taxa(toy$phy, ts_taxa(toy), simmap = ts_multi_simmap(maps, c("a b", "a/b", "c")), method = "uniform", nb_simulations = 2,
-                            save_temp = TRUE, save_temp_every = NULL, temp_file_path = path, verbose = FALSE, parallel = FALSE)
+                            save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = NULL, temp_file_path = path, verbose = FALSE, parallel = FALSE)
   expect_setequal(list.files(dirname(path)), c("temp_map_a_b-1_sim_1.rds", "temp_map_a_b-1_sim_2.rds", "temp_map_a_b-2_sim_1.rds", "temp_map_a_b-2_sim_2.rds",
                                                "temp_map_c_sim_1.rds", "temp_map_c_sim_2.rds"))
   expect_named(out, c("a b", "a/b", "c"))
@@ -172,12 +172,12 @@ test_that("Without save_temp_every, only the completed phylogeny is saved, and w
 
   # Only completed (NULL): nothing is saved if the run is interrupted
   path <- new_temp_path()
-  res <- try(crash_after(3, graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = TRUE, save_temp_every = NULL, temp_file_path = path, verbose = FALSE)), silent = TRUE)
+  res <- try(crash_after(3, graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = NULL, temp_file_path = path, verbose = FALSE)), silent = TRUE)
   expect_s3_class(res, "try-error")
   expect_length(list.files(dirname(path)), 0)
 
   # Progress saved every 2 taxa: after 3 grafts the file holds the progress after 2 taxa, as a plain phylo
-  res <- try(crash_after(3, graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = TRUE, save_temp_every = 2, temp_file_path = path, verbose = FALSE)), silent = TRUE)
+  res <- try(crash_after(3, graft_missing_taxa(toy$phy, mtl, method = "uniform", save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 2, temp_file_path = path, verbose = FALSE)), silent = TRUE)
   expect_s3_class(res, "try-error")
   partial <- readRDS(path)
   expect_s3_class(partial, "phylo")
@@ -194,7 +194,7 @@ test_that("The completed phylogeny replaces the progress in the file, for any sa
   for (every in list(1, 2, NULL, 50))
   {
     path <- new_temp_path()
-    out <- suppressWarnings(graft_missing_taxa(toy$phy, ts_taxa(toy), method = "uniform", save_temp = TRUE, save_temp_every = every, temp_file_path = path, verbose = FALSE))
+    out <- suppressWarnings(graft_missing_taxa(toy$phy, ts_taxa(toy), method = "uniform", save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = every, temp_file_path = path, verbose = FALSE))
     saved <- readRDS(path)
     expect_equal(attr(saved, "phylograftR_temp")$status, "complete")
     attr(saved, "phylograftR_temp") <- NULL
@@ -210,13 +210,13 @@ test_that("graft_missing_clades() saves its progress and the completed phylogeny
   toy <- toy_setup()
   mcl <- ts_clades(toy)
   path <- new_temp_path()
-  res <- try(crash_after(2, graft_missing_clades(toy$phy, mcl, save_temp = TRUE, save_temp_every = 1, temp_file_path = path, verbose = FALSE)), silent = TRUE)
+  res <- try(crash_after(2, graft_missing_clades(toy$phy, mcl, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path, verbose = FALSE)), silent = TRUE)
   expect_s3_class(res, "try-error")
   state <- attr(readRDS(path), "phylograftR_temp")
   expect_equal(state$status, "partial")
   expect_equal(state$progress$unit, "missing clades")
   expect_equal(state$progress$done, 2)
-  out <- graft_missing_clades(toy$phy, mcl, save_temp = TRUE, save_temp_every = 1, temp_file_path = path, verbose = FALSE)
+  out <- graft_missing_clades(toy$phy, mcl, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path, verbose = FALSE)
   expect_equal(attr(readRDS(path), "phylograftR_temp")$status, "complete")
   unlink(dirname(path), recursive = TRUE)
 })
@@ -234,9 +234,9 @@ expect_resume_identical <- function (graft, n_crash, every, ...)
 {
   path <- new_temp_path()
   reference <- graft(save_temp = FALSE, ...)
-  crashed <- try(crash_after(n_crash, graft(save_temp = TRUE, save_temp_every = every, temp_file_path = path, ...)), silent = TRUE)
+  crashed <- try(crash_after(n_crash, graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = every, temp_file_path = path, ...)), silent = TRUE)
   expect_s3_class(crashed, "try-error")
-  resumed <- graft(save_temp = TRUE, save_temp_every = every, temp_file_path = path, resume = TRUE, ...)
+  resumed <- graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = every, temp_file_path = path, resume = TRUE, ...)
   expect_identical(resumed, reference)
   unlink(dirname(path), recursive = TRUE)
   invisible(resumed)
@@ -294,11 +294,11 @@ test_that("Resuming from a save at the very end of the loop only runs the final 
   path <- new_temp_path()
   reference <- graft(save_temp = FALSE)
   # All the 5 grafts are done (the crash happens at the following call, the final check of the ultrametry that is not mocked here): save the progress by hand after 5 taxa
-  res <- try(crash_after(5, graft(save_temp = TRUE, save_temp_every = 5, temp_file_path = path)), silent = TRUE)
+  res <- try(crash_after(5, graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 5, temp_file_path = path)), silent = TRUE)
   # The run completed (no further call): replace the complete file by a partial one saved after the last taxon
   partial_done <- attr(readRDS(path), "phylograftR_temp")$status
   expect_true(partial_done %in% c("complete", "partial"))
-  resumed <- graft(save_temp = TRUE, save_temp_every = 5, temp_file_path = path, resume = TRUE)
+  resumed <- graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 5, temp_file_path = path, resume = TRUE)
   expect_identical(resumed, reference)
   unlink(dirname(path), recursive = TRUE)
 })
@@ -312,21 +312,21 @@ test_that("Resuming a run with several simulations and several maps: complete fi
   path <- new_temp_path()
   reference <- graft(save_temp = FALSE)
   # 4 tasks of 5 grafts: crash during the second task (map a, simulation 2)
-  crashed <- try(crash_after(7, graft(save_temp = TRUE, save_temp_every = 1, temp_file_path = path)), silent = TRUE)
+  crashed <- try(crash_after(7, graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path)), silent = TRUE)
   expect_s3_class(crashed, "try-error")
   status <- vapply(list.files(dirname(path), full.names = TRUE), function (f) attr(readRDS(f), "phylograftR_temp")$status, character(1))
   expect_equal(unname(status[basename(names(status)) == "temp_map_a_sim_1.rds"]), "complete")
   expect_equal(unname(status[basename(names(status)) == "temp_map_a_sim_2.rds"]), "partial")
   expect_false("temp_map_b_sim_1.rds" %in% basename(names(status)))
 
-  resumed <- graft(save_temp = TRUE, save_temp_every = 1, temp_file_path = path, resume = TRUE)
+  resumed <- graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path, resume = TRUE)
   expect_identical(resumed, reference)
   expect_setequal(list.files(dirname(path)), c("temp_map_a_sim_1.rds", "temp_map_a_sim_2.rds", "temp_map_b_sim_1.rds", "temp_map_b_sim_2.rds"))
   expect_true(all(vapply(list.files(dirname(path), full.names = TRUE), function (f) attr(readRDS(f), "phylograftR_temp")$status == "complete", logical(1))))
 
   # A second resume reuses everything: no graft is done
   count <- 0
-  again <- testthat::with_mocked_bindings(graft(save_temp = TRUE, save_temp_every = 1, temp_file_path = path, resume = TRUE),
+  again <- testthat::with_mocked_bindings(graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path, resume = TRUE),
                                           enforce_ultrametry_new_tips = function (...) { count <<- count + 1; stop("must not be called") }, .package = "phylograftR")
   expect_identical(again, reference)
   expect_equal(count, 0)
@@ -339,9 +339,9 @@ test_that("Resuming with force_simulations uses the attempt numbers in the names
   graft <- function (...) suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = "uniform", nb_simulations = 2, force_simulations = TRUE, seed = 5, verbose = FALSE, parallel = FALSE, ...))
   path <- new_temp_path()
   reference <- graft(save_temp = FALSE)
-  graft(save_temp = TRUE, save_temp_every = 1, temp_file_path = path)
+  graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path)
   expect_true(all(c("temp_sim_1.rds", "temp_sim_2.rds") %in% list.files(dirname(path))))
-  resumed <- graft(save_temp = TRUE, save_temp_every = 1, temp_file_path = path, resume = TRUE)
+  resumed <- graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path, resume = TRUE)
   expect_identical(resumed, reference)
   unlink(dirname(path), recursive = TRUE)
 })
@@ -350,7 +350,7 @@ test_that("Resuming without any file starts from scratch, and without a seed the
   toy <- toy_setup()
   mtl <- ts_taxa(toy)
   path <- new_temp_path()
-  graft <- function (seed, ...) suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = "uniform", seed = seed, verbose = FALSE, save_temp = TRUE, save_temp_every = 2, temp_file_path = path, ...))
+  graft <- function (seed, ...) suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = "uniform", seed = seed, verbose = FALSE, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 2, temp_file_path = path, ...))
   fresh <- graft(seed = 8, resume = TRUE)
   expect_identical(drop_simmap(fresh), drop_simmap(graft_missing_taxa(toy$phy, mtl, method = "uniform", seed = 8, verbose = FALSE)))
   unlink(path)
@@ -369,7 +369,7 @@ test_that("Resume restores the random number generator of the session after the 
   toy <- toy_setup()
   mtl <- ts_taxa(toy)
   path <- new_temp_path()
-  graft <- function (...) suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = "uniform", seed = 8, verbose = FALSE, save_temp = TRUE, save_temp_every = 1, temp_file_path = path, ...))
+  graft <- function (...) suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = "uniform", seed = 8, verbose = FALSE, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path, ...))
   try(crash_after(3, graft()), silent = TRUE)
   set.seed(99)
   before <- get(".Random.seed", envir = globalenv())
@@ -385,7 +385,7 @@ test_that("Resuming with different inputs stops with an informative message, and
   toy <- toy_setup()
   mtl <- ts_taxa(toy)
   path <- new_temp_path()
-  graft <- function (mtl = mtl, seed = 8, method = "uniform", ...) suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = method, seed = seed, verbose = FALSE, save_temp = TRUE, save_temp_every = 1, temp_file_path = path, ...))
+  graft <- function (mtl = mtl, seed = 8, method = "uniform", ...) suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = method, seed = seed, verbose = FALSE, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path, ...))
   mtl_main <- ts_taxa(toy)
   try(crash_after(3, graft(mtl_main)), silent = TRUE)
 
@@ -397,7 +397,7 @@ test_that("Resuming with different inputs stops with an informative message, and
   expect_error(graft(mtl_other, resume = TRUE), "different inputs \\(the list of missing taxa")
   other_phy <- toy$phy
   other_phy$edge.length[1] <- other_phy$edge.length[1] * 0.5
-  expect_error(suppressWarnings(graft_missing_taxa(other_phy, mtl_main, method = "uniform", seed = 8, verbose = FALSE, save_temp = TRUE, save_temp_every = 1, temp_file_path = path, resume = TRUE)),
+  expect_error(suppressWarnings(graft_missing_taxa(other_phy, mtl_main, method = "uniform", seed = 8, verbose = FALSE, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path, resume = TRUE)),
                "(different inputs|not ultrametric)")
   simmap <- make_toy_simmap(toy$phy, seed = 1)
   expect_error(graft(mtl_main, simmap = simmap, allowed_states = c("A", "B", "C"), resume = TRUE), "different inputs \\(.*the simmap")
@@ -412,7 +412,7 @@ test_that("A file that was not saved by this version, or is corrupted, is ignore
   toy <- toy_setup()
   mtl <- ts_taxa(toy)
   path <- new_temp_path()
-  graft <- function (...) graft_missing_taxa(toy$phy, mtl, method = "uniform", seed = 8, verbose = FALSE, save_temp = TRUE, save_temp_every = 1, temp_file_path = path, resume = TRUE, ...)
+  graft <- function (...) graft_missing_taxa(toy$phy, mtl, method = "uniform", seed = 8, verbose = FALSE, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path, resume = TRUE, ...)
   reference <- suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = "uniform", seed = 8, verbose = FALSE))
 
   # Old format: a plain phylo
@@ -466,15 +466,114 @@ test_that("The files of a parallel run are written by the workers, and a resume 
   # Relative path: made absolute in the main session
   withr_dir <- tempfile("parallel"); dir.create(withr_dir)
   path <- file.path(withr_dir, "temp.rds")
-  out <- graft(save_temp = TRUE, save_temp_every = 2, temp_file_path = path, parallel = TRUE)
+  out <- graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 2, temp_file_path = path, parallel = TRUE)
   expect_identical(out, reference)
   files <- list.files(withr_dir)
   expect_setequal(files, c("temp_map_a_sim_1.rds", "temp_map_a_sim_2.rds", "temp_map_b_sim_1.rds", "temp_map_b_sim_2.rds"))
 
   # Delete one completed file: a resume in parallel recomputes only this one, and reuses the others
   unlink(file.path(withr_dir, "temp_map_b_sim_1.rds"))
-  resumed <- graft(save_temp = TRUE, save_temp_every = 2, temp_file_path = path, resume = TRUE, parallel = TRUE)
+  resumed <- graft(save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 2, temp_file_path = path, resume = TRUE, parallel = TRUE)
   expect_identical(resumed, reference)
   expect_setequal(list.files(withr_dir), files)
   unlink(withr_dir, recursive = TRUE)
+})
+
+
+# ---- Cleaning of the temporary files, and order of the arguments ----
+
+test_that("check_save_temp() validates clean_temp_files", {
+  expect_true(check_save_temp(TRUE, NULL, FALSE, clean_temp_files = FALSE))
+  expect_error(check_save_temp(TRUE, NULL, FALSE, clean_temp_files = NA), "'clean_temp_files'")
+  expect_error(check_save_temp(TRUE, NULL, FALSE, clean_temp_files = "yes"), "'clean_temp_files'")
+  toy <- toy_setup()
+  expect_error(graft_missing_taxa(toy$phy, ts_taxa(toy), save_temp = TRUE, clean_temp_files = 2, verbose = FALSE), "'clean_temp_files'")
+  expect_error(graft_missing_clades(toy$phy, ts_clades(toy), save_temp = TRUE, clean_temp_files = NULL, verbose = FALSE), "'clean_temp_files'")
+})
+
+test_that("The temporary files are deleted by default once the run is completed, and only these files", {
+  toy <- toy_setup()
+  maps <- lapply(1:2, function (k) make_toy_simmap(toy$phy, seed = k))
+  path <- new_temp_path()
+  other <- file.path(dirname(path), "other.rds")
+  saveRDS(1, other)
+  # Single phylogeny
+  expect_formals <- formals(graft_missing_taxa)
+  expect_true(expect_formals$clean_temp_files)
+  out <- graft_missing_taxa(toy$phy, ts_taxa(toy), method = "uniform", save_temp = TRUE, save_temp_every = 1, temp_file_path = path, verbose = FALSE)
+  expect_s3_class(out, "phylo")
+  expect_equal(list.files(dirname(path)), "other.rds")
+  # Simulations x maps, taxa and clades
+  out <- suppressWarnings(graft_missing_taxa(toy$phy, ts_taxa(toy), simmap = ts_multi_simmap(maps, c("a", "b")), allowed_states = c("A", "B", "C"), method = "uniform",
+                                             nb_simulations = 2, save_temp = TRUE, temp_file_path = path, verbose = FALSE, parallel = FALSE))
+  expect_equal(list.files(dirname(path)), "other.rds")
+  out <- suppressWarnings(graft_missing_clades(toy$phy, ts_clades(toy), simmap = ts_multi_simmap(maps, c("a", "b")), nb_simulations = 2, save_temp = TRUE,
+                                               save_temp_every = 1, temp_file_path = path, verbose = FALSE, parallel = FALSE))
+  expect_equal(list.files(dirname(path)), "other.rds")
+  # With force_simulations (up to 10 attempts per simulation)
+  out <- graft_missing_taxa(toy$phy, ts_taxa(toy), method = "uniform", nb_simulations = 2, force_simulations = TRUE, save_temp = TRUE, temp_file_path = path, verbose = FALSE, parallel = FALSE)
+  expect_equal(list.files(dirname(path)), "other.rds")
+  # Nothing is created without save_temp
+  graft_missing_taxa(toy$phy, ts_taxa(toy), method = "uniform", temp_file_path = path, verbose = FALSE)
+  expect_equal(list.files(dirname(path)), "other.rds")
+  unlink(dirname(path), recursive = TRUE)
+})
+
+test_that("clean_temp_files = FALSE keeps the files, and the message of the deletion is printed with verbose", {
+  toy <- toy_setup()
+  path <- new_temp_path()
+  graft_missing_taxa(toy$phy, ts_taxa(toy), method = "uniform", save_temp = TRUE, clean_temp_files = FALSE, temp_file_path = path, verbose = FALSE)
+  expect_true(file.exists(path))
+  graft_missing_taxa(toy$phy, ts_taxa(toy), method = "uniform", save_temp = TRUE, nb_simulations = 2, temp_file_path = path, verbose = FALSE)
+  expect_true(file.exists(path))  # The file of the first run is not one of this run (suffixes _sim_k): not touched
+  expect_output(graft_missing_taxa(toy$phy, ts_taxa(toy), method = "uniform", save_temp = TRUE, temp_file_path = path, verbose = TRUE), "temporary file\\(s\\) deleted")
+  expect_false(file.exists(path))
+  unlink(dirname(path), recursive = TRUE)
+})
+
+test_that("A crashed run keeps its files, and the resumed run that completes deletes them", {
+  toy <- toy_setup()
+  mtl <- ts_taxa(toy)
+  path <- new_temp_path()
+  graft <- function (...) suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = "uniform", seed = 3, verbose = FALSE, save_temp = TRUE, save_temp_every = 1, temp_file_path = path, ...))
+  reference <- graft_missing_taxa(toy$phy, mtl, method = "uniform", seed = 3, verbose = FALSE)
+  crashed <- try(crash_after(2, graft()), silent = TRUE)
+  expect_s3_class(crashed, "try-error")
+  expect_true(file.exists(path))
+  resumed <- graft(resume = TRUE)
+  expect_identical(resumed, reference)
+  expect_length(list.files(dirname(path)), 0)
+  unlink(dirname(path), recursive = TRUE)
+})
+
+test_that("temp_files_of_run() lists the files of all the maps and attempts", {
+  tags <- temp_map_tags(c("a", "b"))
+  expect_equal(basename(temp_files_of_run("/d/t.rds", NULL, NULL, 1, FALSE))[1], "t.rds")
+  files <- temp_files_of_run("/d/t.rds", c("a", "b"), tags, 2, FALSE)
+  expect_equal(basename(files[1:4]), c("t_map_a_sim_1.rds", "t_map_a_sim_2.rds", "t_map_b_sim_1.rds", "t_map_b_sim_2.rds"))
+  expect_equal(basename(files[5:8]), paste0(basename(files[1:4]), ".part"))
+  expect_length(temp_files_of_run("/d/t.rds", NULL, NULL, 2, TRUE), 2 * 20)
+})
+
+test_that("remove_temp_files() warns about the files it cannot delete", {
+  path <- new_temp_path()
+  saveRDS(1, path)
+  with_mocked_bindings(
+    expect_warning(remove_temp_files(path, NULL, NULL, 1, FALSE), "could not be deleted"),
+    file.remove = function (...) FALSE, .package = "base")
+  unlink(dirname(path), recursive = TRUE)
+})
+
+test_that("The save/resume arguments, then 'verbose', come last in both functions; 'seed' comes before 'nb_simulations'", {
+  tail_args <- c("save_temp", "save_temp_every", "temp_file_path", "clean_temp_files", "resume", "verbose")
+  for (f in list(graft_missing_taxa, graft_missing_clades))
+  {
+    args <- names(formals(f))
+    expect_equal(tail(args, 6), tail_args)
+    expect_lt(match("seed", args), match("nb_simulations", args))
+    expect_null(formals(f)$save_temp_every)
+    expect_false(formals(f)$save_temp)
+    expect_false(formals(f)$resume)
+    expect_true(formals(f)$clean_temp_files)
+  }
 })

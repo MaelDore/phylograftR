@@ -95,7 +95,7 @@ test_that("graft_missing_clades() returns the grafted tips and branches, and sav
   temp_file <- file.path(tempdir(), "temp_graft_clades.rds")
   unlink(temp_file)
 
-  grafted <- quiet_graft(graft_missing_clades, toy$phy, mcl, seed = 1, save_temp = TRUE, save_temp_every = 1, temp_file_path = temp_file)
+  grafted <- quiet_graft(graft_missing_clades, toy$phy, mcl, seed = 1, save_temp = TRUE, save_temp_every = 1, clean_temp_files = FALSE, temp_file_path = temp_file)
   expect_setequal(grafted$tip.label[grafted$grafted_tips], mcl$Taxon_name)
   expect_identical(names(grafted$grafted_edges), as.character(grafted$edge[, 2]))
   expect_null(grafted$sampling_fraction_df)
