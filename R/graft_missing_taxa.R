@@ -231,12 +231,6 @@
 #' To graft taxa specifically on the stem branch of a clade or of a single tip, use [`phylograftR::graft_missing_clades()`][graft_missing_clades] instead.
 #' A warning lists the single-tip excluded subclades with a stem that is not excluded, as they exclude nothing.
 #'
-#' ### Enclosing clades
-#'
-#' Under the `"BD_clades"` method, when a target clade contains fewer tips than `min_tips`, an alternative higher clade is selected to fit the birth-death model.
-#' This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the target clade, until a clade meets the `min_tips` condition.
-#' This ensures that the diversification dynamics modeled are based on enough tips to be relevant, while being closely associated with the target clade.
-#'
 #' ### Methods
 #'
 #' * `"uniform"`: Taxa are grafted one by one, per target clade from the smallest to the largest, so nested clades are processed first (see below).
@@ -266,6 +260,34 @@
 #' For taxa of the same clade, those without access to the stem come first.
 #' For `"BD_clades"`, it also ensures that the divergence times of nested clades are accounted for when drawing the divergence times of the larger clade.
 #' Taxa of the same target clade are grafted in random order, so they are exchangeable.
+#'
+#' ### Enclosing clades
+#'
+#' Under the `"BD_clades"` method, when a target clade contains fewer tips than `min_tips`, an alternative higher clade is selected to fit the birth-death model.
+#' This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the target clade, until a clade meets the `min_tips` condition.
+#' This ensures that the diversification dynamics modeled are based on enough tips to be relevant, while being closely associated with the target clade.
+#'
+#' ### Sampling fraction and unsampled species
+#'
+#' Under `method = "BD_clades"`, the birth-death model of a clade is fitted with the sampling fraction
+#' `n_present / (n_present + n_pending + n_unsampled)`, with `n_present` the tips of the fitted clade in the current tree (backbone tips and taxa already grafted),
+#' `n_pending` the taxa of `missing_taxa_list` still to graft in this clade, and `n_unsampled` the unsampled species derived from `total_richness_per_clades`.
+#' Taxa grafted in nested clades processed earlier are already in the tree, so they are not counted as missing anymore.
+#' Unsampled species are only used to fit the rates: they are not grafted, and do not compete with the grafted taxa for the branches.
+#'
+#' For a clade with a `total_richness` value provided: `nb_unsampled = total_richness - nb_backbone - nb_missing`, with `nb_missing` the number of taxa to graft
+#' whose target clade is this clade or is nested within it. For a clade with no `total_richness` value (`NA`, or enclosing a target clade without being listed),
+#' `nb_unsampled` is the sum over the largest clades nested within it with a `total_richness` value provided.
+#' As such, the unsampled species of nested clades are summed across disjoint clades but never counted twice within nested clades.
+#'
+#' If `total_richness_per_clades = NULL`, `nb_unsampled = 0` and no `sampling_fraction_df` is returned.
+#' To obtain the `sampling_fraction_df` without informing any total richness, provide `total_richness_per_clades` with the clades and only `NA` in `$total_richness`:
+#' `nb_unsampled = 0` and `total_richness` equals the backbone plus missing species in all clades (the sampling fraction is 1).
+#'
+#' The function stops, before any grafting, if `total_richness_per_clades` does not cover all the target clades, if a `total_richness` provided is lower than
+#' the number of backbone species plus species to graft of the clade, or if a clade has fewer unsampled species than the sum of the clades with
+#' a `total_richness` provided nested within it.
+#' With `method = "uniform"`, no diversification model is used: `total_richness_per_clades` is only used to derive the `sampling_fraction_df` table (a warning is issued).
 #'
 #' ### Species attributes: allowed states of a simmap
 #'
@@ -386,28 +408,6 @@
 #'
 #' The other traits are matched exactly, and are inherited as they are from the point where the taxon is grafted: with `"AB"` and `"high"` at the graft point and the allowed range `"A"`,
 #' the taxon inherits `"A"` and `"high"`. Only one trait can be treated as ranges to prevent inflation of the number of combined allowed states to consider.
-#'
-#' ### Sampling fraction and unsampled species
-#'
-#' Under `method = "BD_clades"`, the birth-death model of a clade is fitted with the sampling fraction
-#' `n_present / (n_present + n_pending + n_unsampled)`, with `n_present` the tips of the fitted clade in the current tree (backbone tips and taxa already grafted),
-#' `n_pending` the taxa of `missing_taxa_list` still to graft in this clade, and `n_unsampled` the unsampled species derived from `total_richness_per_clades`.
-#' Taxa grafted in nested clades processed earlier are already in the tree, so they are not counted as missing anymore.
-#' Unsampled species are only used to fit the rates: they are not grafted, and do not compete with the grafted taxa for the branches.
-#'
-#' For a clade with a `total_richness` value provided: `nb_unsampled = total_richness - nb_backbone - nb_missing`, with `nb_missing` the number of taxa to graft
-#' whose target clade is this clade or is nested within it. For a clade with no `total_richness` value (`NA`, or enclosing a target clade without being listed),
-#' `nb_unsampled` is the sum over the largest clades nested within it with a `total_richness` value provided.
-#' As such, the unsampled species of nested clades are summed across disjoint clades but never counted twice within nested clades.
-#'
-#' If `total_richness_per_clades = NULL`, `nb_unsampled = 0` and no `sampling_fraction_df` is returned.
-#' To obtain the `sampling_fraction_df` without informing any total richness, provide `total_richness_per_clades` with the clades and only `NA` in `$total_richness`:
-#' `nb_unsampled = 0` and `total_richness` equals the backbone plus missing species in all clades (the sampling fraction is 1).
-#'
-#' The function stops, before any grafting, if `total_richness_per_clades` does not cover all the target clades, if a `total_richness` provided is lower than
-#' the number of backbone species plus species to graft of the clade, or if a clade has fewer unsampled species than the sum of the clades with
-#' a `total_richness` provided nested within it.
-#' With `method = "uniform"`, no diversification model is used: `total_richness_per_clades` is only used to derive the `sampling_fraction_df` table (a warning is issued).
 #'
 #' ### Temporary saves and resuming
 #'

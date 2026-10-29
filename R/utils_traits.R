@@ -40,7 +40,7 @@ get_multisimmap_maps <- function (simmap, who = "'simmap'")
   unnamed <- which(is.na(map_names) | map_names == "")
   if (length(unnamed) > 0)
   {
-    stop("Some maps of ", who, " are named and others are not (maps n°", paste(unnamed, collapse = ", "), "): name all the maps or none of them.")
+    stop("Some maps of ", who, " are named and others are not (maps n\u00b0", paste(unnamed, collapse = ", "), "): name all the maps or none of them.")
   }
   duplicated_names <- unique(map_names[duplicated(map_names)])
   if (length(duplicated_names) > 0)
@@ -82,7 +82,7 @@ check_trait_maps <- function (simmap)
     unnamed <- which(is.na(trait_names) | trait_names == "")
     if (length(unnamed) > 0)
     {
-      stop("Some traits of 'simmap' are named and others are not (traits n°", paste(unnamed, collapse = ", "), "): name all the traits or none of them.")
+      stop("Some traits of 'simmap' are named and others are not (traits n\u00b0", paste(unnamed, collapse = ", "), "): name all the traits or none of them.")
     }
     duplicated_names <- unique(trait_names[duplicated(trait_names)])
     if (length(duplicated_names) > 0)

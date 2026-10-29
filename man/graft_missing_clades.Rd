@@ -603,7 +603,8 @@ plot(grafted_phy_traits$simmap[[2]]) # Only 'low'
 # Load the range simmap
 data(toy_simmap_ranges)
 
-# The clades are grafted on stem branch pieces in ranges containing "A" or "B", and in elevation "low"
+# The clades are grafted on stem branch pieces in ranges
+# containing "A" or "B" and in elevation "low"
 grafted_phy_ranges_traits <- graft_missing_clades(phy = toy_backbone,
     missing_taxa_list = missing_clades_list,
     simmap = list(biogeo = toy_simmap_ranges, elevation = toy_simmap_elevation),

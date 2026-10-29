@@ -179,8 +179,10 @@
 #' # --- Discretize multiple continuous stochastic maps --- #
 #'
 #' \dontrun{ # Requires one package not available on CRAN
-#' ## The R packages 'deepSTRAPP' (on CRAN) and 'contsimmap' (not on CRAN) are needed for this example to work.
-#' if (requireNamespace("deepSTRAPP", quietly = TRUE) && requireNamespace("contsimmap", quietly = TRUE))
+#' ## The R packages 'deepSTRAPP' (on CRAN) and 'contsimmap' (not on CRAN)
+#' ## are needed for this example to work.
+#' if (requireNamespace("deepSTRAPP", quietly = TRUE)
+#'     && requireNamespace("contsimmap", quietly = TRUE))
 #' {
 #'  # Use phytools::anc.ML() to extract the evolutionary rate = sigma²
 #'  BM_fit <- phytools::anc.ML(tree = toy_backbone,

@@ -47,7 +47,8 @@ system.file("extdata", "toy_missing_taxa_with_ranges_and_elevation.csv", package
 
 # Graft with the maps of the two traits. The first trait is treated as ranges,
 # the second as 'normal', non-biogeographic states.
-# Taxa without taxon-level states can be grafted on branches in a range containing "A" or "B" (global value),
+# Taxa without taxon-level states can be grafted on branches
+# in a range containing "A" or "B" (global value),
 # whatever the elevation (NULL).
 
 # Load datasets
@@ -77,7 +78,9 @@ taxon_states
 toy_missing_taxa_list_with_ranges_and_elevation$allowed_states
 
 # Check that all the grafted taxa respect their constraints, trait by trait
-check_grafting_constraints(grafted_phy,
+check_grafting_constraints(
+    phy_grafted = grafted_phy,
+    phy_backbone = toy_backbone,
     missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
     allowed_states = list(c("A", "B"), NULL),
     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE))

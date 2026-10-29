@@ -353,7 +353,8 @@
 #' data(toy_simmap_elevation)
 #'
 #' # Plot the map
-#' plot(toy_simmap_elevation, colors = c(high = "darkorange", low = "steelblue"), fsize = 0.7, ftype = "i")
+#' plot(toy_simmap_elevation, colors = c(high = "darkorange", low = "steelblue"),
+#'      fsize = 0.7, ftype = "i")
 #'
 #' # Duration spent in each state (sum on all the branches)
 #' colSums(toy_simmap_elevation$mapped.edge)
@@ -466,7 +467,8 @@
 #'
 #' # Graft with the maps of the two traits. The first trait is treated as ranges,
 #' # the second as 'normal', non-biogeographic states.
-#' # Taxa without taxon-level states can be grafted on branches in a range containing "A" or "B" (global value),
+#' # Taxa without taxon-level states can be grafted on branches
+#' # in a range containing "A" or "B" (global value),
 #' # whatever the elevation (NULL).
 #'
 #' # Load datasets
@@ -496,7 +498,9 @@
 #' toy_missing_taxa_list_with_ranges_and_elevation$allowed_states
 #'
 #' # Check that all the grafted taxa respect their constraints, trait by trait
-#' check_grafting_constraints(grafted_phy,
+#' check_grafting_constraints(
+#'     phy_grafted = grafted_phy,
+#'     phy_backbone = toy_backbone,
 #'     missing_taxa_list = toy_missing_taxa_list_with_ranges_and_elevation,
 #'     allowed_states = list(c("A", "B"), NULL),
 #'     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE))

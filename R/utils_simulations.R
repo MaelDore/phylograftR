@@ -278,7 +278,7 @@ run_attempts <- function (simulate_attempt, n_maps, map_names, nb_simulations, f
 
     if (verbose && use_future)
     {
-      cat(paste0(Sys.time(), " - Simulation ", task$id, "/", task$total, " done (", if (!is.null(map_name)) paste0("map ", map_name, ", "), "simulation n°", attempt, ")\n"))
+      cat(paste0(Sys.time(), " - Simulation ", task$id, "/", task$total, " done (", if (!is.null(map_name)) paste0("map ", map_name, ", "), "simulation n\u00b0", attempt, ")\n"))
     }
     list(out = out, warnings = warnings_sent, seed = sim_seed)
   }

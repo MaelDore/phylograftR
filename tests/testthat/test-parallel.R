@@ -196,7 +196,10 @@ test_that("run_maps() runs the maps x simulations as one set of tasks, with the 
                                    warning = function (w) { messages <<- c(messages, conditionMessage(w)); invokeRestart("muffleWarning") }))
   expect_true(any(grepl("^Map 'c': none of the 2 simulation", messages)))
   expect_true(any(grepl("^Map 'b': Only 1 of the 2 simulations", messages)))
-  with_workers(expect_error(run_maps(function (...) stop("generic problem"), prepared, c("a", "b", "c"), TRUE, 2, FALSE, seed = 4, parallel = TRUE), "Map 'a': generic problem"))
+  # An error that is not a simulation failure stops the run and names its map. In parallel, the maps run at the same time and the first error that arrives is the one reported,
+  # so it can be the one of any map (sequentially, it is always the first map)
+  expect_error(run_maps(function (...) stop("generic problem"), prepared, c("a", "b", "c"), TRUE, 2, FALSE, seed = 4, parallel = FALSE), "Map 'a': generic problem")
+  with_workers(expect_error(run_maps(function (...) stop("generic problem"), prepared, c("a", "b", "c"), TRUE, 2, FALSE, seed = 4, parallel = TRUE), "Map '[abc]': generic problem"))
 })
 
 

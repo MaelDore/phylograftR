@@ -32,7 +32,8 @@ Among the first 1000 seeds, the one used (94) is the first giving a map that is 
 data(toy_simmap_elevation)
 
 # Plot the map
-plot(toy_simmap_elevation, colors = c(high = "darkorange", low = "steelblue"), fsize = 0.7, ftype = "i")
+plot(toy_simmap_elevation, colors = c(high = "darkorange", low = "steelblue"),
+     fsize = 0.7, ftype = "i")
 
 # Duration spent in each state (sum on all the branches)
 colSums(toy_simmap_elevation$mapped.edge)

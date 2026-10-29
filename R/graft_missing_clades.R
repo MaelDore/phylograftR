@@ -179,6 +179,36 @@
 #' This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the sister clade, until a clade meets the `min_tips` condition.
 #' This ensures that the diversification dynamics modeled are based on enough tips to be relevant, while being closely associated with the sister clade.
 #'
+#' ### Sampling fraction
+#'
+#' The birth-death model is fitted on the crown group of the sister clade or its enclosing clade, so the sampling fraction is:
+#' `n_present / (n_present + n_pending + n_unsampled)`, with `n_present` the tips of the fitted clade in the current tree
+#' (backbone tips and taxa already grafted, so missing clades grafted in nested sister clades processed earlier are not missing anymore),
+#' `n_pending` the taxa of `missing_taxa_list` still to graft whose sister clade is strictly nested within the fitted clade,
+#' and `n_unsampled` the unsampled species derived from `total_richness_per_clades` (0 without it).
+#'
+#' Taxa that are sister to the fitted clade itself are outside of its crown group, so they are not counted:
+#' when the sister clade itself is fitted (i.e. have at least `min_tips` tips) and nothing is pending nor unsampled within it, the sampling fraction is 1.
+#' When an enclosing clade is fitted, the taxa to graft on the sister clade (nested in the enclosing clade) are counted.
+#' The divergence time of each missing clade is still drawn with `TreeSim::corsim(missing = 1)`: unsampled species only influence the fitted rates,
+#' they do not take a branch.
+#'
+#' ### Unsampled species
+#'
+#' For a clade with a `total_richness` value provided: `nb_unsampled = total_richness - nb_backbone - nb_missing`, with `nb_missing` the number of taxa to graft
+#' whose sister clade is strictly nested within the clade. For a clade with no `total_richness` value (`NA`, or enclosing a sister clade without being listed),
+#' `nb_unsampled` is the sum of `nb_unsampled` over the largest clades nested within it with a `total_richness` value provided. If there is none, `nb_unsampled = 0`.
+#' The rationale is that even if `nb_unsampled` cannot be derived from its `total_richness` (as it is not provided for this clade), it has to at least account for the `nb_unsampled`
+#' species that have being identified in its own nested clades.
+#'
+#' If `total_richness_per_clades = NULL`, `nb_unsampled = 0` and no `sampling_fraction_df` is returned.
+#' To obtain the `sampling_fraction_df` without informing any total richness, provide `total_richness_per_clades` with the clades and only `NA` in `$total_richness`:
+#' `nb_unsampled = 0` and `total_richness` equals the backbone plus missing species in all clades (the sampling fraction is 1).
+#'
+#' The function stops, before any grafting, if `total_richness_per_clades` does not cover all the sister clades,
+#' if a `total_richness` provided is lower than the number of backbone species plus missing species of the clade,
+#' or if a clade has fewer unsampled species than the sum of the clades with an informed `total_richness` nested within it.
+#'
 #' ### Species attributes: allowed states of a simmap
 #'
 #' A `simmap` describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
@@ -297,36 +327,6 @@
 #'
 #' The other traits are matched exactly, and are inherited as they are from the point where the clade is grafted: with `"AB"` and `"high"` at the graft point and the allowed range `"A"`,
 #' the whole missing clade inherits `"A"` and `"high"`. Only one trait can be treated as ranges to prevent inflation of the number of combined allowed states to consider.
-#'
-#' ### Sampling fraction
-#'
-#' The birth-death model is fitted on the crown group of the sister clade or its enclosing clade, so the sampling fraction is:
-#' `n_present / (n_present + n_pending + n_unsampled)`, with `n_present` the tips of the fitted clade in the current tree
-#' (backbone tips and taxa already grafted, so missing clades grafted in nested sister clades processed earlier are not missing anymore),
-#' `n_pending` the taxa of `missing_taxa_list` still to graft whose sister clade is strictly nested within the fitted clade,
-#' and `n_unsampled` the unsampled species derived from `total_richness_per_clades` (0 without it).
-#'
-#' Taxa that are sister to the fitted clade itself are outside of its crown group, so they are not counted:
-#' when the sister clade itself is fitted (i.e. have at least `min_tips` tips) and nothing is pending nor unsampled within it, the sampling fraction is 1.
-#' When an enclosing clade is fitted, the taxa to graft on the sister clade (nested in the enclosing clade) are counted.
-#' The divergence time of each missing clade is still drawn with `TreeSim::corsim(missing = 1)`: unsampled species only influence the fitted rates,
-#' they do not take a branch.
-#'
-#' ### Unsampled species
-#'
-#' For a clade with a `total_richness` value provided: `nb_unsampled = total_richness - nb_backbone - nb_missing`, with `nb_missing` the number of taxa to graft
-#' whose sister clade is strictly nested within the clade. For a clade with no `total_richness` value (`NA`, or enclosing a sister clade without being listed),
-#' `nb_unsampled` is the sum of `nb_unsampled` over the largest clades nested within it with a `total_richness` value provided. If there is none, `nb_unsampled = 0`.
-#' The rationale is that even if `nb_unsampled` cannot be derived from its `total_richness` (as it is not provided for this clade), it has to at least account for the `nb_unsampled`
-#' species that have being identified in its own nested clades.
-#'
-#' If `total_richness_per_clades = NULL`, `nb_unsampled = 0` and no `sampling_fraction_df` is returned.
-#' To obtain the `sampling_fraction_df` without informing any total richness, provide `total_richness_per_clades` with the clades and only `NA` in `$total_richness`:
-#' `nb_unsampled = 0` and `total_richness` equals the backbone plus missing species in all clades (the sampling fraction is 1).
-#'
-#' The function stops, before any grafting, if `total_richness_per_clades` does not cover all the sister clades,
-#' if a `total_richness` provided is lower than the number of backbone species plus missing species of the clade,
-#' or if a clade has fewer unsampled species than the sum of the clades with an informed `total_richness` nested within it.
 #'
 #' ### Temporary saves and resuming
 #'
@@ -549,7 +549,8 @@
 #' # Load the range simmap
 #' data(toy_simmap_ranges)
 #'
-#' # The clades are grafted on stem branch pieces in ranges containing "A" or "B", and in elevation "low"
+#' # The clades are grafted on stem branch pieces in ranges
+#' # containing "A" or "B" and in elevation "low"
 #' grafted_phy_ranges_traits <- graft_missing_clades(phy = toy_backbone,
 #'     missing_taxa_list = missing_clades_list,
 #'     simmap = list(biogeo = toy_simmap_ranges, elevation = toy_simmap_elevation),
