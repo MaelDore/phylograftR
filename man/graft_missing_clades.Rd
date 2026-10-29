@@ -7,15 +7,14 @@
 graft_missing_clades(
   phy,
   missing_taxa_list,
+  min_tips = 5,
+  total_richness_per_clades = NULL,
   simmap = NULL,
   allowed_states = NULL,
   treat_states_as_ranges = FALSE,
   return_simmap = TRUE,
   min_valid_fraction = 0.1,
   max_age_redraws = 1000,
-  min_tips = 5,
-  total_richness_per_clades = NULL,
-  ultrametric_tol = .Machine$double.eps^0.5,
   seed = 1234,
   nb_simulations = 1,
   force_simulations = FALSE,
@@ -25,6 +24,7 @@ graft_missing_clades(
   temp_file_path = NULL,
   clean_temp_files = TRUE,
   resume = FALSE,
+  ultrametric_tol = .Machine$double.eps^0.5,
   verbose = TRUE
 )
 }
@@ -47,6 +47,28 @@ Only used with a \code{simmap}. Taxa with the same sister clade are grafted toge
 With the maps of several traits, each element is a list with the states of each trait (\code{NULL}: no taxon-level value for the trait), e.g.,
 \code{list(M1 = list(c("blue", "green"), "high"), M2 = list(NULL, "low"))} (see 'Several traits' in Details section).
 }}
+
+\item{min_tips}{Integer. Minimum number of tips of the clade used to fit the birth-death model.
+If the sister clade has fewer tips, the smallest enclosing clade with at least \code{min_tips} tips is used instead. Must be at least 3. Default is \code{5}.}
+
+\item{total_richness_per_clades}{(Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
+nor in \code{missing_taxa_list} (i.e., unsampled species) when fitting the birth-death models. Items:
+\itemize{
+\item \verb{$Sister_clade}: List of character vectors of tips, defining clades as in \code{missing_taxa_list$Sister_clade}.
+Node IDs are not accepted: convert them with \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} in the same call as \code{missing_taxa_list},
+so the tips of the clades match between both objects.
+It must cover all the unique sister clades of \code{missing_taxa_list}. It can include other clades, e.g., enclosing clades.
+\item \verb{$total_richness}: Vector of positive integers, same length as \verb{$Sister_clade}. Total number of species of each clade,
+i.e., backbone species, missing species nested within the clade, and unsampled species. Use \code{NA} if unknown: the unsampled species
+are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
+}
+
+With \code{NULL} (default), no \code{sampling_fraction_df} is returned and missing species to graft and backbone species
+are assumed to cover all species in the focal group (no unsampled species).
+If the list is provided with only \code{NA} in \verb{$total_richness}, the fits are identical (no unsampled species in any clade, \code{total_richness} = backbone + missing species),
+but the \code{sampling_fraction_df} table is returned (with \code{total_richness_provided = FALSE}).
+
+See 'Sampling fraction and unsampled species' in Details section.}
 
 \item{simmap}{(Optional) A stochastic character map of the backbone, of class \code{"simmap"} (e.g., from \code{phytools::make.simmap()} or \code{phytools::sim.history()}),
 or a set of maps of the same trait, of class \code{"multiSimmap"} (e.g., from \code{phytools::make.simmap(nsim = 10)}), used as alternative hypotheses of the evolution of a species attribute
@@ -93,31 +115,6 @@ as their divergence times are concentrated on a small part of the stem branch. T
 \item{max_age_redraws}{Integer. Only used with a \code{simmap}. Maximum number of times the divergence time of a missing clade can be drawn again when it falls
 in a part of the stem branch that is not in an allowed state. The function stops with an informative message if this limit is reached. Default is \code{1000}.}
 
-\item{min_tips}{Integer. Minimum number of tips of the clade used to fit the birth-death model.
-If the sister clade has fewer tips, the smallest enclosing clade with at least \code{min_tips} tips is used instead. Must be at least 3. Default is \code{5}.}
-
-\item{total_richness_per_clades}{(Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
-nor in \code{missing_taxa_list} (i.e., unsampled species) when fitting the birth-death models. Items:
-\itemize{
-\item \verb{$Sister_clade}: List of character vectors of tips, defining clades as in \code{missing_taxa_list$Sister_clade}.
-Node IDs are not accepted: convert them with \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} in the same call as \code{missing_taxa_list},
-so the tips of the clades match between both objects.
-It must cover all the unique sister clades of \code{missing_taxa_list}. It can include other clades, e.g., enclosing clades.
-\item \verb{$total_richness}: Vector of positive integers, same length as \verb{$Sister_clade}. Total number of species of each clade,
-i.e., backbone species, missing species nested within the clade, and unsampled species. Use \code{NA} if unknown: the unsampled species
-are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
-}
-
-With \code{NULL} (default), no \code{sampling_fraction_df} is returned and missing species to graft and backbone species
-are assumed to cover all species in the focal group (no unsampled species).
-If the list is provided with only \code{NA} in \verb{$total_richness}, the fits are identical (no unsampled species in any clade, \code{total_richness} = backbone + missing species),
-but the \code{sampling_fraction_df} table is returned (with \code{total_richness_provided = FALSE}).
-
-See 'Sampling fraction and unsampled species' in Details section.}
-
-\item{ultrametric_tol}{Numeric. Tolerance used by \code{ape::is.ultrametric()} for the ultrametricity checks of the backbone and of the final phylogeny.
-Default is \code{.Machine$double.eps^0.5}.}
-
 \item{seed}{Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
 is restored on exit. Set to \code{NULL} to use the random number generator of the session. Default is \code{1234}.
 With several simulations, it is the master seed: the first simulation uses \code{seed}, and the seeds of the other simulations are derived from it (see 'Multiple simulations').}
@@ -151,6 +148,9 @@ If the run crashes or is interrupted, nothing is deleted so it can be resumed. U
 
 \item{resume}{Logical. Whether to resume an interrupted run from its temporary files, which must come from a run with the exact same arguments (see 'Temporary saves and resuming').
 Needs \code{save_temp = TRUE}. Default is \code{FALSE}.}
+
+\item{ultrametric_tol}{Numeric. Tolerance used by \code{ape::is.ultrametric()} for the ultrametricity checks of the backbone and of the final phylogeny.
+Default is \code{.Machine$double.eps^0.5}.}
 
 \item{verbose}{Logical. Whether to display progress. Messages print every 10 missing clades.
 If computation is run in parallel, only a message is printed when each simulation is done. Default is \code{TRUE}.}
@@ -234,6 +234,38 @@ under the fitted model, conditioned on the number of taxa and on its stem age (t
 When a sister clade contains fewer tips than \code{min_tips}, an alternative higher clade is selected to fit the birth-death model.
 This 'enclosing clade' is identified by walking rootward the tree node by node, starting from the sister clade, until a clade meets the \code{min_tips} condition.
 This ensures that the diversification dynamics modeled are based on enough tips to be relevant, while being closely associated with the sister clade.
+}
+
+\subsection{Sampling fraction}{
+
+The birth-death model is fitted on the crown group of the sister clade or its enclosing clade, so the sampling fraction is:
+\code{n_present / (n_present + n_pending + n_unsampled)}, with \code{n_present} the tips of the fitted clade in the current tree
+(backbone tips and taxa already grafted, so missing clades grafted in nested sister clades processed earlier are not missing anymore),
+\code{n_pending} the taxa of \code{missing_taxa_list} still to graft whose sister clade is strictly nested within the fitted clade,
+and \code{n_unsampled} the unsampled species derived from \code{total_richness_per_clades} (0 without it).
+
+Taxa that are sister to the fitted clade itself are outside of its crown group, so they are not counted:
+when the sister clade itself is fitted (i.e. have at least \code{min_tips} tips) and nothing is pending nor unsampled within it, the sampling fraction is 1.
+When an enclosing clade is fitted, the taxa to graft on the sister clade (nested in the enclosing clade) are counted.
+The divergence time of each missing clade is still drawn with \code{TreeSim::corsim(missing = 1)}: unsampled species only influence the fitted rates,
+they do not take a branch.
+}
+
+\subsection{Unsampled species}{
+
+For a clade with a \code{total_richness} value provided: \code{nb_unsampled = total_richness - nb_backbone - nb_missing}, with \code{nb_missing} the number of taxa to graft
+whose sister clade is strictly nested within the clade. For a clade with no \code{total_richness} value (\code{NA}, or enclosing a sister clade without being listed),
+\code{nb_unsampled} is the sum of \code{nb_unsampled} over the largest clades nested within it with a \code{total_richness} value provided. If there is none, \code{nb_unsampled = 0}.
+The rationale is that even if \code{nb_unsampled} cannot be derived from its \code{total_richness} (as it is not provided for this clade), it has to at least account for the \code{nb_unsampled}
+species that have being identified in its own nested clades.
+
+If \code{total_richness_per_clades = NULL}, \code{nb_unsampled = 0} and no \code{sampling_fraction_df} is returned.
+To obtain the \code{sampling_fraction_df} without informing any total richness, provide \code{total_richness_per_clades} with the clades and only \code{NA} in \verb{$total_richness}:
+\code{nb_unsampled = 0} and \code{total_richness} equals the backbone plus missing species in all clades (the sampling fraction is 1).
+
+The function stops, before any grafting, if \code{total_richness_per_clades} does not cover all the sister clades,
+if a \code{total_richness} provided is lower than the number of backbone species plus missing species of the clade,
+or if a clade has fewer unsampled species than the sum of the clades with an informed \code{total_richness} nested within it.
 }
 
 \subsection{Species attributes: allowed states of a simmap}{
@@ -360,70 +392,6 @@ whereas a missing clade allowed in \code{"AB;high"} only can be grafted on stem 
 
 The other traits are matched exactly, and are inherited as they are from the point where the clade is grafted: with \code{"AB"} and \code{"high"} at the graft point and the allowed range \code{"A"},
 the whole missing clade inherits \code{"A"} and \code{"high"}. Only one trait can be treated as ranges to prevent inflation of the number of combined allowed states to consider.
-}
-
-\subsection{Sampling fraction}{
-
-The birth-death model is fitted on the crown group of the sister clade or its enclosing clade, so the sampling fraction is:
-\code{n_present / (n_present + n_pending + n_unsampled)}, with \code{n_present} the tips of the fitted clade in the current tree
-(backbone tips and taxa already grafted, so missing clades grafted in nested sister clades processed earlier are not missing anymore),
-\code{n_pending} the taxa of \code{missing_taxa_list} still to graft whose sister clade is strictly nested within the fitted clade,
-and \code{n_unsampled} the unsampled species derived from \code{total_richness_per_clades} (0 without it).
-
-Taxa that are sister to the fitted clade itself are outside of its crown group, so they are not counted:
-when the sister clade itself is fitted (i.e. have at least \code{min_tips} tips) and nothing is pending nor unsampled within it, the sampling fraction is 1.
-When an enclosing clade is fitted, the taxa to graft on the sister clade (nested in the enclosing clade) are counted.
-The divergence time of each missing clade is still drawn with \code{TreeSim::corsim(missing = 1)}: unsampled species only influence the fitted rates,
-they do not take a branch.
-}
-
-\subsection{Unsampled species}{
-
-For a clade with a \code{total_richness} value provided: \code{nb_unsampled = total_richness - nb_backbone - nb_missing}, with \code{nb_missing} the number of taxa to graft
-whose sister clade is strictly nested within the clade. For a clade with no \code{total_richness} value (\code{NA}, or enclosing a sister clade without being listed),
-\code{nb_unsampled} is the sum of \code{nb_unsampled} over the largest clades nested within it with a \code{total_richness} value provided. If there is none, \code{nb_unsampled = 0}.
-The rationale is that even if \code{nb_unsampled} cannot be derived from its \code{total_richness} (as it is not provided for this clade), it has to at least account for the \code{nb_unsampled}
-species that have being identified in its own nested clades.
-
-If \code{total_richness_per_clades = NULL}, \code{nb_unsampled = 0} and no \code{sampling_fraction_df} is returned.
-To obtain the \code{sampling_fraction_df} without informing any total richness, provide \code{total_richness_per_clades} with the clades and only \code{NA} in \verb{$total_richness}:
-\code{nb_unsampled = 0} and \code{total_richness} equals the backbone plus missing species in all clades (the sampling fraction is 1).
-
-The function stops, before any grafting, if \code{total_richness_per_clades} does not cover all the sister clades,
-if a \code{total_richness} provided is lower than the number of backbone species plus missing species of the clade,
-or if a clade has fewer unsampled species than the sum of the clades with an informed \code{total_richness} nested within it.
-}
-
-\subsection{Temporary saves and resuming}{
-
-With \code{save_temp = TRUE}, each grafted phylogeny (one per simulation and per stochastic map) is saved in its own \code{.rds} file, built from \code{temp_file_path} by adding
-the suffixes \code{"_map_<name>"} when a \code{"multiSimmap"} is used, then \code{"_sim_<k>"} when \code{nb_simulations > 1}.
-For instance, with \code{temp_file_path = "dir/temp.rds"}:
-\itemize{
-\item a single phylogeny uses \code{"dir/temp.rds"};
-\item several simulations use \code{"dir/temp_sim_1.rds"}, \code{"dir/temp_sim_2.rds"}, ...;
-\item several maps use \code{"dir/temp_map_A.rds"}, \code{"dir/temp_map_B.rds"}, ...;
-\item several simulations across several maps use both suffixes as \code{"dir/temp_map_A_sim_1.rds"}.
-}
-
-With \code{force_simulations = TRUE}, \verb{<k>} is the number of the attempt, not necessarily the ID to which the grafted phylogeny will be attributed to in the final output.
-This is required to identify the appropriate seed used to produce each attempt; attempts that failed leave a file too for tractability.
-
-Temporary files can be read with \code{readRDS()} and used to plot the grafted phylogeny in its current state.
-The object is a regular \code{"phylo"} with the attribute \code{"phylograftR_temp"} that stores what is needed to resume a run.
-Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with \verb{$simmap}, \verb{$grafted_tips}, etc.).
-
-With \code{clean_temp_files = TRUE} (default), all the temporary files of the run are deleted once the function returns without crashing.
-A run that crashes or is interrupted never deletes its files, so it can be resumed with \code{resume = TRUE}.
-Use \code{clean_temp_files = FALSE} to keep the files after a successful run.
-
-With \code{resume = TRUE}, the function must be called again with \strong{exactly the same arguments} as the interrupted run.
-For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
-
-Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a \code{missing_taxa_list} restricted to these taxa:
-the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
-the identification of the grafted tips and the updated \code{simmap} would be wrong, and a \code{simmap} of the initial backbone would not match the temporary phylogeny.
-Use \code{resume = TRUE} instead.
 }
 
 \subsection{Parallel computation}{
@@ -628,6 +596,37 @@ Other functions from phylograftR:
 \item \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to identify the grafted tips and branches of a phylogeny,
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
 \item \code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}} to check a posteriori that grafted taxa respect their constraints.
+}
+\subsection{Temporary saves and resuming}{
+
+With \code{save_temp = TRUE}, each grafted phylogeny (one per simulation and per stochastic map) is saved in its own \code{.rds} file, built from \code{temp_file_path} by adding
+the suffixes \code{"_map_<name>"} when a \code{"multiSimmap"} is used, then \code{"_sim_<k>"} when \code{nb_simulations > 1}.
+For instance, with \code{temp_file_path = "dir/temp.rds"}:
+\itemize{
+\item a single phylogeny uses \code{"dir/temp.rds"};
+\item several simulations use \code{"dir/temp_sim_1.rds"}, \code{"dir/temp_sim_2.rds"}, ...;
+\item several maps use \code{"dir/temp_map_A.rds"}, \code{"dir/temp_map_B.rds"}, ...;
+\item several simulations across several maps use both suffixes as \code{"dir/temp_map_A_sim_1.rds"}.
+}
+
+With \code{force_simulations = TRUE}, \verb{<k>} is the number of the attempt, not necessarily the ID to which the grafted phylogeny will be attributed to in the final output.
+This is required to identify the appropriate seed used to produce each attempt; attempts that failed leave a file too for tractability.
+
+Temporary files can be read with \code{readRDS()} and used to plot the grafted phylogeny in its current state.
+The object is a regular \code{"phylo"} with the attribute \code{"phylograftR_temp"} that stores what is needed to resume a run.
+Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with \verb{$simmap}, \verb{$grafted_tips}, etc.).
+
+With \code{clean_temp_files = TRUE} (default), all the temporary files of the run are deleted once the function returns without crashing.
+A run that crashes or is interrupted never deletes its files, so it can be resumed with \code{resume = TRUE}.
+Use \code{clean_temp_files = FALSE} to keep the files after a successful run.
+
+With \code{resume = TRUE}, the function must be called again with \strong{exactly the same arguments} as the interrupted run.
+For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
+
+Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a \code{missing_taxa_list} restricted to these taxa:
+the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
+the identification of the grafted tips and the updated \code{simmap} would be wrong, and a \code{simmap} of the initial backbone would not match the temporary phylogeny.
+Use \code{resume = TRUE} instead.
 }
 }
 \author{
