@@ -2,6 +2,7 @@
 
 export(build_missing_taxa_list)
 export(check_grafting_constraints)
+export(convert_contMap_to_simmap)
 export(convert_nodes_to_tips)
 export(flatten_grafted_phylogenies)
 export(graft_missing_clades)
@@ -34,7 +35,9 @@ importFrom(phytools,
   nodeheight
 )
 importFrom(stats,
+  quantile,
   runif,
   setNames
 )
+importFrom(tools,md5sum)
 importFrom(utils,read.table)

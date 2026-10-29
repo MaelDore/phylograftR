@@ -19,15 +19,17 @@ graft_missing_taxa(
   method = "BD_clades",
   min_tips = 5,
   total_richness_per_clades = NULL,
-  verbose = TRUE,
-  save_temp = FALSE,
-  save_temp_every = 10,
-  temp_file_path = NULL,
   ultrametric_tol = .Machine$double.eps^0.5,
+  seed = 1234,
   nb_simulations = 1,
   force_simulations = FALSE,
   parallel = NULL,
-  seed = 1234
+  save_temp = FALSE,
+  save_temp_every = NULL,
+  temp_file_path = NULL,
+  clean_temp_files = TRUE,
+  resume = FALSE,
+  verbose = TRUE
 )
 }
 \arguments{
@@ -156,18 +158,12 @@ If the list is provided with only \code{NA} in \verb{$total_richness}, no unsamp
 
 See 'Sampling fraction and unsampled species' in Details section.}
 
-\item{verbose}{Logical. Whether to display progress. Messages print every 100 taxa for \code{method = "uniform"}, and every 10 target clades for \code{method = "BD_clades"}.
-Default is \code{TRUE}.}
-
-\item{save_temp}{Logical. Whether to save a temporary version of the grafted phylogeny during the process, to recover from a crash on long runs. Default is \code{FALSE}.}
-
-\item{save_temp_every}{Integer. Frequency of the temporary saves: every \code{save_temp_every} taxa for \code{method = "uniform"},
-and every \code{save_temp_every} target clades for \code{method = "BD_clades"}. Only used if \code{save_temp = TRUE}. Default is \code{10}.}
-
-\item{temp_file_path}{Character string. Path of the \code{.rds} file used for temporary saves. It must end with \code{.rds} and its directory must exist and be writable. Default is \code{NULL}, which saves in \code{"./temp_phy_from_grafting.rds"}.}
-
 \item{ultrametric_tol}{Numeric. Tolerance used by \code{ape::is.ultrametric()} for the ultrametricity checks of the backbone and of the final phylogeny.
 Default is \code{.Machine$double.eps^0.5}.}
+
+\item{seed}{Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
+is restored on exit. Set to \code{NULL} to use the random number generator of the session. Default is \code{1234}.
+With several simulations, it is the master seed: the first simulation uses \code{seed}, and the seeds of the other simulations are derived from it (see 'Multiple simulations').}
 
 \item{nb_simulations}{Integer. Number of simulations, i.e., of grafted phylogenies to produce in the same run, from the same backbone and the same \code{missing_taxa_list}.
 The grafting is stochastic, so ideally downstream analyses should be run on a set of grafted phylogenies rather than on a single one. Default is \code{1}.
@@ -181,9 +177,27 @@ Default is \code{NULL}: the simulations are run in parallel if the user set a \c
 \code{FALSE} forces a sequential run, even if a plan is set. \code{TRUE} execute the \code{future} plan, but stops with an informative error if the packages are not installed or no plan is set.
 See 'Parallel computation' in Details section for recommendations on whether parallelization is useful in your case.}
 
-\item{seed}{Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
-is restored on exit. Set to \code{NULL} to use the random number generator of the session. Default is \code{1234}.
-With several simulations, it is the master seed: the first simulation uses \code{seed}, and the seeds of the other simulations are derived from it (see 'Multiple simulations').}
+\item{save_temp}{Logical. Whether to save the grafted phylogenies during the process, to recover from a crash or an interruption of long runs (see 'Temporary saves and resuming' in the Details section).
+Each phylogeny (one per simulation and per stochastic map) has its own temporary file. Its progress is saved every \code{save_temp_every} taxa or groups of taxa (missing clades in \code{graft_missing_clades()}), if not \code{NULL}, and the phylogeny is always saved once fully grafted. Default is \code{FALSE}.}
+
+\item{save_temp_every}{Integer or \code{NULL}. Frequency of the saves of the progress, in number of taxa for \code{method = "uniform"}, and groups of taxa for \code{method = "BD_clades"}
+(the taxa grafted together because they share the same target clade, availability of its stem and allowed states). Only used if \code{save_temp = TRUE}.
+Default is \code{NULL}: save each phylogeny only once fully grafted.}
+
+\item{temp_file_path}{Character string. Path of the \code{.rds} file used for the temporary saves. It must end with \code{.rds} and its directory must exist and be writable.
+Default is \code{NULL}, which saves in \code{"temp_phy_from_grafting.rds"} in the working directory.
+With several simulations and/or several stochastic maps, the path is a template:
+the suffixes \code{"_map_<name>"} (several maps) and \code{"_sim_<k>"} (several simulations) are added before \code{".rds"}, in this order (e.g., \code{"temp_map_A_sim_2.rds"}).
+See 'Temporary saves and resuming' in the Details section.}
+
+\item{clean_temp_files}{Logical. Whether to delete all the temporary files of the run once it is completed without stopping/crashing. Only used if \code{save_temp = TRUE}.
+If the run crashes or is interrupted, nothing is deleted so it can be resumed. Use \code{FALSE} to keep the files. Default is \code{TRUE}.}
+
+\item{resume}{Logical. Whether to resume an interrupted run from its temporary files, which must come from a run with the exact same arguments (see 'Temporary saves and resuming').
+Needs \code{save_temp = TRUE}. Default is \code{FALSE}.}
+
+\item{verbose}{Logical. Whether to display progress. Messages print every 100 taxa for \code{method = "uniform"}, and every 10 target clades for \code{method = "BD_clades"}.
+Default is \code{TRUE}.}
 }
 \value{
 The function returns an object of class \code{"phylo"}: the backbone phylogeny with the grafted taxa added as new tips.
@@ -344,6 +358,21 @@ with \code{TreeSim::corsim()}, as without a \code{simmap}: the diversification m
 The same grafting procedure, described above without a \code{simmap}, is then used except that
 an age can only be used if an available branch in an allowed state crosses it (without a \code{simmap}, if an available branch crosses it).
 The ages are used from the oldest to the youngest, each for one taxon of the group.
+
+\strong{Cautions for interpretation: risks of circularity.}
+
+Constraining the grafting by a trait that will then be analyzed (e.g., the association of the trait with diversification) may bias the results towards the constraint.
+The grafted taxa are placed only where the trait allows it, so they are in the allowed states by construction. This can create or inflate an association between the trait and the diversification dynamics,
+affect the rates of transitions between states, or inflate the phylogenetic signal of the trait. It also reduces the uncertainty about the state of the grafted lineages since they always inherit a unique state.
+It is recommended to acknowledge these potential biases when interpreting such analyses.
+
+To limit the risk of circularity, multiple approaches are possible:
+\itemize{
+\item constrain the grafting by traits that are not the object of downstream analysis;
+\item compare the results with and without the constraint (or on the backbone only);
+\item keep the constraint as loose as the information allows (e.g., allowed states that include neighboring states);
+\item use several maps and simulations to propagate the uncertainty in ancestral state estimates.
+}
 }
 
 \subsection{Biogeographic ranges as states}{
@@ -378,7 +407,7 @@ if it differs from \code{nb_simulations}, and stops if no simulation succeeded. 
 (up to \code{10 * nb_simulations} attempts): the phylogenies are then named \code{"sim_1"} to \code{"sim_N"} without gaps, and the seeds of the failed attempts are in the attribute \code{"failed"}.
 Any other error (invalid inputs, no branch available for a taxon, ...) concerns all the simulations and stops the whole run.
 
-With \code{save_temp = TRUE} and several simulations, each simulation saves its temporary phylogeny in its own file, with the suffix \code{"_sim_k"} added before \code{".rds"} in \code{temp_file_path}.
+With \code{save_temp = TRUE}, each simulation saves its own temporary file (see 'Temporary saves and resuming').
 }
 
 \subsection{Multiple stochastic maps}{
@@ -395,7 +424,8 @@ Each phylogeny can be reproduced alone with its map (as a single \code{simmap}) 
 
 A map for which no simulation could be obtained is dropped from the output with a warning, and listed in the attribute \code{"failed_maps"} of the list
 (data.frame with the columns \code{map} and \code{reason}). The function stops if no map gives any phylogeny.
-With \code{save_temp = TRUE}, the temporary files get the suffix \code{"_map_<name>"} before the suffix of the simulation.
+
+With \code{save_temp = TRUE}, each map and each simulation saves its own temporary file (see 'Temporary saves and resuming').
 }
 
 \subsection{Several traits}{
@@ -451,6 +481,38 @@ The function stops, before any grafting, if \code{total_richness_per_clades} doe
 the number of backbone species plus species to graft of the clade, or if a clade has fewer unsampled species than the sum of the clades with
 a \code{total_richness} provided nested within it.
 With \code{method = "uniform"}, no diversification model is used: \code{total_richness_per_clades} is only used to derive the \code{sampling_fraction_df} table (a warning is issued).
+}
+
+\subsection{Temporary saves and resuming}{
+
+With \code{save_temp = TRUE}, each grafted phylogeny (one per simulation and per stochastic map) is saved in its own \code{.rds} file, built from \code{temp_file_path} by adding
+the suffixes \code{"_map_<name>"} when a \code{"multiSimmap"} is used, then \code{"_sim_<k>"} when \code{nb_simulations > 1}.
+For instance, with \code{temp_file_path = "dir/temp.rds"}:
+\itemize{
+\item a single phylogeny uses \code{"dir/temp.rds"};
+\item several simulations use \code{"dir/temp_sim_1.rds"}, \code{"dir/temp_sim_2.rds"}, ...;
+\item several maps use \code{"dir/temp_map_A.rds"}, \code{"dir/temp_map_B.rds"}, ...;
+\item several simulations across several maps use both suffixes as \code{"dir/temp_map_A_sim_1.rds"}.
+}
+
+With \code{force_simulations = TRUE}, \verb{<k>} is the number of the attempt, not necessarily the ID to which the grafted phylogeny will be attributed to in the final output.
+This is required to identify the appropriate seed used to produce each attempt; attempts that failed leave a file too for tractability.
+
+Temporary files can be read with \code{readRDS()} and used to plot the grafted phylogeny in its current state.
+The object is a regular \code{"phylo"} with the attribute \code{"phylograftR_temp"} that stores what is needed to resume a run.
+Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with \verb{$simmap}, \verb{$grafted_tips}, etc.).
+
+With \code{clean_temp_files = TRUE} (default), all the temporary files of the run are deleted once the function returns without crashing.
+A run that crashes or is interrupted never deletes its files, so it can be resumed with \code{resume = TRUE}.
+Use \code{clean_temp_files = FALSE} to keep the files after a successful run.
+
+With \code{resume = TRUE}, the function must be called again with \strong{exactly the same arguments} as the interrupted run.
+For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
+
+Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a \code{missing_taxa_list} restricted to these taxa:
+the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
+the identification of the grafted tips and the updated \code{simmap} would be wrong, and a \code{simmap} of the initial backbone would not match the temporary phylogeny.
+Use \code{resume = TRUE} instead.
 }
 
 \subsection{Parallel computation}{

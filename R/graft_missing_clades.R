@@ -115,6 +115,7 @@
 #'   Needs `save_temp = TRUE`. Default is `FALSE`.
 #' @param verbose Logical. Whether to display progress. Messages print every 10 missing clades.
 #'   If computation is run in parallel, only a message is printed when each simulation is done. Default is `TRUE`.
+#'
 #' @return The function returns an object of class `"phylo"`: the backbone phylogeny with the grafted taxa added as new tips.
 #'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
 #'
