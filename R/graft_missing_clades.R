@@ -193,6 +193,19 @@
 #' The function stops, before any grafting, if the taxa of a same missing clade have different allowed states, or if the stem branch of a sister clade has no piece in the allowed states
 #' (the clades are listed), and warns about the missing clades with a small share of their stem branch in allowed states (see `min_valid_fraction`).
 #'
+#' **Cautions for interpretation: risks of circularity.**
+#'
+#' Constraining the grafting by a trait that will then be analyzed (e.g., the association of the trait with diversification) may bias the results towards the constraint.
+#' The grafted taxa are placed only where the trait allows it, so they are in the allowed states by construction. This can create or inflate an association between the trait and the diversification dynamics,
+#' affect the rates of transitions between states, or inflate the phylogenetic signal of the trait. It also reduces the uncertainty about the state of the grafted clades since they always inherit a unique state.
+#' It is recommended to acknowledge these potential biases when interpreting such analyses.
+#'
+#' To limit the risk of circularity, multiple approaches are possible:
+#' * constrain the grafting by traits that are not the object of downstream analysis;
+#' * compare the results with and without the constraint (or on the backbone only);
+#' * keep the constraint as loose as the information allows (e.g., allowed states that include neighboring states);
+#' * use several maps and simulations to propagate the uncertainty in ancestral state estimates.
+#'
 #' ### Biogeographic ranges as states
 #'
 #' With `treat_states_as_ranges = TRUE`, the states of the `simmap` are biogeographic ranges, coded as in `BioGeoBEARS`
