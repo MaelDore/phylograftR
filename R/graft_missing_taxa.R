@@ -126,10 +126,18 @@
 #'   See 'Sampling fraction and unsampled species' in Details section.
 #' @param verbose Logical. Whether to display progress. Messages print every 100 taxa for `method = "uniform"`, and every 10 target clades for `method = "BD_clades"`.
 #'   Default is `TRUE`.
-#' @param save_temp Logical. Whether to save a temporary version of the grafted phylogeny during the process, to recover from a crash on long runs. Default is `FALSE`.
-#' @param save_temp_every Integer. Frequency of the temporary saves: every `save_temp_every` taxa for `method = "uniform"`,
-#'   and every `save_temp_every` target clades for `method = "BD_clades"`. Only used if `save_temp = TRUE`. Default is `10`.
-#' @param temp_file_path Character string. Path of the `.rds` file used for temporary saves. It must end with `.rds` and its directory must exist and be writable. Default is `NULL`, which saves in `"./temp_phy_from_grafting.rds"`.
+#' @param save_temp Logical. Whether to save the grafted phylogenies during the process, to recover from a crash or an interruption of long runs (see 'Temporary saves and resuming' in the Details section).
+#'   Each phylogeny (one per simulation and per stochastic map) has its own temporary file. Its progress is saved every `save_temp_every` missing clades, and the phylogeny is always saved once fully grafted. Default is `FALSE`.
+#' @param save_temp_every Integer or `NULL`. Frequency of the saves of the progress, in number of taxa for `method = "uniform"`, and groups of taxa for `method = "BD_clades"`
+#'   (the taxa grafted together because they share the same target clade, availability of its stem and allowed states). Only used if `save_temp = TRUE`.
+#'   Default is `NULL`: save each phylogeny only once fully grafted.
+#' @param temp_file_path Character string. Path of the `.rds` file used for the temporary saves. It must end with `.rds` and its directory must exist and be writable.
+#'   Default is `NULL`, which saves in `"temp_phy_from_grafting.rds"` in the working directory.
+#'   With several simulations and/or several stochastic maps, the path is a template:
+#'   the suffixes `"_map_<name>"` (several maps) and `"_sim_<k>"` (several simulations) are added before `".rds"`, in this order (e.g., `"temp_map_A_sim_2.rds"`).
+#'   See 'Temporary saves and resuming' in the Details section.
+#' @param resume Logical. Whether to resume an interrupted run from its temporary files, which must come from a run with the exact same arguments (see 'Temporary saves and resuming').
+#'   Needs `save_temp = TRUE`. Default is `FALSE`.
 #' @param ultrametric_tol Numeric. Tolerance used by `ape::is.ultrametric()` for the ultrametricity checks of the backbone and of the final phylogeny.
 #'   Default is `.Machine$double.eps^0.5`.
 #' @param nb_simulations Integer. Number of simulations, i.e., of grafted phylogenies to produce in the same run, from the same backbone and the same `missing_taxa_list`.
@@ -327,7 +335,7 @@
 #' (up to `10 * nb_simulations` attempts): the phylogenies are then named `"sim_1"` to `"sim_N"` without gaps, and the seeds of the failed attempts are in the attribute `"failed"`.
 #' Any other error (invalid inputs, no branch available for a taxon, ...) concerns all the simulations and stops the whole run.
 #'
-#' With `save_temp = TRUE` and several simulations, each simulation saves its temporary phylogeny in its own file, with the suffix `"_sim_k"` added before `".rds"` in `temp_file_path`.
+#' With `save_temp = TRUE`, each simulation saves its own temporary file (see 'Temporary saves and resuming').
 #'
 #' ### Multiple stochastic maps
 #'
@@ -343,7 +351,8 @@
 #'
 #' A map for which no simulation could be obtained is dropped from the output with a warning, and listed in the attribute `"failed_maps"` of the list
 #' (data.frame with the columns `map` and `reason`). The function stops if no map gives any phylogeny.
-#' With `save_temp = TRUE`, the temporary files get the suffix `"_map_<name>"` before the suffix of the simulation.
+#'
+#' With `save_temp = TRUE`, each map and each simulation saves its own temporary file (see 'Temporary saves and resuming').
 #'
 #' ### Several traits
 #'
@@ -397,6 +406,31 @@
 #' the number of backbone species plus species to graft of the clade, or if a clade has fewer unsampled species than the sum of the clades with
 #' a `total_richness` provided nested within it.
 #' With `method = "uniform"`, no diversification model is used: `total_richness_per_clades` is only used to derive the `sampling_fraction_df` table (a warning is issued).
+#'
+#' ### Temporary saves and resuming
+#'
+#' With `save_temp = TRUE`, each grafted phylogeny (one per simulation and per stochastic map) is saved in its own `.rds` file, built from `temp_file_path` by adding
+#' the suffixes `"_map_<name>"` when a `"multiSimmap"` is used, then `"_sim_<k>"` when `nb_simulations > 1`.
+#' For instance, with `temp_file_path = "dir/temp.rds"`:
+#' * a single phylogeny uses `"dir/temp.rds"`;
+#' * several simulations use `"dir/temp_sim_1.rds"`, `"dir/temp_sim_2.rds"`, ...;
+#' * several maps use `"dir/temp_map_A.rds"`, `"dir/temp_map_B.rds"`, ...;
+#' * several simulations across several maps use both suffixes as `"dir/temp_map_A_sim_1.rds"`.
+#'
+#' With `force_simulations = TRUE`, `<k>` is the number of the attempt, not necessarily the ID to which the grafted phylogeny will be attributed to in the final output.
+#' This is required to identify the appropriate seed used to produce each attempt; attempts that failed leave a file too for tractability.
+#'
+#' Temporary files can be read with `readRDS()` and used to plot the grafted phylogeny in its current state.
+#' The object is a regular `"phylo"` with the attribute `"phylograftR_temp"` that stores what is needed to resume a run.
+#' Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with `$simmap`, `$grafted_tips`, etc.).
+#'
+#' With `resume = TRUE`, the function must be called again with **exactly the same arguments** as the interrupted run.
+#' For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
+#'
+#' Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a `missing_taxa_list` restricted to these taxa:
+#' the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
+#' the identification of the grafted tips and the updated `simmap` would be wrong, and a `simmap` of the initial backbone would not match the temporary phylogeny.
+#' Use `resume = TRUE` instead.
 #'
 #' ### Parallel computation
 #'
@@ -654,9 +688,10 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model for "BD_clades" (the enclosing clade is used if the focal clade is smaller)
                                 total_richness_per_clades = NULL, # NULL, or list with Target_clade = list(c(), ...) and total_richness = c(...) (NA allowed). Total number of species of the clades
                                 verbose = TRUE, # To print progress every 100 taxa or every 10 target clades
-                                save_temp = FALSE, # Save a temporary phylogeny after each target clade (BD_clades)
-                                save_temp_every = 10,
-                                temp_file_path = NULL, # Default = "./temp_phy_from_grafting.rds"
+                                save_temp = FALSE, # Save the grafted phylogenies during the process (partial every 'save_temp_every' taxa or groups of taxa, and complete once fully grafted)
+                                save_temp_every = NULL, # NULL: only save the complete phylogenies
+                                temp_file_path = NULL, # Default = "temp_phy_from_grafting.rds" in the working directory
+                                resume = FALSE, # Resume an interrupted run from its temporary files (same arguments)
                                 ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
                                 nb_simulations = 1, # Number of grafted phylogenies to produce in the same run (a multiPhylo if > 1)
                                 force_simulations = FALSE, # If TRUE, try new seeds until nb_simulations phylogenies are obtained (up to 10 x nb_simulations attempts)
@@ -668,6 +703,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     ## Check 'nb_simulations' and 'force_simulations'
     check_nb_simulations(nb_simulations = nb_simulations, force_simulations = force_simulations)
     check_parallel(parallel)
+    check_save_temp(save_temp = save_temp, save_temp_every = save_temp_every, resume = resume)
 
     ## Check 'method'
     if (!(method %in% c("uniform", "BD_clades")))
@@ -871,6 +907,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     ## temp_file_path
     # If provided, must be a single path ending with ".rds", in an existing and writable directory
     check_temp_file_path(temp_file_path = temp_file_path)
+    # Absolute path (in the main session), so the workers of a parallel run write in the same place
+    if (save_temp) { temp_file_path <- resolve_temp_file_path(temp_file_path) }
 
     ## Richness of the clades (unsampled species)
     # Validates 'total_richness_per_clades' if provided, and derives the number of unsampled species of each node of the backbone.
@@ -991,6 +1029,23 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     with_map_context(prepare_map(simmap_input$maps[[k]]), map_name = simmap_input$names[k])
   })
 
+  ### ---- Temporary saves ---- ###
+
+  # Tags of the maps in the names of the temporary files (maps never share a file)
+  map_tags <- temp_map_tags(simmap_input$names)
+
+  # Warn once, before any simulation, if 'save_temp_every' is larger than the number of units to graft (taxa, or groups of taxa): nothing would be saved before the phylogeny is complete
+  if (save_temp && !is.null(save_temp_every))
+  {
+    n_save_units <- vapply(prepared_maps, function (prepared)
+    {
+      if (method == "uniform") { return(n_missing) }
+      length(group_and_order_clades(phy, prepared$missing_taxa_list$Target_clade, include_target_clade_stem = prepared$missing_taxa_list$include_target_clade_stem,
+                                    allowed_states = if (use_states) prepared$missing_taxa_list$allowed_states else NULL)$group_clade_tips)
+    }, numeric(1))
+    warn_save_temp_every(save_temp_every = save_temp_every, n_units = n_save_units, unit = if (method == "uniform") "taxa" else "groups of taxa", map_names = simmap_input$names)
+  }
+
   ### ---- Simulations ---- ###
 
   # Function to produce one simulation = one grafted phylogeny, from the backbone, the tracker for states and the list of taxa of a map (prepared above), and the associated seed and index
@@ -1001,7 +1056,30 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     # With several simulations, the progress messages state the simulation they belong to
     # (and the map, if the maps of a 'multiSimmap' are used)
     sim_label <- paste0(if (!is.null(map_name)) paste0(" - Map ", map_name), if (nb_simulations > 1) paste0(" - Simulation n\u00b0", sim_index), collapse = "")
-    temp_file_path <- temp_file_path_simulation(temp_file_path = temp_file_path, index = sim_index, multiple = nb_simulations > 1, map_name = map_name)
+    temp_file_path <- temp_file_path_simulation(temp_file_path = temp_file_path, index = sim_index, multiple = nb_simulations > 1, map_name = map_name,
+                                                map_tag = if (is.null(map_name)) NULL else map_tags[[map_name]])
+
+    ## Temporary saves: signature of the inputs of this simulation (stored in its files), and resume from its file if requested
+    signature <- NULL
+    resumed <- NULL
+    if (save_temp)
+    {
+      signature <- temp_signature(phy = phy, missing_taxa_list = missing_taxa_list, tracker = tracker,
+                                  options = list(method = method, use_excluded_subclades = use_excluded_subclades, treat_states_as_ranges = treat_states_as_ranges, min_tips = min_tips,
+                                                 max_age_redraws = max_age_redraws, ultrametric_tol = ultrametric_tol, richness = richness_info$table,
+                                                 sim_seed = sim_seed, sim_index = sim_index, map_name = map_name))
+      if (resume)
+      {
+        resumed <- read_resume_state(path = temp_file_path, signature = signature)
+        # A complete phylogeny is reused as it is
+        if (!is.null(resumed) && identical(resumed$status, "complete"))
+        {
+          if (verbose) cat(paste0(Sys.time(), sim_label, " - Complete phylogeny found in the temporary file: reused\n"))
+          return(resumed$phy)
+        }
+        if (verbose && is.null(resumed)) cat(paste0(Sys.time(), sim_label, " - No temporary file found: grafting from scratch\n"))
+      }
+    }
 
     ## Set seed of the simulation, for the duration of the simulation only (the global RNG state is restored on exit)
     set_local_seed(sim_seed)
@@ -1028,7 +1106,18 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 
       if (verbose) cat(paste0(Sys.time(), sim_label, " - Start grafting process\n"))
 
-      for (i in seq_len(n_missing))
+      # Resume: restart from the phylogeny, the states and the random number generator saved with the last progress (the taxa already grafted are skipped)
+      first_taxon <- 1
+      if (!is.null(resumed))
+      {
+        phy <- resumed$phy
+        tracker <- resumed$state$tracker
+        set_rng_state(resumed$state$rng)
+        first_taxon <- resumed$state$progress$done + 1
+        if (verbose) cat(paste0(Sys.time(), sim_label, " - Resuming from the temporary file: ", first_taxon - 1, "/", n_missing, " taxa already grafted\n"))
+      }
+
+      for (i in seq_len(n_missing)[seq_len(n_missing) >= first_taxon])
       {
         focal_taxon_name <- missing_taxa_list$Taxon_name[i]
         # Is the stem of the target clade available for this taxon?
@@ -1099,15 +1188,11 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         # Enforce ultrametricity for the new terminal branch only (backbone branches are left untouched)
         phy <- enforce_ultrametry_new_tips(phy = phy, tip_labels = focal_taxon_name, root_age = root_age)
 
-        # Save temporary phylo if requested
-        if (save_temp && (i %% save_temp_every == 0))
+        # Save the progress if requested (the phylogeny is saved with its original node labels restored)
+        if (save_temp && !is.null(save_temp_every) && (i %% save_temp_every == 0))
         {
-          if (is.null(temp_file_path))
-          {
-            temp_file_path <- "./temp_phy_from_grafting.rds"
-          }
-          # Save the phylogeny with original node labels restored
-          saveRDS(object = restore_node_labels(phy = phy, labelled = labelled_backbone), file = file.path(temp_file_path))
+          save_temp_progress(path = temp_file_path, phy = phy, labelled_backbone = labelled_backbone, signature = signature, sim_seed = sim_seed,
+                             done = i, total = n_missing, unit = "taxa", tracker = tracker)
         }
 
         # Print progress if requested
@@ -1140,8 +1225,20 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
       nb_taxa_grafted <- 0
       nb_clades_grafted <- 0
 
+      # Resume: restart from the phylogeny, the states, the BD models already fitted and the random number generator saved with the last progress (the groups already grafted are skipped)
+      if (!is.null(resumed))
+      {
+        phy <- resumed$phy
+        tracker <- resumed$state$tracker
+        BD_cache <- resumed$state$bd_cache
+        nb_taxa_grafted <- resumed$state$counters$nb_taxa_grafted
+        nb_clades_grafted <- resumed$state$counters$nb_clades_grafted
+        set_rng_state(resumed$state$rng)
+        if (verbose) cat(paste0(Sys.time(), sim_label, " - Resuming from the temporary file: ", nb_clades_grafted, "/", n_groups, " groups of taxa already grafted\n"))
+      }
+
       # Loop per ordered clades
-      for (i in groups$group_order)
+      for (i in groups$group_order[seq_along(groups$group_order) > nb_clades_grafted])
       {
         # Extract ID of taxa in group n°i
         taxa_ID_i <- which(groups$group_ID == i)
@@ -1309,14 +1406,12 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
         nb_taxa_grafted <- nb_taxa_grafted + ntips_missing
         nb_clades_grafted <- nb_clades_grafted + 1
 
-        # Save temporary phylo if requested
-        if (save_temp && (nb_clades_grafted %% save_temp_every == 0))
+        # Save the progress if requested (the phylogeny is saved with its original node labels restored)
+        if (save_temp && !is.null(save_temp_every) && (nb_clades_grafted %% save_temp_every == 0))
         {
-          if (is.null(temp_file_path))
-          {
-            temp_file_path <- "./temp_phy_from_grafting.rds"
-          }
-          saveRDS(object = restore_node_labels(phy = phy, labelled = labelled_backbone), file = file.path(temp_file_path))
+          save_temp_progress(path = temp_file_path, phy = phy, labelled_backbone = labelled_backbone, signature = signature, sim_seed = sim_seed,
+                             done = nb_clades_grafted, total = n_groups, unit = "groups", tracker = tracker, bd_cache = BD_cache,
+                             counters = list(nb_taxa_grafted = nb_taxa_grafted, nb_clades_grafted = nb_clades_grafted))
         }
 
         # Print progress if requested
@@ -1351,6 +1446,9 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxon_name)
     if (!is.null(richness_info$table)) phy$sampling_fraction_df <- richness_info$table
     if (!is.null(updated_simmap)) phy$simmap <- updated_simmap
+
+    # Save the complete phylogeny, which replaces the saved progress
+    if (save_temp) { save_temp_complete(path = temp_file_path, phy = phy, signature = signature) }
 
     return(phy)
   }

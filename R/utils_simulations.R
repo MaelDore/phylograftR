@@ -99,17 +99,20 @@ derive_simulation_seeds <- function (seed, n)
 #' @param index Integer. Index of the simulation.
 #' @param multiple Logical. Whether several simulations are run. If `FALSE`, no suffix for the simulation is added.
 #' @param map_name `NULL` (a single map), or name of the map. The suffix of the map is added if not `NULL`.
+#' @param map_tag `NULL`, or tag of the map used in the suffix (see `temp_map_tags()`). By default, the name of the map with the characters other than letters, digits, `_`, `.` and `-` replaced by `_`.
 #'
 #' @noRd
 #'
 #' @return A path (or `NULL` if there is no suffix to add and `temp_file_path` is `NULL`).
 #'
 
-temp_file_path_simulation <- function (temp_file_path, index, multiple, map_name = NULL)
+temp_file_path_simulation <- function (temp_file_path, index, multiple, map_name = NULL, map_tag = NULL)
 {
   if (!multiple && is.null(map_name)) { return(temp_file_path) }
   if (is.null(temp_file_path)) { temp_file_path <- "./temp_phy_from_grafting.rds" }
-  suffix <- paste0(if (!is.null(map_name)) paste0("_map_", gsub("[^A-Za-z0-9_.-]", "_", map_name)),
+  # The tag of the map is computed once for all the maps (see temp_map_tags()), so maps never share a file; otherwise from the name
+  if (is.null(map_tag) && !is.null(map_name)) { map_tag <- gsub("[^A-Za-z0-9_.-]", "_", map_name) }
+  suffix <- paste0(if (!is.null(map_name)) paste0("_map_", map_tag),
                    if (multiple) paste0("_sim_", index), collapse = "")
   sub("\\.rds$", paste0(suffix, ".rds"), temp_file_path)
 }
