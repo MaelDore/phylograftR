@@ -564,13 +564,16 @@ test_that("remove_temp_files() warns about the files it cannot delete", {
   unlink(dirname(path), recursive = TRUE)
 })
 
-test_that("The save/resume arguments, then 'verbose', come last in both functions; 'seed' comes before 'nb_simulations'", {
-  tail_args <- c("save_temp", "save_temp_every", "temp_file_path", "clean_temp_files", "resume", "verbose")
+test_that("The arguments follow the blocks of the Details: inputs, method, constraints, richness, attributes, multi-run, saving and resuming, technical, verbose", {
+  common_tail <- c("seed", "nb_simulations", "force_simulations", "parallel", "save_temp", "save_temp_every", "temp_file_path", "clean_temp_files", "resume", "ultrametric_tol", "verbose")
+  expect_equal(names(formals(graft_missing_taxa)),
+               c("phy", "missing_taxa_list", "method", "min_tips", "include_target_clade_stem", "use_excluded_subclades", "exclude_subclades_stem", "total_richness_per_clades",
+                 "simmap", "allowed_states", "treat_states_as_ranges", "return_simmap", "min_valid_fraction", "max_age_redraws", common_tail))
+  expect_equal(names(formals(graft_missing_clades)),
+               c("phy", "missing_taxa_list", "min_tips", "total_richness_per_clades",
+                 "simmap", "allowed_states", "treat_states_as_ranges", "return_simmap", "min_valid_fraction", "max_age_redraws", common_tail))
   for (f in list(graft_missing_taxa, graft_missing_clades))
   {
-    args <- names(formals(f))
-    expect_equal(tail(args, 6), tail_args)
-    expect_lt(match("seed", args), match("nb_simulations", args))
     expect_null(formals(f)$save_temp_every)
     expect_false(formals(f)$save_temp)
     expect_false(formals(f)$resume)

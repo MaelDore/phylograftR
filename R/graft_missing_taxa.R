@@ -47,6 +47,10 @@
 #'     Only used with a `simmap`. For example, `allowed_states = list(X1 = c("blue", "green"), X2 = NULL)`.
 #'     With the maps of several traits, each element is a list with the states of each trait (`NULL`: no taxon-level value for the trait), e.g.,
 #'     `list(X1 = list(c("blue", "green"), "high"), X2 = list(NULL, "low"))` (see 'Several traits' in Details section).
+#' @param method Character string. Method used to draw the divergence times and the branches used for grafting.
+#'   Must be one of `"uniform"` or `"BD_clades"` (default). See Details.
+#' @param min_tips Integer. Only used for `method = "BD_clades"`. Minimum number of tips of the clade used to fit the birth-death model.
+#'   If the target clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
 #' @param include_target_clade_stem Logical. Whether the stem branch of target clades is available for grafting. This is the default for all taxa:
 #'   taxa with a value in `missing_taxa_list$include_target_clade_stem` use this specific instead.
 #'   If `TRUE`, a taxon can be grafted on the stem branch, and becomes sister to the target clade.
@@ -61,6 +65,22 @@
 #'   If `FALSE`, only the branches within the subclade are excluded, and the taxon can be sister to it.
 #'   For a single-tip excluded subclade, the terminal branch is the only branch of the tip, and it is its stem: the tip excludes nothing if `FALSE`
 #'   (a warning lists these cases). Only used if `use_excluded_subclades = TRUE`. Default is `TRUE`.
+#' @param total_richness_per_clades (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
+#'   nor in `missing_taxa_list` (unsampled species). Items:
+#'   * `$Target_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Target_clade`.
+#'     Node IDs are not accepted: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
+#'     so the tips of the clades match between both objects.
+#'     It must cover all the unique target clades of `missing_taxa_list`. It can include other clades, e.g., enclosing clades.
+#'   * `$total_richness`: Vector of positive integers, same length as `$Target_clade`. Total number of species of each clade,
+#'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species
+#'     are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
+#'
+#'   With `NULL` (default), no unsampled species are accounted for and no `sampling_fraction_df` is returned.
+#'
+#'   If the list is provided with only `NA` in `$total_richness`, no unsampled species are assumed in any clade
+#'   (`total_richness` = backbone + missing species), and the `sampling_fraction_df` table is returned (with `total_richness_provided = FALSE`).
+#'
+#'   See 'Sampling fraction and unsampled species' in Details section.
 #' @param simmap (Optional) A stochastic character map of the backbone, of class `"simmap"` (e.g., from `phytools::make.simmap()` or `phytools::sim.history()`),
 #'   or a set of maps of the same trait, of class `"multiSimmap"` (e.g., from `phytools::make.simmap(nsim = 10)`), used as alternative hypotheses of the evolution of a species attribute
 #'   (e.g., a trait or a range) with discrete states along the branches of `phy`.
@@ -104,28 +124,6 @@
 #' @param max_age_redraws Integer. Only used with `method = "BD_clades"`. Maximum number of times the divergence ages of a group of taxa
 #'   (same target clade, same stem availability and, with a `simmap`, same allowed states) can be redrawn, when some of the ages drawn cannot be used because no available branch
 #'   (in an allowed state with a `simmap`) crosses them. The function stops with an informative message if this limit is reached. See 'Methods' and 'Species attributes' in Details section. Default is `1000`.
-#' @param method Character string. Method used to draw the divergence times and the branches used for grafting.
-#'   Must be one of `"uniform"` or `"BD_clades"` (default). See Details.
-#' @param min_tips Integer. Only used for `method = "BD_clades"`. Minimum number of tips of the clade used to fit the birth-death model.
-#'   If the target clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
-#' @param total_richness_per_clades (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
-#'   nor in `missing_taxa_list` (unsampled species). Items:
-#'   * `$Target_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Target_clade`.
-#'     Node IDs are not accepted: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
-#'     so the tips of the clades match between both objects.
-#'     It must cover all the unique target clades of `missing_taxa_list`. It can include other clades, e.g., enclosing clades.
-#'   * `$total_richness`: Vector of positive integers, same length as `$Target_clade`. Total number of species of each clade,
-#'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species
-#'     are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
-#'
-#'   With `NULL` (default), no unsampled species are accounted for and no `sampling_fraction_df` is returned.
-#'
-#'   If the list is provided with only `NA` in `$total_richness`, no unsampled species are assumed in any clade
-#'   (`total_richness` = backbone + missing species), and the `sampling_fraction_df` table is returned (with `total_richness_provided = FALSE`).
-#'
-#'   See 'Sampling fraction and unsampled species' in Details section.
-#' @param ultrametric_tol Numeric. Tolerance used by `ape::is.ultrametric()` for the ultrametricity checks of the backbone and of the final phylogeny.
-#'   Default is `.Machine$double.eps^0.5`.
 #' @param seed Integer. Seed used for reproducibility. The seed only applies within the function: the state of the random number generator of the R session
 #'   is restored on exit. Set to `NULL` to use the random number generator of the session. Default is `1234`.
 #'   With several simulations, it is the master seed: the first simulation uses `seed`, and the seeds of the other simulations are derived from it (see 'Multiple simulations').
@@ -152,9 +150,10 @@
 #'   If the run crashes or is interrupted, nothing is deleted so it can be resumed. Use `FALSE` to keep the files. Default is `TRUE`.
 #' @param resume Logical. Whether to resume an interrupted run from its temporary files, which must come from a run with the exact same arguments (see 'Temporary saves and resuming').
 #'   Needs `save_temp = TRUE`. Default is `FALSE`.
+#' @param ultrametric_tol Numeric. Tolerance used by `ape::is.ultrametric()` for the ultrametricity checks of the backbone and of the final phylogeny.
+#'   Default is `.Machine$double.eps^0.5`.
 #' @param verbose Logical. Whether to display progress. Messages print every 100 taxa for `method = "uniform"`, and every 10 target clades for `method = "BD_clades"`.
 #'   Default is `TRUE`.
-#'
 #' @return The function returns an object of class `"phylo"`: the backbone phylogeny with the grafted taxa added as new tips.
 #'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
 #'
@@ -409,35 +408,6 @@
 #' The other traits are matched exactly, and are inherited as they are from the point where the taxon is grafted: with `"AB"` and `"high"` at the graft point and the allowed range `"A"`,
 #' the taxon inherits `"A"` and `"high"`. Only one trait can be treated as ranges to prevent inflation of the number of combined allowed states to consider.
 #'
-#' ### Temporary saves and resuming
-#'
-#' With `save_temp = TRUE`, each grafted phylogeny (one per simulation and per stochastic map) is saved in its own `.rds` file, built from `temp_file_path` by adding
-#' the suffixes `"_map_<name>"` when a `"multiSimmap"` is used, then `"_sim_<k>"` when `nb_simulations > 1`.
-#' For instance, with `temp_file_path = "dir/temp.rds"`:
-#' * a single phylogeny uses `"dir/temp.rds"`;
-#' * several simulations use `"dir/temp_sim_1.rds"`, `"dir/temp_sim_2.rds"`, ...;
-#' * several maps use `"dir/temp_map_A.rds"`, `"dir/temp_map_B.rds"`, ...;
-#' * several simulations across several maps use both suffixes as `"dir/temp_map_A_sim_1.rds"`.
-#'
-#' With `force_simulations = TRUE`, `<k>` is the number of the attempt, not necessarily the ID to which the grafted phylogeny will be attributed to in the final output.
-#' This is required to identify the appropriate seed used to produce each attempt; attempts that failed leave a file too for tractability.
-#'
-#' Temporary files can be read with `readRDS()` and used to plot the grafted phylogeny in its current state.
-#' The object is a regular `"phylo"` with the attribute `"phylograftR_temp"` that stores what is needed to resume a run.
-#' Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with `$simmap`, `$grafted_tips`, etc.).
-#'
-#' With `clean_temp_files = TRUE` (default), all the temporary files of the run are deleted once the function returns without crashing.
-#' A run that crashes or is interrupted never deletes its files, so it can be resumed with `resume = TRUE`.
-#' Use `clean_temp_files = FALSE` to keep the files after a successful run.
-#'
-#' With `resume = TRUE`, the function must be called again with **exactly the same arguments** as the interrupted run.
-#' For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
-#'
-#' Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a `missing_taxa_list` restricted to these taxa:
-#' the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
-#' the identification of the grafted tips and the updated `simmap` would be wrong, and a `simmap` of the initial backbone would not match the temporary phylogeny.
-#' Use `resume = TRUE` instead.
-#'
 #' ### Parallel computation
 #'
 #' The simulations based on the different stochastic maps and seeds are independent, so they can be run in parallel with the package `future` and `future.apply`.
@@ -470,6 +440,35 @@
 #'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny,
 #'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to a clade of the backbone,
 #'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their target clades and excluded subclades.
+#'
+#' ### Temporary saves and resuming
+#'
+#' With `save_temp = TRUE`, each grafted phylogeny (one per simulation and per stochastic map) is saved in its own `.rds` file, built from `temp_file_path` by adding
+#' the suffixes `"_map_<name>"` when a `"multiSimmap"` is used, then `"_sim_<k>"` when `nb_simulations > 1`.
+#' For instance, with `temp_file_path = "dir/temp.rds"`:
+#' * a single phylogeny uses `"dir/temp.rds"`;
+#' * several simulations use `"dir/temp_sim_1.rds"`, `"dir/temp_sim_2.rds"`, ...;
+#' * several maps use `"dir/temp_map_A.rds"`, `"dir/temp_map_B.rds"`, ...;
+#' * several simulations across several maps use both suffixes as `"dir/temp_map_A_sim_1.rds"`.
+#'
+#' With `force_simulations = TRUE`, `<k>` is the number of the attempt, not necessarily the ID to which the grafted phylogeny will be attributed to in the final output.
+#' This is required to identify the appropriate seed used to produce each attempt; attempts that failed leave a file too for tractability.
+#'
+#' Temporary files can be read with `readRDS()` and used to plot the grafted phylogeny in its current state.
+#' The object is a regular `"phylo"` with the attribute `"phylograftR_temp"` that stores what is needed to resume a run.
+#' Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with `$simmap`, `$grafted_tips`, etc.).
+#'
+#' With `clean_temp_files = TRUE` (default), all the temporary files of the run are deleted once the function returns without crashing.
+#' A run that crashes or is interrupted never deletes its files, so it can be resumed with `resume = TRUE`.
+#' Use `clean_temp_files = FALSE` to keep the files after a successful run.
+#'
+#' With `resume = TRUE`, the function must be called again with **exactly the same arguments** as the interrupted run.
+#' For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
+#'
+#' Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a `missing_taxa_list` restricted to these taxa:
+#' the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
+#' the identification of the grafted tips and the updated `simmap` would be wrong, and a `simmap` of the initial backbone would not match the temporary phylogeny.
+#' Use `resume = TRUE` instead.
 #'
 #' @author Maël Doré
 #'
@@ -681,19 +680,18 @@
 
 graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 missing_taxa_list, # List with Taxon_name = c(), and items named after Taxon_name: Target_clade = list(X1 = c(), ...), include_target_clade_stem = c(X1 = TRUE, ...) (optional), Excluded_subclades = list(X1 = list(c(), c()), X2 = NULL, ...), exclude_subclades_stem = list(X1 = c(TRUE, NA), X2 = NULL, ...) (optional)
+                                method = "BD_clades", # "uniform" or "BD_clades"
+                                min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model for "BD_clades" (the enclosing clade is used if the focal clade is smaller)
                                 include_target_clade_stem = TRUE, # Include the stem of the target clades when grafting? Default for all taxa, overridden by missing_taxa_list$include_target_clade_stem
                                 use_excluded_subclades = TRUE, # Avoid grafting within Excluded_subclades?
                                 exclude_subclades_stem = TRUE, # Also exclude the stem of the excluded subclades? Default for all subclades, overridden by missing_taxa_list$exclude_subclades_stem
+                                total_richness_per_clades = NULL, # NULL, or list with Target_clade = list(c(), ...) and total_richness = c(...) (NA allowed). Total number of species of the clades
                                 simmap = NULL, # NULL, or stochastic character map(s) (class "simmap" or "multiSimmap", or a list of them for several traits)  of the backbone: restricts grafting to the branch segments in allowed states
                                 allowed_states = NULL, # States of the simmap where grafting is allowed. Default for all taxa, overridden by missing_taxa_list$allowed_states. NULL: all states
                                 treat_states_as_ranges = FALSE, # Are the states of the simmap biogeographic ranges to be treated as sets of areas? An allowed range matches the states that contain it. (only with a simmap)
                                 return_simmap = TRUE, # Add the updated simmap to the output ($simmap)? Only with a simmap
                                 min_valid_fraction = 0.1, # Warn for the taxa with a smaller share of valid branches in allowed states: fraction of their available branch length ('uniform') or of their time window ('BD_clades') (only with a simmap)
                                 max_age_redraws = 1000, # Maximum number of redraws of the divergence ages of a group of taxa when some ages cannot be used because of the states (only with a simmap and 'BD_clades')
-                                method = "BD_clades", # "uniform" or "BD_clades"
-                                min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model for "BD_clades" (the enclosing clade is used if the focal clade is smaller)
-                                total_richness_per_clades = NULL, # NULL, or list with Target_clade = list(c(), ...) and total_richness = c(...) (NA allowed). Total number of species of the clades
-                                ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
                                 seed = 1234,
                                 nb_simulations = 1, # Number of grafted phylogenies to produce in the same run (a multiPhylo if > 1)
                                 force_simulations = FALSE, # If TRUE, try new seeds until nb_simulations phylogenies are obtained (up to 10 x nb_simulations attempts)
@@ -703,6 +701,7 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
                                 temp_file_path = NULL, # Default = "temp_phy_from_grafting.rds" in the working directory
                                 clean_temp_files = TRUE, # Delete all the temporary files once the run is completed without crashing?
                                 resume = FALSE, # Resume an interrupted run from its temporary files (same arguments)
+                                ultrametric_tol = .Machine$double.eps^0.5, # Tolerance used by ape::is.ultrametric() for the ultrametricity checks
                                 verbose = TRUE) # To print progress every 100 taxa or every 10 target clades
 {
   ### ---- Check input validity ---- ###
