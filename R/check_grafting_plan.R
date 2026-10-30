@@ -55,8 +55,8 @@
 #' The enclosing clade is the target clade (or sister clade), or the smallest clade enclosing it with at least `min_tips` tips, in the backbone.
 #' With `method = "BD_clades"`, it is used to fit the Birth-Death model and estimate divergence ages of the missing taxa to graft in accordance to the fitted diversification process.
 #' It is reported so users can tune `min_tips` accordingly to define more relevant enclosing clades.
-#' During the grafting, taxa grafted in nested subclades count in the number of tips of the enclosing clade, so the enclosing clade used can be larger and younger than the one reported here,
-#' although the reported clade is the oldest one that can be used.
+#' During the grafting, taxa already grafted in a clade count in its number of tips. The chosen enclosing clade used can therefore be the reported clade or a clade nested within it.
+#' It can contain more tips than the one reported here, although the reported clade is the oldest one that can be used, and the number of tips reported is its number of backbone tips.
 #' The sampling fractions of the birth-death models are not reported: they depend on the taxa already grafted in the clade, so they cannot be known before grafting.
 #'
 #' ### Several maps
@@ -81,7 +81,7 @@
 #'   * `target_n_tips` Integer. Number of tips of the target clade in the backbone.
 #'   * `n_branches` Integer. Number of branches available for grafting (before the restriction to the allowed states).
 #'   * `window_age` Numeric. Upper end (age) of the time window of the divergence ages: the stem age of the target clade, or its crown age if the stem is not available for grafting.
-#'   * `enclosing_n_tips`, `enclosing_age` Integer and numeric. Number of tips and crown age of the enclosing clade (see Details).
+#'   * `enclosing_n_tips`, `enclosing_age` Integer and numeric. Number of tips in the backbone phylogeny, and crown age of the enclosing clade (see Details).
 #'
 #'   Columns for missing clades:
 #'   * `Missing_clade` Integer. ID of the missing clade (taxa with the same sister clade).
@@ -90,7 +90,7 @@
 #'   * `sister_n_tips` Integer. Number of tips of the sister clade in the backbone.
 #'   * `stem_length` Numeric. Length of the stem branch of the sister clade.
 #'   * `stem_age` Numeric. Age of the rootward end of the stem branch: the upper end of the divergence ages.
-#'   * `enclosing_n_tips`, `enclosing_age` Integer and numeric. Number of tips and crown age of the enclosing clade (see Details).
+#'   * `enclosing_n_tips`, `enclosing_age` Integer and numeric. Number of tips in the backbone phylogeny, and crown age of the enclosing clade (see Details).
 #'
 #'   Columns for both, with a `simmap`:
 #'   * `allowed_states` Character string. The allowed states (resolved among the states of the simmap).
@@ -545,7 +545,7 @@ print_grafting_plan_summary <- function (plan, is_clades, use_states, n_maps)
     }
   }
   cat(paste0("  - ", if (is_clades) "Sister" else "Target", " clades smaller than 'min_tips' = ", min_tips, " (birth-death model fitted on an enclosing clade): ", below_min_tips, "/", nrow(plan),
-             if (below_min_tips > 0) paste0("; enclosing clades of ", format_range(plan$enclosing_n_tips[target_n < min_tips]), " tips (at most, in the backbone)") else "", "\n",
+             if (below_min_tips > 0) paste0("; enclosing clades of ", format_range(plan$enclosing_n_tips[target_n < min_tips]), " tips in the backbone; in practice, the clade used can be nested within them, as previously grafted taxa count towards 'min_tips'") else "", "\n",
              "  => ", if (n_infeasible == 0) "All can be grafted with these constraints\n" else "Some cannot be grafted with these constraints (see the table)\n"))
   invisible(NULL)
 }
