@@ -477,7 +477,7 @@
 #'
 #' # The updated simmap is in the output: the new grafted clades branch from the "green" segments
 #' # of the stem branches of their sister clades, and each newly grafted clades are entirely "green"
-#' # Grafted branches are dashed, and grafted tips are labelled in red.
+#' # Grafted branches are dashed lines, and grafted tips are labelled in red.
 #' plot_grafted(grafted_phy_states,
 #'              simmap_colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 #'
@@ -531,7 +531,7 @@
 #' # '$simmap' is a list of updated simmaps, one per trait
 #' names(grafted_phy_traits$simmap)
 #'
-#' # Newly grafted clades can only be grafted and harbor the allowed state in each trait
+#' # Newly grafted clades can only be grafted on and harbor the allowed state in each trait
 #' plot_grafted(grafted_phy_traits, trait = 1) # Only 'green'
 #' plot_grafted(grafted_phy_traits, trait = 2) # Only 'low'
 #'

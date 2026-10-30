@@ -411,6 +411,38 @@ Setting up the workers and sending the data to them has a time cost, so parallel
 As a rule of thumb, use parallel computation when the sequential run would last more than a minute or so, i.e., for large backbone phylogenies (500 tips or more) and several grafted phylogenies
 (\code{nb_maps * nb_simulations}), or for 50 or more grafted phylogenies on small backbones.
 }
+
+\subsection{Temporary saves and resuming}{
+
+With \code{save_temp = TRUE}, each grafted phylogeny (one per simulation and per stochastic map) is saved in its own \code{.rds} file, built from \code{temp_file_path} by adding
+the suffixes \code{"_map_<name>"} when a \code{"multiSimmap"} is used, then \code{"_sim_<k>"} when \code{nb_simulations > 1}.
+For instance, with \code{temp_file_path = "dir/temp.rds"}:
+\itemize{
+\item a single phylogeny uses \code{"dir/temp.rds"};
+\item several simulations use \code{"dir/temp_sim_1.rds"}, \code{"dir/temp_sim_2.rds"}, ...;
+\item several maps use \code{"dir/temp_map_A.rds"}, \code{"dir/temp_map_B.rds"}, ...;
+\item several simulations across several maps use both suffixes as \code{"dir/temp_map_A_sim_1.rds"}.
+}
+
+With \code{force_simulations = TRUE}, \verb{<k>} is the number of the attempt, not necessarily the ID to which the grafted phylogeny will be attributed to in the final output.
+This is required to identify the appropriate seed used to produce each attempt; attempts that failed leave a file too for tractability.
+
+Temporary files can be read with \code{readRDS()} and used to plot the grafted phylogeny in its current state.
+The object is a regular \code{"phylo"} with the attribute \code{"phylograftR_temp"} that stores what is needed to resume a run.
+Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with \verb{$simmap}, \verb{$grafted_tips}, etc.).
+
+With \code{clean_temp_files = TRUE} (default), all the temporary files of the run are deleted once the function returns without crashing.
+A run that crashes or is interrupted never deletes its files, so it can be resumed with \code{resume = TRUE}.
+Use \code{clean_temp_files = FALSE} to keep the files after a successful run.
+
+With \code{resume = TRUE}, the function must be called again with \strong{exactly the same arguments} as the interrupted run.
+For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
+
+Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a \code{missing_taxa_list} restricted to these taxa:
+the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
+the identification of the grafted tips and the updated \code{simmap} would be wrong, and a \code{simmap} of the initial backbone would not match the temporary phylogeny.
+Use \code{resume = TRUE} instead.
+}
 }
 \examples{
 # --- Prepare data --- #
@@ -434,10 +466,8 @@ grafted_phy <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clade
                                     verbose = FALSE, seed = 1234)
 plot(grafted_phy, cex = 0.7)
 
-# Color the grafted tips and branches in red based on elements returned with the phylogeny
-plot(grafted_phy, cex = 0.7,
-     edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
-     tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+# Highlight the grafted tips and branches in red
+plot_grafted(grafted_phy, cex = 0.7)
 
 
 # --- Produce several grafted phylogenies --- #
@@ -453,9 +483,9 @@ attr(grafted_phys, "seeds")
 # Plot phylos
 old_par <- par()["mfrow"]
 par(mfrow = c(1, 3))
-plot(grafted_phys[[1]], cex = 0.7, main = "Sim #1") # sim_1
-plot(grafted_phys[[2]], cex = 0.7, main = "Sim #2") # sim_2
-plot(grafted_phys[[3]], cex = 0.7, main = "Sim #3") # sim_3
+plot_grafted(grafted_phys, index = 1, cex = 0.7, main = "Sim #1") # sim_1
+plot_grafted(grafted_phys, index = 2, cex = 0.7, main = "Sim #2") # sim_2
+plot_grafted(grafted_phys, index = 3, cex = 0.7, main = "Sim #3") # sim_3
 par(old_par)
 
 
@@ -497,14 +527,13 @@ grafted_phy_states <- graft_missing_clades(phy = toy_backbone,
                                            verbose = FALSE, seed = 1234)
 
 # Plot output phylogeny with colored grafts
-plot(grafted_phy_states, cex = 0.7,
-     edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
-     tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
+plot_grafted(grafted_phy_states, use_simmap = FALSE, cex = 0.7)
 
 # The updated simmap is in the output: the new grafted clades branch from the "green" segments
 # of the stem branches of their sister clades, and each newly grafted clades are entirely "green"
-plot(grafted_phy_states$simmap,
-     col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+# Grafted branches are dashed lines, and grafted tips are labelled in red.
+plot_grafted(grafted_phy_states,
+             simmap_colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 
 
 # --- Use several stochastic maps (alternative hypotheses of trait evolution) as constraints --- #
@@ -556,9 +585,9 @@ grafted_phy_traits <- graft_missing_clades(phy = toy_backbone,
 # '$simmap' is a list of updated simmaps, one per trait
 names(grafted_phy_traits$simmap)
 
-# Newly grafted clades can only be grafted and harbor the allowed state in each trait
-plot(grafted_phy_traits$simmap[[1]]) # Only 'green'
-plot(grafted_phy_traits$simmap[[2]]) # Only 'low'
+# Newly grafted clades can only be grafted on and harbor the allowed state in each trait
+plot_grafted(grafted_phy_traits, trait = 1) # Only 'green'
+plot_grafted(grafted_phy_traits, trait = 2) # Only 'low'
 
 
 # --- Constraints from biogeographic ranges and another trait at once --- #
@@ -585,8 +614,8 @@ names(grafted_phy_ranges_traits$simmap)
 
 # Newly grafted clades can only harbor the allowed state/range in each trait
 # They can be grafted on range that encompasses their allowed range (here, "AB")
-plot(grafted_phy_traits$simmap[[1]]) # Grafted on "A", "B", or "AB", but inherit only "A" or "B".
-plot(grafted_phy_traits$simmap[[2]]) # Only 'low'
+plot_grafted(grafted_phy_traits, trait = 1) # Grafted on "A", "B", or "AB", but inherit only "A" or "B".
+plot_grafted(grafted_phy_traits, trait = 2) # Only 'low'
 
 
 }
@@ -596,37 +625,6 @@ Other functions from phylograftR:
 \item \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to identify the grafted tips and branches of a phylogeny,
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
 \item \code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}} to check a posteriori that grafted taxa respect their constraints.
-}
-\subsection{Temporary saves and resuming}{
-
-With \code{save_temp = TRUE}, each grafted phylogeny (one per simulation and per stochastic map) is saved in its own \code{.rds} file, built from \code{temp_file_path} by adding
-the suffixes \code{"_map_<name>"} when a \code{"multiSimmap"} is used, then \code{"_sim_<k>"} when \code{nb_simulations > 1}.
-For instance, with \code{temp_file_path = "dir/temp.rds"}:
-\itemize{
-\item a single phylogeny uses \code{"dir/temp.rds"};
-\item several simulations use \code{"dir/temp_sim_1.rds"}, \code{"dir/temp_sim_2.rds"}, ...;
-\item several maps use \code{"dir/temp_map_A.rds"}, \code{"dir/temp_map_B.rds"}, ...;
-\item several simulations across several maps use both suffixes as \code{"dir/temp_map_A_sim_1.rds"}.
-}
-
-With \code{force_simulations = TRUE}, \verb{<k>} is the number of the attempt, not necessarily the ID to which the grafted phylogeny will be attributed to in the final output.
-This is required to identify the appropriate seed used to produce each attempt; attempts that failed leave a file too for tractability.
-
-Temporary files can be read with \code{readRDS()} and used to plot the grafted phylogeny in its current state.
-The object is a regular \code{"phylo"} with the attribute \code{"phylograftR_temp"} that stores what is needed to resume a run.
-Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with \verb{$simmap}, \verb{$grafted_tips}, etc.).
-
-With \code{clean_temp_files = TRUE} (default), all the temporary files of the run are deleted once the function returns without crashing.
-A run that crashes or is interrupted never deletes its files, so it can be resumed with \code{resume = TRUE}.
-Use \code{clean_temp_files = FALSE} to keep the files after a successful run.
-
-With \code{resume = TRUE}, the function must be called again with \strong{exactly the same arguments} as the interrupted run.
-For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
-
-Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a \code{missing_taxa_list} restricted to these taxa:
-the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
-the identification of the grafted tips and the updated \code{simmap} would be wrong, and a \code{simmap} of the initial backbone would not match the temporary phylogeny.
-Use \code{resume = TRUE} instead.
 }
 }
 \author{

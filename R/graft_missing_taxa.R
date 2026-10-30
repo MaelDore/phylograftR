@@ -580,7 +580,7 @@
 #'
 #' # The updated simmap is in the output:
 #' # the grafted taxa are in the state of the point where they were grafted.
-#' # Grafted branches are dashed, and grafted tips are labelled in red.
+#' # Grafted branches are dashed lines, and grafted tips are labelled in red.
 #' plot_grafted(grafted_phy_states, fsize = 0.5, ftype = "i",
 #'              simmap_colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 #'

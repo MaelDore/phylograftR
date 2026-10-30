@@ -2,7 +2,7 @@
 % Please edit documentation in R/check_grafting_constraints.R
 \name{check_grafting_constraints}
 \alias{check_grafting_constraints}
-\title{Check that grafted taxa respect their grafting constraints}
+\title{Check that grafted taxa and missing clades respect their grafting constraints}
 \usage{
 check_grafting_constraints(
   phy_grafted,
@@ -27,18 +27,20 @@ See 'Several grafted phylogenies' in Details section.}
 \item{phy_backbone}{An object of class \code{"phylo"}. The backbone phylogeny used for grafting (i.e., before grafting).}
 
 \item{missing_taxa_list}{A list with the information on the grafted taxa. Typically the same list as used for grafting.
-Items: \verb{$Taxon_name}, \verb{$Target_clade}, and optionally \verb{$include_target_clade_stem}, \verb{$Excluded_subclades} and \verb{$exclude_subclades_stem}.
-Every item provided must be named after \verb{$Taxon_name} (same names, same order), as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}, see this function for details.}
+Items: \verb{$Taxon_name}, \verb{$Target_clade} (taxa grafted with \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}) or \verb{$Sister_clade} (missing clades grafted with
+\code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}), and optionally \verb{$include_target_clade_stem}, \verb{$Excluded_subclades} and \verb{$exclude_subclades_stem} (taxa only), and \verb{$allowed_states}.
+Exactly one of \verb{$Target_clade} and \verb{$Sister_clade} must be provided: it defines the type of the check.
+Every item provided must be named after \verb{$Taxon_name} (same names, same order), as in the grafting functions, see these functions for details.}
 
 \item{include_target_clade_stem}{Logical. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: whether grafting on the stem branch of target clades is accepted.
-Taxa with a value in \code{missing_taxa_list$include_target_clade_stem} use it instead (\code{NA} or no item: this global value is used). Default is \code{TRUE}.}
+Taxa with a value in \code{missing_taxa_list$include_target_clade_stem} use it instead (\code{NA} or no item: this global value is used). Ignored for missing clades. Default is \code{TRUE}.}
 
 \item{use_excluded_subclades}{Logical. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: whether to check the excluded subclades.
-If no \verb{$Excluded_subclades} item is found in \code{missing_taxa_list}, a warning is issued and excluded subclades are not checked. Default is \code{TRUE}.}
+If no \verb{$Excluded_subclades} item is found in \code{missing_taxa_list}, a warning is issued and excluded subclades are not checked. Ignored for missing clades. Default is \code{TRUE}.}
 
 \item{exclude_subclades_stem}{Logical. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: whether the stem of the excluded subclades is also excluded
 (a taxon sister to an excluded subclade is then a violation). Excluded subclades with a value in \code{missing_taxa_list$exclude_subclades_stem} use it instead
-(\code{NA} or no item: this global value is used). Default is \code{TRUE}.}
+(\code{NA} or no item: this global value is used). Ignored for missing clades. Default is \code{TRUE}.}
 
 \item{allowed_states}{Character vector. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: the states in which grafting is allowed.
 This is the default for all taxa: taxa with a value in \code{missing_taxa_list$allowed_states} use this specific value instead.
@@ -67,7 +69,10 @@ Default is \code{1e-6}.}
 \item{verbose}{Logical. Whether to print a summary of the checks. Default is \code{TRUE}.}
 }
 \value{
-The function returns a data.frame with one row per taxon in \code{missing_taxa_list} (in the original order) for each phylogeny checked, and the following columns:
+The structure of the output depends on the type of elements grafted, and their associated grafting function used in the process.
+
+\strong{Missing taxa} With a \verb{$Target_clade} list (for missing taxa), the function assumed that \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} was used for the grafting.
+It returns a data.frame with one row per taxon in \code{missing_taxa_list} (in the original order) for each phylogeny checked, and the following columns:
 \itemize{
 \item \verb{$map}: Name of the stochastic map used to constrain grafting based on species attributes. \code{NA} if none was used.
 \item \verb{$simulation}: Integer. Index of the simulation (the index in the name \code{"sim_k"} of the phylogeny; 1 for a single phylogeny).
@@ -94,7 +99,31 @@ This differs from \verb{$states_ok} that checks only the validity of the termina
 \item \verb{$ok}: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
 }
 
-With a list of maps as \code{phy_grafted}, the function returns a list of such data.frames (one per map, named after the maps, with the attribute \code{"all_ok"} for all the maps),
+(with a \verb{$Sister_clade} list, see 'Missing clades' below)
+
+\strong{Missing clades} With a \verb{$Sister_clade} list (for missing clades), the function assumed that \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} was used for the grafting.
+It returns a data.frame with one row per missing clade, i.e., per group of taxa sharing the same sister clade, numbered in the order of their first appearance in \code{missing_taxa_list}, for each phylogeny checked.
+
+The columns \verb{$map}, \verb{$simulation} and \verb{$seed} are the same as above, followed by:
+\itemize{
+\item \verb{$missing_clade}: ID or label of the missing clade: the label of its sister clade if \code{missing_taxa_list} has a \verb{$Sister_clade_name} item (character string), otherwise the ID of the clade (integer).
+\item \verb{$Taxon_names}: Character string. The taxa of the missing clade, separated by commas.
+\item \verb{$n_taxa}: Integer. Number of taxa of the missing clade.
+\item \verb{$Sister_clade_tips}: Character string. The tips that define the sister clade, separated by commas.
+\item \verb{$in_tree}: Logical. Whether all the taxa of the missing clade are found in the grafted phylogeny. \verb{$n_in_tree} is the number of taxa found.
+\item \verb{$monophyletic}: Logical. Whether the taxa form one clade of the grafted phylogeny with no other tip (backbone tip or taxon of another missing clade).
+\item \verb{$sister_position}: Character string. Position of the missing clade relative to its sister clade: \code{"stem"} (sister to the clade, or to other missing taxa grafted on its stem, with no other backbone tip in between),
+\code{"tip_branch"} (on the branch of the tip, for a single-tip sister clade), \code{"crown"} (nested within the sister clade), or \code{"outside"}.
+\item \verb{$sister_ok}: Logical. Whether the missing clade is on the stem of its sister clade (\code{"stem"} or \code{"tip_branch"}).
+\item \verb{$states_ok}: Logical. Only checked if \code{phy_grafted} has a \verb{$simmap} item: whether the whole missing clade (its stem branch and all its descendant branches) is in one single state, and this state is allowed
+(\code{missing_taxa_list$allowed_states} if provided, otherwise the global \code{allowed_states} argument; all the states if neither is provided). \code{NA} if \code{phy_grafted} has no \verb{$simmap}.
+With the maps of several traits, \code{TRUE} if this is the case for all the traits, and \verb{$states_ok_<trait>} gives the result of each trait.
+With \code{treat_states_as_ranges = TRUE}, the single state is the range inherited by the missing clade, which must be one of its allowed ranges (any range if none).
+\item \verb{$ranges_ok}: Logical. Only checked with \code{treat_states_as_ranges = TRUE} (or a range trait): whether the range inherited by the missing clade is contained in the state of the lineage at the graft point.
+\item \verb{$ok}: Logical. Whether the missing clade is in the tree, monophyletic, on the stem of its sister clade, and in an allowed state and range (if checked).
+}
+
+\strong{Multiple maps} With a list of maps as \code{phy_grafted}, the function returns a list of such data.frames (one per map, named after the maps, with the attribute \code{"all_ok"} for all the maps),
 since the maps have their own constraints: in each data.frame, the rows of all the simulations of the map are merged.
 
 The data.frame has the following attributes (for several phylogenies: \code{"topology_preserved"} and \code{"backbone_preserved"} are \code{TRUE} if they are \code{TRUE} for all the phylogenies,
@@ -107,17 +136,24 @@ the deviations are the maximum over the phylogenies, and \code{"all_ok"} is \cod
 \item \code{"all_ok"}: Logical. Whether all taxa respect their constraints and the backbone is preserved (if checked).
 \item \code{"trait_names"}: Character vector. Names of the traits checked (only with the maps of several traits, otherwise \code{NULL}).
 \item \code{"range_trait"}: Character string. Name of the trait treated as ranges (only with the maps of several traits, otherwise \code{NULL}).
-\item \code{"phylogenies"}: data.frame with one row per phylogeny checked (columns \code{map}, \code{simulation}, \code{seed}, \code{n_failed} (number of taxa that failed), \code{backbone_preserved} and \code{all_ok}).
+\item \code{"phylogenies"}: data.frame with one row per phylogeny checked (columns \code{map}, \code{simulation}, \code{seed}, \code{n_failed} (number of taxa, or of missing clades, that failed), \code{backbone_preserved} and \code{all_ok}).
 }
 
 Attributes are accessed with \code{attr(x = output, which = "attribute_name")}.
 }
 \description{
-This function checks, a posteriori, that each taxon grafted with \code{graft_missing_taxa()} sits at a valid position in the grafted phylogeny:
-within its target clade (or on its stem branch if allowed), and outside its excluded subclades.
-It can also check that the backbone phylogeny is preserved by the grafting once the grafted taxa are pruned.
+This function checks, a posteriori, that each taxon grafted on a phylogeny sits in a valid position.
+For missing taxa grafted with \code{graft_missing_taxa()}: within its target clade (or on its stem branch if allowed), and outside its excluded subclades.
+For missing clades grafted with \code{graft_missing_clades()}: each missing clade (the taxa sharing the same sister clade) must form one clade, grafted on the stem branch of its sister clade.
+
+The type of grafting is detected from \code{missing_taxa_list}: a \verb{$Target_clade} item for taxa, a \verb{$Sister_clade} item for missing clades (see 'Missing clades' in Details section).
+With a \code{simmap}, the validity of the states of the taxa or of the missing clades are checked too.
+
+The function can also check that the backbone phylogeny is preserved by the grafting once the grafted taxa are pruned.
 }
 \details{
+\subsection{Missing taxa}{
+
 A taxon respects its target clade if it is found within the clade, or on its stem branch if the stem is accepted for this taxon:
 global \code{include_target_clade_stem = TRUE}, or \code{missing_taxa_list$include_target_clade_stem} of this taxon
 (the taxon is then sister to the target clade, or to other missing taxa sister to the target clade, with no other backbone tip in between).
@@ -138,6 +174,26 @@ As in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}, if t
 
 Branches of the backbone are matched between the pruned grafted phylogeny and the backbone by the set of tips they subtend.
 Branch lengths are considered preserved if the maximum deviation, relative to the depth of the backbone, is lower than \code{tolerance}.
+}
+
+\subsection{Missing clades}{
+
+\code{graft_missing_clades()} grafts the taxa sharing the same sister clade together, as ONE missing clade, on the stem branch of their sister clade.
+With a \verb{$Sister_clade} list, this function checks each missing clade (the taxa whose sister clades have the same backbone tips, whatever the pair of tips used to define them) for:
+\itemize{
+\item its presence (\verb{$in_tree}): all its taxa must be in the grafted phylogeny ;
+\item its monophyly (\verb{$monophyletic}): its taxa must form one clade of the grafted phylogeny, free of any other tip ;
+\item its position (\verb{$sister_position} and \verb{$sister_ok}): the missing clade must be sister to its sister clade, or to other missing taxa grafted on the same stem, with no other backbone tip in between (\code{"stem"}), or on the terminal branch of a single-tip sister clade (\code{"tip_branch"}).
+A missing clade nested within its sister clade (\code{"crown"}) is a violation, unlike a taxon grafted by \code{graft_missing_taxa()} within its target clade;
+\item with a \verb{$simmap} item, its states (\verb{$states_ok}): the whole missing clade is in the state of the point where it was grafted, so its stem branch and all its descendant branches must have one single state,
+which must be allowed. The taxa of a missing clade are grafted together, so they must share their allowed states (the function stops otherwise, as the grafting function does).
+With \code{treat_states_as_ranges = TRUE}, the whole missing clade inherits one range, which must be contained in the state of the lineage at the graft point (see 'Biogeographic ranges as states').
+}
+
+The arguments \code{include_target_clade_stem}, \code{use_excluded_subclades} and \code{exclude_subclades_stem} only apply to taxa and are ignored. The backbone is checked as for taxa.
+Several phylogenies, maps and traits are handled as described in the corresponding sections. With \code{verbose = TRUE}, the summary counts missing clades instead of taxa.
+}
+
 \subsection{Several traits}{
 
 If the grafting used several traits as constraints, the grafting functions return a \verb{$simmap} item that is a list of simmaps, one per trait, named after the traits,
@@ -191,9 +247,9 @@ missing_taxa_list <- list(
   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")),
   Excluded_subclades = list(X1 = list(c("t10", "t19")), X2 = NULL, X3 = NULL, X4 = NULL))
 
-# --- Perform grafting --- #
+# --- Perform grafting of missing taxa--- #
 
-# Graft the missing taxa
+# Graft the missing taxa with graft_missing_taxa()
 grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
                                   verbose = FALSE, seed = 1234)
 
@@ -202,7 +258,9 @@ grafted_phy <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_li
 # Check that the grafted taxa respect their constraints, and that the backbone is preserved
 check_results <- check_grafting_constraints(phy_grafted = grafted_phy, phy_backbone = phy,
                                             missing_taxa_list = missing_taxa_list)
+# Inspect results
 check_results
+# Check overall results
 attr(check_results, "all_ok")
 
 # --- Check several grafted phylogenies --- #
@@ -222,6 +280,26 @@ head(check_results_multi[, c("map", "simulation", "seed", "Taxon_name", "ok")])
 # An additional attribute provide a summary per phylogeny:
 # number of taxa that failed, backbone preserved, all constraints respected
 attr(check_results_multi, "phylogenies")
+
+
+# --- Check missing clades grafted with graft_missing_clades() --- #
+
+# With a 'Sister_clade' item, the missing clades are checked (one row per missing clade)
+
+# Prepare a missing_taxa_list for missing clades
+missing_clades_list <- list(
+  Taxon_name = c("M1", "M2", "M3"),
+  Sister_clade = list(M1 = c("t26", "t18"), M2 = c("t26", "t18"), M3 = "t5"))
+
+# Graft the missing clades with graft_missing_clades()
+grafted_clades <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
+                                       verbose = FALSE, seed = 1234)
+
+# Check results
+check_clades <- check_grafting_constraints(phy_grafted = grafted_clades, phy_backbone = phy,
+                                           missing_taxa_list = missing_clades_list)
+# Inspect results
+check_clades[, c("missing_clade", "Taxon_names", "monophyletic", "sister_position", "ok")]
 
 
 # --- Check the constraints from several traits, with biogeographic ranges --- #

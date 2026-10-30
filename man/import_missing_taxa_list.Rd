@@ -145,9 +145,7 @@ grafted_phy <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = missin
                                   method = "uniform", verbose = FALSE, seed = 1234)
 
 # Plot the pruned phylogeny with the updated colors
-plot(grafted_phy, cex = 0.7,
-     edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
-     tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+plot_grafted(grafted_phy, cex = 0.7)
 
 }
 \seealso{

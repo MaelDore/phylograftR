@@ -47,8 +47,8 @@ grafted_phy <- graft_missing_taxa(phy = toy_backbone,
     verbose = FALSE, seed = 1234)
 
 # Plot the updated simmap
-plot(grafted_phy$simmap, fsize = 0.5, ftype = "i",
-     colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+plot_grafted(grafted_phy, fsize = 0.5, ftype = "i",
+             simmap_colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 
 # Inspect final states of each grafted taxon
 taxon_names <- toy_missing_taxa_list_with_allowed_states$Taxon_name

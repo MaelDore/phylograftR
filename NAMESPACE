@@ -2,14 +2,17 @@
 
 export(build_missing_taxa_list)
 export(check_grafting_constraints)
+export(check_grafting_plan)
 export(convert_contMap_to_simmap)
 export(convert_nodes_to_tips)
 export(convert_values_to_states)
+export(extract_grafting_info)
 export(flatten_grafted_phylogenies)
 export(graft_missing_clades)
 export(graft_missing_taxa)
 export(identify_grafted)
 export(import_missing_taxa_list)
+export(plot_grafted)
 importFrom(TreeSim,
   corsim,
   sim.bd.taxa.age
@@ -19,6 +22,7 @@ importFrom(ape,
   all.equal.phylo,
   bind.tree,
   branching.times,
+  drop.tip,
   extract.clade,
   getMRCA,
   is.ultrametric,
@@ -26,14 +30,24 @@ importFrom(ape,
   node.depth,
   node.depth.edgelength,
   prop.part,
-  reorder.phylo
+  reorder.phylo,
+  tiplabels
+)
+importFrom(grDevices,
+  col2rgb,
+  hcl.colors
+)
+importFrom(graphics,
+  par,
+  strwidth
 )
 importFrom(phytools,
   bind.tip,
   fit.bd,
   force.ultrametric,
   nodeHeights,
-  nodeheight
+  nodeheight,
+  plotSimmap
 )
 importFrom(stats,
   quantile,
@@ -41,4 +55,7 @@ importFrom(stats,
   setNames
 )
 importFrom(tools,md5sum)
-importFrom(utils,read.table)
+importFrom(utils,
+  modifyList,
+  read.table
+)
