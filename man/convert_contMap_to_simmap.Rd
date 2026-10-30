@@ -45,7 +45,10 @@ Depending on the nature of the input:
 \item If \code{contMap} is a list of \code{contMap}s: an object of class \code{"multiSimmap"} in which each element is a \code{"simmap"} ordered to match the initial \code{contMap}s.
 }
 
-The interior cut points used to discretize the trait values are stored in the attribute \code{"breaks"} of the output.
+The interior cut points used to discretize the trait values are stored in the attribute \code{"breaks"} of the output,
+and the names of the states (from the lowest to the highest values) in its attribute \code{"states"}.
+They allow to convert other values, e.g., the trait values of the missing taxa, into the same states
+with \code{\link[=convert_values_to_states]{phylograftR::convert_values_to_states()}}.
 }
 \description{
 Converts the continuous trait history(ies) mapped on a phylogeny into a stochastic character map of class \code{"simmap"}
@@ -230,6 +233,7 @@ if (requireNamespace("deepSTRAPP", quietly = TRUE)
 Other functions from phylograftR:
 \itemize{
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} that use the \code{simmap} to constrain the grafting.
+\item \code{\link[=convert_values_to_states]{phylograftR::convert_values_to_states()}} to convert continuous values of the missing taxa into the same states.
 }
 }
 \author{
