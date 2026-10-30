@@ -91,7 +91,7 @@
 #' It returns a data.frame with one row per missing clade, i.e., per group of taxa sharing the same sister clade, numbered in the order of their first appearance in `missing_taxa_list`, for each phylogeny checked.
 #'
 #' The columns `$map`, `$simulation` and `$seed` are the same as above, followed by:
-#' * `$missing_clade`: Integer. ID of the missing clade.
+#' * `$missing_clade`: ID or label of the missing clade: the label of its sister clade if `missing_taxa_list` has a `$Sister_clade_name` item (character string), otherwise the ID of the clade (integer).
 #' * `$Taxon_names`: Character string. The taxa of the missing clade, separated by commas.
 #' * `$n_taxa`: Integer. Number of taxa of the missing clade.
 #' * `$Sister_clade_tips`: Character string. The tips that define the sister clade, separated by commas.
@@ -653,7 +653,9 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
       if (!same) { stop("The taxa of the missing clade sharing the sister clade '", paste(unique(unname(missing_taxa_list$Sister_clade[[members[1]]])), collapse = ", "), "' (", paste(taxa_names[members], collapse = ", "), ") have different allowed states: they are grafted together, so they must share their allowed states.") }
     }
 
-    res <- data.frame(missing_clade = seq_len(n_clades),
+    # Label of each missing clade: the label of its sister clade if the list has labels (the ID of the clade otherwise)
+    clade_labels <- get_missing_clade_labels(groups = list(group_ID = clade_ID, group_clade_tips = vector("list", n_clades)), missing_taxa_list = missing_taxa_list)
+    res <- data.frame(missing_clade = clade_labels,
                       Taxon_names = NA_character_, # Taxa of the missing clade
                       n_taxa = NA_integer_,
                       Sister_clade_tips = NA_character_, # Tips defining the sister clade

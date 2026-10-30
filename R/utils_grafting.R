@@ -981,6 +981,37 @@ group_and_order_clades <- function (phy, clade_tips, include_target_clade_stem =
 }
 
 
+# ---- Labels of the missing clades ----
+
+#' @title Labels of the missing clades
+#'
+#' @description Identify each missing clade (group of taxa with the same sister clade, see `group_and_order_clades()`) by the label of its sister clade
+#'   if the list has a `$Sister_clade_name` item (the optional labels of the sister clades, e.g., from `import_missing_taxa_list()`), otherwise by the ID of its group.
+#'
+#' @param groups Output of `group_and_order_clades()` for the sister clades of `missing_taxa_list`.
+#' @param missing_taxa_list List of missing clades with the item `$Sister_clade` and, optionally, `$Sister_clade_name`.
+#'
+#' @noRd
+#'
+#' @return Without `$Sister_clade_name` (or if it does not match the taxa): the integer IDs of the groups. Otherwise a character vector with one label per group:
+#'   the labels of the taxa of the group (the unique ones, separated by commas if they differ), and the ID of the group if the taxa have no label.
+#'
+
+get_missing_clade_labels <- function (groups, missing_taxa_list)
+{
+  n_groups <- length(groups$group_clade_tips)
+  labels <- missing_taxa_list$Sister_clade_name
+  if (is.null(labels) || length(labels) != length(groups$group_ID)) { return(seq_len(n_groups)) }
+  labels <- unname(as.character(labels))
+  vapply(seq_len(n_groups), function (g)
+  {
+    x <- unique(labels[groups$group_ID == g])
+    x <- x[!is.na(x) & nzchar(x)]
+    if (length(x) == 0) as.character(g) else paste(x, collapse = ", ")
+  }, character(1))
+}
+
+
 # ---- Richness information ----
 
 #' @title Build the richness information used for the sampling fractions

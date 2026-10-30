@@ -241,3 +241,22 @@ test_that("The check of the taxa is unchanged by the detection of the missing cl
   expect_true(attr(res, "all_ok"))
   expect_output(check_grafting_constraints(grafted, toy$phy, mtl, verbose = TRUE), "Target clade violated")
 })
+
+test_that("The missing clades are labelled with the labels of their sister clades if the list has them, and numbered otherwise", {
+  toy <- toy_setup()
+  mcl <- cc_clades(toy)
+  grafted <- cc_graft(toy, mcl)
+  expect_identical(cc_check(grafted, toy, mcl)$missing_clade, 1:3)
+  # Labels (one per taxon, shared by the taxa of a clade): used as the names of the missing clades
+  mcl$Sister_clade_name <- c("cladeB", "cladeB", "cladeC", "tipS")
+  res <- cc_check(grafted, toy, mcl)
+  expect_identical(res$missing_clade, c("cladeB", "cladeC", "tipS"))
+  expect_equal(res$Taxon_names, c("M1, M2", "M3", "M4"))
+  # A clade without label keeps its ID as text
+  mcl$Sister_clade_name <- c(NA, "cladeB", NA, "tipS")
+  expect_identical(cc_check(grafted, toy, mcl)$missing_clade, c("cladeB", "2", "tipS"))
+  # Several simulations: the same labels in each phylogeny
+  sims <- cc_graft(toy, mcl, nb_simulations = 2)
+  expect_identical(cc_check(sims, toy, mcl)$missing_clade, rep(c("cladeB", "2", "tipS"), 2))
+})
+
