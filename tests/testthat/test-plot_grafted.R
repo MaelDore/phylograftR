@@ -29,20 +29,25 @@ plot_quiet <- function (expr)
 
 test_that("dash_map() cuts the pieces in dashes and gaps, preserving the total length",
 {
-  # Long piece: alternating dashes and gaps, starting and ending with a dash
+  # Long piece: alternating dashes and gaps (twice as long), starting and ending with a dash
   out <- phylograftR:::dash_map(c(A = 10), dash_length = 1, gap_state = ".gap")
   expect_equal(sum(out), 10)
   expect_equal(names(out)[1], "A")
   expect_equal(names(out)[length(out)], "A")
   expect_equal(length(out) %% 2, 1)
   expect_equal(names(out), rep(c("A", ".gap"), length.out = length(out)))
-  expect_equal(length(out), 2 * floor((10 / 1 - 1) / 2) + 1)
-  expect_true(all(abs(out - out[1]) < 1e-12)) # Regular dashes
+  expect_equal(length(out), 2 * floor((10 / 1 - 1) / 3) + 1)
+  dashes <- out[names(out) == "A"]; gaps <- out[names(out) == ".gap"]
+  expect_true(all(abs(dashes - dashes[1]) < 1e-12)) # Regular dashes
+  expect_equal(unname(gaps), rep(2 * unname(dashes[1]), length(gaps)))
+  expect_equal(dashes[[1]], 1, tolerance = 0.25) # Close to the requested length
 
   # Short piece (< 3 dashes): kept as it is
   expect_equal(phylograftR:::dash_map(c(A = 2.9), dash_length = 1, gap_state = ".gap"), c(A = 2.9))
-  # Exactly 3 dashes: one gap
-  expect_equal(names(phylograftR:::dash_map(c(A = 3), dash_length = 1, gap_state = ".gap")), c("A", ".gap", "A"))
+  # Exactly 3 dashes: one gap (dashes shorter than requested)
+  out3 <- phylograftR:::dash_map(c(A = 3), dash_length = 1, gap_state = ".gap")
+  expect_equal(names(out3), c("A", ".gap", "A"))
+  expect_equal(unname(out3), c(0.75, 1.5, 0.75))
 
   # Several pieces: each is cut separately and the order of the states is kept
   out <- phylograftR:::dash_map(c(B = 0.5, A = 6, C = 1), dash_length = 1, gap_state = ".gap")
