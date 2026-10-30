@@ -210,7 +210,7 @@ plot_grafted <- function (phy_grafted, # Output of the grafting functions: phylo
   root_age <- max(phytools::nodeHeights(simmap)[, 2])
   if (highlight_edges)
   {
-    simmap$maps[phy$grafted_edges] <- lapply(simmap$maps[phy$grafted_edges], dash_map, dash_length = 0.01 * root_age, gap_state = gap_state)
+    simmap$maps[phy$grafted_edges] <- lapply(simmap$maps[phy$grafted_edges], dash_map, dash_length = 0.005 * root_age, gap_state = gap_state)
   }
   simmap$mapped.edge <- NULL
 
@@ -226,6 +226,8 @@ plot_grafted <- function (phy_grafted, # Output of the grafting functions: phylo
     label_fraction <- min(label_width / graphics::par("pin")[1], 0.6)
     dots$xlim <- c(0, root_age / (1 - label_fraction - 0.03))
   }
+  old_par <- graphics::par(lend = "butt") # Dashes as long as the gaps
+  on.exit(graphics::par(old_par), add = TRUE)
   do.call(phytools::plotSimmap, c(list(tree = simmap, colors = plot_colors, ftype = "off", fsize = label_size), dots))
   if (draw_labels)
   {
@@ -239,10 +241,10 @@ plot_grafted <- function (phy_grafted, # Output of the grafting functions: phylo
 #' @title Cut the map of a branch in dashes
 #'
 #' @description Cut each piece of the map of a branch (one state) in alternating pieces of the same state and of a transparent state (the gap), starting and ending with a dash.
-#'   A piece that is too short to have a gap (shorter than three dashes) is kept as it is.
+#'   The gaps are twice as long as the dashes. A piece that is too short to have a gap (shorter than three dashes) is kept as it is.
 #'
 #' @param map Named numeric vector. The pieces of the branch from the rootward node to the tipward node: the durations, named after the states.
-#' @param dash_length Numeric. Approximate length of the dashes and of the gaps.
+#' @param dash_length Numeric. Approximate length of the dashes (the gaps are twice as long).
 #' @param gap_state Character string. Name of the transparent state.
 #'
 #' @noRd
@@ -255,9 +257,12 @@ dash_map <- function (map, dash_length, gap_state)
   out <- lapply(seq_along(map), function (k)
   {
     length_k <- map[[k]]
-    n_gaps <- floor((length_k / dash_length - 1) / 2)
-    if (n_gaps < 1) { return(map[k]) }
-    stats::setNames(rep(length_k / (2 * n_gaps + 1), 2 * n_gaps + 1), rep(c(names(map)[k], gap_state), length.out = 2 * n_gaps + 1))
+    if (length_k < 3 * dash_length) { return(map[k]) }
+    # n_gaps gaps (twice as long as the dashes) between n_gaps + 1 dashes: length = (n_gaps + 1) * dash + n_gaps * 2 * dash
+    n_gaps <- max(1, floor((length_k / dash_length - 1) / 3))
+    unit <- length_k / (3 * n_gaps + 1)
+    n_pieces <- 2 * n_gaps + 1
+    stats::setNames(rep(c(unit, 2 * unit), length.out = n_pieces), rep(c(names(map)[k], gap_state), length.out = n_pieces))
   })
   do.call(c, out)
 }
