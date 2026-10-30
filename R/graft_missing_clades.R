@@ -344,20 +344,6 @@
 #' As a rule of thumb, use parallel computation when the sequential run would last more than a minute or so, i.e., for large backbone phylogenies (500 tips or more) and several grafted phylogenies
 #' (`nb_maps * nb_simulations`), or for 50 or more grafted phylogenies on small backbones.
 #'
-#'
-#' @importFrom ape bind.tree branching.times extract.clade is.ultrametric
-#'
-#' @importFrom phytools bind.tip nodeHeights nodeheight
-#'
-#' @importFrom TreeSim corsim sim.bd.taxa.age
-#'
-#' @export
-#'
-#' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny,
-#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade with constraints (target clades and excluded subclades),
-#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints.
-#'
 #' ### Temporary saves and resuming
 #'
 #' With `save_temp = TRUE`, each grafted phylogeny (one per simulation and per stochastic map) is saved in its own `.rds` file, built from `temp_file_path` by adding
@@ -387,6 +373,21 @@
 #' the identification of the grafted tips and the updated `simmap` would be wrong, and a `simmap` of the initial backbone would not match the temporary phylogeny.
 #' Use `resume = TRUE` instead.
 #'
+#'
+#' @importFrom ape bind.tree branching.times extract.clade is.ultrametric
+#'
+#' @importFrom phytools bind.tip nodeHeights nodeheight
+#'
+#' @importFrom TreeSim corsim sim.bd.taxa.age
+#'
+#' @export
+#'
+#' @seealso Other functions from phylograftR:
+#'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny,
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade with constraints (target clades and excluded subclades),
+#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints.
+#'
+#'
 #' @author Maël Doré
 #'
 #' @examples
@@ -411,10 +412,8 @@
 #'                                     verbose = FALSE, seed = 1234)
 #' plot(grafted_phy, cex = 0.7)
 #'
-#' # Color the grafted tips and branches in red based on elements returned with the phylogeny
-#' plot(grafted_phy, cex = 0.7,
-#'      edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
-#'      tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+#' # Highlight the grafted tips and branches in red
+#' plot_grafted(grafted_phy, cex = 0.7)
 #'
 #'
 #' # --- Produce several grafted phylogenies --- #
@@ -430,9 +429,9 @@
 #' # Plot phylos
 #' old_par <- par()["mfrow"]
 #' par(mfrow = c(1, 3))
-#' plot(grafted_phys[[1]], cex = 0.7, main = "Sim #1") # sim_1
-#' plot(grafted_phys[[2]], cex = 0.7, main = "Sim #2") # sim_2
-#' plot(grafted_phys[[3]], cex = 0.7, main = "Sim #3") # sim_3
+#' plot_grafted(grafted_phys, index = 1, cex = 0.7, main = "Sim #1") # sim_1
+#' plot_grafted(grafted_phys, index = 2, cex = 0.7, main = "Sim #2") # sim_2
+#' plot_grafted(grafted_phys, index = 3, cex = 0.7, main = "Sim #3") # sim_3
 #' par(old_par)
 #'
 #'
@@ -474,14 +473,13 @@
 #'                                            verbose = FALSE, seed = 1234)
 #'
 #' # Plot output phylogeny with colored grafts
-#' plot(grafted_phy_states, cex = 0.7,
-#'      edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
-#'      tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
+#' plot_grafted(grafted_phy_states, use_simmap = FALSE, cex = 0.7)
 #'
 #' # The updated simmap is in the output: the new grafted clades branch from the "green" segments
 #' # of the stem branches of their sister clades, and each newly grafted clades are entirely "green"
-#' plot(grafted_phy_states$simmap,
-#'      col = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+#' # Grafted branches are dashed, and grafted tips are labelled in red.
+#' plot_grafted(grafted_phy_states,
+#'              simmap_colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 #'
 #'
 #' # --- Use several stochastic maps (alternative hypotheses of trait evolution) as constraints --- #
@@ -534,8 +532,8 @@
 #' names(grafted_phy_traits$simmap)
 #'
 #' # Newly grafted clades can only be grafted and harbor the allowed state in each trait
-#' plot(grafted_phy_traits$simmap[[1]]) # Only 'green'
-#' plot(grafted_phy_traits$simmap[[2]]) # Only 'low'
+#' plot_grafted(grafted_phy_traits, trait = 1) # Only 'green'
+#' plot_grafted(grafted_phy_traits, trait = 2) # Only 'low'
 #'
 #'
 #' # --- Constraints from biogeographic ranges and another trait at once --- #
@@ -562,8 +560,8 @@
 #'
 #' # Newly grafted clades can only harbor the allowed state/range in each trait
 #' # They can be grafted on range that encompasses their allowed range (here, "AB")
-#' plot(grafted_phy_traits$simmap[[1]]) # Grafted on "A", "B", or "AB", but inherit only "A" or "B".
-#' plot(grafted_phy_traits$simmap[[2]]) # Only 'low'
+#' plot_grafted(grafted_phy_traits, trait = 1) # Grafted on "A", "B", or "AB", but inherit only "A" or "B".
+#' plot_grafted(grafted_phy_traits, trait = 2) # Only 'low'
 #'
 #'
 

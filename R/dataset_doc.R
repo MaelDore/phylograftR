@@ -119,8 +119,8 @@
 #'     verbose = FALSE, seed = 1234)
 #'
 #' # Plot the updated simmap
-#' plot(grafted_phy$simmap, fsize = 0.5, ftype = "i",
-#'      colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+#' plot_grafted(grafted_phy, fsize = 0.5, ftype = "i",
+#'              simmap_colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 #'
 #' # Inspect final states of each grafted taxon
 #' taxon_names <- toy_missing_taxa_list_with_allowed_states$Taxon_name
@@ -186,8 +186,8 @@
 #'                                   verbose = FALSE, seed = 1234)
 #'
 #' # Plot the updated simmap
-#' plot(grafted_phy$simmap,
-#'      col = c("A" = "gold", "B" = "dodgerblue", "AB" = "limegreen", "BC" = "firebrick2"))
+#' plot_grafted(grafted_phy,
+#'              simmap_colors = c("A" = "gold", "B" = "dodgerblue", "AB" = "limegreen", "BC" = "firebrick2"))
 #'
 #' # Inspect range inherited by each grafted taxon (state of its terminal branch in the updated simmap)
 #' taxon_names <- toy_missing_taxa_list_with_allowed_ranges$Taxon_name

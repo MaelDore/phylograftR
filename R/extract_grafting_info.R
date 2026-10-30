@@ -118,6 +118,7 @@
 #' head(info)
 #'
 #' # Inspect uncertainty of the graft age of each taxon over the simulations
+#' # Average minimum and maximum graft age across simulations
 #' aggregate(graft_age ~ Taxon_name, data = info, FUN = function (x) round(range(x), 1))
 #'
 #'

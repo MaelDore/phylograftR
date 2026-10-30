@@ -139,9 +139,7 @@
 #'                                   method = "uniform", verbose = FALSE, seed = 1234)
 #'
 #' # Plot the pruned phylogeny with the updated colors
-#' plot(grafted_phy, cex = 0.7,
-#'      edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
-#'      tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+#' plot_grafted(grafted_phy, cex = 0.7)
 #'
 
 import_missing_taxa_list <- function (file, # Path to the table

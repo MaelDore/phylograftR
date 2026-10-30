@@ -425,22 +425,6 @@
 #' As a rule of thumb, use parallel computation when the sequential run would last more than a minute or so, i.e., for large backbone phylogenies (500 tips or more) and several grafted phylogenies
 #' (`nb_maps * nb_simulations`), or for 50 or more grafted phylogenies on small backbones.
 #'
-#'
-#' @importFrom ape Ntip branching.times extract.clade getMRCA is.ultrametric
-#'
-#' @importFrom phytools bind.tip nodeHeights nodeheight
-#'
-#' @importFrom TreeSim corsim
-#'
-#' @importFrom stats runif
-#'
-#' @export
-#'
-#' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny,
-#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to a clade of the backbone,
-#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their target clades and excluded subclades.
-#'
 #' ### Temporary saves and resuming
 #'
 #' With `save_temp = TRUE`, each grafted phylogeny (one per simulation and per stochastic map) is saved in its own `.rds` file, built from `temp_file_path` by adding
@@ -469,6 +453,22 @@
 #' the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
 #' the identification of the grafted tips and the updated `simmap` would be wrong, and a `simmap` of the initial backbone would not match the temporary phylogeny.
 #' Use `resume = TRUE` instead.
+#'
+#'
+#' @importFrom ape Ntip branching.times extract.clade getMRCA is.ultrametric
+#'
+#' @importFrom phytools bind.tip nodeHeights nodeheight
+#'
+#' @importFrom TreeSim corsim
+#'
+#' @importFrom stats runif
+#'
+#' @export
+#'
+#' @seealso Other functions from phylograftR:
+#'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny,
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to a clade of the backbone,
+#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their target clades and excluded subclades.
 #'
 #' @author Maël Doré
 #'
@@ -506,10 +506,8 @@
 #'                                   method = "BD_clades", verbose = FALSE, seed = 1234)
 #' plot(grafted_phy, cex = 0.7)
 #'
-#' # Color the grafted tips and branches in red based on elements returned with the phylogeny
-#' plot(grafted_phy, cex = 0.7,
-#'      edge.color = c("black", "red")[grafted_phy$grafted_edges + 1],
-#'      tip.color = c("black", "red")[grafted_phy$grafted_tips + 1])
+#' # Highlight the grafted tips and branches in red
+#' plot_grafted(grafted_phy, cex = 0.7)
 #'
 #' # Graft with the "uniform" method, without using the excluded subclades
 #' grafted_phy_uniform <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_list,
@@ -535,9 +533,9 @@
 #' # Plot phylos
 #' old_par <- par()["mfrow"]
 #' par(mfrow = c(1, 3))
-#' plot(grafted_phys[[1]], cex = 0.7, main = "Sim #1") # sim_1
-#' plot(grafted_phys[[2]], cex = 0.7, main = "Sim #2") # sim_2
-#' plot(grafted_phys[[3]], cex = 0.7, main = "Sim #3") # sim_3
+#' plot_grafted(grafted_phys, index = 1, cex = 0.7, main = "Sim #1") # sim_1
+#' plot_grafted(grafted_phys, index = 2, cex = 0.7, main = "Sim #2") # sim_2
+#' plot_grafted(grafted_phys, index = 3, cex = 0.7, main = "Sim #3") # sim_3
 #' par(old_par)
 #'
 #'
@@ -578,14 +576,13 @@
 #'    method = "BD_clades", verbose = FALSE, seed = 1234)
 #'
 #' # Plot output phylogeny with colored grafts
-#' plot(grafted_phy_states, cex = 0.7,
-#'      edge.color = c("black", "red")[grafted_phy_states$grafted_edges + 1],
-#'      tip.color = c("black", "red")[grafted_phy_states$grafted_tips + 1])
+#' plot_grafted(grafted_phy_states, use_simmap = FALSE, cex = 0.7)
 #'
 #' # The updated simmap is in the output:
 #' # the grafted taxa are in the state of the point where they were grafted.
-#' plot(grafted_phy_states$simmap, fsize = 0.5, ftype = "i",
-#'      colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
+#' # Grafted branches are dashed, and grafted tips are labelled in red.
+#' plot_grafted(grafted_phy_states, fsize = 0.5, ftype = "i",
+#'              simmap_colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 #'
 #' # States of the grafted taxa: "Genus_a_sp1" and "Genus_c_sp2" can be "red"
 #' # thanks to their taxon-level states, but the taxa using the global states cannot.
