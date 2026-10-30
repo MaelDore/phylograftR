@@ -511,7 +511,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
   # Check presence of excluded subclades (not used with missing clades)
   if (is_clades) { use_excluded_subclades <- FALSE }
   excluded_list <- if (is_clades) NULL else missing_taxa_list$Excluded_subclades
-  if (use_excluded_subclades & is.null(excluded_list))
+  if (use_excluded_subclades && is.null(excluded_list))
   {
     warning("No 'Excluded_subclades' item found in missing_taxa_list: excluded subclades are not checked")
     use_excluded_subclades <- FALSE
@@ -759,7 +759,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
       }
 
       # Overall, a missing clade is okay if it is monophyletic, sister to its sister clade, and in an allowed state and range (if checked)
-      res$ok[g] <- res$monophyletic[g] & res$sister_ok[g] & !isFALSE(res$states_ok[g]) & !isFALSE(res$ranges_ok[g])
+      res$ok[g] <- res$monophyletic[g] && res$sister_ok[g] && !isFALSE(res$states_ok[g]) && !isFALSE(res$ranges_ok[g])
     }
   } else {
   ## 1.2.c/ Taxa grafted within target clades
@@ -824,7 +824,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
         # If not, use 'no_foreign_backbone_tip' to distinguish between taxa grafted on the stem branch, and taxa outside of the target clade
         res$target_position[i] <- ifelse(in_crown, "crown", ifelse(no_foreign_backbone_tip, "stem", "outside"))
         # Target is okay if in_crown or on the stem when the stem is accepted for this taxon
-        res$target_ok[i] <- in_crown | (include_target_clade_stem_taxa[i] & no_foreign_backbone_tip)
+        res$target_ok[i] <- in_crown || (include_target_clade_stem_taxa[i] && no_foreign_backbone_tip)
       }
 
       ## Excluded subclades
@@ -913,7 +913,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
       }
 
       # Overall, a taxon is okay if the rules for target clade and excluded subclades are respected, and the states are allowed (if checked)
-      res$ok[i] <- res$target_ok[i] & res$excluded_ok[i] & !isFALSE(res$states_ok[i]) & !isFALSE(res$ranges_ok[i])
+      res$ok[i] <- res$target_ok[i] && res$excluded_ok[i] && !isFALSE(res$states_ok[i]) && !isFALSE(res$ranges_ok[i])
     }
   }
 
@@ -941,7 +941,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
                                                       use.edge.length = FALSE, use.tip.label = TRUE))
 
     # if the topology match, check branch lengths
-    if (topology_preserved & !is.null(phy_backbone$edge.length) & !is.null(pruned$edge.length))
+    if (topology_preserved && !is.null(phy_backbone$edge.length) && !is.null(pruned$edge.length))
     {
       # Function to identify each branch by the set of backbone tips it subtends, to match branches between the two trees
       branch_keys <- function (tree)
@@ -969,12 +969,12 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
     }
   }
   # backbone is fully preserved if both topology and branch lengths are matching (within tolerance)
-  backbone_preserved <- if (check_backbone) isTRUE(topology_preserved) & isTRUE(lengths_preserved) else NA
+  backbone_preserved <- if (check_backbone) isTRUE(topology_preserved) && isTRUE(lengths_preserved) else NA
 
   ## 1.4/ Summary ####
 
   # Summarize check results as attributes
-  all_ok <- all(res$ok) & !isFALSE(backbone_preserved)
+  all_ok <- all(res$ok) && !isFALSE(backbone_preserved)
   attr(res, "topology_preserved") <- topology_preserved
   attr(res, "max_branch_length_deviation") <- max_dev_abs
   attr(res, "max_branch_length_deviation_relative") <- max_dev_rel
@@ -1058,7 +1058,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
   }
 
   # Display error message
-  if (stop_on_failure & !all_ok)
+  if (stop_on_failure && !all_ok)
   {
     stop("Some grafting constraints are not respected: ", sum(!res$ok | !res$in_tree), if (is_clades) " missing clades" else " taxa", " failed; backbone preserved = ", backbone_preserved, describe_failures())
   }
