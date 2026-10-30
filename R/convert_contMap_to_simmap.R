@@ -114,10 +114,14 @@
 #' * If `contMap` is a single `contMap`: an object of class `"simmap"`.
 #' * If `contMap` is a list of `contMap`s: an object of class `"multiSimmap"` in which each element is a `"simmap"` ordered to match the initial `contMap`s.
 #'
-#' The interior cut points used to discretize the trait values are stored in the attribute `"breaks"` of the output.
+#' The interior cut points used to discretize the trait values are stored in the attribute `"breaks"` of the output,
+#' and the names of the states (from the lowest to the highest values) in its attribute `"states"`.
+#' They allow to convert other values, e.g., the trait values of the missing taxa, into the same states
+#' with [`phylograftR::convert_values_to_states()`][convert_values_to_states].
 #'
 #' @seealso Other functions from phylograftR:
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] that use the `simmap` to constrain the grafting.
+#'  * [`phylograftR::convert_values_to_states()`][convert_values_to_states] to convert continuous values of the missing taxa into the same states.
 #'
 #' @importFrom ape Ntip
 #' @importFrom stats quantile
@@ -389,8 +393,9 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
     output <- simmaps
     class(output) <- c("multiSimmap", "multiPhylo")
   }
-  # In both cases, keep the cut points used, so that other values (e.g., of the missing taxa) can be binned the same way with findInterval()
+  # In both cases, keep the cut points and the names of the states, so that other values (e.g., of the missing taxa) can be binned the same way (see convert_values_to_states())
   attr(output, "breaks") <- breaks
+  attr(output, "states") <- states
 
   return(output)
 }

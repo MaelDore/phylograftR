@@ -86,6 +86,7 @@ test_that("A single contMap gives a valid simmap with the requested states", {
   expect_false(inherits(sm, "multiSimmap"))
   expect_equal(colnames(sm$mapped.edge), states3)
   expect_equal(length(attr(sm, "breaks")), 2)
+  expect_equal(attr(sm, "states"), states3)
 
   # Same tree, durations sum to the branch lengths, states from the list
   expect_equal(sm$edge, cm$tree$edge)
