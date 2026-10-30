@@ -454,7 +454,12 @@ label_excluded_subclades <- function (excluded_subclades_i, max_tips = 5)
 #'   * `Target_clade` Character string. Tips used to describe the target clade associated with the missing taxon; separated by commas if multiple.
 #'   * `Cause` Character string. `"excluded"` if all the branches of the pool are excluded, `"allowed_states"` if some branches are available but none has a segment in an allowed state.
 #'
-#'   With a `tracker`, the data.frame has two attributes, numeric vectors named after the taxa (all the taxa, not only the flagged ones, `NA` for the taxa without any available branch):
+#'   The data.frame has two attributes named after the taxa (all the taxa, not only the flagged ones):
+#'   * `"n_branches"` Integer vector. Number of branches available for the taxon (before restricting to its allowed states).
+#'   * `"window_age"` Numeric vector. Upper end (age) of the time window of the divergence ages of the taxon: the stem age of its target clade, or its crown age if the stem is not available.
+#'
+#'   With a `tracker`, the data.frame also has three attributes (all the taxa, not only the flagged ones, `NA` for the taxa without any available branch):
+#'   * `"states_available"` List of character vectors. States of the pieces of the available branches of the taxon.
 #'   * `"valid_fraction"` The fraction of the total length of the available branches of the taxon that is in its allowed states.
 #'   * `"time_coverage"` The fraction of the time window of the divergence ages of the taxon (from the present to the stem age of its target clade,
 #'     or to its crown age if the stem is not available) where at least one available branch is in an allowed state.
@@ -470,12 +475,9 @@ find_taxa_without_allowed_branch <- function (phy,
 {
   n_missing <- length(missing_taxa_list$Taxon_name)
   use_states <- !is.null(tracker)
-  # Ages (rootward, tipward) of the branches, to cut the segments in allowed states
-  if (use_states)
-  {
-    root_age <- max(phytools::nodeHeights(phy)[, 2])
-    edge_ages <- root_age - phytools::nodeHeights(phy)
-  }
+  # Ages (rootward, tipward) of the branches, to cut the segments in allowed states and give the time window of each taxon
+  root_age <- max(phytools::nodeHeights(phy)[, 2])
+  edge_ages <- root_age - phytools::nodeHeights(phy)
   root_node <- setdiff(phy$edge[, 1], phy$edge[, 2])
   # One value per taxon
   include_target_clade_stem_taxa <- rep_len(include_target_clade_stem, n_missing)
@@ -497,6 +499,9 @@ find_taxa_without_allowed_branch <- function (phy,
   no_state <- logical(n_missing) # Flagged because no available segment is in an allowed state
   valid_fraction <- rep(NA_real_, n_missing)
   time_coverage <- rep(NA_real_, n_missing)
+  n_branches <- integer(n_missing) # Number of branches available (before restricting to the allowed states)
+  window_age <- rep(NA_real_, n_missing) # Upper end (age) of the time window of the divergence ages
+  states_available <- vector("list", n_missing) # States of the pieces of the available branches (with a tracker)
 
   ## Loop per taxa
   for (i in seq_len(n_missing))
@@ -536,6 +541,14 @@ find_taxa_without_allowed_branch <- function (phy,
     }
     # The taxa if flagged only if no valid branches (tipward nodes) remains in the pool
     flagged[i] <- length(allowed_nodes) == 0
+    n_branches[i] <- length(allowed_nodes)
+
+    # Time window of the divergence ages: from the present to the stem age, or to the crown age if the stem is not available
+    edge_row <- match(MRCA_node_i, phy$edge[, 2])
+    crown_age <- if (is.na(edge_row)) root_age else edge_ages[edge_row, 2]
+    upper_age <- if (stem_available) edge_ages[edge_row, 1] else crown_age
+    window_age[i] <- upper_age
+    if (use_states) { states_available[[i]] <- sort(unique(tracker$state_table$state[tracker$state_table$node %in% allowed_nodes])) }
 
     # With states: segments of the available branches in the allowed states of the taxon, and their share of the total length of the available branches
     if (use_states && !flagged[i])
@@ -546,9 +559,6 @@ find_taxa_without_allowed_branch <- function (phy,
       no_state[i] <- nrow(segments_i) == 0
 
       # Share of the time window of the divergence ages (from the present to the stem age, or to the crown age without the stem) covered by the segments in allowed states
-      edge_row <- match(MRCA_node_i, phy$edge[, 2])
-      crown_age <- if (is.na(edge_row)) root_age else edge_ages[edge_row, 2]
-      upper_age <- if (stem_available) edge_ages[edge_row, 1] else crown_age
       time_coverage[i] <- get_time_coverage(phy = phy, segments = segments_i, edge_ages = edge_ages, upper_age = upper_age)
     }
   }
@@ -560,8 +570,11 @@ find_taxa_without_allowed_branch <- function (phy,
     Taxon_name = missing_taxa_list$Taxon_name[flagged_any],
     Target_clade = vapply(missing_taxa_list$Target_clade[flagged_any], paste, character(1), collapse = ", "),
     Cause = ifelse(no_state[flagged_any], "allowed_states", "excluded"), stringsAsFactors = FALSE)
+  attr(flagged_taxa_df, "n_branches") <- stats::setNames(n_branches, missing_taxa_list$Taxon_name)
+  attr(flagged_taxa_df, "window_age") <- stats::setNames(window_age, missing_taxa_list$Taxon_name)
   if (use_states)
   {
+    attr(flagged_taxa_df, "states_available") <- stats::setNames(states_available, missing_taxa_list$Taxon_name)
     attr(flagged_taxa_df, "valid_fraction") <- stats::setNames(valid_fraction, missing_taxa_list$Taxon_name)
     attr(flagged_taxa_df, "time_coverage") <- stats::setNames(time_coverage, missing_taxa_list$Taxon_name)
   }

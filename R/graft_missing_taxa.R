@@ -600,15 +600,9 @@
 #' # Here, 3 maps are simulated from the states of the tips of the toy simmap.
 #' tip_states <- phytools::getStates(toy_simmap, type = "tips")
 #'
-#' # (the random number generator of the session is restored afterwards)
-#' had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
-#' if (had_seed) old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
 #' set.seed(118)
 #' toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states,
 #'                                          model = "ER", nsim = 3, message = FALSE)
-#' if (had_seed)
-#' { assign(".Random.seed", old_seed, envir = globalenv())
-#' } else { rm(".Random.seed", envir = globalenv()) }
 #'
 #' # Graft using constraints from all 3 simmaps X 2 simulations per simmap
 #' grafted_phys_maps <- graft_missing_taxa(phy = toy_backbone,
