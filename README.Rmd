@@ -214,7 +214,6 @@ The taxa are assigned to target clades, some with excluded subclades and some wi
 
 
 ```{r quick-data}
-
 ## Prepare data
 
 # The backbone phylogeny is a time-calibrated phylogeny, and the stochastic character map (simmap) describes
@@ -231,6 +230,8 @@ data(toy_simmap)
 # and a single tip defines a terminal branch.
 # Some taxa also have excluded subclades (`Excluded_subclades`), where they are known not to belong,
 # and `allowed_states`, the states of the trait in which they can be grafted.
+# The inclusion of the stem branch as a valid placement for grafting can be fine-tuned
+# for target clades ('include_target_clade_stem') and excluded subclades ('exclude_subclades_stem').
 
 # The table is imported into a `missing_taxa_list`, and checked against the backbone phylogeny.
 missing_taxa_file <- system.file("extdata", "toy_missing_taxa_with_allowed_states.csv", package = "phylograftR")
