@@ -110,6 +110,10 @@ test_that("plot_grafted() plots simmaps, with dashed grafted edges and colored g
     expect_no_error(plot_quiet(plot_grafted(s$g_sm, which = w, fsize = 0.7, lwd = 2)))
   }
   expect_no_error(plot_quiet(plot_grafted(s$g_sm, simmap_colors = c(A = "lightblue", B = "orange", C = "grey"), color = "purple")))
+  # Title and subtitle (not supported by plotSimmap: drawn separately)
+  expect_no_error(plot_quiet(plot_grafted(s$g_sm, main = "Title")))
+  expect_no_error(plot_quiet(plot_grafted(s$g_sm, main = "Title", sub = "Subtitle", fsize = 0.7)))
+  expect_no_error(plot_quiet(plot_grafted(s$g_sm, sub = "Subtitle", mar = c(2, 1, 1, 1))))
   # No labels
   expect_no_error(plot_quiet(plot_grafted(s$g_sm, ftype = "off")))
   # Font types

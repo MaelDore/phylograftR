@@ -32,6 +32,7 @@
 #' @param trait Integer or character string. The trait to plot when the phylogeny has the simmaps of several traits (position or name of the trait). Default is `1`. Ignored with a single trait.
 #' @param ... Other arguments passed to `plot()` (see `ape::plot.phylo()`) for a plain phylogeny, or to `phytools::plotSimmap()` for a simmap
 #'   (e.g., `cex`, `show.tip.label`, `edge.width` for the plain phylogeny; `fsize`, `ftype`, `lwd` for the simmap).
+#'   A title can be added with `main` (or `sub`).
 #'
 #' @details
 #' ### Plain phylogeny
@@ -219,6 +220,13 @@ plot_grafted <- function (phy_grafted, # Output of the grafting functions: phylo
   label_type <- if (is.null(dots$ftype)) "reg" else dots$ftype
   draw_labels <- label_type != "off"
   dots[c("fsize", "ftype", "colors")] <- NULL
+  # plotSimmap() has no title: draw it separately, and leave room for it in the margins
+  plot_title <- dots[intersect(c("main", "sub"), names(dots))]
+  dots[c("main", "sub")] <- NULL
+  if (is.null(dots$mar) && length(plot_title) > 0)
+  {
+    dots$mar <- c(if (is.null(plot_title$sub)) 0.1 else 1.5, 0.1, if (is.null(plot_title$main)) 0.1 else 1.5, 0.1)
+  }
   # Room for the labels at the right of the tree (the labels are not known by plotSimmap)
   if (draw_labels && is.null(dots$xlim))
   {
@@ -229,6 +237,7 @@ plot_grafted <- function (phy_grafted, # Output of the grafting functions: phylo
   old_par <- graphics::par(lend = "butt") # Dashes as long as the gaps
   on.exit(graphics::par(old_par), add = TRUE)
   do.call(phytools::plotSimmap, c(list(tree = simmap, colors = plot_colors, ftype = "off", fsize = label_size), dots))
+  if (length(plot_title) > 0) { do.call(graphics::title, plot_title) }
   if (draw_labels)
   {
     ape::tiplabels(text = simmap$tip.label, tip = seq_len(ape::Ntip(simmap)), frame = "none", adj = c(0, 0.5), offset = 0.01 * root_age, cex = label_size,
