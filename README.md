@@ -334,18 +334,104 @@ An overview of all functions and datasets is available
 
 ## :joystick: Quick-to-run example
 
+This example grafts seven missing taxa on a toy backbone phylogeny of 30
+tips, using the datasets shipped with the package. The taxa are assigned
+to target clades, some with excluded subclades and some with the states
+of a color trait in which they can be grafted.
+
 ``` r
-Quick example. Include the plots
 
-o   Import .csv with only MRCA pairs
-o   Include excluded_subclades
-o   Use both global allowed states and taxa-level allowed states
-o   Run for missing taxa, with default options
-o   Plot backbone phylogeny vs. grafted phylogeny with colored grafted edges/tips
-o   Same run with multiple simulations (N = 100)
-o   Plot four grafted phylogenies with colored grafted edges/tips
+## Prepare data
 
+# The backbone phylogeny is a time-calibrated phylogeny, and the stochastic character map (simmap) describes
+# the evolution of a trait with three states (`"blue"`, `"green"`, and `"red"`) along its branches.
+
+library(phylograftR)
+
+data(toy_backbone)
+data(toy_simmap)
+
+# The missing taxa are described in a table, with one row per taxon.
+# Each taxon has a target clade (`Target_clade`) defined by the tips that delimit them:
+# a pair of tips defines the clade as their most recent common ancestor (MRCA),
+# and a single tip defines a terminal branch.
+# Some taxa also have excluded subclades (`Excluded_subclades`), where they are known not to belong,
+# and `allowed_states`, the states of the trait in which they can be grafted.
+
+# The table is imported into a `missing_taxa_list`, and checked against the backbone phylogeny.
+missing_taxa_file <- system.file("extdata", "toy_missing_taxa_with_allowed_states.csv", package = "phylograftR")
+missing_taxa_list <- import_missing_taxa_list(file = missing_taxa_file, phy = toy_backbone)
 ```
+
+| Taxon_name | Target_clade | Target_clade_name | include_target_clade_stem | Excluded_subclades | Excluded_subclades_names | exclude_subclades_stem | allowed_states |
+|:---|:---|:---|:---|:---|:---|:---|:---|
+| Genus_a_sp1 | t26,t18 | clade_A | TRUE | t10,t19;t26,t4 | group_1;group_2 | TRUE;FALSE | red |
+| Genus_a_sp2 | t26,t18 | clade_A | TRUE | t26,t4;t30 | group_2;tip_t30 | FALSE;TRUE |  |
+| Genus_a_sp3 | t26,t18 | clade_A | FALSE |  |  |  |  |
+| Genus_b_sp1 | t8,t22 | clade_B | NA |  |  |  | blue, green |
+| Genus_b_sp2 | t8,t7 | clade_B1 | TRUE | t13,t27 | group_3 |  | green |
+| Genus_c_sp1 | t5 | tip_t5 | NA |  |  |  |  |
+| Genus_c_sp2 | t5,t12 | clade_C | FALSE |  |  |  | blue, red |
+
+``` r
+## Graft the missing taxa
+
+# The taxa are grafted with the default options 
+# (diversification modeling with birth-death models fitted on the target clades).
+# Taxa with their own `allowed_states` follow them,
+# and the others are restricted to the global argument: here, the states `"blue"` and `"green"`.
+
+grafted_phy <- graft_missing_taxa(phy = toy_backbone,
+                                  missing_taxa_list = missing_taxa_list,
+                                  simmap = toy_simmap, allowed_states = c("blue", "green"),
+                                  seed = 1234, verbose = FALSE)
+```
+
+``` r
+## Vizualize the grafted phylogeny
+
+# The grafted taxa can be directly compared with the backbone phylogeny:
+# the grafted tips and branches are colored in red.
+
+par(mfrow = c(1, 2))
+plot(toy_backbone, cex = 0.7, main = "Backbone phylogeny")
+plot_grafted(grafted_phy, use_simmap = FALSE, cex = 0.7, main = "Grafted phylogeny")
+par(mfrow = c(1, 1))
+```
+
+<img src="man/figures/README-quick-plot-single_eval-1.png" alt="" width="100%" />
+
+``` r
+## Account for the uncertainty with several simulations
+
+# Grafting is stochastic, so a single grafted phylogeny is only one of the possible outcomes.
+# Downstream analyses should ideally be run on a set of grafted phylogenies:
+# Here, we use 10 simulations for a quick example.
+
+grafted_phys <- graft_missing_taxa(phy = toy_backbone,
+                                   missing_taxa_list = missing_taxa_list,
+                                   simmap = toy_simmap, allowed_states = c("blue", "green"),
+                                   nb_simulations = 10, seed = 1234, verbose = FALSE)
+```
+
+``` r
+## Vizualize updated stochastic maps
+
+# Below we plot four of the simulations with their updated simmap. 
+# The states of the trait are kept along grafted branches
+# The grafted branches appear as dashed lines, and the labels of the grafted taxa are in red.
+
+par(mfrow = c(2, 2))
+for (i in 1:4)
+{
+  plot_grafted(grafted_phys, index = i, fsize = 0.5, ftype = "i",
+               simmap_colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"),
+               main = paste("Simulation", i))
+}
+par(mfrow = c(1, 1))
+```
+
+<img src="man/figures/README-quick-plot-multi_eval-1.png" alt="" width="100%" />
 
 ## :bug: Found a bug?
 
