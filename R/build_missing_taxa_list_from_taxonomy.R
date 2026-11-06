@@ -98,44 +98,57 @@
 #' @author Maël Doré
 #'
 #' @examples
-#' ## Backbone phylogeny with 10 tips
-#' phy <- ape::read.tree(text = "(((((a1,a2),a3),a4),((b1,b2),b3)),((c1,c2),c3));")
-#' phy <- ape::compute.brlen(phy)
+#' ## Load the toy backbone phylogeny and its taxonomy
+#' data(toy_backbone)
+#' data(toy_backbone_taxonomic_table)
+#' head(toy_backbone_taxonomic_table)
 #'
-#' ## Taxonomy of the backbone
-#' # Fam1 = GenA + GenB; Fam2 = GenC
-#' backbone_taxonomic_table <- data.frame(
-#'   Taxa = phy$tip.label,
-#'   Family = ifelse(grepl("^c", phy$tip.label), "Fam2", "Fam1"),
-#'   Genus = unname(c(a = "GenA", b = "GenB", c = "GenC")[substr(phy$tip.label, 1, 1)]))
-#' backbone_taxonomic_table
+#' ## Load the taxonomic table of the taxa to graft
+#' data(toy_missing_taxa_taxonomic_table)
+#' toy_missing_taxa_taxonomic_table
 #'
-#' ## Taxa to graft
-#' # 'a_new' is grafted in its genus, 'b_new' in its family except in the genus GenA,
-#' # and 'd_new1' and 'd_new2' belong to a new genus GenD, sister to GenC: they have the same sister clade,
-#' # so they are grafted together as a missing clade.
-#' missing_taxa_taxonomic_table <- data.frame(
-#'   Taxa = c("a_new", "b_new", "d_new1", "d_new2"),
-#'   Type = c("taxa", "taxa", "clades", "clades"),
-#'   Family = c("Fam1", "Fam1", "Fam2", "Fam2"),
-#'   Genus = c("GenA", "GenB", "GenD", "GenD"),
-#'   Target_clade = c("Genus", "Family", NA, NA),
-#'   Excluded_subclades = c(NA, "GenA", NA, NA),
-#'   Sister_clade = c(NA, NA, "GenC", "GenC"))
+#' # The taxa to graft with graft_missing_taxa() (Type = "taxa") use different types of constraints:
+#' # * Genus_a_sp1: grafted in its family (Target_clade = "Family" is the family of the taxon, i.e., "Family_A"),
+#' #   but not in the subfamily "Subfam_A1" nor in the tribe "Tribe_A2a" (Excluded_subclades).
+#' #   The stem of the family is available (include_target_clade_stem), the stem of "Subfam_A1" is excluded too, but not the one of "Tribe_A2a" (exclude_subclades_stem).
+#' # * Genus_a_sp2: same target clade, but excluded subclades are a tribe and a genus with a single species ("Gen_3"), and the stem is excluded for the genus only.
+#' # * Genus_a_sp3: same target clade, without excluded subclades and without access to the stem of the family.
+#' # * Genus_b_sp1: grafted in the family "Family_B", written directly with the name of the group.
+#' # * Genus_b_sp2: grafted in its subfamily (Target_clade = "Subfamily", i.e., "Subfam_B1"), except in the genus "Gen_1".
+#' # * Genus_c_sp1: grafted on the terminal branch of the only species of the genus "Gen_2" (a single tip).
+#' # * Genus_c_sp2: grafted in its tribe (Target_clade = "Tribe", i.e., "Tribe_B2"), without access to the stem.
+#'
+#' # The taxa to graft with graft_missing_clades() (Type = "clades") use sister clades:
+#' # * Genus_d_sp1 and Genus_d_sp2: belong to a new genus, and have the same sister clade ("Gen_1"),
+#' #   so they are grafted together as a missing clade.
+#' # * Genus_e_sp1: grafted as the sister of its own tribe (Sister_clade = "Tribe", i.e., "Tribe_A1b").
 #'
 #' ## Build the missing taxa lists associated to these taxonomic tables
 #' missing_taxa_lists <- build_missing_taxa_list_from_taxonomy(
-#'   backbone_taxonomic_table = backbone_taxonomic_table,
-#'   missing_taxa_taxonomic_table = missing_taxa_taxonomic_table,
-#'   phy = phy)
+#'   backbone_taxonomic_table = toy_backbone_taxonomic_table,
+#'   missing_taxa_taxonomic_table = toy_missing_taxa_taxonomic_table,
+#'   phy = toy_backbone)
 #'
-#' # Since both types of taxa to graft where provided, the output contains one list per grafting function
+#' # Since both types of taxa to graft were provided, the output contains one list per grafting function
 #' names(missing_taxa_lists)
-#' print(missing_taxa_lists$taxa) # Missing_taxa_list for graft_missing_taxa()
-#' print(missing_taxa_lists$clades) # Missing_taxa_list for graft_missing_clades()
+#' str(missing_taxa_lists$taxa, max.level = 1) # Missing_taxa_list for graft_missing_taxa()
+#' str(missing_taxa_lists$clades, max.level = 1) # Missing_taxa_list for graft_missing_clades()
+#'
+#' # Clades are written as pairs of tips, and named after their taxonomic groups
+#' missing_taxa_lists$taxa$Target_clade
+#' missing_taxa_lists$taxa$Excluded_subclades$Genus_a_sp1
+#' missing_taxa_lists$taxa$exclude_subclades_stem$Genus_a_sp1
+#' missing_taxa_lists$clades$Sister_clade
+#'
+#' # The taxa to graft as clades share their sister clade, so they will be grafted together
+#' missing_taxa_lists$clades$Sister_clade_name
 #'
 #' # Information on the groups used
 #' attr(missing_taxa_lists, "taxonomic_groups")
+#'
+#' # The lists can be used for grafting
+#' grafted_taxa <- graft_missing_taxa(toy_backbone, missing_taxa_lists$taxa, verbose = FALSE)
+#' grafted_clades <- graft_missing_clades(toy_backbone, missing_taxa_lists$clades, verbose = FALSE)
 #'
 
 build_missing_taxa_list_from_taxonomy <- function (backbone_taxonomic_table, # Data frame, one row per tip of the backbone
