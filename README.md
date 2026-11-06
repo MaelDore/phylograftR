@@ -417,7 +417,8 @@ toy_missing_taxa_taxonomic_table$allowed_states <- c("red", NA, NA, "blue, green
 ``` r
 ## Build the list of missing taxa from the taxonomic tables
 
-# The taxonomic names are converted into clades of the backbone phylogeny, and the tables are checked against the backbone phylogeny.
+# The taxonomic names are converted into clades of the backbone phylogeny, 
+# and the tables are checked against the backbone phylogeny.
 missing_taxa_list <- build_missing_taxa_list_from_taxonomy(
   backbone_taxonomic_table = toy_backbone_taxonomic_table,
   missing_taxa_taxonomic_table = toy_missing_taxa_taxonomic_table,
