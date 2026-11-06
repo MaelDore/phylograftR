@@ -8,7 +8,7 @@
 
 
 ## Expected columns (without the optional Clade_name)
-bd_columns <- c("Taxa", "n_taxa", "initial_clade_node", "initial_clade_tips", "initial_clade_n_tips", "initial_clade_crown_age", "enlarged",
+bd_columns <- c("Taxa", "n_taxa", "initial_clade_node", "initial_clade_tips", "initial_clade_n_tips", "initial_clade_crown_age", "enclosing",
                 "fitted_clade_node", "fitted_clade_tips", "fitted_clade_n_tips", "fitted_clade_n_backbone_tips", "fitted_clade_crown_age", "min_tips",
                 "b", "d", "d_fitted", "d_adjustment", "net_diversification", "relative_extinction", "rho", "n_pending", "n_unsampled")
 
@@ -56,9 +56,9 @@ test_that("graft_missing_taxa() reports one BD model per target clade, only if r
   expect_equal(info$initial_clade_node, c(toy$node_A, toy$node_B, match(toy$s, toy$phy$tip.label)))
   expect_equal(info$initial_clade_n_tips, c(toy$nA, toy$nB, 1))
   expect_equal(info$initial_clade_crown_age, c(toy$root_age - phytools::nodeheight(toy$phy, toy$node_A), toy$root_age - phytools::nodeheight(toy$phy, toy$node_B), NA))
-  # A and B have fewer tips than min_tips = 8, but A has more: the clades are enlarged when they are too small
-  expect_equal(info$enlarged, info$fitted_clade_node != info$initial_clade_node)
-  expect_true(info$enlarged[3]) # A tip is always enlarged
+  # A and B have fewer tips than min_tips = 8, but A has more: an enclosing clade is used when the clade is too small
+  expect_equal(info$enclosing, info$fitted_clade_node != info$initial_clade_node)
+  expect_true(info$enclosing[3]) # A tip always uses an enclosing clade
   expect_true(all(info$fitted_clade_n_backbone_tips >= 8))
   expect_true(all(info$fitted_clade_n_tips >= info$fitted_clade_n_backbone_tips))
   # The fitted clades contain the initial ones
@@ -84,14 +84,14 @@ test_that("graft_missing_taxa() reports one BD model per target clade, only if r
   expect_true(all(info$n_pending >= 0))
 })
 
-test_that("The model of a clade that is not enlarged is the one fitted by fit_bd_on_clade() with its sampling fraction", {
+test_that("The model of a clade that does not use an enclosing clade is the one fitted by fit_bd_on_clade() with its sampling fraction", {
   toy <- toy_setup()
   mtl <- list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$A, X2 = toy$A))
   total <- list(Target_clade = list(toy$A), total_richness = toy$nA + 2 + 5)
   g <- quiet_graft(graft_missing_taxa, toy$phy, mtl, total_richness_per_clades = total, min_tips = 5, return_BD_model_summary = TRUE, seed = 1)
   info <- extract_BD_model_summary(g)
   expect_equal(nrow(info), 1)
-  expect_false(info$enlarged)
+  expect_false(info$enclosing)
   expect_equal(info$n_unsampled, 5)
   expect_equal(info$n_pending, 2)
   expect_equal(info$rho, toy$nA / (toy$nA + 2 + 5))
@@ -115,7 +115,7 @@ test_that("graft_missing_clades() reports one BD model per missing clade", {
   expect_equal(info$Taxa, c("M1, M2", "M3", "M4"))
   expect_equal(info$n_taxa, c(2, 1, 1))
   expect_equal(info$initial_clade_n_tips, c(toy$nB, toy$nC, 1))
-  expect_true(info$enlarged[3])
+  expect_true(info$enclosing[3])
   expect_true(all(info$fitted_clade_n_backbone_tips >= 5))
   # Without names, no Clade_name column
   mcl_no_names <- mcl; mcl_no_names$Sister_clade_name <- NULL

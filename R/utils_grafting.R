@@ -1492,7 +1492,7 @@ build_bd_record <- function (fit, phy, initial_tips, taxa, richness_info, min_ti
     Taxa = paste(taxa, collapse = ", "), n_taxa = length(taxa),
     initial_clade_node = as.integer(initial_node), initial_clade_tips = paste(node_to_tips(backbone, initial_node), collapse = ", "),
     initial_clade_n_tips = as.integer(n_backbone_all[initial_node]), initial_clade_crown_age = if (is_tip) NA_real_ else age[initial_node],
-    enlarged = fitted_node != initial_node,
+    enclosing = fitted_node != initial_node,
     fitted_clade_node = as.integer(fitted_node), fitted_clade_tips = paste(node_to_tips(backbone, fitted_node), collapse = ", "),
     fitted_clade_n_tips = as.integer(fit$n_tips), fitted_clade_n_backbone_tips = as.integer(n_backbone_all[fitted_node]),
     fitted_clade_crown_age = age[fitted_node], min_tips = as.integer(min_tips),

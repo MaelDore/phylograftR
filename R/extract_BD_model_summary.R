@@ -27,7 +27,7 @@
 #' With [`phylograftR::graft_missing_clades()`][graft_missing_clades], a model is fitted per missing clade, i.e., per sister clade.
 #'
 #' The initial clade is the target clade (or the sister clade). The model is fitted on the initial clade if it has at least `min_tips` tips,
-#' otherwise on the smallest enclosing clade that has `min_tips` tips (`enlarged = TRUE`).
+#' otherwise on the smallest enclosing clade that has `min_tips` tips (`enclosing = TRUE`).
 #' The number of tips of the fitted clade counts the taxa already grafted when the model is fitted.
 #'
 #' Clades are identified by their node in the backbone phylogeny provided to the grafting function, and by a pair of tips that defines the clade
@@ -55,8 +55,8 @@
 #'   * `initial_clade_tips` Character string. Pair of tips that defines the initial clade.
 #'   * `initial_clade_n_tips` Integer. Number of tips of the initial clade in the backbone.
 #'   * `initial_clade_crown_age` Numeric. Crown age of the initial clade (`NA` for a single tip).
-#'   * `enlarged` Logical. Whether the model was fitted on an enclosing clade, because the initial clade has fewer than `min_tips` tips.
-#'   * `fitted_clade_node` Integer. Node ID in the backbone of the MRCA of the clade used to fit the model (the same as `initial_clade_node` if `enlarged = FALSE`).
+#'   * `enclosing` Logical. Whether the model was fitted on an enclosing clade, because the initial clade has fewer than `min_tips` tips.
+#'   * `fitted_clade_node` Integer. Node ID in the backbone of the MRCA of the clade used to fit the model (the same as `initial_clade_node` if `enclosing = FALSE`).
 #'   * `fitted_clade_tips` Character string. Pair of tips that defines the fitted clade.
 #'   * `fitted_clade_n_tips` Integer. Number of tips of the fitted clade when the model was fitted, including the taxa already grafted.
 #'   * `fitted_clade_n_backbone_tips` Integer. Number of tips of the fitted clade in the backbone.
@@ -98,10 +98,10 @@
 #' # --- Extract the BD models --- #
 #'
 #' BD_summary <- extract_BD_model_summary(phy_grafted = grafted_phys)
-#' BD_summary[, c("simulation", "Taxa", "initial_clade_n_tips", "enlarged", "fitted_clade_n_tips", "b", "d", "rho")]
+#' BD_summary[, c("simulation", "Taxa", "initial_clade_n_tips", "enclosing", "fitted_clade_n_tips", "b", "d", "rho")]
 #'
 #' # The clade of 3 tips is smaller than min_tips = 5: the model is fitted on its enclosing clade
-#' BD_summary[BD_summary$enlarged, c("Taxa", "initial_clade_tips", "fitted_clade_tips")]
+#' BD_summary[BD_summary$enclosing, c("Taxa", "initial_clade_tips", "fitted_clade_tips")]
 #'
 
 extract_BD_model_summary <- function (phy_grafted) # Output of the grafting functions run with return_BD_model_summary = TRUE: phylo, multiPhylo, or list of maps
