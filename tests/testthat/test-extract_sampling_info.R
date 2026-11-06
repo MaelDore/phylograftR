@@ -168,8 +168,7 @@ test_that("extract_sampling_info() reports the names of the clades when provided
 {
   toy <- toy_setup()
   g <- sampling_toy_graft(toy)
-  totals <- list(Target_clade = list(toy$B, toy$A, toy$C), total_richness = c(toy$nB + 10, toy$nA + 12, NA),
-                 Target_clade_name = c("clade_B", NA, "clade_C"))
+  totals <- list(Target_clade_name = c("clade_B", NA, "clade_C"), Target_clade = list(toy$B, toy$A, toy$C), total_richness = c(toy$nB + 10, toy$nA + 12, NA))
   info <- extract_sampling_info(g, totals)
   expect_equal(names(info), c("map", "simulation", "seed", "Clade_name", "Clade_tips", "total_richness", "total_richness_provided", "nb_backbone_species",
                               "nb_grafted_species", "nb_unsampled_species", "sampling_fraction"))
@@ -181,14 +180,14 @@ test_that("extract_sampling_info() reports the names of the clades when provided
   # Several phylogenies: the names are repeated for each phylogeny
   mtl <- list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$A, X2 = toy$B))
   g_sim <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", nb_simulations = 3, seed = 5)
-  totals_sim <- list(Target_clade = list(toy$A, toy$B), total_richness = c(toy$nA + 5, toy$nB + 5), Target_clade_name = c("A", "B"))
+  totals_sim <- list(Target_clade_name = c("A", "B"), Target_clade = list(toy$A, toy$B), total_richness = c(toy$nA + 5, toy$nB + 5))
   info_sim <- extract_sampling_info(g_sim, totals_sim)
   expect_equal(info_sim$Clade_name, rep(c("A", "B"), 3))
 
   # Sister clades
   mcl <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B, M2 = toy$C))
   g_clades <- quiet_graft(graft_missing_clades, toy$phy, mcl, nb_simulations = 3, seed = 5)
-  totals_sis <- list(Sister_clade = list(toy$B, toy$C), total_richness = c(toy$nB + 3, NA), Sister_clade_name = c("sis_B", "sis_C"))
+  totals_sis <- list(Sister_clade_name = c("sis_B", "sis_C"), Sister_clade = list(toy$B, toy$C), total_richness = c(toy$nB + 3, NA))
   info_sis <- extract_sampling_info(g_clades, totals_sis)
   expect_equal(info_sis$Clade_name, rep(c("sis_B", "sis_C"), 3))
   # Missing clades are always grafted on the stem of their sister clade: the counts are the same in all the phylogenies
@@ -197,7 +196,7 @@ test_that("extract_sampling_info() reports the names of the clades when provided
   expect_equal(info_sis[info_sis$simulation == 3, cols], info_sis[info_sis$simulation == 1, cols], ignore_attr = TRUE)
 
   # Negative unsampled species: the warning names the clade
-  totals_neg <- list(Target_clade = list(toy$B, toy$A, toy$C), total_richness = c(toy$nB, toy$nA + 12, NA), Target_clade_name = c("clade_B", "clade_A", "clade_C"))
+  totals_neg <- list(Target_clade_name = c("clade_B", "clade_A", "clade_C"), Target_clade = list(toy$B, toy$A, toy$C), total_richness = c(toy$nB, toy$nA + 12, NA))
   expect_warning(extract_sampling_info(g, totals_neg), "clade_B")
 })
 
@@ -206,12 +205,26 @@ test_that("extract_sampling_info() checks the names of the clades",
   toy <- toy_setup()
   g <- sampling_toy_graft(toy)
   base <- list(Target_clade = list(toy$B, toy$A), total_richness = c(toy$nB + 10, toy$nA + 12))
-  expect_error(extract_sampling_info(g, c(base, list(Target_clade_name = "B"))), "one name per clade")
-  expect_error(extract_sampling_info(g, c(base, list(Target_clade_name = c(1, 2)))), "one name per clade")
-  expect_error(extract_sampling_info(g, c(base, list(Target_clade_name = c("same", "same")))), "must be unique")
+  expect_error(extract_sampling_info(g, c(list(Target_clade_name = "B"), base)), "one name per clade")
+  expect_error(extract_sampling_info(g, c(list(Target_clade_name = c(1, 2)), base)), "one name per clade")
+  expect_error(extract_sampling_info(g, c(list(Target_clade_name = c("same", "same")), base)), "must be unique")
   # NA and empty names are unnamed clades, and are not duplicates
-  info <- extract_sampling_info(g, c(base, list(Target_clade_name = c(NA, ""))))
+  info <- extract_sampling_info(g, c(list(Target_clade_name = c(NA, "")), base))
   expect_equal(info$Clade_name, c(NA_character_, NA_character_))
-  expect_no_error(extract_sampling_info(g, c(base, list(Target_clade_name = c(NA, NA)))))
+  expect_no_error(extract_sampling_info(g, c(list(Target_clade_name = c(NA, NA)), base)))
+})
+
+test_that("extract_sampling_info() shows the variation of the richness of nested clades among simulations of graft_missing_taxa()",
+{
+  toy <- toy_setup()
+  # Taxa assigned to A can be grafted within B (nested in A), in A outside B, or on the stem of A
+  mtl <- list(Taxon_name = paste0("X", 1:4), Target_clade = list(X1 = toy$A, X2 = toy$A, X3 = toy$A, X4 = toy$A))
+  totals <- list(Target_clade_name = c("A", "B"), Target_clade = list(toy$A, toy$B), total_richness = c(toy$nA + 10, toy$nB + 6))
+  g <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "uniform", nb_simulations = 20, seed = 3)
+  info <- extract_sampling_info(g, totals)
+  expect_gt(length(unique(info$nb_grafted_species[info$Clade_name == "B"])), 1)
+  expect_gt(length(unique(info$sampling_fraction[info$Clade_name == "B"])), 1)
+  # The backbone species do not vary
+  expect_equal(length(unique(info$nb_backbone_species[info$Clade_name == "A"])), 1)
 })
 

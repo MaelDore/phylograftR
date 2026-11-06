@@ -24,12 +24,12 @@
 #'   or a list of them with one element per map (output of the grafting functions with a `"multiSimmap"`).
 #'   The phylogenies must have the elements `$grafted_tips` and `$grafted_edges` (see [`phylograftR::identify_grafted()`][identify_grafted]).
 #' @param total_richness_per_clades A list with the total number of species of the clades, as used for the grafting. Items:
-#'   * `$Target_clade_name` or `$Sister_clade_name`: (Optional) Character vector of the names of the clades, same length as the clades (`NA` if a clade has no name).
-#'     The names must be unique. They are reported in the `Clade_name` column of the output.
 #'   * `$Target_clade` (clades defined for the taxa grafted with [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]) or `$Sister_clade`
 #'     (sister clades of the missing clades grafted with [`phylograftR::graft_missing_clades()`][graft_missing_clades]). Exactly one of them must be provided.
 #'     List of character vectors of tips of the backbone: a pair of tips defines the clade as their most recent common ancestor (MRCA), and a single tip defines a terminal branch.
 #'     Node IDs are not accepted: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips].
+#'   * `$Target_clade_name` or `$Sister_clade_name`: (Optional) Character vector of the names of the clades, same length as the clades (`NA` if a clade has no name).
+#'     The names must be unique. They are reported in the `Clade_name` column of the output.
 #'   * `$total_richness`: Vector of positive integers, same length as the clades. Total number of species of each clade,
 #'     i.e., backbone species, grafted species, and unsampled species. Use `NA` if unknown.
 #'
@@ -71,7 +71,7 @@
 #'   * `total_richness_provided` Logical. Whether the total richness of the clade was provided.
 #'   * `nb_backbone_species` Integer. Number of species of the clade that are in the backbone.
 #'   * `nb_grafted_species` Integer. Number of species of the clade that were grafted.
-#'   * `nb_unsampled_species` Numeric. Number of species of the clade that are neither in the backbone nor grafted. Negative (erroneous) if the clade has more species than expected.
+#'   * `nb_unsampled_species` Numeric. Number of species of the clade that are neither in the backbone nor grafted. Negative (conflictual) if the clade has more species than expected.
 #'   * `sampling_fraction` Numeric. Fraction of the clade richness present in the grafted phylogeny, `(nb_backbone_species + nb_grafted_species) / total_richness`.
 #'
 #'   Attributes: `"type"` (`"taxa"` if the clades are `$Target_clade`, `"clades"` if they are `$Sister_clade`).
@@ -86,20 +86,23 @@
 #' phy <- ape::rcoal(n = 30)
 #' phy$edge.length <- phy$edge.length / max(ape::node.depth.edgelength(phy)) * 50
 #'
-#' # List the missing taxa to graft
+#' # Two nested clades: B is nested within A
+#' clade_A <- c("t26", "t18") # 17 backbone species
+#' clade_B <- c("t26", "t3")  # 9 backbone species, nested within A
+#'
+#' # List the missing taxa to graft: 3 taxa in clade A and 1 taxon in clade B
 #' missing_taxa_list <- list(
 #'   Taxon_name = c("X1", "X2", "X3", "X4"),
+#'   Target_clade = list(X1 = clade_A, X2 = clade_A, X3 = clade_A, X4 = clade_B),
 #'   # Optional names of the clades (one per taxon): they must match those of total_richness_per_clades
-#'   Target_clade_name = c("clade_A", "clade_B", "tip_t5", "clade_A"),
-#'   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")))
-#'
+#'   Target_clade_name = c("clade_A", "clade_A", "clade_A", "clade_B"))
 #'
 #' # Total richness of the target clades
 #' # NA = unknown richness (i.e., no unsampled species beyond nested clades)
 #' total_richness_per_clades <- list(
-#'   Target_clade_name = c("clade_A", "clade_B", "tip_t5"),
-#'   Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5"),
-#'   total_richness = c(25, NA, 3))
+#'   Target_clade = list(clade_A, clade_B),
+#'   Target_clade_name = c("clade_A", "clade_B"),
+#'   total_richness = c(25, 12))
 #'
 #' # --- Graft the taxa (several simulations) --- #
 #'
@@ -111,9 +114,12 @@
 #'
 #' sampling_info <- extract_sampling_info(phy_grafted = grafted_phys,
 #'                                        total_richness_per_clades = total_richness_per_clades)
-#' head(sampling_info)
+#' sampling_info[, c("simulation", "Clade_name", "nb_backbone_species", "nb_grafted_species",
+#'                   "nb_unsampled_species", "sampling_fraction")]
 #'
-#' # Sampling fraction of each clade in each simulation (it varies when taxa are grafted in different clades)
+#' # The sampling fraction of clade B varies among simulations: the taxa assigned to clade A can be grafted
+#' # within clade B (nested in A, so they count for B) or in A outside of B. As such, the richness of B
+#' # differs between grafted phylogenies, while all the taxa are always in A (constant sampling fraction).
 #' tapply(sampling_info$sampling_fraction, list(sampling_info$Clade_name, sampling_info$simulation), mean)
 #'
 #'

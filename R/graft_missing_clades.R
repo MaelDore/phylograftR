@@ -33,13 +33,13 @@
 #'   If the sister clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
 #' @param total_richness_per_clades (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
 #'   nor in `missing_taxa_list` (i.e., unsampled species) when fitting the birth-death models. Items:
-#'   * `$Sister_clade_name`: (Optional) Character vector of the names of the clades, same length as `$Sister_clade` (`NA` if a clade has no name).
-#'     The names must be unique. If `missing_taxa_list$Sister_clade_name` is provided, a clade must have the same name in both objects (the function stops otherwise).
-#'     They are not used for the grafting, but they are reported by [`phylograftR::extract_sampling_info()`][extract_sampling_info].
 #'   * `$Sister_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Sister_clade`.
 #'     Node IDs are not accepted: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
 #'     so the tips of the clades match between both objects.
 #'     It must cover all the unique sister clades of `missing_taxa_list`. It can include other clades, e.g., enclosing clades.
+#'   * `$Sister_clade_name`: (Optional) Character vector of the names of the clades, same length as `$Sister_clade` (`NA` if a clade has no name).
+#'     Provided before the clades. The names must be unique. If `missing_taxa_list$Sister_clade_name` is provided, a clade must have the same name in both objects (the function stops otherwise).
+#'     They are not used for the grafting, but they are reported by [`phylograftR::extract_sampling_info()`][extract_sampling_info].
 #'   * `$total_richness`: Vector of positive integers, same length as `$Sister_clade`. Total number of species of each clade,
 #'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species
 #'     are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
