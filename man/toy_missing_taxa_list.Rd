@@ -9,7 +9,7 @@ A named list with 7 taxa and the following items. Every item is named after the 
 \itemize{
 \item \verb{$Taxon_name} Character vector. Names of the taxa to graft.
 \item \verb{$Target_clade} List of character vectors of tips defining the target clade of each taxon (one tip: the terminal branch of this tip).
-\item \verb{$Target_clade_name} Character vector. Labels of the target clades. Ignored by the grafting functions.
+\item \verb{$Target_clade_name} Character vector. Labels of the target clades. Not used for the grafting, but checked against the names of \code{total_richness_per_clades}, if provided.
 \item \verb{$include_target_clade_stem} Logical vector. Whether the stem of the target clade of each taxon is available for grafting (\code{NA} uses the global argument).
 \item \verb{$Excluded_subclades} List (one element per taxon) of named lists of character vectors of tips defining the excluded subclades, or \code{NULL}.
 \item \verb{$exclude_subclades_stem} List (one element per taxon) of logical vectors (one value per excluded subclade), or \code{NULL}.

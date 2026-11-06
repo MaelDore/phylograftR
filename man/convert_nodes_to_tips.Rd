@@ -28,7 +28,8 @@ The inner names of the subclades are kept.
 
 \item{total_richness_per_clades}{(Optional) List with the total richness of clades, as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}
 or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}. Its \verb{$Target_clade} (or \verb{$Sister_clade}) clades can also be defined by node IDs, and are converted the same way.
-Default is \code{NULL}. It must be provided in the same call as its \code{missing_taxa_list} (see Details).}
+Default is \code{NULL}. It must be provided in the same call as its \code{missing_taxa_list} (see Details).
+Its optional \verb{$Target_clade_name} (or \verb{$Sister_clade_name}) item is returned unchanged.}
 
 \item{verbose}{Logical. Whether to print the conversions of the node IDs into tips. Default is \code{TRUE}.}
 }

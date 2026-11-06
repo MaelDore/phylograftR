@@ -37,7 +37,8 @@ For a \code{"multiPhylo"}, it is the position of the simulation. For a list of m
 \item{trait}{Integer or character string. The trait to plot when the phylogeny has the simmaps of several traits (position or name of the trait). Default is \code{1}. Ignored with a single trait.}
 
 \item{...}{Other arguments passed to \code{plot()} (see \code{ape::plot.phylo()}) for a plain phylogeny, or to \code{phytools::plotSimmap()} for a simmap
-(e.g., \code{cex}, \code{show.tip.label}, \code{edge.width} for the plain phylogeny; \code{fsize}, \code{ftype}, \code{lwd} for the simmap).}
+(e.g., \code{cex}, \code{show.tip.label}, \code{edge.width} for the plain phylogeny; \code{fsize}, \code{ftype}, \code{lwd} for the simmap).
+A title can be added with \code{main} (and \code{sub}).}
 }
 \value{
 \code{NULL}, invisibly. The function is called for its plot.

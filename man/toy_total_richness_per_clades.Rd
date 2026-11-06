@@ -5,7 +5,8 @@
 \alias{toy_total_richness_per_clades}
 \title{Toy total richness of the target clades}
 \format{
-A list with the items \verb{$Target_clade} (list of character vectors of tips) and \verb{$total_richness} (numeric vector, \code{NA} if unknown).
+A list with the items \verb{$Target_clade} (list of character vectors of tips), \verb{$Target_clade_name} (character vector of the names of the clades,
+the same as in \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}) and \verb{$total_richness} (numeric vector, \code{NA} if unknown).
 }
 \usage{
 data(toy_total_richness_per_clades)
@@ -26,6 +27,7 @@ system.file("extdata", "toy_total_richness.csv", package = "phylograftR")
 tab <- read.csv(system.file("extdata", "toy_total_richness.csv", package = "phylograftR"))
 total_richness_per_clades <- list(
   Target_clade = strsplit(tab$Target_clade, ",", fixed = TRUE),
+  Target_clade_name = tab$Target_clade_name,
   total_richness = tab$total_richness)
 
 }

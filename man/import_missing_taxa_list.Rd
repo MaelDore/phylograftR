@@ -45,7 +45,7 @@ A \code{missing_taxa_list}: a list, ready to be used in the grafting functions, 
 \itemize{
 \item \verb{$Taxon_name} Character vector.
 \item \verb{$Target_clade} (or \verb{$Sister_clade}) List of character vectors of tips.
-\item \verb{$Target_clade_name} (or \verb{$Sister_clade_name}) Only if the column was provided. Character vector of labels (\code{NA} if none). Ignored by the grafting functions.
+\item \verb{$Target_clade_name} (or \verb{$Sister_clade_name}) Only if the column was provided. Character vector of labels (\code{NA} if none). Not used for the grafting, but checked against the names of \code{total_richness_per_clades}, if provided (see the grafting functions).
 \item \verb{$include_target_clade_stem} Only if the column was provided. Logical vector (\code{NA} uses the global argument).
 \item \verb{$Excluded_subclades} Only if the column was provided. List (one element per taxon) of lists of character vectors of tips. \code{NULL} for taxa with no excluded subclades.
 The subclades are named after their labels if \code{Excluded_subclades_names} was provided.
