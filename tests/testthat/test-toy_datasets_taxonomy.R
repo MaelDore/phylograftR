@@ -54,6 +54,9 @@ test_that("the toy taxonomic tables build the toy missing taxa list and a list o
   expect_equal(lapply(taxa$Excluded_subclades, nodes), lapply(toy_missing_taxa_list$Excluded_subclades, nodes), ignore_attr = TRUE)
   expect_equal(lapply(taxa$exclude_subclades_stem, unname), lapply(toy_missing_taxa_list$exclude_subclades_stem, unname), ignore_attr = TRUE)
   expect_equal(unname(taxa$include_target_clade_stem), unname(toy_missing_taxa_list$include_target_clade_stem))
+  # Same names of the clades and excluded subclades
+  expect_equal(taxa$Target_clade_name, toy_missing_taxa_list$Target_clade_name)
+  expect_equal(lapply(taxa$Excluded_subclades, names), lapply(toy_missing_taxa_list$Excluded_subclades, names))
 
   # The two taxa of the new genus are grafted together: same sister clade
   clades <- lists$clades
@@ -70,6 +73,8 @@ test_that("the lists built from the toy taxonomic tables can be grafted", {
   lists <- build_missing_taxa_list_from_taxonomy(toy_backbone_taxonomic_table, toy_missing_taxa_taxonomic_table, toy_backbone, verbose = FALSE)
   g_taxa <- quiet_graft(graft_missing_taxa, toy_backbone, lists$taxa, method = "uniform", seed = 1)
   expect_valid_graft(g_taxa, toy_backbone, lists$taxa)
+  # The names are consistent with the toy total richness (checked by the grafting function)
+  expect_no_error(quiet_graft(graft_missing_taxa, toy_backbone, lists$taxa, method = "uniform", seed = 1, total_richness_per_clades = toy_total_richness_per_clades))
   g_clades <- quiet_graft(graft_missing_clades, toy_backbone, lists$clades, seed = 1)
   expect_true(all(lists$clades$Taxon_name %in% g_clades$tip.label))
   expect_true(ape::is.ultrametric(g_clades))

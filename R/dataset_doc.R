@@ -51,6 +51,7 @@
 #'   It is the output of [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] applied to the table
 #'   `system.file("extdata", "toy_missing_taxa.csv", package = "phylograftR")`: open that file to see how to fill the table.
 #'   It shows target clades defined by one or two tips, excluded subclades (named or not, with one tip or several), and the stem settings.
+#'   Clades and excluded subclades are named after the taxonomic groups of [`phylograftR::toy_backbone_taxonomic_table`][toy_taxonomic_tables] (e.g., `"Family_A"`).
 #'
 #' @usage data(toy_missing_taxa_list)
 #' @format A named list with 7 taxa and the following items. Every item is named after the taxa (`$Taxon_name`), in the same order.
@@ -253,8 +254,8 @@
 #'   Both tables are also provided as `.csv` files in `system.file("extdata", package = "phylograftR")`
 #'   (`toy_backbone_taxonomic_table.csv` and `toy_missing_taxa_taxonomic_table.csv`).
 #'
-#'   The names of the clades made from the taxonomy (e.g., `"Family_A"`) are not the ones of [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list]
-#'   (e.g., `"clade_A"`), so the lists must not be combined with [`phylograftR::toy_total_richness_per_clades`][toy_total_richness_per_clades], whose names follow the latter.
+#'   The clades are named after their taxonomic groups (e.g., `"Family_A"`), as in [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list]
+#'   and [`phylograftR::toy_total_richness_per_clades`][toy_total_richness_per_clades], so the lists built from the taxonomy can be used with this richness list.
 #'
 #' @usage
 #' data(toy_backbone_taxonomic_table)

@@ -47,23 +47,25 @@ stopifnot(isTRUE(all.equal(max(ape::node.depth.edgelength(toy_backbone)), 50)),
           min(toy_backbone$edge.length[toy_backbone$edge[, 2] > n_tips]) >= min_internal_branch - 1e-8)
 
 # Reference clades (node: tips) used below
-# 32: t26 t2 t21 t16 t11 t4 t3 t25 t28 t10 t6 t20 t9 t30 t24 t18 t19  (clade A)
-# 33: t8 t1 t15 t29 t14 t13 t17 t27 t7 t5 t23 t12 t22                 (clade B)
-# 34: t8 t1 t15 t29 t14 t13 t17 t27 t7                                (clade B1, nested in B)
-# 37: t10 t6 t20 t9 t30 t24 t18 t19                                   (group_1, nested in A)
-# 39: t26 t2 t21 t16 t11 t4                                           (group_2, nested in A)
-# 50: t13 t17 t27                                                     (group_3, nested in B1)
-# 53: t5 t23 t12                                                      (clade C, nested in B)
+# 32: t26 t2 t21 t16 t11 t4 t3 t25 t28 t10 t6 t20 t9 t30 t24 t18 t19  (Family_A)
+# 33: t8 t1 t15 t29 t14 t13 t17 t27 t7 t5 t23 t12 t22                 (Family_B)
+# 34: t8 t1 t15 t29 t14 t13 t17 t27 t7                                (Subfam_B1, nested in B)
+# 37: t10 t6 t20 t9 t30 t24 t18 t19                                   (Subfam_A1, nested in A)
+# 39: t26 t2 t21 t16 t11 t4                                           (Tribe_A2a, nested in A)
+# 50: t13 t17 t27                                                     (Gen_1, nested in B1)
+# 53: t5 t23 t12                                                      (Tribe_B2, nested in B)
+# Clades are named after the taxonomic groups of 'toy_backbone_taxonomic_table' (section 4b), so the names of the toy missing taxa list, of the toy total richness
+# and of the lists built from the taxonomy are the same. Tips t5 and t30 are single-species genera (Gen_2 and Gen_3).
 
 ##### 2/ Create table of the missing taxa as .csv #####
 
 toy_missing_taxa_table <- data.frame(
   Taxon_name = c("Genus_a_sp1", "Genus_a_sp2", "Genus_a_sp3", "Genus_b_sp1", "Genus_b_sp2", "Genus_c_sp1", "Genus_c_sp2"),
   Target_clade = c("t26,t18", "t26,t18", "t26,t18", "t8,t22", "t8,t7", "t5", "t5,t12"),
-  Target_clade_name = c("clade_A", "clade_A", "clade_A", "clade_B", "clade_B1", "tip_t5", "clade_C"),
+  Target_clade_name = c("Family_A", "Family_A", "Family_A", "Family_B", "Subfam_B1", "Gen_2", "Tribe_B2"),
   include_target_clade_stem = c(TRUE, TRUE, FALSE, NA, TRUE, NA, FALSE),
   Excluded_subclades = c("t10,t19;t26,t4", "t26,t4;t30", NA, NA, "t13,t27", NA, NA),
-  Excluded_subclades_names = c("group_1;group_2", "group_2;tip_t30", NA, NA, "group_3", NA, NA),
+  Excluded_subclades_names = c("Subfam_A1;Tribe_A2a", "Tribe_A2a;Gen_3", NA, NA, "Gen_1", NA, NA),
   exclude_subclades_stem = c("TRUE;FALSE", "FALSE;TRUE", NA, NA, NA, NA, NA),
   stringsAsFactors = FALSE)
 
@@ -81,7 +83,7 @@ toy_missing_taxa_list <- phylograftR::import_missing_taxa_list(
 toy_total_richness_table <- data.frame(
   Target_clade = c("t26,t18", "t8,t22", "t8,t7", "t5", "t5,t12"),
   # Names identical to the ones of the toy missing taxa list (checked by the grafting functions)
-  Target_clade_name = c("clade_A", "clade_B", "clade_B1", "tip_t5", "clade_C"),
+  Target_clade_name = c("Family_A", "Family_B", "Subfam_B1", "Gen_2", "Tribe_B2"),
   total_richness = c(25, NA, 14, NA, 8))
 
 # Export in inst/extdata
@@ -159,6 +161,10 @@ stopifnot(identical(names(toy_taxonomic_lists), c("taxa", "clades")),
                     unname(lapply(toy_missing_taxa_list$Excluded_subclades, function (x) unname(vapply(x, clade_node, numeric(1)))))),
           identical(unname(lapply(toy_taxonomic_lists$taxa$exclude_subclades_stem, unname)), unname(lapply(toy_missing_taxa_list$exclude_subclades_stem, unname))),
           identical(unname(toy_taxonomic_lists$taxa$include_target_clade_stem), unname(toy_missing_taxa_list$include_target_clade_stem)),
+          # Same names of the clades and excluded subclades, so the lists are consistent with 'toy_total_richness_per_clades'
+          identical(toy_taxonomic_lists$taxa$Target_clade_name, toy_missing_taxa_list$Target_clade_name),
+          identical(lapply(toy_taxonomic_lists$taxa$Excluded_subclades, names), lapply(toy_missing_taxa_list$Excluded_subclades, names)),
+          all(toy_total_richness_per_clades$Target_clade_name %in% toy_missing_taxa_list$Target_clade_name),
           all(attr(toy_taxonomic_lists, "taxonomic_groups")$monophyletic))
 
 ##### 5/ Create a stochastic character map (simmap) of the backbone #####

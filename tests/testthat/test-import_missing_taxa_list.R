@@ -52,10 +52,10 @@ test_that("the dataset toy_missing_taxa_list has the format required by the graf
   expect_identical(l$Target_clade$Genus_c_sp1, "t5")
   expect_identical(l$Target_clade$Genus_b_sp2, c("t8", "t7"))
   # Nested and named excluded subclades
-  expect_identical(l$Excluded_subclades$Genus_a_sp1, list(group_1 = c("t10", "t19"), group_2 = c("t26", "t4")))
-  expect_identical(l$Excluded_subclades$Genus_a_sp2, list(group_2 = c("t26", "t4"), tip_t30 = "t30"))
+  expect_identical(l$Excluded_subclades$Genus_a_sp1, list(Subfam_A1 = c("t10", "t19"), Tribe_A2a = c("t26", "t4")))
+  expect_identical(l$Excluded_subclades$Genus_a_sp2, list(Tribe_A2a = c("t26", "t4"), Gen_3 = "t30"))
   expect_null(l$Excluded_subclades$Genus_a_sp3)
-  expect_identical(l$exclude_subclades_stem$Genus_a_sp1, c(group_1 = TRUE, group_2 = FALSE))
+  expect_identical(l$exclude_subclades_stem$Genus_a_sp1, c(Subfam_A1 = TRUE, Tribe_A2a = FALSE))
   expect_identical(l$include_target_clade_stem[["Genus_a_sp3"]], FALSE)
   expect_true(is.na(l$include_target_clade_stem[["Genus_b_sp1"]]))
   expect_silent(phylograftR:::validate_missing_taxa_list(l, clade_item = "Target_clade"))
