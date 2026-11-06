@@ -634,6 +634,8 @@ plot_grafted(grafted_phy_traits, trait = 2)
 \seealso{
 Other functions from phylograftR:
 \itemize{
+\item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to build 'missing_taxa_list' objects from an internal data.frame using nodes and tips to define clades,
+\item \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} to build 'missing_taxa_list' objects from internal data.frame using taxonomic classifications,
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
 \item \code{\link[=check_grafting_plan]{phylograftR::check_grafting_plan()}} to check a priori the feasibility of a grafting plan,
 \item \code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}} to check a posteriori that grafted taxa respect their constraints,

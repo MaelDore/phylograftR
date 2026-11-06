@@ -52,7 +52,8 @@
 #' The limit is that only the taxonomic groups of the backbone table can be used as clades. To fine-tune the grafting of some taxa with any other node of the phylogeny
 #' (e.g., a clade without a name, a part of a group, or a group of several genera), define their clades by tips or node IDs with
 #' [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] or [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] (see 'Fine-tuning the clades' in their Details sections).
-#' Both routes return the same `missing_taxa_list`, so a list built from taxonomic tables can be adjusted afterwards.#'
+#'
+#' Both routes return the same `missing_taxa_list`, so a list built from taxonomic tables can be adjusted afterwards.
 #'
 #' **Backbone table** (`type = "backbone"`)
 #'
@@ -138,7 +139,7 @@
 #'
 
 import_taxonomic_table <- function (file, # Path to the table
-                                    type, # Table to read
+                                    type, # Table to read: "backbone" or "missing_taxa"
                                     phy = NULL, # Optional backbone phylogeny
                                     sep = NULL, # Field separator of text files. By default, from the extension
                                     sheet = 1, # Sheet of Excel files
@@ -148,7 +149,10 @@ import_taxonomic_table <- function (file, # Path to the table
 {
   ## 1.1/ Check the inputs ####
 
-  type <- match.arg(type)
+  if (missing(type) || !is.character(type) || length(type) != 1 || is.na(type) || !(type %in% c("backbone", "missing_taxa")))
+  {
+    stop("'type' must be provided, and be either \"backbone\" or \"missing_taxa\"")
+  }
   if (!is.null(phy) && !inherits(phy, "phylo")) { stop("'phy' must be NULL or a phylogeny of class 'phylo'") }
   if (!is.logical(verbose) || length(verbose) != 1 || is.na(verbose)) { stop("'verbose' must be TRUE or FALSE") }
 

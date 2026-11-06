@@ -37,8 +37,6 @@ test_that("import_taxonomic_table() reads the .csv files of the package as the t
   expect_true(all(vapply(mt, is.character, logical(1))))
   toy_mt[] <- lapply(toy_mt, as.character)
   expect_identical(mt, toy_mt)
-  # The default type is the backbone
-  expect_identical(import_taxonomic_table(backbone_path(), verbose = FALSE), bb)
 })
 
 test_that("tables imported from files give the same missing_taxa_lists as the toy datasets",
@@ -64,13 +62,13 @@ test_that("import_taxonomic_table() reads .csv, .tsv, .txt and files with a give
   utils::write.table(d, file.path(dir, "t.dat"), sep = "|", row.names = FALSE, na = "", quote = FALSE)
   for (f in c("t.csv", "t.tsv", "t.txt"))
   {
-    x <- import_taxonomic_table(file.path(dir, f), verbose = FALSE)
+    x <- import_taxonomic_table(file.path(dir, f), "backbone", verbose = FALSE)
     expect_identical(x, d, info = f)
   }
-  expect_identical(import_taxonomic_table(file.path(dir, "t.dat"), sep = "|", verbose = FALSE), d)
-  expect_error(import_taxonomic_table(file.path(dir, "t.dat"), verbose = FALSE), "Unknown file extension '.dat'")
+  expect_identical(import_taxonomic_table(file.path(dir, "t.dat"), "backbone", sep = "|", verbose = FALSE), d)
+  expect_error(import_taxonomic_table(file.path(dir, "t.dat"), "backbone", verbose = FALSE), "Unknown file extension '.dat'")
   # Blank cells are NA, and columns are text
-  x <- import_taxonomic_table(file.path(dir, "t.csv"), verbose = FALSE)
+  x <- import_taxonomic_table(file.path(dir, "t.csv"), "backbone", verbose = FALSE)
   expect_true(all(vapply(x, is.character, logical(1))))
   expect_true(is.na(x$Family[3]))
 })
@@ -92,7 +90,7 @@ test_that("import_taxonomic_table() strips spaces, drops empty rows, and does no
   d <- data.frame(` Taxa ` = c(" t1", "t2 ", NA, NA), Family = c("F1 ", " f2", NA, ""), check.names = FALSE, stringsAsFactors = FALSE)
   path <- file.path(temp_dir(), "t.csv")
   utils::write.csv(d, path, row.names = FALSE, na = "")
-  x <- import_taxonomic_table(path, verbose = FALSE)
+  x <- import_taxonomic_table(path, "backbone", verbose = FALSE)
   expect_identical(names(x), c("Taxa", "Family"))
   expect_identical(x$Taxa, c("t1", "t2"))
   expect_identical(x$Family, c("F1", "f2"))
@@ -119,38 +117,43 @@ test_that("import_taxonomic_table() accepts a user-supplied reader",
   d <- bb_table()
   path <- file.path(temp_dir(), "t.rds")
   saveRDS(d, path)
-  expect_identical(import_taxonomic_table(path, reader = readRDS, verbose = FALSE), d)
+  expect_identical(import_taxonomic_table(path, "backbone", reader = readRDS, verbose = FALSE), d)
   reader <- function (file, keep) { x <- readRDS(file); x[keep, ] }
-  expect_identical(import_taxonomic_table(path, reader = reader, keep = 1:2, verbose = FALSE)$Taxa, c("t1", "t2"))
-  expect_error(import_taxonomic_table(path, reader = "readRDS"), "'reader' must be a function")
-  expect_error(import_taxonomic_table(path, reader = function (file) "a"), "not a data frame")
+  expect_identical(import_taxonomic_table(path, "backbone", reader = reader, keep = 1:2, verbose = FALSE)$Taxa, c("t1", "t2"))
+  expect_error(import_taxonomic_table(path, "backbone", reader = "readRDS"), "'reader' must be a function")
+  expect_error(import_taxonomic_table(path, "backbone", reader = function (file) "a"), "not a data frame")
 })
 
 ### 3/ Checks ####
 
 test_that("import_taxonomic_table() checks the file and the arguments",
 {
-  expect_error(import_taxonomic_table(file.path(tempdir(), "nothing.csv")), "File not found")
-  expect_error(import_taxonomic_table(c("a.csv", "b.csv")), "single path")
-  expect_error(import_taxonomic_table(backbone_path(), sep = ";;"), "single character")
-  expect_error(import_taxonomic_table(backbone_path(), type = "other"), "'arg' should be one of")
-  expect_error(import_taxonomic_table(backbone_path(), phy = "a"), "'phy' must be NULL or a phylogeny")
-  expect_error(import_taxonomic_table(backbone_path(), verbose = NA), "'verbose' must be TRUE or FALSE")
+  expect_error(import_taxonomic_table(file.path(tempdir(), "nothing.csv"), "backbone"), "File not found")
+  expect_error(import_taxonomic_table(c("a.csv", "b.csv"), "backbone"), "single path")
+  expect_error(import_taxonomic_table(backbone_path(), "backbone", sep = ";;"), "single character")
+  # The type must be given, and valid: there is no default
+  expect_error(import_taxonomic_table(backbone_path()), "'type' must be provided")
+  expect_error(import_taxonomic_table(backbone_path(), type = "other"), "either \"backbone\" or \"missing_taxa\"")
+  expect_error(import_taxonomic_table(backbone_path(), type = c("backbone", "missing_taxa")), "'type' must be provided")
+  expect_error(import_taxonomic_table(backbone_path(), type = NA_character_), "'type' must be provided")
+  expect_error(import_taxonomic_table(backbone_path(), type = "Backbone"), "'type' must be provided")
+  expect_error(import_taxonomic_table(backbone_path(), "backbone", phy = "a"), "'phy' must be NULL or a phylogeny")
+  expect_error(import_taxonomic_table(backbone_path(), "backbone", verbose = NA), "'verbose' must be TRUE or FALSE")
   path <- file.path(temp_dir(), "empty.csv")
   writeLines("Taxa,Family", path)
-  expect_error(import_taxonomic_table(path), "no rows")
+  expect_error(import_taxonomic_table(path, "backbone"), "no rows")
   writeLines(c("Taxa,Family", ",", ","), path)
-  expect_error(import_taxonomic_table(path), "no rows with values")
+  expect_error(import_taxonomic_table(path, "backbone"), "no rows with values")
 })
 
 test_that("import_taxonomic_table() checks the columns and the names of the taxa",
 {
   dir <- temp_dir()
   write_table <- function (d, name = "t.csv") { p <- file.path(dir, name); utils::write.csv(d, p, row.names = FALSE, na = ""); p }
-  expect_error(import_taxonomic_table(write_table(data.frame(Tip = "t1", Family = "F1"))), "must have a column 'Taxa'")
-  expect_error(import_taxonomic_table(write_table(data.frame(Taxa = "t1"))), "at least one taxonomic level")
-  expect_error(import_taxonomic_table(write_table(data.frame(Taxa = c("t1", "t1"), Family = "F1"))), "'Taxa' must be unique.*t1")
-  expect_error(import_taxonomic_table(write_table(data.frame(Taxa = c("t1", NA), Family = c("F1", "F2")))), "'Taxa' is empty in the row\\(s\\).*: 2")
+  expect_error(import_taxonomic_table(write_table(data.frame(Tip = "t1", Family = "F1")), "backbone"), "must have a column 'Taxa'")
+  expect_error(import_taxonomic_table(write_table(data.frame(Taxa = "t1")), "backbone"), "at least one taxonomic level")
+  expect_error(import_taxonomic_table(write_table(data.frame(Taxa = c("t1", "t1"), Family = "F1")), "backbone"), "'Taxa' must be unique.*t1")
+  expect_error(import_taxonomic_table(write_table(data.frame(Taxa = c("t1", NA), Family = c("F1", "F2"))), "backbone"), "'Taxa' is empty in the row\\(s\\).*: 2")
   expect_error(import_taxonomic_table(write_table(data.frame(Taxa = "X1", Family = "F1")), type = "missing_taxa"), "must have a column 'Type'")
   d <- mt_table(); d$Type[2] <- "family"
   expect_error(import_taxonomic_table(write_table(d), type = "missing_taxa"), "'Type' must be 'taxa' or 'clades'.*X2")
@@ -158,7 +161,7 @@ test_that("import_taxonomic_table() checks the columns and the names of the taxa
   expect_error(import_taxonomic_table(write_table(d), type = "missing_taxa"), "Invalid for: X1")
   # Two columns with the same name
   p <- file.path(dir, "dup.csv"); writeLines(c("Taxa,Family,Family", "t1,F1,F2"), p)
-  expect_error(import_taxonomic_table(p), "same name: Family")
+  expect_error(import_taxonomic_table(p, "backbone"), "same name: Family")
 })
 
 test_that("import_taxonomic_table() checks the table against the tips of the phylogeny, when provided",
@@ -167,8 +170,8 @@ test_that("import_taxonomic_table() checks the table against the tips of the phy
   dir <- temp_dir()
   d <- bb_table(); d$Taxa[3] <- "not_a_tip"
   p <- file.path(dir, "b.csv"); utils::write.csv(d, p, row.names = FALSE, na = "")
-  expect_error(import_taxonomic_table(p, phy = phy), "1 taxa of the backbone table are not tips of 'phy': not_a_tip")
-  expect_no_error(import_taxonomic_table(p, verbose = FALSE))
+  expect_error(import_taxonomic_table(p, "backbone", phy = phy), "1 taxa of the backbone table are not tips of 'phy': not_a_tip")
+  expect_no_error(import_taxonomic_table(p, "backbone", verbose = FALSE))
   # Taxa to graft cannot be tips
   d <- mt_table(); d$Taxa[1] <- "t1"
   p <- file.path(dir, "m.csv"); utils::write.csv(d, p, row.names = FALSE, na = "")
@@ -180,7 +183,7 @@ test_that("import_taxonomic_table() checks the table against the tips of the phy
 
 test_that("import_taxonomic_table() summarizes the table if verbose = TRUE",
 {
-  expect_message(import_taxonomic_table(backbone_path()), "Backbone taxonomic table: 30 tips, with")
+  expect_message(import_taxonomic_table(backbone_path(), "backbone"), "Backbone taxonomic table: 30 tips, with")
   expect_message(import_taxonomic_table(missing_path(), "missing_taxa"), "Missing taxa taxonomic table: 10 taxa to graft \\(7 as 'taxa', 3 as 'clades'\\)")
-  expect_no_message(import_taxonomic_table(backbone_path(), verbose = FALSE))
+  expect_no_message(import_taxonomic_table(backbone_path(), "backbone", verbose = FALSE))
 })

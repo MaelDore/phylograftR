@@ -37,6 +37,10 @@ Lists of tips (or node IDs, see Details) are written in the cells of the table, 
 and runs all the checks of validity against the backbone phylogeny.
 
 Use \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read the table directly from a file.
+
+Clades are defined by tips or node IDs, which allows for fine-tuning the constraints of each taxon (see 'Fine-tuning the clades' in Details).
+For large phylogenies with neatly defined taxonomic levels, taxonomic tables are likely easier to prepare:
+see \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} and \code{\link[=import_taxonomic_table]{phylograftR::import_taxonomic_table()}}.
 }
 \details{
 The columns of \code{data} are the items of \code{missing_taxa_list} as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}.
@@ -99,6 +103,22 @@ Convert \code{total_richness_per_clades} (if you use it) at the same time as the
 so the tips of the clades match between both objects.
 }
 
+\subsection{Fine-tuning the clades}{
+
+Defining clades with tips or node IDs gives full control on the constraints of each taxon. \strong{Any node of \code{phy} can be used} as a \code{Target_clade},
+as a \code{Sister_clade}, or as an excluded subclade, simply by writing its node ID (e.g., \code{"34"}), or two tips whose MRCA is the node (e.g., \code{"t8, t7"}).
+The node does not need to match a taxonomic group: it can be a clade without a name, a clade that groups several taxonomic units (e.g., two neighboring genera),
+a part of a taxonomic group only, or a clade you identified from the phylogeny itself or from another source (e.g., a molecular study).
+Clades can be nested at any depth, and each taxon has its own set of excluded subclades, with or without their stem.
+
+This is the best route to fine-tune the grafting of a limited number of taxa, but the clades have to be written for each taxon.
+When the backbone is large, and taxonomic levels (e.g., Family, Subfamily, Tribe, Genus) are defined for its tips and for the taxa to graft, taxonomic tables are the go-to option:
+clades are retrieved from their taxonomic names, which ease the attribution of clades across many taxa.
+See \code{\link[=import_taxonomic_table]{phylograftR::import_taxonomic_table()}} and \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}}.
+
+Both routes return the same \code{missing_taxa_list}, so they can be combined: build a list from taxonomic tables, and then adjust the clades of a few taxa with node IDs or tips.
+}
+
 \subsection{Labels of the clades}{
 
 Labels (\code{Target_clade_name}, \code{Sister_clade_name}, and \code{Excluded_subclades_names}) are optional but, when used, they identify the clades
@@ -156,7 +176,8 @@ str(build_missing_taxa_list(data = my_table_nodes, phy = toy_backbone), 2)
 Other functions from phylograftR:
 \itemize{
 \item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read the table from a file,
-\item \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} to convert the node IDs of a list built 'by hand',
+\item \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} and \code{\link[=import_taxonomic_table]{phylograftR::import_taxonomic_table()}} to define the clades with taxonomic names instead of tips or node IDs,
+\item \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} to convert the node IDs of a list built 'by hand' into pairs of tips defining MRCA,
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} that use the list for grafting.
 }
 }

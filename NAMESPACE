@@ -15,6 +15,7 @@ export(graft_missing_clades)
 export(graft_missing_taxa)
 export(identify_grafted)
 export(import_missing_taxa_list)
+export(import_taxonomic_table)
 export(plot_grafted)
 importFrom(TreeSim,
   corsim,
