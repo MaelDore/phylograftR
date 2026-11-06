@@ -34,6 +34,10 @@
 #'     `list(M1 = list(c("blue", "green"), "high"), M2 = list(NULL, "low"))` (see 'Several traits' in Details section).
 #' @param min_tips Integer. Minimum number of tips of the clade used to fit the birth-death model.
 #'   If the sister clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
+#' @param return_BD_model_summary Logical. Whether to report the birth-death models fitted during the grafting.
+#'   If `TRUE`, each grafted phylogeny has the attribute `"BD_model_summary"`: a data.frame with one row per model (i.e., per missing clade),
+#'   summarizing diversification rates and sampling fraction.
+#'   It can be extracted a posteriori with [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary]. Default is `FALSE`.
 #' @param total_richness_per_clades (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
 #'   nor in `missing_taxa_list` (i.e., unsampled species) when fitting the birth-death models. Items:
 #'   * `$Sister_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Sister_clade`.
@@ -137,6 +141,9 @@
 #'
 #'   Optional elements can be added to the output based on what optional argument was provided:
 #'
+#'   * `"BD_model_summary"` (attribute). Only if `return_BD_model_summary = TRUE`. Data.frame with one row per birth-death model fitted (one per missing clade),
+#'     summarizing information about the clade used for model fitting, diversification rates, and sampling fraction.
+#'     It can be extracted a posteriori with [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary].
 #'   * `simmap` Only if a `simmap` is provided and `return_simmap = TRUE`. The updated stochastic character map of the grafted phylogeny (class `"simmap"`):
 #'     the pieces of the branches of the backbone keep their states (cut where taxa were grafted), and every grafted clades is entirely in the state of the point where it was grafted.
 #'     With `treat_states_as_ranges = TRUE`, each grafted clade is entirely in the range it inherited (see 'Biogeographic ranges as states' in Details section).
@@ -383,10 +390,12 @@
 #' @export
 #'
 #' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny,
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade with constraints (target clades and excluded subclades),
-#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints.
-#'
+#'  * [`phylograftR::check_grafting_plan()`][check_grafting_plan] to check a priori the feasibility of a grafting plan,
+#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints,
+#'  * [`phylograftR::extract_gratfing_info()`][extract_gratfing_info] to extract a posteriori information on the location of grafted lineages,
+#'  * [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary] to extract a posteriori information on birth-death models fitted during grafting (with `return_BD_model_summary = TRUE`),
+#'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny.
 #'
 #' @author Maël Doré
 #'
@@ -571,6 +580,7 @@
 graft_missing_clades <- function (phy, # Backbone phylogeny
                                   missing_taxa_list, # List with Taxon_name = c(), and items named after Taxon_name: Sister_clade = list(X1 = c(), ...), allowed_states = list(X1 = c(), ...) (optional)
                                   min_tips = 5, # Minimum number of tips of the clade used to fit the birth-death model (the enclosing clade is used if the sister clade is smaller)
+                                  return_BD_model_summary = FALSE, # Report the birth-death models fitted during grafting in the attribute "BD_model_summary" of the phylogenies?
                                   total_richness_per_clades = NULL, # NULL, or list with Sister_clade = list(c(), ...) and total_richness = c(...) (NA allowed). Total number of species of the clades accounting for the unsampled species that are neither present in the backbone, nor grafted.
                                   simmap = NULL, # NULL, or stochastic character map(s) (class "simmap" or "multiSimmap", or a list of them for several traits) of the backbone: restricts grafting to the parts of the stem branches in allowed states
                                   allowed_states = NULL, # States of the simmap where grafting is allowed. Default for all taxa, overridden by missing_taxa_list$allowed_states. NULL: all states
@@ -602,6 +612,12 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
 
     ## The backbone must be binary (error otherwise): polytomies are not handled, and resolving them is left to the user
     check_backbone_binary(phy = phy)
+
+    ## Check 'return_BD_model_summary'
+    if (!is.logical(return_BD_model_summary) || length(return_BD_model_summary) != 1 || is.na(return_BD_model_summary))
+    {
+      stop("'return_BD_model_summary' must be TRUE or FALSE")
+    }
 
     ## Check 'min_tips'
     if (!is.numeric(min_tips) || length(min_tips) != 1 || min_tips < 3)
@@ -863,7 +879,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     if (save_temp)
     {
       signature <- temp_signature(phy = phy, missing_taxa_list = missing_taxa_list, tracker = tracker,
-                                  options = list(treat_states_as_ranges = treat_states_as_ranges, min_tips = min_tips, max_age_redraws = max_age_redraws,
+                                  options = list(treat_states_as_ranges = treat_states_as_ranges, min_tips = min_tips, return_BD_model_summary = return_BD_model_summary, max_age_redraws = max_age_redraws,
                                                  ultrametric_tol = ultrametric_tol, richness = richness_info$table,
                                                  sim_seed = sim_seed, sim_index = sim_index, map_name = map_name))
       if (resume)
@@ -896,6 +912,8 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     # Initiate number of taxa and missing clades grafted
     nb_taxa_grafted <- 0
     nb_missing_clades_grafted <- 0
+    # Records of the birth-death models fitted (one per missing clade), for the summary
+    BD_records <- list()
 
     # Resume: restart from the phylogeny, the states and the random number generator saved with the last progress (the missing clades already grafted are skipped)
     if (!is.null(resumed))
@@ -904,6 +922,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
       tracker <- resumed$state$tracker
       nb_taxa_grafted <- resumed$state$counters$nb_taxa_grafted
       nb_missing_clades_grafted <- resumed$state$counters$nb_missing_clades_grafted
+      if (!is.null(resumed$state$bd_cache)) { BD_records <- resumed$state$bd_cache } # The records of the models fitted before the interruption
       set_rng_state(resumed$state$rng)
       if (verbose) cat(paste0(Sys.time(), sim_label, " - Resuming from the temporary file: ", nb_missing_clades_grafted, "/", n_groups, " missing clades already grafted\n"))
     }
@@ -964,6 +983,13 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
       # Stop at the root if reached
       # Sampling fraction of the crown group of the fitted clade: accounts for the taxa still to graft and the unsampled species nested in it
       BD_i <- fit_bd_on_clade(phy = phy, node = MRCA_node_i, min_tips = min_tips, richness_info = richness_info)
+      # Record the model for the summary
+      if (return_BD_model_summary)
+      {
+        BD_records[[length(BD_records) + 1]] <- build_bd_record(fit = BD_i, phy = phy, initial_tips = sister_clade_tips_i, taxa = missing_taxa_list_i$Taxon_name,
+                                                                richness_info = richness_info, min_tips = min_tips,
+                                                                clade_name = get_clade_name_of_taxa(missing_taxa_list_i$Sister_clade_name))
+      }
 
       # Compute crown age of the sister-clade Age of the sister clade's MRCA node and
       MRCA_age_i <- root_age - phytools::nodeheight(tree = phy, node = MRCA_node_i)
@@ -1070,7 +1096,7 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
       if (save_temp && !is.null(save_temp_every) && (nb_missing_clades_grafted %% save_temp_every == 0))
       {
         save_temp_progress(path = temp_file_path, phy = phy, labelled_backbone = labelled_backbone, signature = signature, sim_seed = sim_seed,
-                           done = nb_missing_clades_grafted, total = n_groups, unit = "missing clades", tracker = tracker,
+                           done = nb_missing_clades_grafted, total = n_groups, unit = "missing clades", tracker = tracker, bd_cache = BD_records,
                            counters = list(nb_taxa_grafted = nb_taxa_grafted, nb_missing_clades_grafted = nb_missing_clades_grafted))
       }
 
@@ -1103,6 +1129,8 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     # Add the elements identifying the grafted tips and branches
     phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxon_name)
     if (!is.null(updated_simmap)) phy$simmap <- updated_simmap
+    # Summary of the birth-death models fitted (one per missing clade)
+    if (return_BD_model_summary) { attr(phy, "BD_model_summary") <- assemble_bd_summary(BD_records, type = "clades") }
 
     # Save the complete phylogeny, which replaces the saved progress
     if (save_temp) { save_temp_complete(path = temp_file_path, phy = phy, signature = signature) }

@@ -1361,9 +1361,11 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
 #'
 #' @noRd
 #'
-#' @return A list with 7 elements:
+#' @return A list with 9 elements:
 #'  * `b` Numeric. Birth rate = speciation rate in events per time per lineage.
-#'  * `d` Numeric. Death rate = extinction rate in events per time per lineage.
+#'  * `d` Numeric. Death rate = extinction rate in events per time per lineage, as used to simulate the divergence times (set to 0 if not finite or negative, and capped to 99% of `b`).
+#'  * `d_fitted` Numeric. Death rate as fitted by `phytools::fit.bd()`, before the adjustments above.
+#'  * `d_adjustment` Character string. `"none"`, `"set_to_0"` (death rate not finite or negative) or `"capped"` (death rate above 99% of the birth rate).
 #'  * `n_tips` Integer. Number of tips in the enclosing clade used for fitting.
 #'  * `node` Integer. MRCA node ID of the selected enclosing clade.
 #'  * `n_pending` Numeric. Number of taxa still to graft in the selected clade, used for the sampling fraction (0 if `richness_info = NULL`).
@@ -1431,18 +1433,115 @@ fit_bd_on_clade <- function (phy, node, min_tips = 5, richness_info = NULL)
 
   ## Extract rates
   b <- unname(fit$b); d <- unname(fit$d)
+  d_fitted <- d
+  d_adjustment <- "none"
 
   ## Keep rates usable by TreeSim (mu < lambda)
   # If death rate is infinite or negative, fix it to zero
-  if (!is.finite(d) || d < 0) d <- 0
-  d <- min(d, 0.99 * b) # Limit death rate to 99% of birth rate to ensure the net diversification is never negative
+  if (!is.finite(d) || d < 0) { d <- 0; d_adjustment <- "set_to_0" }
+  # Limit death rate to 99% of birth rate to ensure the net diversification is never negative
   # No divergence times can be drawn from a negative net diversification process
+  if (isTRUE(d > 0.99 * b)) { d <- 0.99 * b; d_adjustment <- "capped" }
 
   # Record rates, nb of tips in selected enclosing clade, and MRCA node of the selected clade
-  BD_output <- list(b = b, d = d, n_tips = n_tips, node = clade_node, n_pending = n_pending, n_unsampled = n_unsampled, rho = rho)
+  BD_output <- list(b = b, d = d, d_fitted = d_fitted, d_adjustment = d_adjustment, n_tips = n_tips, node = clade_node, n_pending = n_pending, n_unsampled = n_unsampled, rho = rho)
 
   # Export output
   return(BD_output)
+}
+
+
+#' @title Summary of a birth-death model fitted during grafting
+#'
+#' @description Build the record of a birth-death model fitted by `fit_bd_on_clade()`, to report it in the `"BD_model_summary"` attribute of the grafted phylogenies.
+#'   The clades are identified by their node in the backbone (node IDs of the grafted tree change after each graft) and by a pair of tips.
+#'
+#' @param fit Output of `fit_bd_on_clade()`.
+#' @param phy Phylogeny of class `"phylo"` the model was fitted on (the current tree, with the taxa already grafted).
+#' @param initial_tips Character vector. Tips of the backbone defining the initial clade (the target clade, or the sister clade).
+#' @param taxa Character vector. Taxa using the model (taxa of the target clade, or of the missing clade).
+#' @param richness_info Output of `build_richness_info()` (provides the backbone and the names of the taxa to graft).
+#' @param min_tips Integer. Minimum number of tips used for the fit.
+#' @param clade_name `NULL` if the clades have no names in `missing_taxa_list`. Otherwise the name of the initial clade (`NA` if none).
+#'
+#' @importFrom ape extract.clade node.depth node.depth.edgelength Ntip
+#'
+#' @noRd
+#'
+#' @return A list with 2 elements: `first`, the index of the first of the `taxa` in the list of taxa to graft (to order the records),
+#'   and `row`, a one-row data.frame (see `extract_BD_model_summary()` for the columns).
+#'
+
+build_bd_record <- function (fit, phy, initial_tips, taxa, richness_info, min_tips, clade_name = NULL)
+{
+  backbone <- richness_info$phy_backbone
+  n_backbone_all <- ape::node.depth(backbone, method = 1)
+  depth <- ape::node.depth.edgelength(backbone)
+  age <- max(depth[seq_len(ape::Ntip(backbone))]) - depth
+
+  ## Initial clade and fitted clade, located in the backbone
+  initial_node <- get_clade_node(backbone, initial_tips)
+  fitted_tips <- setdiff(ape::extract.clade(phy, fit$node)$tip.label, richness_info$taxa_names)
+  fitted_node <- get_clade_node(backbone, fitted_tips)
+  is_tip <- initial_node <= ape::Ntip(backbone)
+
+  ## Taxa using the model, in the order of the list of taxa to graft
+  taxa <- taxa[order(match(taxa, richness_info$taxa_names))]
+
+  row <- data.frame(
+    Taxa = paste(taxa, collapse = ", "), n_taxa = length(taxa),
+    initial_clade_node = as.integer(initial_node), initial_clade_tips = paste(node_to_tips(backbone, initial_node), collapse = ", "),
+    initial_clade_n_tips = as.integer(n_backbone_all[initial_node]), initial_clade_crown_age = if (is_tip) NA_real_ else age[initial_node],
+    enlarged = fitted_node != initial_node,
+    fitted_clade_node = as.integer(fitted_node), fitted_clade_tips = paste(node_to_tips(backbone, fitted_node), collapse = ", "),
+    fitted_clade_n_tips = as.integer(fit$n_tips), fitted_clade_n_backbone_tips = as.integer(n_backbone_all[fitted_node]),
+    fitted_clade_crown_age = age[fitted_node], min_tips = as.integer(min_tips),
+    b = fit$b, d = fit$d, d_fitted = fit$d_fitted, d_adjustment = fit$d_adjustment,
+    net_diversification = fit$b - fit$d, relative_extinction = fit$d / fit$b,
+    rho = fit$rho, n_pending = as.integer(fit$n_pending), n_unsampled = as.numeric(fit$n_unsampled),
+    stringsAsFactors = FALSE)
+  if (!is.null(clade_name)) { row <- cbind(Clade_name = as.character(clade_name), row, stringsAsFactors = FALSE) }
+  list(first = min(match(taxa, richness_info$taxa_names)), row = row)
+}
+
+
+#' @title Name of a clade from the names of its taxa
+#'
+#' @param names_of_taxa `NULL`, or the names of the clade given to its taxa in `missing_taxa_list` (`Target_clade_name` or `Sister_clade_name`).
+#'
+#' @noRd
+#'
+#' @return `NULL` if there are no names. Otherwise the name of the clade, `NA` if its taxa have none.
+#'
+
+get_clade_name_of_taxa <- function (names_of_taxa)
+{
+  if (is.null(names_of_taxa)) { return(NULL) }
+  x <- unique(stats::na.omit(as.character(names_of_taxa)))
+  x <- x[nzchar(x)]
+  if (length(x) == 0) NA_character_ else x[1]
+}
+
+
+#' @title Assemble the records of the birth-death models into the summary table
+#'
+#' @param records List of the outputs of `build_bd_record()` (`NULL` elements are ignored).
+#' @param type Character string. `"taxa"` (one model per target clade) or `"clades"` (one model per missing clade).
+#'
+#' @noRd
+#'
+#' @return A data.frame with one row per model (in the order of the taxa in `missing_taxa_list`), with the attribute `"type"`. `NULL` if there is no record.
+#'
+
+assemble_bd_summary <- function (records, type)
+{
+  records <- records[!vapply(records, is.null, logical(1))]
+  if (length(records) == 0) { return(NULL) }
+  records <- unname(records[order(vapply(records, function (r) r$first, numeric(1)))])
+  output <- do.call(rbind, lapply(records, function (r) r$row))
+  rownames(output) <- NULL
+  attr(output, "type") <- type
+  output
 }
 
 
