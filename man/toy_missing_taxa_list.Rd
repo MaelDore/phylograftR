@@ -27,6 +27,7 @@ with 7 taxa to graft by \code{\link[=graft_missing_taxa]{phylograftR::graft_miss
 It is the output of \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} applied to the table
 \code{system.file("extdata", "toy_missing_taxa.csv", package = "phylograftR")}: open that file to see how to fill the table.
 It shows target clades defined by one or two tips, excluded subclades (named or not, with one tip or several), and the stem settings.
+Clades and excluded subclades are named after the taxonomic groups of \code{\link[=toy_taxonomic_tables]{phylograftR::toy_backbone_taxonomic_table}} (e.g., \code{"Family_A"}).
 }
 \examples{
 # Import the list from loaded datasets
