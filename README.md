@@ -335,9 +335,7 @@ An overview of all functions and datasets is available
 ## :joystick: Quick-to-run example
 
 This example grafts seven missing taxa on a toy backbone phylogeny of 30
-tips, using the datasets shipped with the package. The taxa are assigned
-to target clades, some with excluded subclades and some with the states
-of a color trait in which they can be grafted.
+tips, using the datasets shipped with the package.
 
 ``` r
 ## Prepare data
@@ -350,29 +348,86 @@ library(phylograftR)
 data(toy_backbone)
 data(toy_simmap)
 
-# The missing taxa are described in a table, with one row per taxon.
-# Each taxon has a target clade (`Target_clade`) defined by the tips that delimit them:
-# a pair of tips defines the clade as their most recent common ancestor (MRCA),
-# and a single tip defines a terminal branch.
-# Some taxa also have excluded subclades (`Excluded_subclades`), where they are known not to belong,
-# and `allowed_states`, the states of the trait in which they can be grafted.
-# The inclusion of the stem branch as a valid placement for grafting can be fine-tuned
-# for target clades ('include_target_clade_stem') and excluded subclades ('exclude_subclades_stem').
+# The taxonomy of the tips of the backbone is provided in a table, with one row per tip:
+# the first column (`Taxa`) holds the tip labels, and the other columns are taxonomic levels
+# (here, `Family`, `Subfamily`, `Tribe`, and `Genus`).
+data(toy_backbone_taxonomic_table)
+head(toy_backbone_taxonomic_table)
+#>   Taxa   Family Subfamily     Tribe Genus
+#> 1  t26 Family_A Subfam_A2 Tribe_A2a  <NA>
+#> 2   t2 Family_A Subfam_A2 Tribe_A2a  <NA>
+#> 3  t21 Family_A Subfam_A2 Tribe_A2a  <NA>
+#> 4  t16 Family_A Subfam_A2 Tribe_A2a  <NA>
+#> 5  t11 Family_A Subfam_A2 Tribe_A2a  <NA>
+#> 6   t4 Family_A Subfam_A2 Tribe_A2a  <NA>
 
-# The table is imported into a `missing_taxa_list`, and checked against the backbone phylogeny.
-missing_taxa_file <- system.file("extdata", "toy_missing_taxa_with_allowed_states.csv", package = "phylograftR")
-missing_taxa_list <- import_missing_taxa_list(file = missing_taxa_file, phy = toy_backbone)
+# The missing taxa are described in a second table, with one row per taxon.
+data(toy_missing_taxa_taxonomic_table)
+head(toy_missing_taxa_taxonomic_table)
+#>          Taxa Type   Family Subfamily    Tribe   Genus Target_clade
+#> 1 Genus_a_sp1 taxa Family_A      <NA>     <NA> Genus_a       Family
+#> 2 Genus_a_sp2 taxa Family_A      <NA>     <NA> Genus_a       Family
+#> 3 Genus_a_sp3 taxa Family_A      <NA>     <NA> Genus_a       Family
+#> 4 Genus_b_sp1 taxa Family_B      <NA>     <NA> Genus_b     Family_B
+#> 5 Genus_b_sp2 taxa Family_B Subfam_B1     <NA> Genus_b    Subfamily
+#> 6 Genus_c_sp1 taxa Family_B Subfam_B2 Tribe_B2 Genus_c        Gen_2
+#>   Sister_clade  Excluded_subclades include_target_clade_stem
+#> 1         <NA> Subfam_A1;Tribe_A2a                      TRUE
+#> 2         <NA>     Tribe_A2a;Gen_3                      TRUE
+#> 3         <NA>                <NA>                     FALSE
+#> 4         <NA>                <NA>                        NA
+#> 5         <NA>               Gen_1                      TRUE
+#> 6         <NA>                <NA>                        NA
+#>   exclude_subclades_stem
+#> 1             TRUE;FALSE
+#> 2             FALSE;TRUE
+#> 3                   <NA>
+#> 4                   <NA>
+#> 5                   <NA>
+#> 6                   <NA>
+
+# `Type` states how the taxon is grafted: within a target clade (`"taxa"`), or as the sister of a clade (`"clades"`).
+# For the example, keep only the missing taxa to graft within a target clade (`"taxa"`)
+# and remove the ones to graft as blocks of missing clades (`"clades"`).
+toy_missing_taxa_taxonomic_table <- toy_missing_taxa_taxonomic_table[toy_missing_taxa_taxonomic_table$Type == "taxa", ]
+
+# Clades are written with taxonomic names (e.g., `"Family_B"`), or with the name of a taxonomic level
+# (e.g., `"Family"`, meaning the family of the taxon, as given in the column of the same name).
+# Target clades (`Target_clade`), where the taxa is known to belong,
+# and excluded subclades (`Excluded_subclades`), where taxa are known NOT to belong,
+# are retrieved from the taxonomy of the backbone.
+
+# The inclusion of the stem branch as a valid placement for grafting can be fine-tuned
+# for target clades (`include_target_clade_stem`) and excluded subclades (`exclude_subclades_stem`).
+
+# Some taxa may also have `allowed_states`: the states of the branches on which they can be grafted.
+toy_missing_taxa_taxonomic_table$allowed_states <- c("red", NA, NA, "blue, green", "green", NA, "blue, red")
 ```
 
-| Taxon_name | Target_clade | Target_clade_name | include_target_clade_stem | Excluded_subclades | Excluded_subclades_names | exclude_subclades_stem | allowed_states |
-|:---|:---|:---|:---|:---|:---|:---|:---|
-| Genus_a_sp1 | t26,t18 | clade_A | TRUE | t10,t19;t26,t4 | group_1;group_2 | TRUE;FALSE | red |
-| Genus_a_sp2 | t26,t18 | clade_A | TRUE | t26,t4;t30 | group_2;tip_t30 | FALSE;TRUE |  |
-| Genus_a_sp3 | t26,t18 | clade_A | FALSE |  |  |  |  |
-| Genus_b_sp1 | t8,t22 | clade_B | NA |  |  |  | blue, green |
-| Genus_b_sp2 | t8,t7 | clade_B1 | TRUE | t13,t27 | group_3 |  | green |
-| Genus_c_sp1 | t5 | tip_t5 | NA |  |  |  |  |
-| Genus_c_sp2 | t5,t12 | clade_C | FALSE |  |  |  | blue, red |
+| Taxa | Type | Family | Subfamily | Tribe | Genus | Target_clade | Sister_clade | Excluded_subclades | include_target_clade_stem | exclude_subclades_stem | allowed_states |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| Genus_a_sp1 | taxa | Family_A | NA | NA | Genus_a | Family | NA | Subfam_A1;Tribe_A2a | TRUE | TRUE;FALSE | red |
+| Genus_a_sp2 | taxa | Family_A | NA | NA | Genus_a | Family | NA | Tribe_A2a;Gen_3 | TRUE | FALSE;TRUE | NA |
+| Genus_a_sp3 | taxa | Family_A | NA | NA | Genus_a | Family | NA | NA | FALSE | NA | NA |
+| Genus_b_sp1 | taxa | Family_B | NA | NA | Genus_b | Family_B | NA | NA | NA | NA | blue, green |
+| Genus_b_sp2 | taxa | Family_B | Subfam_B1 | NA | Genus_b | Subfamily | NA | Gen_1 | TRUE | NA | green |
+| Genus_c_sp1 | taxa | Family_B | Subfam_B2 | Tribe_B2 | Genus_c | Gen_2 | NA | NA | NA | NA | NA |
+| Genus_c_sp2 | taxa | Family_B | Subfam_B2 | Tribe_B2 | Genus_c | Tribe | NA | NA | FALSE | NA | blue, red |
+
+``` r
+## Build the list of missing taxa from the taxonomic tables
+
+# The taxonomic names are converted into clades of the backbone phylogeny, and the tables are checked against the backbone phylogeny.
+missing_taxa_list <- build_missing_taxa_list_from_taxonomy(
+  backbone_taxonomic_table = toy_backbone_taxonomic_table,
+  missing_taxa_taxonomic_table = toy_missing_taxa_taxonomic_table,
+  phy = toy_backbone, verbose = FALSE)
+
+# Alternatively, it is possible to build directly the missing_taxa_list object and
+# fine-tune which clades to use as a Target_calde, Sister_clade, or excluded_subclades
+# based on its node_ID or MRCA_tips, without the need of an explicit taxonomic classification.
+# Please refer to 'vignette("format_inputs")' for a dedicated tutorial.
+```
 
 ``` r
 ## Graft the missing taxa
@@ -434,6 +489,36 @@ par(mfrow = c(1, 1))
 
 <img src="man/figures/README-quick-plot-multi_eval-1.png" alt="" width="100%" />
 
+## :scroll: Advanced uses / tutorials
+
+Tutorials are available to explore **all usages** of phylograftR.
+
+They are listed below, in the [companion
+website](https://maeldore.github.io/deepSTRAPP/articles/phylograftR.html),
+and in this vignette: `vignette("phylograftR")`.
+
+**1/ Format inputs**
+
+- [Format **inputs** prior to
+  grafting](https://maeldore.github.io/deepSTRAPP/articles/format_inputs.html):
+  `vignette("format_inputs")`.
+
+Alternatively, if you prefer to view the vignettes in R, you can install
+the package with `build_vignettes = TRUE`.
+
+``` r
+remotes::install_github(repo = "MaelDore/phylograftR",
+                        dependencies = TRUE, 
+                        upgrade = "ask",
+                        build_vignettes = TRUE) 
+
+# Access vignettes within R
+vignette("phylograftR")
+
+# You can also use this to open access to all local vignettes in an HTML Brower
+utils::browseVignettes(package = "phylograftR")
+```
+
 ## :bug: Found a bug?
 
 Thank you for finding it! Head over to the [GitHub Issues
@@ -459,18 +544,6 @@ the TACT paper as a foundation work for the development of
 > diversification rates on incompletely-sampled phylogenies: theoretical
 > concerns and practical solutions. *Systematic Biology*.
 > <https://doi.org/10.1093/sysbio/syz081>
-
-Two cautionary references mentioned above are:
-
-> Rabosky, D. L. (2015). No substitute for real data: A cautionary note
-> on the use of phylogenies from birth-death polytomy resolvers for
-> downstream comparative analyses. *Evolution*, 69, 3207-3216.
-> <https://doi.org/10.1111/evo.12817>
-
-> Revell, L. J., Gonzalez-Valenzuela, L. E., Alfonso, A.,
-> Castaneda-Garcia, L. A., Cardenas, N. A., & Hanna, J. (2015).
-> Comparing evolutionary rates between trees, clades and traits.
-> *Evolution*. <https://doi.org/10.1111/evo.12628>
 
 **TACT** is available as Python-based software at:
 <https://tact.jonathanchang.org/>

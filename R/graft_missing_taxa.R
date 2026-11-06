@@ -475,6 +475,8 @@
 #' @export
 #'
 #' @seealso Other functions from phylograftR:
+#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build 'missing_taxa_list' objects from an internal data.frame using nodes and tips to define clades,
+#'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to build 'missing_taxa_list' objects from internal data.frame using taxonomic classifications,
 #'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to a clade of the backbone,
 #'  * [`phylograftR::check_grafting_plan()`][check_grafting_plan] to check a priori the feasibility of a grafting plan,
 #'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their target clades and excluded subclades,
