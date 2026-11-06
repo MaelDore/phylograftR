@@ -16,6 +16,10 @@
 #'   The table is converted by [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list], which also runs all the checks of validity
 #'   against the backbone phylogeny to ensure the `missing_taxa_list` provides information that are valid to process the grafting.
 #'
+#'   Clades are defined by tips or node IDs, which allows for fine-tuning the constraints of each taxon (see 'Fine-tuning the clades' in Details).
+#'   For large phylogenies with neatly defined taxonomic levels, taxonomic tables are likely easier to prepare:
+#'   see [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] and [`phylograftR::import_taxonomic_table()`][import_taxonomic_table].
+#'
 #' @param file Character string. Path to the file with the table.
 #'   The format is chosen from the extension of the file: `".csv"` (comma-separated), `".tsv"`, `".tab"` or `".txt"` (tab-separated),
 #'   `".xlsx"` or `".xls"` (Excel, requires the package `readxl`). Use `sep` or `reader` for other formats.
@@ -95,6 +99,21 @@
 #' Convert `total_richness_per_clades` (if you use it) at the same time as the list, with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips],
 #' so the tips of the clades match between both objects.
 #'
+#' ### Fine-tuning the clades
+#'
+#' Defining clades with tips or node IDs gives full control on the constraints of each taxon. **Any node of `phy` can be used** as a `Target_clade`,
+#' as a `Sister_clade`, or as an excluded subclade, simply by writing its node ID (e.g., `"34"`), or two tips whose MRCA is the node (e.g., `"t8, t7"`).
+#' The node does not need to match a taxonomic group: it can be a clade without a name, a clade that groups several taxonomic units (e.g., two neighboring genera),
+#' a part of a taxonomic group only, or a clade you identified from the phylogeny itself or from another source (e.g., a molecular study).
+#' Clades can be nested at any depth, and each taxon has its own set of excluded subclades, with or without their stem.
+#'
+#' This is the best route to fine-tune the grafting of a limited number of taxa, but the clades have to be written for each taxon.
+#' When the backbone is large, and taxonomic levels (e.g., Family, Subfamily, Tribe, Genus) are defined for its tips and for the taxa to graft, taxonomic tables are the go-to option:
+#' clades are retrieved from their taxonomic names, which ease the attribution of clades across many taxa.
+#' See [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] and [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy].
+#'
+#' Both routes return the same `missing_taxa_list`, so they can be combined: build a list from taxonomic tables, and then adjust the clades of a few taxa with node IDs or tips.
+#'
 #' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions, with the following items:
 #'  * `$Taxon_name` Character vector.
 #'  * `$Target_clade` (or `$Sister_clade`) List of character vectors of tips.
@@ -108,10 +127,9 @@
 #'  Every item is named after the taxa (`$Taxon_name`), in the same order.
 #'
 #' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to convert a data frame already loaded in R,
+#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to convert a data.frame already loaded in R,
+#'  * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] and [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to define the clades with taxonomic names instead of tips or node IDs,
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] that use the list for grafting.
-#'
-#' @importFrom utils read.table
 #'
 #' @export
 #'
@@ -150,44 +168,12 @@ import_missing_taxa_list <- function (file, # Path to the table
                                       verbose = TRUE, # Print the conversions of node IDs into tips
                                       ...)
 {
-  ## 1.1/ Check the inputs ####
+  ## 1.1/ Read the table ####
 
-  if (!is.character(file) || length(file) != 1 || is.na(file)) { stop("'file' must be a single path") }
-  if (!file.exists(file)) { stop("File not found: ", file) }
-  if (!is.null(reader) && !is.function(reader)) { stop("'reader' must be a function that takes the path of the file and returns a data frame") }
-  if (!is.null(sep) && (!is.character(sep) || length(sep) != 1 || is.na(sep) || nchar(sep) != 1)) { stop("'sep' must be a single character") }
+  # Checks the inputs, and reads the file with the reader matching its extension (or 'reader')
+  data <- read_table_file(file = file, sep = sep, sheet = sheet, reader = reader, ...)
 
-  ## 1.2/ Read the table ####
-
-  extension <- tolower(sub(".*\\.", "", basename(file)))
-
-  if (!is.null(reader))
-  {
-    data <- reader(file, ...)
-  } else if (extension %in% c("xlsx", "xls"))
-  {
-    if (!requireNamespace("readxl", quietly = TRUE))
-    {
-      stop("The package 'readxl' is required to read Excel files. Install it with install.packages(\"readxl\"), ",
-           "or export the table as a .csv file.")
-    }
-    data <- readxl::read_excel(path = file, sheet = sheet, col_types = "text", ...)
-  } else if (extension %in% c("csv", "tsv", "tab", "txt") || !is.null(sep))
-  {
-    if (is.null(sep)) { sep <- if (extension == "csv") "," else "\t" }
-    # Everything is read as text (the cells contain lists of tips), blank cells are missing values, and the names of the columns are kept as they are
-    data <- utils::read.table(file = file, header = TRUE, sep = sep, quote = "\"", colClasses = "character",
-                              na.strings = c("", "NA"), strip.white = TRUE, check.names = FALSE, comment.char = "",
-                              fill = FALSE, stringsAsFactors = FALSE, encoding = "UTF-8", ...)
-  } else {
-    stop("Unknown file extension '.", extension, "'. Use a '.csv', '.tsv', '.tab', '.txt', '.xlsx' or '.xls' file, ",
-         "or provide 'sep' (for a text file) or 'reader' (a function that reads the file).")
-  }
-
-  if (!is.data.frame(data)) { stop("The table read from '", file, "' is not a data frame") }
-  if (nrow(data) == 0) { stop("The table read from '", file, "' has no rows") }
-
-  ## 1.3/ Convert it ####
+  ## 1.2/ Convert it ####
 
   build_missing_taxa_list(data = data, phy = phy, verbose = verbose)
 }

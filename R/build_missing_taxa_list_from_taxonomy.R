@@ -17,13 +17,20 @@
 #'   The function retrieves the MRCA node of each taxonomic group in the backbone phylogeny, checks that the group is monophyletic,
 #'   and writes each clade as a pair of tips, as expected by [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list].
 #'
+#'   Taxonomic tables are the go-to option for large phylogenies with neatly defined taxonomic levels (see 'When to use taxonomic tables' in Details).
+#'   Use [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] to read the tables directly from files.
+#'
+#'   For a finer level of control on the clades to use as target clades, sister clades, and/or excluded subclades, you can use alternative functions
+#'   that define those clades based on any node IDs or pairs of tips used to identify MRCA:
+#'   see [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] and [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list].
+#'
 #' @param backbone_taxonomic_table Data frame. Taxonomy of the tips of the backbone phylogeny, with one row per tip.
 #'   The first column must be named `Taxa` and holds the tip labels of `phy`.
 #'   All the other columns are taxonomic levels (e.g., `Family`, `Subfamily`, `Tribe`, `Genus`, but they can be anything), usually from the broadest to the narrowest.
 #'   The values of a level are the names of the taxonomic groups (e.g., `"Homo"`). Levels do not have to be informed for all the tips: blank cells and `NA` are missing values.
 #'   See Details for the constraints on the names of the levels and groups.
 #' @param missing_taxa_taxonomic_table Data frame. Description of the taxa to graft, with one row per taxon.
-#'   Columns `Taxa` (names of the taxa to graft) and `Type` (`"Taxa"` or `"clades"`) are required, as well as the column of the clade to use for grafting (`Target_clade` or `Sister_clade`).
+#'   Columns `Taxa` (names of the taxa to graft) and `Type` (`"taxa"` or `"clades"`) are required, as well as the column of the clade to use for grafting (`Target_clade` or `Sister_clade`).
 #'   Entries can be either the name of the taxonomic group (e.g., `"Homo"`) or the taxonomic level of the taxa to use (e.g., `Genus`).
 #'   Next columns provide the taxonomic levels of the taxa to graft using the same names as in `backbone_taxonomic_table` (e.g., `Family`, `Subfamily`, `Tribe`, `Genus`, but they can be anything).
 #'   Other optional columns provide additional information on constraints to use for grafting: `Excluded_subclades`, `include_target_clade_stem`, `exclude_subclades_stem`, and `allowed_states`,
@@ -35,6 +42,18 @@
 #' @param verbose Logical. Whether to print a summary of the conversion. Default is `TRUE`.
 #'
 #' @details
+#' **When to use taxonomic tables**
+#'
+#' Taxonomic tables are the go-to option for large phylogenies with neatly defined taxonomic levels (e.g., Family, Subfamily, Tribe, Genus). The taxonomy of the backbone is provided once,
+#' and each taxon to graft only needs its own taxonomic levels: the constraints (target clade, sister clade, excluded subclades) are written with the names of the groups or of the taxonomic levels to use,
+#' and the clades are retrieved from the phylogeny. The same group is therefore always the same clade, whatever the number of taxa, which avoids the typos and
+#' inconsistencies of clades written taxon by taxon, and the tables can be taken as such from a taxonomic database.
+#'
+#' The limit is that only the taxonomic groups of the backbone table can be used as clades. To fine-tune the grafting of some taxa with any other node of the phylogeny
+#' (e.g., a clade without a name, a part of a group, or a group of several genera), define their clades by tips or node IDs with
+#' [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] or [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] (see 'Fine-tuning the clades' in their Details sections).
+#' Both routes return the same `missing_taxa_list`, so a list built from taxonomic tables can be adjusted afterwards.
+#'
 #' **Backbone taxonomic table**
 #'
 #' Names of taxonomic levels (the column names; e.g., `"Genus"`) and names of taxonomic groups (their values; e.g., `"Homo"`) must be unambiguous:
@@ -59,10 +78,11 @@
 #' * `Excluded_subclades` (Optional, `Type = "taxa"`): Subclades of the target clade where the taxon is known not to belong, separated by semicolons (e.g., `"Pheidole; Camponotus"`).
 #'   Each one is a group or a level name, as in `Target_clade`.
 #' * `$include_target_clade_stem` (Optional, `Type = "taxa"`): Logical. Whether the stem branch of the target clade is a valid placement to graft this taxa (`NA` uses the global argument set in the grafting function).
-#' * `$exclude_subclades_stem` (Optional, `Type = "taxa"`): Logical. Whether the stem branch of the excluded clade(s) is/are a exlcuded from grafting too. Separated by semicolons if multiple `Excluded_subclades` are provided
+#' * `$exclude_subclades_stem` (Optional, `Type = "taxa"`): Logical. Whether the stem branch of the excluded clade(s) is/are a excluded from grafting too. Separated by semicolons if multiple `Excluded_subclades` are provided
 #'   (`NA` uses the global argument set in the grafting function).
 #' * `$allowed_states` (Optional): For each taxon, the states of a `simmap` in which it can be grafted
 #'   (see the `simmap` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades]), separated by commas.
+#'   If multiple traits are used, each set of states must be separated by semicolons (e.g., `"blue, red; low"`).
 #'   It is accepted with both `Target_clade` and `Sister_clade`. (`NA` uses the global argument set in the grafting function).
 #'
 #' **Non-monophyletic groups**
@@ -87,7 +107,8 @@
 #'   `n_unannotated` (tips without value at this level in the clade), and `monophyletic`.
 #'
 #' @seealso Other functions from phylograftR:
-#' * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]: to build a `missing_taxa_list` object from a data.frame loaded within R,
+#' * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table]: to read the taxonomic tables from external files,
+#' * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]: to build a `missing_taxa_list` object from a data.frame loaded within R, defining the clades with tips or node IDs,
 #' * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list]: to build a `missing_taxa_list` object from an external table,
 #' * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa], [`phylograftR::graft_missing_clades()`][graft_missing_clades]: to use the list for grafting.
 #'
