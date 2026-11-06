@@ -72,12 +72,13 @@
 #' * `non_monophyletic = "exclude"` (default): For target clades, intruders (i.e., tips from other groups descending from the MRCA) are added to the
 #'   `Excluded_subclades` of the taxon (with their stem, `exclude_subclades_stem = TRUE`), so the taxon is never grafted among intruders.
 #'   Intruders nested within an excluded subclade provided by the user are not added.
-#'   Intruders cannot be removed from a sister clade: the clade of the MRCA is used with a warning (as for `"mrca"`).
+#'   Intruders cannot be removed from a sister clade or from a group of `Excluded_subclades`: the clade of the MRCA is used with a warning (as for `"mrca"`).
+#'   For `Excluded_subclades`, all the branches descending from the MRCA are then excluded, including the ones of intruders.
 #' * `non_monophyletic = "mrca"`: The clade of the MRCA is used as such, with a warning, including its intruders.
 #' * `non_monophyletic = "error"`: Stop if one group used is not monophyletic.
 #'
 #' @return A `missing_taxa_list` object as returned by [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]:
-#'   a list ready-to-be-used as input of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] if all the taxa have `Type = "Taxa"`,
+#'   a list ready-to-be-used as input of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] if all the taxa have `Type = "taxa"`,
 #'   or of [`phylograftR::graft_missing_clades()`][graft_missing_clades] if they all have `Type = "clades"`.
 #'   If both types are present, a list with two elements, `taxa` and `clades`, each holding the `missing_taxa_list` of one type.
 #'
@@ -111,15 +112,16 @@
 #'
 #' ## Taxa to graft
 #' # 'a_new' is grafted in its genus, 'b_new' in its family except in the genus GenA,
-#' # and 'd_new' is grafted as the sister of the genus GenC.
+#' # and 'd_new1' and 'd_new2' belong to a new genus GenD, sister to GenC: they have the same sister clade,
+#' # so they are grafted together as a missing clade.
 #' missing_taxa_taxonomic_table <- data.frame(
-#'   Taxa = c("a_new", "b_new", "d_new"),
-#'   Type = c("taxa", "taxa", "clades"),
-#'   Family = c("Fam1", "Fam1", "Fam2"),
-#'   Genus = c("GenA", "GenB", "GenD"),
-#'   Target_clade = c("Genus", "Family", NA),
-#'   Excluded_subclades = c(NA, "GenA", NA),
-#'   Sister_clade = c(NA, NA, "GenC"))
+#'   Taxa = c("a_new", "b_new", "d_new1", "d_new2"),
+#'   Type = c("taxa", "taxa", "clades", "clades"),
+#'   Family = c("Fam1", "Fam1", "Fam2", "Fam2"),
+#'   Genus = c("GenA", "GenB", "GenD", "GenD"),
+#'   Target_clade = c("Genus", "Family", NA, NA),
+#'   Excluded_subclades = c(NA, "GenA", NA, NA),
+#'   Sister_clade = c(NA, NA, "GenC", "GenC"))
 #'
 #' ## Build the missing taxa lists associated to these taxonomic tables
 #' missing_taxa_lists <- build_missing_taxa_list_from_taxonomy(
@@ -203,7 +205,7 @@ build_missing_taxa_list_from_taxonomy <- function (backbone_taxonomic_table, # D
   bad_type <- is.na(type) | !(type %in% c("taxa", "clades"))
   if (any(bad_type))
   {
-    stop("'Type' must be 'Taxa' or 'clades' (case is ignored). Invalid for: ",
+    stop("'Type' must be 'taxa' or 'clades' (case is ignored). Invalid for: ",
          format_names(paste0(taxa_mt[bad_type], " (", ifelse(is.na(mt$Type[bad_type]), "empty", paste0("'", mt$Type[bad_type], "'")), ")")))
   }
   for (what in c("taxa", "clades"))
@@ -422,23 +424,12 @@ build_missing_taxa_list_from_taxonomy <- function (backbone_taxonomic_table, # D
   }
   if (n_nonmono["excluded"] > 0)
   {
-    warning(if (non_monophyletic == "exclude")
-              "Excluded groups are not monophyletic: they are replaced by their largest subclades with only tips of the group, so tips of other groups are not excluded:\n"
-            else "Excluded groups are not monophyletic: their clade (MRCA of their tips) is used, so tips of other groups are excluded too:\n",
+    warning("Excluded groups are not monophyletic: their clade (MRCA of their tips) is excluded, so all its descending branches are excluded too, including the tips of other groups:\n",
             describe_nonmono(nonmono_role$excluded), call. = FALSE)
   }
 
-  # Nodes excluded for each group of Excluded_subclades (several nodes for non-monophyletic groups in 'exclude' mode), with their labels
-  excluded_nodes <- lapply(stats::setNames(role_keys$excluded, role_keys$excluded), function (k)
-  {
-    g <- groups_info[[k]]
-    if (non_monophyletic == "exclude" && !g$monophyletic)
-    {
-      is_member <- !is.na(group_by_pos[[g$level]]) & group_by_pos[[g$level]] == g$group
-      nodes <- maximal_subclades(index, g$node, is_member)
-      nodes[order(index$lo[nodes])]
-    } else g$node
-  })
+  # Node excluded for each group of Excluded_subclades: the clade of the MRCA (all its descending branches are excluded, intruders included)
+  excluded_nodes <- lapply(stats::setNames(role_keys$excluded, role_keys$excluded), function (k) groups_info[[k]]$node)
 
   # Intruders of the target groups in 'exclude' mode
   intruders <- list()
@@ -469,7 +460,7 @@ build_missing_taxa_list_from_taxonomy <- function (backbone_taxonomic_table, # D
     {
       nodes <- excluded_nodes[[k]]
       contrib_node <- c(contrib_node, nodes)
-      contrib_name <- c(contrib_name, if (length(nodes) > 1) paste0(groups_info[[k]]$group, " [", seq_along(nodes), "]") else groups_info[[k]]$group)
+      contrib_name <- c(contrib_name, rep(groups_info[[k]]$group, length(nodes)))
     }
     node_names <- vapply(split(contrib_name, contrib_node), function (x) paste(unique(x), collapse = " / "), character(1))
     # Several groups for the same clade: report the names that were joined

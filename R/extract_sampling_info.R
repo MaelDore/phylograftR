@@ -117,10 +117,13 @@
 #' sampling_info[, c("simulation", "Clade_name", "nb_backbone_species", "nb_grafted_species",
 #'                   "nb_unsampled_species", "sampling_fraction")]
 #'
-#' # The sampling fraction of clade B varies among simulations: the taxa assigned to clade A can be grafted
-#' # within clade B (nested in A, so they count for B) or in A outside of B. As such, the richness of B
-#' # differs between grafted phylogenies, while all the taxa are always in A (constant sampling fraction).
-#' tapply(sampling_info$sampling_fraction, list(sampling_info$Clade_name, sampling_info$simulation), mean)
+#' # The sampling fraction of clade B varies among simulations:
+#' # the taxa assigned to clade A can be grafted within clade B (nested in A, so they count for B)
+#' # or in A outside of B. As such, the richness of B differs between grafted phylogenies,
+#' # while all the taxa are always in A (constant sampling fraction).
+#' tapply(X = sampling_info$sampling_fraction,
+#'        INDEX = list(sampling_info$Clade_name, sampling_info$simulation),
+#'        FUN = mean)
 #'
 #'
 
