@@ -1,6 +1,6 @@
-"Target_clade","total_richness"
-"t26,t18",25
-"t8,t22",
-"t8,t7",14
-"t5",
-"t5,t12",8
+"Target_clade","Target_clade_name","total_richness"
+"t26,t18","clade_A",25
+"t8,t22","clade_B",
+"t8,t7","clade_B1",14
+"t5","tip_t5",
+"t5,t12","clade_C",8

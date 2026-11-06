@@ -55,7 +55,7 @@
 #' @format A named list with 7 taxa and the following items. Every item is named after the taxa (`$Taxon_name`), in the same order.
 #'  * `$Taxon_name` Character vector. Names of the taxa to graft.
 #'  * `$Target_clade` List of character vectors of tips defining the target clade of each taxon (one tip: the terminal branch of this tip).
-#'  * `$Target_clade_name` Character vector. Labels of the target clades. Ignored by the grafting functions.
+#'  * `$Target_clade_name` Character vector. Labels of the target clades. Not used for the grafting, but checked against the names of `total_richness_per_clades`, if provided.
 #'  * `$include_target_clade_stem` Logical vector. Whether the stem of the target clade of each taxon is available for grafting (`NA` uses the global argument).
 #'  * `$Excluded_subclades` List (one element per taxon) of named lists of character vectors of tips defining the excluded subclades, or `NULL`.
 #'  * `$exclude_subclades_stem` List (one element per taxon) of logical vectors (one value per excluded subclade), or `NULL`.
@@ -211,7 +211,8 @@
 #' It is built from the table `system.file("extdata", "toy_total_richness.csv", package = "phylograftR")`, with the tips of each clade separated by commas (see the examples).
 #'
 #' @usage data(toy_total_richness_per_clades)
-#' @format A list with the items `$Target_clade` (list of character vectors of tips) and `$total_richness` (numeric vector, `NA` if unknown).
+#' @format A list with the items `$Target_clade` (list of character vectors of tips), `$Target_clade_name` (character vector of the names of the clades,
+#'   the same as in [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list]) and `$total_richness` (numeric vector, `NA` if unknown).
 #'
 #' @seealso [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
 #' @examples
@@ -226,6 +227,7 @@
 #' tab <- read.csv(system.file("extdata", "toy_total_richness.csv", package = "phylograftR"))
 #' total_richness_per_clades <- list(
 #'   Target_clade = strsplit(tab$Target_clade, ",", fixed = TRUE),
+#'   Target_clade_name = tab$Target_clade_name,
 #'   total_richness = tab$total_richness)
 #'
 "toy_total_richness_per_clades"

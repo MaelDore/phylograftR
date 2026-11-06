@@ -78,8 +78,14 @@ test_that("the .csv of total richness matches the package dataset",
 {
   path <- system.file("extdata", "toy_total_richness.csv", package = "phylograftR")
   tab <- utils::read.csv(path, stringsAsFactors = FALSE)
-  rebuilt <- list(Target_clade = strsplit(tab$Target_clade, ",", fixed = TRUE), total_richness = tab$total_richness)
+  rebuilt <- list(Target_clade = strsplit(tab$Target_clade, ",", fixed = TRUE), Target_clade_name = tab$Target_clade_name, total_richness = tab$total_richness)
   expect_equal(rebuilt, phylograftR::toy_total_richness_per_clades)
+  # The names of the clades are the ones of the toy list of missing taxa (the grafting functions check them)
+  expect_equal(names(phylograftR::toy_total_richness_per_clades), c("Target_clade", "Target_clade_name", "total_richness"))
+  list_names <- phylograftR::toy_missing_taxa_list$Target_clade_name
+  list_clades <- vapply(phylograftR::toy_missing_taxa_list$Target_clade, paste, character(1), collapse = ",")
+  tab_names <- stats::setNames(phylograftR::toy_total_richness_per_clades$Target_clade_name, vapply(phylograftR::toy_total_richness_per_clades$Target_clade, paste, character(1), collapse = ","))
+  expect_equal(unname(tab_names[list_clades]), unname(list_names))
 })
 
 test_that("the backbone dataset is an ultrametric tree with the expected size",

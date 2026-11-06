@@ -98,7 +98,7 @@
 #' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions, with the following items:
 #'  * `$Taxon_name` Character vector.
 #'  * `$Target_clade` (or `$Sister_clade`) List of character vectors of tips.
-#'  * `$Target_clade_name` (or `$Sister_clade_name`) Only if the column was provided. Character vector of labels (`NA` if none). Ignored by the grafting functions.
+#'  * `$Target_clade_name` (or `$Sister_clade_name`) Only if the column was provided. Character vector of labels (`NA` if none). Not used for the grafting, but checked against the names of `total_richness_per_clades`, if provided (see the grafting functions).
 #'  * `$include_target_clade_stem` Only if the column was provided. Logical vector (`NA` uses the global argument).
 #'  * `$Excluded_subclades` Only if the column was provided. List (one element per taxon) of lists of character vectors of tips. `NULL` for taxa with no excluded subclades.
 #'    The subclades are named after their labels if `Excluded_subclades_names` was provided.
@@ -292,7 +292,7 @@ import_missing_taxa_list <- function (file, # Path to the table
 #' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions, with the following items:
 #'  * `$Taxon_name` Character vector.
 #'  * `$Target_clade` (or `$Sister_clade`) List of character vectors of tips.
-#'  * `$Target_clade_name` (or `$Sister_clade_name`) Only if the column was provided. Character vector of labels (`NA` if none). Ignored by the grafting functions.
+#'  * `$Target_clade_name` (or `$Sister_clade_name`) Only if the column was provided. Character vector of labels (`NA` if none). Not used for the grafting, but checked against the names of `total_richness_per_clades`, if provided (see the grafting functions).
 #'  * `$include_target_clade_stem` Only if the column was provided. Logical vector (`NA` uses the global argument).
 #'  * `$Excluded_subclades` Only if the column was provided. List (one element per taxon) of lists of character vectors of tips. `NULL` for taxa with no excluded subclades.
 #'    The subclades are named after their labels if `Excluded_subclades_names` was provided.

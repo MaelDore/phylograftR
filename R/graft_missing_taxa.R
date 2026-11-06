@@ -28,6 +28,9 @@
 #'     A single tip defines the "clade" as the terminal branch of this tip.
 #'     Clades, including the excluded subclades (see below), must be defined by tips: node IDs are not accepted (the function stops, and lists some of them).
 #'     Use [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] to convert node IDs into pairs of tips.
+#'   * `$Target_clade_name`: (Optional) Character vector (named after `$Taxon_name`) of the names of the target clades (`NA` if a clade has no name).
+#'     Taxa sharing the same target clade must have the same name. The names are not used for the grafting, but, if `total_richness_per_clades` is provided,
+#'     they are checked against its `$Target_clade_name` (a clade must have the same name in both objects).
 #'   * `$include_target_clade_stem`: (Optional) Logical vector (named after `$Taxon_name`). For each taxon, whether the stem branch of its target clade
 #'     is available for grafting. It overrides the global argument `include_target_clade_stem` for this taxon. `NA` values use the global argument.
 #'     With `NULL` (default, or no item), the global argument applies to all taxa. Ignored for single-tip target clades (their terminal branch is their only branch,
@@ -72,7 +75,7 @@
 #'     so the tips of the clades match between both objects.
 #'     It must cover all the unique target clades of `missing_taxa_list`. It can include other clades, e.g., enclosing clades.
 #'   * `$Target_clade_name`: (Optional) Character vector of the names of the clades, same length as `$Target_clade` (`NA` if a clade has no name).
-#'     Provided before the clades. The names must be unique. If `missing_taxa_list$Target_clade_name` is provided, a clade must have the same name in both objects (the function stops otherwise).
+#'     The names must be unique. If `missing_taxa_list$Target_clade_name` is provided, a clade must have the same name in both objects (the function stops otherwise).
 #'     They are not used for the grafting, but they are reported by [`phylograftR::extract_sampling_info()`][extract_sampling_info].
 #'   * `$total_richness`: Vector of positive integers, same length as `$Target_clade`. Total number of species of each clade,
 #'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species

@@ -80,6 +80,8 @@ toy_missing_taxa_list <- phylograftR::import_missing_taxa_list(
 
 toy_total_richness_table <- data.frame(
   Target_clade = c("t26,t18", "t8,t22", "t8,t7", "t5", "t5,t12"),
+  # Names identical to the ones of the toy missing taxa list (checked by the grafting functions)
+  Target_clade_name = c("clade_A", "clade_B", "clade_B1", "tip_t5", "clade_C"),
   total_richness = c(25, NA, 14, NA, 8))
 
 # Export in inst/extdata
@@ -87,6 +89,7 @@ utils::write.csv(toy_total_richness_table, file = "inst/extdata/toy_total_richne
 
 toy_total_richness_per_clades <- list(
   Target_clade = strsplit(toy_total_richness_table$Target_clade, ",", fixed = TRUE),
+  Target_clade_name = toy_total_richness_table$Target_clade_name,
   total_richness = toy_total_richness_table$total_richness)
 
 ##### 5/ Create a stochastic character map (simmap) of the backbone #####

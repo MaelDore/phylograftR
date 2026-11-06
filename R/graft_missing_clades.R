@@ -23,6 +23,9 @@
 #'     A pair of tips defines the clade as their MRCA node. A single tip defines the "clade" as the terminal branch of this tip.
 #'     Clades, including the excluded subclades (see below), must be defined by tips: node IDs are not accepted (the function stops, and lists some of them).
 #'     Use [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] to convert node IDs into pairs of tips.
+#'   * `$Sister_clade_name`: (Optional) Character vector (named after `$Taxon_name`) of the names of the sister clades (`NA` if a clade has no name).
+#'     Taxa sharing the same sister clade must have the same name. The names are not used for the grafting, but, if `total_richness_per_clades` is provided,
+#'     they are checked against its `$Sister_clade_name` (a clade must have the same name in both objects).
 #'   * `$allowed_states`: (Optional) List (named after `$Taxon_name`) of character vectors. For each taxon, the states of the `simmap` in which its missing clade
 #'     can be grafted on the stem branch of its sister clade. It overrides the global argument `allowed_states` for this taxon. `NULL` or `NA` use the global argument.
 #'     Only used with a `simmap`. Taxa with the same sister clade are grafted together as one missing clade, so they must have the same allowed states
@@ -38,7 +41,7 @@
 #'     so the tips of the clades match between both objects.
 #'     It must cover all the unique sister clades of `missing_taxa_list`. It can include other clades, e.g., enclosing clades.
 #'   * `$Sister_clade_name`: (Optional) Character vector of the names of the clades, same length as `$Sister_clade` (`NA` if a clade has no name).
-#'     Provided before the clades. The names must be unique. If `missing_taxa_list$Sister_clade_name` is provided, a clade must have the same name in both objects (the function stops otherwise).
+#'     The names must be unique. If `missing_taxa_list$Sister_clade_name` is provided, a clade must have the same name in both objects (the function stops otherwise).
 #'     They are not used for the grafting, but they are reported by [`phylograftR::extract_sampling_info()`][extract_sampling_info].
 #'   * `$total_richness`: Vector of positive integers, same length as `$Sister_clade`. Total number of species of each clade,
 #'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species

@@ -8,6 +8,14 @@
 
 
 ## Backbone with 3 taxa: X1 and X2 in the clade B, X3 in the clade A (B is nested in A)
+## Insert the names of the clades after the clades, before the total richness (as documented)
+with_names <- function (totals, names, item = "Target_clade")
+{
+  out <- totals[item]
+  out[[paste0(item, "_name")]] <- names
+  c(out, totals[names(totals) != item])
+}
+
 names_setup <- function ()
 {
   toy <- toy_setup()
@@ -54,7 +62,7 @@ test_that("graft_missing_taxa() checks the names of total_richness_per_clades ag
 {
   s <- names_setup()
   mtl <- list(Taxon_name = s$taxa, Target_clade = s$clades, Target_clade_name = c("clade_B", "clade_B", "clade_A"))
-  tr <- c(list(Target_clade_name = c("clade_B", "clade_A")), s$totals)
+  tr <- with_names(s$totals, c("clade_B", "clade_A"))
   g <- quiet_graft(graft_missing_taxa, s$toy$phy, mtl, total_richness_per_clades = tr, seed = 1)
   expect_s3_class(g, "phylo")
   # Names are not required in both objects
@@ -66,11 +74,11 @@ test_that("graft_missing_taxa() checks the names of total_richness_per_clades ag
   expect_equal(g$edge.length, g_no_names$edge.length)
 
   # A different name for the same clade, or a name identifying two clades
-  tr_wrong <- c(list(Target_clade_name = c("clade_A", "clade_B")), s$totals)
+  tr_wrong <- with_names(s$totals, c("clade_A", "clade_B"))
   expect_error(quiet_graft(graft_missing_taxa, s$toy$phy, mtl, total_richness_per_clades = tr_wrong, seed = 1), "different name")
-  tr_dup <- c(list(Target_clade_name = c("same", "same")), s$totals)
+  tr_dup <- with_names(s$totals, c("same", "same"))
   expect_error(quiet_graft(graft_missing_taxa, s$toy$phy, mtl, total_richness_per_clades = tr_dup, seed = 1), "must be unique")
-  tr_len <- c(list(Target_clade_name = "clade_B"), s$totals)
+  tr_len <- with_names(s$totals, "clade_B")
   expect_error(quiet_graft(graft_missing_taxa, s$toy$phy, mtl, total_richness_per_clades = tr_len, seed = 1), "one name per clade")
   # Taxa of the same clade with different names in the list
   mtl_conflict <- mtl; mtl_conflict$Target_clade_name <- c("clade_B", "other", "clade_A")
@@ -81,7 +89,7 @@ test_that("graft_missing_clades() checks the names of total_richness_per_clades 
 {
   toy <- toy_setup()
   mcl <- list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = toy$B, M2 = toy$C), Sister_clade_name = c("sis_B", "sis_C"))
-  tr <- list(Sister_clade_name = c("sis_B", "sis_C"), Sister_clade = list(toy$B, toy$C), total_richness = c(toy$nB + 3, NA))
+  tr <- list(Sister_clade = list(toy$B, toy$C), Sister_clade_name = c("sis_B", "sis_C"), total_richness = c(toy$nB + 3, NA))
   expect_s3_class(quiet_graft(graft_missing_clades, toy$phy, mcl, total_richness_per_clades = tr, seed = 1), "phylo")
   # Names in the list only, or in total_richness_per_clades only
   tr_no_names <- tr; tr_no_names$Sister_clade_name <- NULL
@@ -104,7 +112,7 @@ test_that("convert_nodes_to_tips() keeps the names of the clades of total_richne
   node_B <- ape::getMRCA(s$toy$phy, s$toy$B)
   node_A <- ape::getMRCA(s$toy$phy, s$toy$A)
   mtl <- list(Taxon_name = s$taxa, Target_clade = list(X1 = node_B, X2 = node_B, X3 = node_A), Target_clade_name = c("clade_B", "clade_B", "clade_A"))
-  tr <- list(Target_clade_name = c("clade_B", "clade_A"), Target_clade = list(node_B, node_A), total_richness = c(s$toy$nB + 5, s$toy$nA + 8))
+  tr <- list(Target_clade = list(node_B, node_A), Target_clade_name = c("clade_B", "clade_A"), total_richness = c(s$toy$nB + 5, s$toy$nA + 8))
   converted <- suppressMessages(convert_nodes_to_tips(mtl, s$toy$phy, total_richness_per_clades = tr, verbose = FALSE))
   expect_equal(converted$total_richness_per_clades$Target_clade_name, c("clade_B", "clade_A"))
   expect_equal(converted$total_richness_per_clades$total_richness, tr$total_richness)
