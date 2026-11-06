@@ -129,7 +129,7 @@
 #'   missing_taxa_taxonomic_table = missing_taxa_taxonomic_table,
 #'   phy = phy)
 #'
-#' # Since both types of taxa ti graft where provided, the output contains one list per grafting function
+#' # Since both types of taxa to graft where provided, the output contains one list per grafting function
 #' names(missing_taxa_lists)
 #' print(missing_taxa_lists$taxa) # Missing_taxa_list for graft_missing_taxa()
 #' print(missing_taxa_lists$clades) # Missing_taxa_list for graft_missing_clades()

@@ -7,10 +7,10 @@
 
 # Run from the root of the package, after loading it (devtools::load_all() or devtools::install()).
 # Produces:
-#  * data/toy_backbone.rda, data/toy_missing_taxa_list.rda, data/toy_total_richness_per_clades.rda, data/toy_simmap.rda, data/toy_missing_taxa_list_with_allowed_states.rda,
+#  * data/toy_backbone.rda, data/toy_backbone_taxonomic_table.rda, data/toy_missing_taxa_taxonomic_table.rda, data/toy_missing_taxa_list.rda, data/toy_total_richness_per_clades.rda, data/toy_simmap.rda, data/toy_missing_taxa_list_with_allowed_states.rda,
 #    data/toy_simmap_elevation.rda, data/toy_missing_taxa_list_with_two_traits.rda,
 #    data/toy_simmap_ranges.rda, data/toy_missing_taxa_list_with_allowed_ranges.rda, data/toy_missing_taxa_list_with_ranges_and_elevation.rda
-#  * inst/extdata/toy_missing_taxa.csv, inst/extdata/toy_total_richness.csv, inst/extdata/toy_missing_taxa_with_allowed_states.csv,
+#  * inst/extdata/toy_missing_taxa.csv, inst/extdata/toy_backbone_taxonomic_table.csv, inst/extdata/toy_missing_taxa_taxonomic_table.csv, inst/extdata/toy_total_richness.csv, inst/extdata/toy_missing_taxa_with_allowed_states.csv,
 #    inst/extdata/toy_missing_taxa_with_two_traits.csv, inst/extdata/toy_missing_taxa_with_allowed_ranges.csv, inst/extdata/toy_missing_taxa_with_ranges_and_elevation.csv
 #
 
@@ -91,6 +91,75 @@ toy_total_richness_per_clades <- list(
   Target_clade = strsplit(toy_total_richness_table$Target_clade, ",", fixed = TRUE),
   Target_clade_name = toy_total_richness_table$Target_clade_name,
   total_richness = toy_total_richness_table$total_richness)
+
+##### 4b/ Create the taxonomic tables #####
+
+# Taxonomy of the backbone (4 levels, from the broadest to the narrowest) designed to be consistent with the clades of the toy missing taxa list:
+# the groups below are the clades used in 'toy_missing_taxa.csv' (reference clades listed in section 1), so the list built from the taxonomy
+# has the same clades, excluded subclades and stems as 'toy_missing_taxa_list'. Tips left without a group at a level are unannotated at this level (NA).
+backbone_parts <- ape::prop.part(toy_backbone)
+tips_of_node <- function (node) toy_backbone$tip.label[backbone_parts[[node - ape::Ntip(toy_backbone)]]]
+
+toy_backbone_taxonomic_table <- data.frame(Taxa = toy_backbone$tip.label, Family = NA_character_, Subfamily = NA_character_,
+                                           Tribe = NA_character_, Genus = NA_character_, stringsAsFactors = FALSE)
+taxonomic_groups <- list(
+  # Level, name of the group, tips
+  list("Family", "Family_A", tips_of_node(32)), # Clade A
+  list("Family", "Family_B", tips_of_node(33)), # Clade B
+  list("Subfamily", "Subfam_A1", tips_of_node(37)), # group_1
+  list("Subfamily", "Subfam_A2", tips_of_node(38)), # group_2 and 3 other tips
+  list("Subfamily", "Subfam_B1", tips_of_node(34)), # Clade B1
+  list("Subfamily", "Subfam_B2", tips_of_node(47)), # Clade C and t22
+  list("Tribe", "Tribe_A1a", tips_of_node(41)),
+  list("Tribe", "Tribe_A1b", tips_of_node(40)),
+  list("Tribe", "Tribe_A2a", tips_of_node(39)), # group_2
+  list("Tribe", "Tribe_A2b", tips_of_node(42)),
+  list("Tribe", "Tribe_B1a", tips_of_node(35)),
+  list("Tribe", "Tribe_B2", tips_of_node(53)), # Clade C
+  list("Genus", "Gen_1", tips_of_node(50)), # group_3
+  list("Genus", "Gen_2", "t5"), # Genus with a single species
+  list("Genus", "Gen_3", "t30"), # Genus with a single species
+  list("Genus", "Gen_4", tips_of_node(43)),
+  list("Genus", "Gen_5", tips_of_node(49)))
+for (group in taxonomic_groups)
+{
+  toy_backbone_taxonomic_table[[group[[1]]]][match(group[[3]], toy_backbone_taxonomic_table$Taxa)] <- group[[2]]
+}
+
+# Taxa to graft: the 7 taxa of the toy missing taxa list ('taxa'), and 3 taxa grafted as sister clades ('clades').
+# Clades are written with names of groups, or with levels (the group of the taxon itself at this level).
+# The genera of the taxa to graft are not in the backbone.
+toy_missing_taxa_taxonomic_table <- data.frame(
+  Taxa = c("Genus_a_sp1", "Genus_a_sp2", "Genus_a_sp3", "Genus_b_sp1", "Genus_b_sp2", "Genus_c_sp1", "Genus_c_sp2", "Genus_d_sp1", "Genus_d_sp2", "Genus_e_sp1"),
+  Type = c(rep("taxa", 7), rep("clades", 3)),
+  Family = c(rep("Family_A", 3), rep("Family_B", 6), "Family_A"),
+  Subfamily = c(NA, NA, NA, NA, "Subfam_B1", "Subfam_B2", "Subfam_B2", "Subfam_B1", "Subfam_B1", "Subfam_A1"),
+  Tribe = c(NA, NA, NA, NA, NA, "Tribe_B2", "Tribe_B2", NA, NA, "Tribe_A1b"),
+  Genus = c("Genus_a", "Genus_a", "Genus_a", "Genus_b", "Genus_b", "Genus_c", "Genus_c", "Genus_d", "Genus_d", "Genus_e"),
+  Target_clade = c("Family", "Family", "Family", "Family_B", "Subfamily", "Gen_2", "Tribe", NA, NA, NA),
+  Sister_clade = c(rep(NA, 7), "Gen_1", "Gen_1", "Tribe"),
+  Excluded_subclades = c("Subfam_A1;Tribe_A2a", "Tribe_A2a;Gen_3", NA, NA, "Gen_1", rep(NA, 5)),
+  include_target_clade_stem = c(TRUE, TRUE, FALSE, NA, TRUE, NA, FALSE, rep(NA, 3)),
+  exclude_subclades_stem = c("TRUE;FALSE", "FALSE;TRUE", rep(NA, 8)),
+  stringsAsFactors = FALSE)
+
+# Export in inst/extdata/
+utils::write.csv(toy_backbone_taxonomic_table, file = "inst/extdata/toy_backbone_taxonomic_table.csv", row.names = FALSE, na = "")
+utils::write.csv(toy_missing_taxa_taxonomic_table, file = "inst/extdata/toy_missing_taxa_taxonomic_table.csv", row.names = FALSE, na = "")
+
+# Check that the list built from the taxonomy has the clades of the toy missing taxa list
+toy_taxonomic_lists <- phylograftR::build_missing_taxa_list_from_taxonomy(
+  toy_backbone_taxonomic_table, toy_missing_taxa_taxonomic_table, phy = toy_backbone, verbose = FALSE)
+clade_node <- function (tips) if (length(tips) == 1) match(tips, toy_backbone$tip.label) else ape::getMRCA(toy_backbone, tips)
+stopifnot(identical(names(toy_taxonomic_lists), c("taxa", "clades")),
+          identical(toy_taxonomic_lists$taxa$Taxon_name, toy_missing_taxa_list$Taxon_name),
+          identical(unname(vapply(toy_taxonomic_lists$taxa$Target_clade, clade_node, numeric(1))),
+                    unname(vapply(toy_missing_taxa_list$Target_clade, clade_node, numeric(1)))),
+          identical(unname(lapply(toy_taxonomic_lists$taxa$Excluded_subclades, function (x) unname(vapply(x, clade_node, numeric(1))))),
+                    unname(lapply(toy_missing_taxa_list$Excluded_subclades, function (x) unname(vapply(x, clade_node, numeric(1)))))),
+          identical(unname(lapply(toy_taxonomic_lists$taxa$exclude_subclades_stem, unname)), unname(lapply(toy_missing_taxa_list$exclude_subclades_stem, unname))),
+          identical(unname(toy_taxonomic_lists$taxa$include_target_clade_stem), unname(toy_missing_taxa_list$include_target_clade_stem)),
+          all(attr(toy_taxonomic_lists, "taxonomic_groups")$monophyletic))
 
 ##### 5/ Create a stochastic character map (simmap) of the backbone #####
 
@@ -445,6 +514,8 @@ for (method in c("uniform", "BD_clades"))
 
 dir.create("data", showWarnings = FALSE)
 save(toy_backbone, file = "data/toy_backbone.rda", compress = "gzip", version = 2)
+save(toy_backbone_taxonomic_table, file = "data/toy_backbone_taxonomic_table.rda", compress = "gzip", version = 2)
+save(toy_missing_taxa_taxonomic_table, file = "data/toy_missing_taxa_taxonomic_table.rda", compress = "gzip", version = 2)
 save(toy_missing_taxa_list, file = "data/toy_missing_taxa_list.rda", compress = "gzip", version = 2)
 save(toy_total_richness_per_clades, file = "data/toy_total_richness_per_clades.rda", compress = "gzip", version = 2)
 save(toy_simmap, file = "data/toy_simmap.rda", compress = "gzip", version = 2)

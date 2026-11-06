@@ -9,6 +9,7 @@
 # Includes:
 #  - A backbone phylogeny for grafting
 #  - A list of missing taxa to be grafted, with and without allowed states or allowed ranges
+#  - Taxonomic tables of the backbone and of the missing taxa, to build a list of missing taxa from taxonomic names
 #  - A table of total richness per clades to inform sampling fractions with unsampled species
 #  - A stochastic character map (simmap) of the backbone phylogeny, mapping a trait with three states
 #  - A stochastic character map (simmap) of the backbone phylogeny, mapping biogeographic ranges with four states
@@ -234,7 +235,72 @@
 "toy_total_richness_per_clades"
 
 
-##### 4/ Toy simmap #####
+##### 4/ Toy taxonomic tables #####
+
+#' @title Toy taxonomic tables
+#'
+#' @description Tables to build a `missing_taxa_list` from taxonomic names with
+#'   [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy], consistent with [`phylograftR::toy_backbone`][toy_backbone].
+#'
+#'   `toy_backbone_taxonomic_table` gives the taxonomy of the 30 tips of the backbone, with four levels (`Family`, `Subfamily`, `Tribe`, `Genus`).
+#'   All the groups are monophyletic. Some tips have no group at the finest levels (`NA`), as often in real data.
+#'
+#'   `toy_missing_taxa_taxonomic_table` describes 10 taxa to graft. The first seven (`Type = "taxa"`) are the taxa of
+#'   [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], written with taxonomic names: the clades, excluded subclades and stem settings are the same.
+#'   The last three (`Type = "clades"`) are taxa to graft as sister clades with [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
+#'   `Genus_d_sp1` and `Genus_d_sp2` belong to a new genus sister to the genus `Gen_1`, so they are grafted together as a missing clade, and `Genus_e_sp1` is sister to its own tribe.
+#'   The target and sister clades are written with the name of a group (e.g., `"Family_B"`) or of a level (e.g., `"Family"`, meaning the family of the taxon itself).
+#'   Both tables are also provided as `.csv` files in `system.file("extdata", package = "phylograftR")`
+#'   (`toy_backbone_taxonomic_table.csv` and `toy_missing_taxa_taxonomic_table.csv`).
+#'
+#'   The names of the clades made from the taxonomy (e.g., `"Family_A"`) are not the ones of [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list]
+#'   (e.g., `"clade_A"`), so the lists must not be combined with [`phylograftR::toy_total_richness_per_clades`][toy_total_richness_per_clades], whose names follow the latter.
+#'
+#' @usage
+#' data(toy_backbone_taxonomic_table)
+#' data(toy_missing_taxa_taxonomic_table)
+#'
+#' @format
+#' `toy_backbone_taxonomic_table` is a data frame with 30 rows (one per tip of the backbone) and the columns `Taxa` (tip labels), `Family`, `Subfamily`, `Tribe` and `Genus`.
+#'
+#' `toy_missing_taxa_taxonomic_table` is a data frame with 10 rows (one per taxon to graft) and the columns `Taxa`, `Type`, the taxonomic levels `Family`, `Subfamily`, `Tribe` and `Genus`
+#' of the taxa (`NA` if unknown), `Target_clade`, `Sister_clade`, `Excluded_subclades`, `include_target_clade_stem` and `exclude_subclades_stem`.
+#'
+#' @name toy_taxonomic_tables
+#' @aliases toy_backbone_taxonomic_table toy_missing_taxa_taxonomic_table
+#'
+#' @seealso [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy]
+#'
+#' @examples
+#' data(toy_backbone)
+#' data(toy_backbone_taxonomic_table)
+#' data(toy_missing_taxa_taxonomic_table)
+#'
+#' head(toy_backbone_taxonomic_table)
+#' toy_missing_taxa_taxonomic_table
+#'
+#' # Build the lists: one for graft_missing_taxa() and one for graft_missing_clades()
+#' toy_lists <- build_missing_taxa_list_from_taxonomy(
+#'   backbone_taxonomic_table = toy_backbone_taxonomic_table,
+#'   missing_taxa_taxonomic_table = toy_missing_taxa_taxonomic_table,
+#'   phy = toy_backbone)
+#' str(toy_lists$taxa, max.level = 1)
+#' str(toy_lists$clades, max.level = 1)
+#'
+#' # Compare to the initial '.csv' files
+#' system.file("extdata", "toy_backbone_taxonomic_table.csv", package = "phylograftR")
+#' system.file("extdata", "toy_missing_taxa_taxonomic_table.csv", package = "phylograftR")
+#'
+NULL
+
+#' @rdname toy_taxonomic_tables
+"toy_backbone_taxonomic_table"
+
+#' @rdname toy_taxonomic_tables
+"toy_missing_taxa_taxonomic_table"
+
+
+##### 5/ Toy simmap #####
 
 #' @title Toy stochastic character map of the toy backbone phylogeny
 #'
@@ -270,7 +336,7 @@
 "toy_simmap"
 
 
-##### 4b/ Toy simmap of biogeographic ranges #####
+##### 5b/ Toy simmap of biogeographic ranges #####
 
 #' @title Toy stochastic character map of biogeographic ranges of the toy backbone phylogeny
 #'
@@ -326,7 +392,7 @@
 "toy_simmap_ranges"
 
 
-##### 5/ Toy datasets for a second trait: simmap and list of missing taxa with allowed states of elevation #####
+##### 6/ Toy datasets for a second trait: simmap and list of missing taxa with allowed states of elevation #####
 
 #' @title Toy stochastic character map of elevation states
 #'

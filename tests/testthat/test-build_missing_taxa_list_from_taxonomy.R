@@ -32,7 +32,7 @@ build_tax <- function (bb, mt, phy, ...) build_missing_taxa_list_from_taxonomy(b
 
 test_that("clades are retrieved from names of groups and from names of levels", {
   s <- small_taxonomy()
-  mt <- make_mt(Taxa = c("x1", "x2", "x3"), Type = "Taxa", Genus = c("GenA", "GenB", "GenB"), Family = "Fam1",
+  mt <- make_mt(Taxa = c("x1", "x2", "x3"), Type = "taxa", Genus = c("GenA", "GenB", "GenB"), Family = "Fam1",
                 Target_clade = c("Genus", "GenA", "Family"))
   mtl <- build_tax(s$bb, mt, s$phy)
   expect_equal(names(mtl), c("Taxon_name", "Target_clade", "Target_clade_name"))
@@ -92,6 +92,11 @@ test_that("sister clades are built for graft_missing_clades()", {
   expect_equal(unname(mtl$Sister_clade_name), c("GenB", "GenA"))
   expect_equal(node_of(s$phy, mtl$Sister_clade$y1), node_of(s$phy, paste0("b", 1:3)))
   expect_no_error(validate_missing_taxa_list(mtl, clade_item = "Sister_clade"))
+  # Taxa with the same sister group have the same sister clade (and name): they are grafted together as a missing clade
+  mt_same <- make_mt(Taxa = c("y1", "y2"), Type = "clades", Genus = "GenD", Sister_clade = "GenC")
+  same <- build_tax(s$bb, mt_same, s$phy)
+  expect_equal(same$Sister_clade$y1, same$Sister_clade$y2)
+  expect_equal(unname(same$Sister_clade_name), c("GenC", "GenC"))
   # allowed_states is also passed
   mt$allowed_states <- c("S1", NA)
   expect_equal(build_tax(s$bb, mt, s$phy)$allowed_states$y1, "S1")
@@ -131,7 +136,7 @@ test_that("both types return one list per type, a single type returns the list",
 
 test_that("groups of the same clade share their names", {
   s <- small_taxonomy()
-  mt <- make_mt(Taxa = c("x1", "x2", "x3"), Type = "Taxa", Family = "Fam2", Genus = "GenC", Target_clade = c("Family", "GenC", "Fam1"),
+  mt <- make_mt(Taxa = c("x1", "x2", "x3"), Type = "taxa", Family = "Fam2", Genus = "GenC", Target_clade = c("Family", "GenC", "Fam1"),
                 Excluded_subclades = c(NA, NA, "GenB"))
   expect_warning(mtl <- build_tax(s$bb, mt, s$phy), "Several groups have the same clade.*Fam2 / GenC \\(clade of Fam2, GenC\\)")
   # No warning when each clade has a single group
@@ -147,7 +152,7 @@ test_that("non-monophyletic target groups: intruders are excluded, kept ('mrca')
   # Fam1 loses b1 and b2, which belong to another family: Fam1 = GenA + b3, whose clade holds the pair (b1, b2)
   bb <- s$bb
   bb$Family[bb$Taxa %in% c("b1", "b2")] <- "FamX"
-  mt <- make_mt(Taxa = c("x1", "x2"), Type = "Taxa", Target_clade = c("Fam1", "GenA"))
+  mt <- make_mt(Taxa = c("x1", "x2"), Type = "taxa", Target_clade = c("Fam1", "GenA"))
   expect_warning(mtl <- build_tax(bb, mt, s$phy), "Target groups are not monophyletic.*Fam1 \\(Family\\): 2 tip\\(s\\) of other groups among 7 tips")
   expect_equal(node_of(s$phy, mtl$Target_clade$x1), node_of(s$phy, c(paste0("a", 1:4), "b3")))
   expect_equal(lengths(mtl$Excluded_subclades), c(x1 = 1, x2 = 0))
@@ -193,7 +198,7 @@ test_that("unannotated tips are compatible with every group", {
   # a3 has no genus, and the table has no row for a2
   bb$Genus[bb$Taxa == "a3"] <- NA
   bb2 <- bb[bb$Taxa != "a2", ]
-  mt <- make_mt(Taxa = "x1", Type = "Taxa", Target_clade = "GenA")
+  mt <- make_mt(Taxa = "x1", Type = "taxa", Target_clade = "GenA")
   expect_no_warning(mtl <- build_tax(bb, mt, s$phy))
   info <- attr(mtl, "taxonomic_groups")
   expect_true(info$monophyletic)
@@ -202,35 +207,29 @@ test_that("unannotated tips are compatible with every group", {
   expect_equal(info$n_tips_clade, 4)
   expect_null(mtl$Excluded_subclades)
   # Tips of the phylogeny absent from the table: warning, and they are never excluded
-  mt2 <- make_mt(Taxa = "x1", Type = "Taxa", Target_clade = "GenA")
+  mt2 <- make_mt(Taxa = "x1", Type = "taxa", Target_clade = "GenA")
   expect_warning(mtl2 <- build_tax(bb2, mt2, s$phy), "1 tips of 'phy' are absent from 'backbone_taxonomic_table'.*a2")
   expect_true(attr(mtl2, "taxonomic_groups")$monophyletic)
   expect_equal(attr(mtl2, "taxonomic_groups")$n_unannotated, 2) # a2 (absent) and a3 (no genus)
 })
 
-test_that("non-monophyletic excluded groups are split into their largest pure subclades", {
+test_that("non-monophyletic excluded groups use the clade of the MRCA, with a warning", {
   s <- small_taxonomy()
-  # a3 belongs to GenB: GenA = (a1, a2) + a4 in the clade (a1, a2, a3, a4)
+  # a3 belongs to GenB: GenA = a1, a2 and a4, in the clade (a1, a2, a3, a4)
   bb <- s$bb
   bb$Genus[bb$Taxa == "a3"] <- "GenB"
-  mt <- make_mt(Taxa = c("x1", "x2"), Type = "Taxa", Target_clade = "Fam1", Excluded_subclades = c("GenA", "GenB"))
-  expect_warning(mtl <- build_tax(bb, mt, s$phy), "Excluded groups are not monophyletic.*GenA \\(Genus\\)")
-  # x1: GenA is replaced by the clade (a1, a2) and the tip a4. a3 is not excluded
-  expect_equal(lengths(mtl$Excluded_subclades)[["x1"]], 2)
-  expect_equal(names(mtl$Excluded_subclades$x1), c("GenA [1]", "GenA [2]"))
-  expect_equal(node_of(s$phy, mtl$Excluded_subclades$x1[[1]]), node_of(s$phy, c("a1", "a2")))
-  expect_equal(node_of(s$phy, mtl$Excluded_subclades$x1[[2]]), node_of(s$phy, "a4"))
-  expect_false("a3" %in% unlist(mtl$Excluded_subclades$x1))
-  # x2: GenB = a3 + (b1, b2, b3) is also split, into the tip a3 and the clade of b1 to b3
-  expect_equal(lengths(mtl$Excluded_subclades)[["x2"]], 2)
-  expect_equal(node_of(s$phy, mtl$Excluded_subclades$x2[[1]]), node_of(s$phy, "a3"))
-  expect_equal(node_of(s$phy, mtl$Excluded_subclades$x2[[2]]), node_of(s$phy, paste0("b", 1:3)))
-  # 'mrca': the clade of the MRCA is excluded
-  expect_warning(mrca <- build_tax(bb, mt[1, ], s$phy, non_monophyletic = "mrca"), "Excluded groups are not monophyletic.*tips of other groups are excluded too")
-  expect_equal(lengths(mrca$Excluded_subclades)[["x1"]], 1)
-  expect_equal(node_of(s$phy, mrca$Excluded_subclades$x1[[1]]), node_of(s$phy, paste0("a", 1:4)))
-  # 'error'
+  mt <- make_mt(Taxa = "x1", Type = "taxa", Target_clade = "Fam1", Excluded_subclades = "GenA")
+  for (mode in c("exclude", "mrca"))
+  {
+    expect_warning(mtl <- build_tax(bb, mt, s$phy, non_monophyletic = mode), "Excluded groups are not monophyletic.*all its descending branches are excluded.*GenA \\(Genus\\)")
+    # The whole clade of the MRCA is excluded, a3 included, as a single subclade with the name of the group
+    expect_equal(length(mtl$Excluded_subclades$x1), 1)
+    expect_equal(node_of(s$phy, mtl$Excluded_subclades$x1[[1]]), node_of(s$phy, paste0("a", 1:4)))
+    expect_equal(names(mtl$Excluded_subclades$x1), "GenA")
+  }
   expect_error(build_tax(bb, mt, s$phy, non_monophyletic = "error"), "Excluded subclades:")
+  # A monophyletic group in the same table: no warning
+  expect_no_warning(build_tax(s$bb, make_mt(Taxa = "x1", Type = "taxa", Target_clade = "Fam1", Excluded_subclades = "GenB"), s$phy))
 })
 
 test_that("non-monophyletic sister groups use the clade of the MRCA, with a warning", {
@@ -250,13 +249,13 @@ test_that("a sister clade holding the whole backbone is an error", {
   mt <- make_mt(Taxa = "y1", Type = "clades", Sister_clade = "Ord1")
   expect_error(build_tax(bb, mt, s$phy), "holds the whole backbone.*Ord1")
   # Allowed for a target clade
-  mt <- make_mt(Taxa = "x1", Type = "Taxa", Target_clade = "Ord1")
+  mt <- make_mt(Taxa = "x1", Type = "taxa", Target_clade = "Ord1")
   expect_no_error(build_tax(bb, mt, s$phy))
 })
 
 test_that("groups that cannot be found are reported for all the taxa and clades", {
   s <- small_taxonomy()
-  mt <- make_mt(Taxa = c("x1", "x2", "x3", "x4"), Type = "Taxa", Genus = c("GenA", NA, "GenZ", "GenA"),
+  mt <- make_mt(Taxa = c("x1", "x2", "x3", "x4"), Type = "taxa", Genus = c("GenA", NA, "GenZ", "GenA"),
                 Target_clade = c("Foo", "Genus", "Genus", "GenA"), Excluded_subclades = c(NA, NA, NA, "GenB; Bar"))
   err <- tryCatch(build_tax(s$bb, mt, s$phy), error = function (e) conditionMessage(e))
   expect_match(err, "4 problem\\(s\\) found")
@@ -265,10 +264,10 @@ test_that("groups that cannot be found are reported for all the taxa and clades"
   expect_match(err, "x3 \\(Target_clade\\): group 'GenZ' \\(Genus\\) is absent from the backbone")
   expect_match(err, "x4 \\(Excluded_subclades\\): 'Bar' is neither")
   # Level used but the column is absent from the table of the missing taxa
-  mt2 <- make_mt(Taxa = "x1", Type = "Taxa", Target_clade = "Genus")
+  mt2 <- make_mt(Taxa = "x1", Type = "taxa", Target_clade = "Genus")
   expect_error(build_tax(s$bb, mt2, s$phy), "'Genus' is a level, but 'missing_taxa_taxonomic_table' has no column 'Genus'")
   # Empty clade, and empty group in a list
-  mt3 <- make_mt(Taxa = c("x1", "x2"), Type = "Taxa", Target_clade = c(NA, "GenA"), Excluded_subclades = c(NA, "GenB;;"))
+  mt3 <- make_mt(Taxa = c("x1", "x2"), Type = "taxa", Target_clade = c(NA, "GenA"), Excluded_subclades = c(NA, "GenB;;"))
   err3 <- tryCatch(build_tax(s$bb, mt3, s$phy), error = function (e) conditionMessage(e))
   expect_match(err3, "x1 \\(Target_clade\\): empty")
   expect_match(err3, "x2 \\(Excluded_subclades\\): empty group")
@@ -276,7 +275,7 @@ test_that("groups that cannot be found are reported for all the taxa and clades"
 
 test_that("ambiguous names in the tables are rejected", {
   s <- small_taxonomy()
-  mt <- make_mt(Taxa = "x1", Type = "Taxa", Target_clade = "GenA")
+  mt <- make_mt(Taxa = "x1", Type = "taxa", Target_clade = "GenA")
   # A level named like a tip
   bb <- s$bb; names(bb)[names(bb) == "Genus"] <- "a1"
   expect_error(build_tax(bb, mt, s$phy), "Ambiguous names.*levels that are also names of taxa: a1")
@@ -290,7 +289,7 @@ test_that("ambiguous names in the tables are rejected", {
   bb <- s$bb; bb$Genus[bb$Taxa == "c1"] <- "Fam1"
   expect_error(build_tax(bb, mt, s$phy), "several levels.*Fam1 \\(Family, Genus\\)")
   # A group of the table of the missing taxa that is also a group of another level
-  mt2 <- make_mt(Taxa = "x1", Type = "Taxa", Target_clade = "GenA", Genus = "Fam1")
+  mt2 <- make_mt(Taxa = "x1", Type = "taxa", Target_clade = "GenA", Genus = "Fam1")
   expect_error(build_tax(s$bb, mt2, s$phy), "several levels.*Fam1")
   # A group with a semicolon
   bb <- s$bb; bb$Genus[bb$Taxa == "c1"] <- "Gen;C"
@@ -305,7 +304,7 @@ test_that("ambiguous names in the tables are rejected", {
 
 test_that("tables and phylogeny are checked", {
   s <- small_taxonomy()
-  mt <- make_mt(Taxa = "x1", Type = "Taxa", Target_clade = "GenA")
+  mt <- make_mt(Taxa = "x1", Type = "taxa", Target_clade = "GenA")
   expect_error(build_missing_taxa_list_from_taxonomy(s$bb, mt, "not a tree", verbose = FALSE), "'phy' must be a phylogeny")
   expect_error(build_tax(as.matrix(s$bb), mt, s$phy), "'backbone_taxonomic_table' must be a data frame")
   expect_error(build_tax(s$bb, "mt", s$phy), "'missing_taxa_taxonomic_table' must be a data frame")
@@ -317,13 +316,13 @@ test_that("tables and phylogeny are checked", {
   bb <- rbind(s$bb, s$bb[1, ])
   expect_error(build_tax(bb, mt, s$phy), "must be unique in 'backbone_taxonomic_table'.*a1")
   # Taxa to graft
-  expect_error(build_tax(s$bb, make_mt(Taxa = "a1", Type = "Taxa", Target_clade = "GenA"), s$phy), "absent from the backbone.*a1")
-  expect_error(build_tax(s$bb, make_mt(Taxa = c("x", "x"), Type = "Taxa", Target_clade = "GenA"), s$phy), "must be unique in 'missing_taxa_taxonomic_table'.*x")
+  expect_error(build_tax(s$bb, make_mt(Taxa = "a1", Type = "taxa", Target_clade = "GenA"), s$phy), "absent from the backbone.*a1")
+  expect_error(build_tax(s$bb, make_mt(Taxa = c("x", "x"), Type = "taxa", Target_clade = "GenA"), s$phy), "must be unique in 'missing_taxa_taxonomic_table'.*x")
   expect_error(build_tax(s$bb, make_mt(Taxa = "x", Target_clade = "GenA"), s$phy), "must have a column 'Type'")
-  expect_error(build_tax(s$bb, make_mt(Type = "Taxa", Target_clade = "GenA"), s$phy), "must have a column 'Taxa'")
-  expect_error(build_tax(s$bb, make_mt(Taxa = c("x", "y"), Type = c("Taxa", "Genus"), Target_clade = "GenA"), s$phy), "'Type' must be 'Taxa' or 'clades'.*y \\('Genus'\\)")
+  expect_error(build_tax(s$bb, make_mt(Type = "taxa", Target_clade = "GenA"), s$phy), "must have a column 'Taxa'")
+  expect_error(build_tax(s$bb, make_mt(Taxa = c("x", "y"), Type = c("Taxa", "Genus"), Target_clade = "GenA"), s$phy), "'Type' must be 'taxa' or 'clades'.*y \\('Genus'\\)")
   expect_error(build_tax(s$bb, make_mt(Taxa = "x", Type = NA, Target_clade = "GenA"), s$phy), "empty")
-  expect_error(build_tax(s$bb, make_mt(Taxa = "x", Type = "Taxa", Sister_clade = "GenA"), s$phy), "needs a column 'Target_clade'")
+  expect_error(build_tax(s$bb, make_mt(Taxa = "x", Type = "taxa", Sister_clade = "GenA"), s$phy), "needs a column 'Target_clade'")
   expect_error(build_tax(s$bb, make_mt(Taxa = "x", Type = "clades", Target_clade = "GenA"), s$phy), "needs a column 'Sister_clade'")
   # Unknown columns are ignored with a warning
   expect_warning(build_tax(s$bb, cbind(mt, Foo = "bar"), s$phy), "Unknown columns ignored.*'Foo'")
@@ -337,7 +336,7 @@ test_that("tables and phylogeny are checked", {
 
 test_that("taxa of the missing table can have no taxonomic level at all", {
   s <- small_taxonomy()
-  mt <- make_mt(Taxa = c("x1", "x2"), Type = "Taxa", Target_clade = c("GenA", "Fam2"))
+  mt <- make_mt(Taxa = c("x1", "x2"), Type = "taxa", Target_clade = c("GenA", "Fam2"))
   mtl <- build_tax(s$bb, mt, s$phy)
   expect_equal(unname(mtl$Target_clade_name), c("GenA", "Fam2"))
 })
@@ -349,7 +348,7 @@ test_that("clades match the MRCA of random groups, and foreign tips are excluded
   label <- sample(c("G1", "G2", "G3", "G4", NA), n, replace = TRUE, prob = c(1, 1, 1, 1, 0.5))
   bb <- data.frame(Taxa = sample(phy$tip.label), stringsAsFactors = FALSE)
   bb$Genus <- label[match(bb$Taxa, phy$tip.label)]
-  mt <- make_mt(Taxa = paste0("x", 1:4), Type = "Taxa", Target_clade = paste0("G", 1:4))
+  mt <- make_mt(Taxa = paste0("x", 1:4), Type = "taxa", Target_clade = paste0("G", 1:4))
   mtl <- suppressWarnings(build_tax(bb, mt, phy))
   parts <- ape::prop.part(phy)
   for (g in paste0("G", 1:4))
@@ -376,7 +375,7 @@ test_that("works with polytomies and with a phylogeny whose tips are not in the 
   phy <- make_toy_polytomies(make_toy_phy(n_tips = 20, seed = 3), n_collapsed = 3)
   tips <- phy$tip.label
   bb <- data.frame(Taxa = rev(tips), Genus = rep(c("G1", "G2"), each = 10), stringsAsFactors = FALSE)
-  mt <- make_mt(Taxa = "x1", Type = "Taxa", Target_clade = "G1")
+  mt <- make_mt(Taxa = "x1", Type = "taxa", Target_clade = "G1")
   mtl <- suppressWarnings(build_tax(bb, mt, phy))
   members <- bb$Taxa[bb$Genus == "G1"]
   expect_equal(node_of(phy, mtl$Target_clade$x1), ape::getMRCA(phy, members))
@@ -396,7 +395,7 @@ test_that("the list is accepted by the grafting functions", {
   bb$Grp[bb$Taxa %in% toy$tipsA] <- "GrpA"
   bb$Grp[bb$Taxa %in% c(tipsB[1], tipsC[1])] <- "GrpX"
   mt <- make_mt(Taxa = c("X1", "X2", "X3", "X4", "Y1", "Y2"),
-                Type = c("Taxa", "Taxa", "Taxa", "Taxa", "clades", "clades"),
+                Type = c("taxa", "taxa", "taxa", "taxa", "clades", "clades"),
                 Family = "FamA", Genus = c("GenB", "GenB", "GenC", NA, "GenC", "GenB"),
                 Target_clade = c("Genus", "FamA", "FamA", "GenC", NA, NA),
                 Excluded_subclades = c(NA, "GenC", "GenB; GenC", NA, NA, NA),
@@ -419,7 +418,7 @@ test_that("the list is accepted by the grafting functions", {
   expect_false("X3" %in% clade_tips(tipsC))
 
   # With a non-monophyletic target (GrpA) the intruders (one tip of B and one tip of C) are excluded
-  mt_r <- make_mt(Taxa = "R1", Type = "Taxa", Target_clade = "GrpA")
+  mt_r <- make_mt(Taxa = "R1", Type = "taxa", Target_clade = "GrpA")
   expect_warning(mtl_r <- build_tax(bb, mt_r, toy$phy), "GrpA")
   expect_setequal(unlist(mtl_r$Excluded_subclades$R1), c(tipsB[1], tipsC[1]))
   g_r <- quiet_graft(graft_missing_taxa, toy$phy, mtl_r, method = "uniform", seed = 1)
