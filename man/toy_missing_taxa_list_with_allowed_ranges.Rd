@@ -53,7 +53,8 @@ grafted_phy <- graft_missing_taxa(phy = toy_backbone,
 
 # Plot the updated simmap
 plot_grafted(grafted_phy,
-             simmap_colors = c("A" = "gold", "B" = "dodgerblue", "AB" = "limegreen", "BC" = "firebrick2"))
+             simmap_colors = c("A" = "gold", "B" = "dodgerblue",
+                               "AB" = "limegreen", "BC" = "firebrick2"))
 
 # Inspect range inherited by each grafted taxon (state of its terminal branch in the updated simmap)
 taxon_names <- toy_missing_taxa_list_with_allowed_ranges$Taxon_name

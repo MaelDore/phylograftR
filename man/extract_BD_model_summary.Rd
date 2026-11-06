@@ -90,7 +90,8 @@ grafted_phys <- graft_missing_taxa(phy = phy, missing_taxa_list = missing_taxa_l
 # --- Extract the BD models --- #
 
 BD_summary <- extract_BD_model_summary(phy_grafted = grafted_phys)
-BD_summary[, c("simulation", "Taxa", "initial_clade_n_tips", "enclosing", "fitted_clade_n_tips", "b", "d", "rho")]
+BD_summary[, c("simulation", "Taxa", "initial_clade_n_tips",
+               "enclosing", "fitted_clade_n_tips", "b", "d", "rho")]
 
 # The clade of 3 tips is smaller than min_tips = 5: the model is fitted on its enclosing clade
 BD_summary[BD_summary$enclosing, c("Taxa", "initial_clade_tips", "fitted_clade_tips")]

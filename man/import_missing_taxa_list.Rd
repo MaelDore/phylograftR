@@ -2,7 +2,7 @@
 % Please edit documentation in R/import_missing_taxa_list.R
 \name{import_missing_taxa_list}
 \alias{import_missing_taxa_list}
-\title{Import a table of missing taxa as a \code{missing_taxa_list} object}
+\title{Import an external table of missing taxa as a \code{missing_taxa_list} object}
 \usage{
 import_missing_taxa_list(
   file,

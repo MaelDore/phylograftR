@@ -623,8 +623,11 @@ names(grafted_phy_ranges_traits$simmap)
 
 # Newly grafted clades can only harbor the allowed state/range in each trait
 # They can be grafted on range that encompasses their allowed range (here, "AB")
-plot_grafted(grafted_phy_traits, trait = 1) # Grafted on "A", "B", or "AB", but inherit only "A" or "B".
-plot_grafted(grafted_phy_traits, trait = 2) # Only 'low'
+
+# Range: Grafted on "A", "B", or "AB", but inherit only "A" or "B".
+plot_grafted(grafted_phy_traits, trait = 1)
+# Elevation: Only 'low'
+plot_grafted(grafted_phy_traits, trait = 2)
 
 
 }
