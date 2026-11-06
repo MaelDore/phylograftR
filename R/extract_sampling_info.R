@@ -1,4 +1,3 @@
-
 ##### Function to extract the sampling fractions of clades from grafted phylogenies #####
 
 ####################################
@@ -13,17 +12,20 @@
 #'
 #' @description Summarize, in each grafted phylogeny, the species of each clade listed in `total_richness_per_clades`:
 #'   species of the backbone, grafted species, and unsampled species (species of the clade that are neither in the backbone nor grafted).
-#'   It then derives the sampling fraction of each clade that can be used in downstream analyses to account for the clade-specific sampling fractions
-#'   (e.g., diversification models).
+#'   It then derives the sampling fraction of each clade that can be used in downstream analyses
+#'   to account for the clade-specific sampling fractions (e.g., diversification models).
 #'
 #'   The function works a posteriori, on the output of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades]
 #'   (a phylogeny, a set of simulations, or the list of maps obtained with a `"multiSimmap"`).
-#'   The counts are taken in each grafted phylogeny, so they differ among simulations and maps whenever the grafted taxa end up in different clades.
+#'   The counts are taken in each grafted phylogeny. With `graft_missing_taxa()`, they can differ among simulations and maps, as a taxon can end up in different clades.
+#'   With `graft_missing_clades()`, they are the same in all the phylogenies, as each missing clade is always grafted on the stem of its sister clade.
 #'
 #' @param phy_grafted A grafted phylogeny (class `"phylo"`), a set of grafted phylogenies (class `"multiPhylo"`, e.g., several simulations),
 #'   or a list of them with one element per map (output of the grafting functions with a `"multiSimmap"`).
 #'   The phylogenies must have the elements `$grafted_tips` and `$grafted_edges` (see [`phylograftR::identify_grafted()`][identify_grafted]).
 #' @param total_richness_per_clades A list with the total number of species of the clades, as used for the grafting. Items:
+#'   * `$Target_clade_name` or `$Sister_clade_name`: (Optional) Character vector of the names of the clades, same length as the clades (`NA` if a clade has no name).
+#'     The names must be unique. They are reported in the `Clade_name` column of the output.
 #'   * `$Target_clade` (clades defined for the taxa grafted with [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]) or `$Sister_clade`
 #'     (sister clades of the missing clades grafted with [`phylograftR::graft_missing_clades()`][graft_missing_clades]). Exactly one of them must be provided.
 #'     List of character vectors of tips of the backbone: a pair of tips defines the clade as their most recent common ancestor (MRCA), and a single tip defines a terminal branch.
@@ -63,6 +65,7 @@
 #'   * `map` Character string. Name of the stochastic map (`NA` if no map was used).
 #'   * `simulation` Integer. Index of the simulation.
 #'   * `seed` Integer. Seed of the simulation (`NA` if unknown).
+#'   * `Clade_name` Character string. Name of the clade (`NA` if it has no name). Only if the names of the clades are provided in `total_richness_per_clades`.
 #'   * `Clade_tips` Character string. Tips used to identify the clade.
 #'   * `total_richness` Numeric. Total number of species of the clade: provided, or derived if `NA` was provided.
 #'   * `total_richness_provided` Logical. Whether the total richness of the clade was provided.
@@ -86,11 +89,15 @@
 #' # List the missing taxa to graft
 #' missing_taxa_list <- list(
 #'   Taxon_name = c("X1", "X2", "X3", "X4"),
+#'   # Optional names of the clades (one per taxon): they must match those of total_richness_per_clades
+#'   Target_clade_name = c("clade_A", "clade_B", "tip_t5", "clade_A"),
 #'   Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5", X4 = c("t26", "t18")))
 #'
+#'
 #' # Total richness of the target clades
-#' # NA = unknown richness (i.e., no unsampled species beyond unsampled species found in nested clades)
+#' # NA = unknown richness (i.e., no unsampled species beyond nested clades)
 #' total_richness_per_clades <- list(
+#'   Target_clade_name = c("clade_A", "clade_B", "tip_t5"),
 #'   Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5"),
 #'   total_richness = c(25, NA, 3))
 #'
@@ -107,7 +114,7 @@
 #' head(sampling_info)
 #'
 #' # Sampling fraction of each clade in each simulation (it varies when taxa are grafted in different clades)
-#' tapply(sampling_info$sampling_fraction, list(sampling_info$Clade_tips, sampling_info$simulation), mean)
+#' tapply(sampling_info$sampling_fraction, list(sampling_info$Clade_name, sampling_info$simulation), mean)
 #'
 #'
 
@@ -117,14 +124,14 @@ extract_sampling_info <- function (phy_grafted, # Output of the grafting functio
   ### ---- Check input validity ---- ###
 
   if (!is.list(total_richness_per_clades)) { stop("'total_richness_per_clades' must be a list with the items 'Target_clade' (or 'Sister_clade') and 'total_richness'") }
-  has_target <- !is.null(total_richness_per_clades$Target_clade)
-  has_sister <- !is.null(total_richness_per_clades$Sister_clade)
+  has_target <- !is.null(total_richness_per_clades[["Target_clade"]])
+  has_sister <- !is.null(total_richness_per_clades[["Sister_clade"]])
   if (has_target && has_sister) { stop("'total_richness_per_clades' has both 'Target_clade' and 'Sister_clade': use only one, depending on the grafting function (graft_missing_taxa() or graft_missing_clades())") }
   if (!has_target && !has_sister) { stop("'total_richness_per_clades' must have a 'Target_clade' item (taxa grafted by graft_missing_taxa()) or a 'Sister_clade' item (missing clades grafted by graft_missing_clades())") }
   is_sister <- has_sister
   clade_element <- if (is_sister) "Sister_clade" else "Target_clade"
   clades <- total_richness_per_clades[[clade_element]]
-  values <- total_richness_per_clades$total_richness
+  values <- total_richness_per_clades[["total_richness"]]
   if (is.null(values)) { stop("'total_richness_per_clades' must have the item 'total_richness'") }
 
   node_clades <- which(vapply(clades, is_node_id_clade, logical(1)))
@@ -174,6 +181,13 @@ extract_sampling_info <- function (phy_grafted, # Output of the grafting functio
          paste0("  - ", vapply(dup, function (nd) paste(clade_labels[clade_nodes == nd], collapse = "  =  "), character(1)), collapse = "\n"))
   }
 
+  ## Names of the clades (optional): valid and unique
+  name_item <- paste0(clade_element, "_name")
+  has_names <- !is.null(total_richness_per_clades[[name_item]])
+  check_clade_names(clade_names = total_richness_per_clades[[name_item]], clade_nodes = clade_nodes, clade_labels = clade_labels,
+                    item = paste0("total_richness_per_clades$", name_item), n_clades = length(clades))
+  clade_names <- if (has_names) { x <- unname(as.character(total_richness_per_clades[[name_item]])); x[!is.na(x) & !nzchar(x)] <- NA_character_; x } else NULL
+
   ## Nesting of the clades: largest clades nested within each clade (backbone tips of the clades)
   backbone_tips <- lapply(clade_nodes, function (nd) if (nd <= ape::Ntip(backbone)) backbone$tip.label[nd] else ape::extract.clade(backbone, nd)$tip.label)
   nested_in <- lapply(seq_along(clades), function (k)
@@ -217,6 +231,7 @@ extract_sampling_info <- function (phy_grafted, # Output of the grafting functio
   {
     cbind(map = rep(listed$map[k], n_rows[k]), simulation = rep(listed$simulation[k], n_rows[k]), seed = rep(listed$seed[k], n_rows[k]), results[[k]], stringsAsFactors = FALSE)
   }))
+  if (has_names) { output <- cbind(output[, c("map", "simulation", "seed")], Clade_name = rep(clade_names, length(results)), output[, -(1:3)], stringsAsFactors = FALSE) }
   rownames(output) <- NULL
   attr(output, "type") <- if (is_sister) "clades" else "taxa"
 
@@ -224,7 +239,7 @@ extract_sampling_info <- function (phy_grafted, # Output of the grafting functio
   negative <- output$nb_unsampled_species < 0
   if (any(negative))
   {
-    concerned <- unique(output$Clade_tips[negative])
+    concerned <- unique(if (has_names) ifelse(is.na(output$Clade_name), output$Clade_tips, paste0(output$Clade_name, " (", output$Clade_tips, ")"))[negative] else output$Clade_tips[negative])
     n_show <- min(length(concerned), 5)
     warning(sum(negative), " row(s) have a negative number of unsampled species (more species in the clade than its total richness): ",
             length(concerned), " clade(s) in ", length(unique(paste(output$map[negative], output$simulation[negative]))), " phylogeny(ies).\n",

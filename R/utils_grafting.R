@@ -1014,6 +1014,90 @@ get_missing_clade_labels <- function (groups, missing_taxa_list)
 
 # ---- Richness information ----
 
+#' @title Check the names of the clades of `total_richness_per_clades`
+#'
+#' @description Check the optional names of the clades (`Target_clade_name` or `Sister_clade_name` items of `total_richness_per_clades`),
+#'   and, if provided, that they are consistent with the names of the clades of `missing_taxa_list`.
+#'
+#' ### Checks
+#' The function stops if:
+#'  * The names are not a character vector with one value per clade (`NA` or `""` for an unnamed clade).
+#'  * A name is used for several clades (clades are identified by their MRCA node), or two clades of `missing_taxa_list` that share the same MRCA node have different names.
+#'  * A clade has a different name in `total_richness_per_clades` and in `missing_taxa_list`, or the same name identifies different clades in both objects.
+#'
+#' @param clade_names `NULL`, or the names of the clades of `total_richness_per_clades`.
+#' @param clade_nodes Numeric vector. Node IDs (MRCA) of the clades of `total_richness_per_clades`.
+#' @param clade_labels Character vector. Tips defining the clades of `total_richness_per_clades` (to report the clades in the messages).
+#' @param item Character string. Name of the item checked (for the messages).
+#' @param n_clades Integer. Number of clades of `total_richness_per_clades`.
+#' @param missing_nodes Numeric vector. Node IDs (MRCA) of the clade of each taxon of `missing_taxa_list`.
+#' @param missing_clade_names `NULL`, or the names of the clade of each taxon of `missing_taxa_list` (`NA` if none).
+#' @param missing_item Character string. Name of the item of `missing_taxa_list` (for the messages).
+#'
+#' @noRd
+#'
+#' @return `NULL`, invisibly. Called for its checks.
+#'
+
+check_clade_names <- function (clade_names, clade_nodes, clade_labels, item, n_clades,
+                               missing_nodes = NULL, missing_clade_names = NULL, missing_item = "missing_taxa_list")
+{
+  if (is.null(clade_names)) { return(invisible(NULL)) }
+  if (!is.atomic(clade_names) || !(is.character(clade_names) || (is.logical(clade_names) && all(is.na(clade_names)))) || length(clade_names) != n_clades)
+  {
+    stop("'", item, "' must be a character vector with one name per clade (", n_clades, " clade(s)), using NA for the clades without a name")
+  }
+  clade_names <- unname(as.character(clade_names))
+  clade_names[!is.na(clade_names) & !nzchar(clade_names)] <- NA_character_
+
+  ## Names identify a single clade
+  named <- which(!is.na(clade_names))
+  if (anyDuplicated(clade_names[named]))
+  {
+    dup <- unique(clade_names[named][duplicated(clade_names[named])])
+    stop("Some names of '", item, "' are used for several clades: ", paste(dup, collapse = ", "), ". The name of a clade must be unique.")
+  }
+
+  ## Names of the clades of 'missing_taxa_list'
+  if (!is.null(missing_clade_names) && length(missing_clade_names) == length(missing_nodes))
+  {
+    missing_clade_names <- unname(as.character(missing_clade_names))
+    missing_clade_names[!is.na(missing_clade_names) & !nzchar(missing_clade_names)] <- NA_character_
+    # One name per clade of 'missing_taxa_list'
+    list_nodes <- unique(missing_nodes)
+    list_names <- lapply(list_nodes, function (nd) unique(stats::na.omit(missing_clade_names[missing_nodes == nd])))
+    conflicting <- which(lengths(list_names) > 1)
+    if (length(conflicting) > 0)
+    {
+      stop("The taxa of '", missing_item, "' that share the same clade have different names: ",
+           paste0(vapply(conflicting, function (k) paste0("{", paste(list_names[[k]], collapse = ", "), "}"), character(1)), collapse = "; "),
+           ". The clades are identified by their MRCA node: give the same name to the same clade.")
+    }
+    list_names <- vapply(list_names, function (x) if (length(x) == 0) NA_character_ else x, character(1))
+    # Same name for the same clade in both objects
+    matched <- match(list_nodes, clade_nodes)
+    differ <- which(!is.na(matched) & !is.na(list_names) & !is.na(clade_names[matched]) & list_names != clade_names[matched])
+    if (length(differ) > 0)
+    {
+      n_show <- min(length(differ), 10)
+      stop(length(differ), " clade(s) have a different name in '", item, "' and in '", missing_item, "':\n",
+           paste0("  - clade (", clade_labels[matched[differ[seq_len(n_show)]]], "): '", clade_names[matched[differ[seq_len(n_show)]]], "' in '", item, "', but '",
+                  list_names[differ[seq_len(n_show)]], "' in '", missing_item, "'", collapse = "\n"),
+           if (length(differ) > n_show) paste0("\n  ... and ", length(differ) - n_show, " more") else "")
+    }
+    # A name used in one object cannot identify another clade in the other object
+    other <- which(!is.na(list_names) & list_names %in% clade_names[named])
+    clash <- other[vapply(other, function (k) { j <- match(list_names[k], clade_names); is.na(matched[k]) || matched[k] != j }, logical(1))]
+    if (length(clash) > 0)
+    {
+      stop("The name(s) ", paste0("'", unique(list_names[clash]), "'", collapse = ", "), " identify different clades in '", item, "' and in '", missing_item, "'")
+    }
+  }
+  invisible(NULL)
+}
+
+
+
 #' @title Build the richness information used for the sampling fractions
 #'
 #' @description Validate the `total_richness_per_clades` input, and derive from it, for every node of the backbone,
@@ -1046,6 +1130,7 @@ get_missing_clade_labels <- function (groups, missing_taxa_list)
 #'  * The structure of `total_richness_per_clades` is not valid.
 #'  * Tips defining a clade are missing from the backbone, or a clade is listed twice.
 #'  * A target clade (or sister clade) used in `missing_taxa_list` is not listed in `total_richness_per_clades`.
+#'  * The names of the clades (`Target_clade_name` or `Sister_clade_name`) are not valid (see `check_clade_names()`), or a clade has a different name in `total_richness_per_clades` and in `missing_taxa_list`.
 #'  * A total richness is lower than the number of backbone species plus missing species it contains (`nb_unsampled < 0`).
 #'  * A clade has fewer unsampled species than the sum of those of the clades with a total richness nested within it.
 #'
@@ -1054,9 +1139,12 @@ get_missing_clade_labels <- function (groups, missing_taxa_list)
 #' @param missing_clades List of character vectors, same length as `missing_taxa_names`. Tips defining the target clade
 #'   (or the sister clade) of each taxon.
 #' @param mode Character string. `"target"` or `"sister"`. See details.
+#' @param missing_clade_names `NULL`, or a vector of the names of the clades (`Target_clade_name` or `Sister_clade_name` of `missing_taxa_list`), same length as `missing_clades`.
+#'   Only used to check the names of `total_richness_per_clades`.
 #' @param total_richness_per_clades `NULL`, or a list with two elements: the clades (`Target_clade` or `Sister_clade`, depending on `mode`),
 #'   a list of character vectors of tips defining each clade, and `total_richness`, a vector of postive integers of the same length.
-#'   `NA` is allowed when no information for a given clade is available.
+#'   `NA` is allowed when no information for a given clade is available. Optionally, a third item with the names of the clades
+#'   (`Target_clade_name` or `Sister_clade_name`), a character vector of the same length (`NA` for unnamed clades).
 #'
 #' @importFrom ape node.depth
 #'
@@ -1073,7 +1161,7 @@ get_missing_clade_labels <- function (groups, missing_taxa_list)
 #'  * `table` `NULL` if `total_richness_per_clades` is `NULL`. Otherwise, a data frame with one row per clade listed in `total_richness_per_clades`.
 #'
 
-build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode = c("target", "sister"), total_richness_per_clades = NULL)
+build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode = c("target", "sister"), total_richness_per_clades = NULL, missing_clade_names = NULL)
 {
   mode <- match.arg(mode)
   clade_element <- if (mode == "target") "Target_clade" else "Sister_clade"
@@ -1154,6 +1242,11 @@ build_richness_info <- function (phy, missing_taxa_names, missing_clades, mode =
       stop("Some clades are listed more than once in 'total_richness_per_clades$", clade_element, "' (clades are matched by their MRCA node):\n",
            paste0("  - ", vapply(dup, function (nd) paste(clade_labels[clade_nodes == nd], collapse = "  =  "), character(1)), collapse = "\n"))
     }
+
+    ## Names of the clades (optional): valid, unique, and consistent with the names of 'missing_taxa_list'
+    check_clade_names(clade_names = total_richness_per_clades[[paste0(clade_element, "_name")]], clade_nodes = clade_nodes, clade_labels = clade_labels,
+                      item = paste0("total_richness_per_clades$", clade_element, "_name"), n_clades = length(clades),
+                      missing_nodes = missing_nodes, missing_clade_names = missing_clade_names, missing_item = paste0("missing_taxa_list$", clade_element, "_name"))
 
     ## Every clade used in 'missing_taxa_list' must be listed
     used_nodes <- unique(missing_nodes)

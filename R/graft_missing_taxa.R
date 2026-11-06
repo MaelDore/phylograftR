@@ -67,6 +67,9 @@
 #'   (a warning lists these cases). Only used if `use_excluded_subclades = TRUE`. Default is `TRUE`.
 #' @param total_richness_per_clades (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
 #'   nor in `missing_taxa_list` (unsampled species). Items:
+#'   * `$Target_clade_name`: (Optional) Character vector of the names of the clades, same length as `$Target_clade` (`NA` if a clade has no name).
+#'     The names must be unique. If `missing_taxa_list$Target_clade_name` is provided, a clade must have the same name in both objects (the function stops otherwise).
+#'     They are not used for the grafting, but they are reported by [`phylograftR::extract_sampling_info()`][extract_sampling_info].
 #'   * `$Target_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Target_clade`.
 #'     Node IDs are not accepted: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
 #'     so the tips of the clades match between both objects.
@@ -275,7 +278,7 @@
 #' If `total_richness_per_clades = NULL`, `nb_unsampled = 0`: the clades have no unsampled species (the same as providing only `NA` in `$total_richness`).
 #'
 #' The species actually present in each listed clade, and the resulting sampling fractions for downstream analyses, may differ among grafted phylogenies,
-#' as the placement of missing grafted taxa, on its stem or nested within, change its richness.
+#' as a taxon can be grafted on the stem of its target clade, or within a clade nested in it, which changes the richness of these clades.
 #' Use [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract them a posteriori.
 #'
 #' The function stops, before any grafting, if `total_richness_per_clades` does not cover all the target clades, if a `total_richness` provided is lower than
@@ -910,11 +913,12 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     # Always computed: it also provides the number of missing taxa to include in the sampling fraction of the BD models
     richness_info <- build_richness_info(phy = phy, missing_taxa_names = missing_taxa_list$Taxon_name,
                                          missing_clades = missing_taxa_list$Target_clade,
-                                         mode = "target", total_richness_per_clades = total_richness_per_clades)
+                                         mode = "target", total_richness_per_clades = total_richness_per_clades,
+                                         missing_clade_names = missing_taxa_list[["Target_clade_name"]])
 
     if (!is.null(total_richness_per_clades) && method == "uniform")
     {
-      warning("'total_richness_per_clades' is not used during grafting when method = 'uniform' as no diversification process is modeled.",
+      warning("'total_richness_per_clades' is not used during grafting when method = 'uniform' as no diversification process is modeled. ",
               "Use extract_sampling_info() on the output to get the resulting sampling fractions of the clades.",
               call. = FALSE)
     }

@@ -33,6 +33,9 @@
 #'   If the sister clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
 #' @param total_richness_per_clades (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
 #'   nor in `missing_taxa_list` (i.e., unsampled species) when fitting the birth-death models. Items:
+#'   * `$Sister_clade_name`: (Optional) Character vector of the names of the clades, same length as `$Sister_clade` (`NA` if a clade has no name).
+#'     The names must be unique. If `missing_taxa_list$Sister_clade_name` is provided, a clade must have the same name in both objects (the function stops otherwise).
+#'     They are not used for the grafting, but they are reported by [`phylograftR::extract_sampling_info()`][extract_sampling_info].
 #'   * `$Sister_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Sister_clade`.
 #'     Node IDs are not accepted: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
 #'     so the tips of the clades match between both objects.
@@ -194,8 +197,8 @@
 #'
 #' If `total_richness_per_clades = NULL`, `nb_unsampled = 0`: the clades have no unsampled species (the same as providing only `NA` in `$total_richness`).
 #'
-#' The species actually present in each focal clade, and the resulting sampling fractions for downstream analyses, may differ among grafted phylogenies,
-#' as the placement of missing clades grafted within on a clade (on its stem or nested within a larger clade) change its richness.
+#' Each missing clade is grafted on the stem branch of its sister clade in all the grafted phylogenies: only the divergence times vary among simulations and maps.
+#' The species present in each listed sister clade, and the resulting sampling fractions for downstream analyses, are therefore the same in all the grafted phylogenies.
 #' Use [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract them a posteriori.
 #'
 #' The function stops, before any grafting, if `total_richness_per_clades` does not cover all the sister clades,
@@ -679,7 +682,8 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     # Always computed: it also provides the taxa still to graft to include in the sampling fraction of the BD models
     richness_info <- build_richness_info(phy = phy, missing_taxa_names = missing_taxa_list$Taxon_name,
                                          missing_clades = missing_taxa_list$Sister_clade,
-                                         mode = "sister", total_richness_per_clades = total_richness_per_clades)
+                                         mode = "sister", total_richness_per_clades = total_richness_per_clades,
+                                         missing_clade_names = missing_taxa_list[["Sister_clade_name"]])
   }
 
   ## Label the internal nodes of the backbone, to identify them in the grafted tree (node IDs change after each graft) and restore the original node labels at the end

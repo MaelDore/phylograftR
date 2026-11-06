@@ -639,7 +639,7 @@ test_that("with method = 'uniform', total_richness_per_clades is not used, with 
   totals <- list(Target_clade = list(toy$B, toy$A), total_richness = c(toy$nB + 1 + 2, toy$nA + 2 + 5))
 
   expect_warning(grafted <- graft_missing_taxa(toy$phy, mtl, total_richness_per_clades = totals, method = "uniform", verbose = FALSE),
-                 "is not used when method = 'uniform'")
+                 "is not used during grafting when method = 'uniform'")
   expect_null(grafted$sampling_fraction_df)
 
   # No warning with the birth-death method

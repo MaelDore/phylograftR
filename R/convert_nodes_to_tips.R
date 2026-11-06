@@ -38,6 +38,7 @@
 #' @param total_richness_per_clades (Optional) List with the total richness of clades, as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
 #'   or [`phylograftR::graft_missing_clades()`][graft_missing_clades]. Its `$Target_clade` (or `$Sister_clade`) clades can also be defined by node IDs, and are converted the same way.
 #'   Default is `NULL`. It must be provided in the same call as its `missing_taxa_list` (see Details).
+#'   Its optional `$Target_clade_name` (or `$Sister_clade_name`) item is returned unchanged.
 #' @param verbose Logical. Whether to print the conversions of the node IDs into tips. Default is `TRUE`.
 #'
 #' @details
@@ -202,8 +203,8 @@ convert_nodes_to_tips <- function (missing_taxa_list, # List of missing taxa wit
   if (!is.null(total_richness_per_clades))
   {
     if (!is.list(total_richness_per_clades)) { stop("'total_richness_per_clades' must be a list") }
-    has_target_tr <- !is.null(total_richness_per_clades$Target_clade)
-    has_sister_tr <- !is.null(total_richness_per_clades$Sister_clade)
+    has_target_tr <- !is.null(total_richness_per_clades[["Target_clade"]])
+    has_sister_tr <- !is.null(total_richness_per_clades[["Sister_clade"]])
     if (has_target_tr == has_sister_tr)
     {
       stop("'total_richness_per_clades' must have one item 'Target_clade' (or 'Sister_clade'), and not both")
