@@ -32,7 +32,7 @@
 #' @param trait Integer or character string. The trait to plot when the phylogeny has the simmaps of several traits (position or name of the trait). Default is `1`. Ignored with a single trait.
 #' @param ... Other arguments passed to `plot()` (see `ape::plot.phylo()`) for a plain phylogeny, or to `phytools::plotSimmap()` for a simmap
 #'   (e.g., `cex`, `show.tip.label`, `edge.width` for the plain phylogeny; `fsize`, `ftype`, `lwd` for the simmap).
-#'   A title can be added with `main` (or `sub`).
+#'   A title can be added with `main` (and `sub`).
 #'
 #' @details
 #' ### Plain phylogeny

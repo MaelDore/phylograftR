@@ -307,16 +307,20 @@ test_that("with method = 'BD_clades', taxa of a clade are grouped by stem availa
 })
 
 ## Test that the richness information does not depend on the stem availability for a shared clade
-test_that("clades with different stem availability share the same row of sampling_fraction_df",
+test_that("clades with different stem availability share the same richness information, and no a priori table is returned",
 {
   toy <- toy_setup()
   mtl <- list(Taxon_name = c("X1", "X2", "X3"), Target_clade = list(X1 = toy$A, X2 = toy$A, X3 = toy$A), include_target_clade_stem = c(X1 = TRUE, X2 = FALSE, X3 = NA))
   totals <- list(Target_clade = list(toy$A), total_richness = toy$nA + 3 + 4)
   grafted <- quiet_graft(graft_missing_taxa, toy$phy, mtl, method = "BD_clades", total_richness_per_clades = totals, seed = 1)
 
-  expect_equal(nrow(grafted$sampling_fraction_df), 1)
-  expect_equal(grafted$sampling_fraction_df$nb_missing_species, 3)
-  expect_equal(grafted$sampling_fraction_df$nb_unsampled_species, 4)
+  expect_null(grafted$sampling_fraction_df)
+  info <- extract_sampling_info(grafted, totals)
+  expect_equal(nrow(info), 1)
+  expect_equal(info$nb_backbone_species, toy$nA)
+  # Taxa grafted on the stem of the clade (X1, X3) are not in the clade
+  expect_true(info$nb_grafted_species %in% 1:3)
+  expect_equal(info$nb_unsampled_species, toy$nA + 7 - toy$nA - info$nb_grafted_species)
 })
 
 ## Test the whole tree warning with a taxon-level stem availability
@@ -615,24 +619,28 @@ test_that("total_richness_per_clades is used in the sampling fraction of the bir
   expect_equal(fit_A$n_unsampled, 31)
   expect_equal(fit_A$rho, (toy$nA + 5) / total_A)
 
-  # Sampling fraction table, as an element of the phylogeny
-  table <- grafted$sampling_fraction_df
+  # The grafted phylogeny has no a priori table: the realized counts are extracted from the tree
+  expect_null(grafted$sampling_fraction_df)
+  table <- extract_sampling_info(grafted, totals)
   expect_s3_class(table, "data.frame")
-  expect_equal(table$nb_unsampled_species, c(12, 0, 31))
   expect_equal(table$total_richness_provided, c(TRUE, FALSE, TRUE))
-  expect_equal(table$sampling_fraction, (table$nb_backbone_species + table$nb_missing_species) / table$total_richness)
+  expect_equal(table$total_richness[c(1, 3)], c(total_B, total_A))
+  # Realized counts: the species of a clade are the tips under its MRCA (taxa grafted on its stem are outside)
+  expect_equal(table$nb_backbone_species, c(toy$nB, toy$nC, toy$nA))
+  expect_equal(table$nb_unsampled_species[c(1, 3)], c(total_B, total_A) - table$nb_backbone_species[c(1, 3)] - table$nb_grafted_species[c(1, 3)])
+  expect_equal(table$sampling_fraction, (table$nb_backbone_species + table$nb_grafted_species) / table$total_richness)
 })
 
 ## Test warnings when using 'total_richness_per_clade' with 'uniform' method
-test_that("with method = 'uniform', total_richness_per_clades only produces the table, with a warning",
+test_that("with method = 'uniform', total_richness_per_clades is not used, with a warning",
 {
   toy <- toy_setup()
   mtl <- list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = toy$B, X2 = toy$A))
   totals <- list(Target_clade = list(toy$B, toy$A), total_richness = c(toy$nB + 1 + 2, toy$nA + 2 + 5))
 
   expect_warning(grafted <- graft_missing_taxa(toy$phy, mtl, total_richness_per_clades = totals, method = "uniform", verbose = FALSE),
-                 "only used to derive the 'sampling_fraction_df' table")
-  expect_s3_class(grafted$sampling_fraction_df, "data.frame")
+                 "is not used when method = 'uniform'")
+  expect_null(grafted$sampling_fraction_df)
 
   # No warning with the birth-death method
   expect_no_warning(graft_missing_taxa(toy$phy, mtl, total_richness_per_clades = totals, method = "BD_clades", verbose = FALSE))

@@ -128,8 +128,8 @@ test_that("graft_missing_clades() fits the crown group, accounting for the taxa 
   expect_equal(fits[[2]]$rho, 1)
 })
 
-## Test that NULL and uninformative total richness give the same fits, but only the latter returns the table
-test_that("graft_missing_clades() gives the same result with NULL and with only NA in total_richness_per_clades, but returns the table only with the latter",
+## Test that NULL and uninformative total richness give the same fits
+test_that("graft_missing_clades() gives the same result with NULL and with only NA in total_richness_per_clades",
 {
   toy <- toy_setup()
   mcl <- toy_missing_clades(toy)
@@ -142,10 +142,13 @@ test_that("graft_missing_clades() gives the same result with NULL and with only 
   expect_equal(grafted_NA$tip.label, grafted_null$tip.label)
 
   expect_null(grafted_null$sampling_fraction_df)
-  expect_s3_class(grafted_NA$sampling_fraction_df, "data.frame")
-  expect_false(any(grafted_NA$sampling_fraction_df$total_richness_provided))
-  expect_equal(grafted_NA$sampling_fraction_df$nb_unsampled_species, rep(0, 3))
-  expect_equal(grafted_NA$sampling_fraction_df$sampling_fraction, rep(1, 3))
+  expect_null(grafted_NA$sampling_fraction_df)
+
+  # Nothing is unsampled: the sampling fraction extracted from the tree is 1
+  info <- extract_sampling_info(grafted_NA, totals_NA)
+  expect_false(any(info$total_richness_provided))
+  expect_equal(info$nb_unsampled_species, rep(0, 3))
+  expect_equal(info$sampling_fraction, rep(1, 3))
 })
 
 ## Test the sampling fraction of the fits with total richness information
@@ -174,9 +177,10 @@ test_that("total_richness_per_clades is used in the sampling fraction of the fit
   expect_equal(fits[[2]]$n_pending, 0)
   expect_equal(fits[[2]]$n_unsampled, 11)
 
-  # Table
-  table <- grafted$sampling_fraction_df
-  expect_equal(table$nb_missing_species, c(0, 1))
+  # Realized counts from the tree: M1 (sister to B) is in A but not in B, M2 (sister to A) is outside A
+  expect_null(grafted$sampling_fraction_df)
+  table <- extract_sampling_info(grafted, totals)
+  expect_equal(table$nb_grafted_species, c(0, 1))
   expect_equal(table$nb_unsampled_species, c(7, 11))
 })
 

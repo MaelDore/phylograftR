@@ -41,10 +41,12 @@
 #'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species
 #'     are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
 #'
-#'   With `NULL` (default), no `sampling_fraction_df` is returned and missing species to graft and backbone species
+#'   With `NULL` (default), missing species to graft and backbone species
 #'   are assumed to cover all species in the focal group (no unsampled species).
-#'   If the list is provided with only `NA` in `$total_richness`, the fits are identical (no unsampled species in any clade, `total_richness` = backbone + missing species),
-#'   but the `sampling_fraction_df` table is returned (with `total_richness_provided = FALSE`).
+#'   If the list is provided with only `NA` in `$total_richness`, the fits are identical (no unsampled species in any clade, `total_richness` = backbone + missing species).
+#'
+#'   To obtain a posteriori the species richness and the effective sampling fraction of the clades in each grafted phylogeny,
+#'   use [`phylograftR::extract_sampling_info()`][extract_sampling_info] on the output, with the same `total_richness_per_clades`.
 #'
 #'   See 'Sampling fraction and unsampled species' in Details section.
 #' @param simmap (Optional) A stochastic character map of the backbone, of class `"simmap"` (e.g., from `phytools::make.simmap()` or `phytools::sim.history()`),
@@ -129,16 +131,6 @@
 #'
 #'   Optional elements can be added to the output based on what optional argument was provided:
 #'
-#'   * `sampling_fraction_df` Only if `total_richness_per_clades` is provided (a list with only `NA` values also returns it, assuming no unsampled species).
-#'     Data frame with one row per clade of `total_richness_per_clades`:
-#'     * `Clade_tips` Character string. Tips used to identify the clade.
-#'     * `total_richness` Integer. Derived when `NA` was provided.
-#'     * `total_richness_provided` Logical. Whether `total_richness` of the clade was provided as input in `total_richness_per_clades`
-#'     * `nb_backbone_species` Integer. Number of species initially present on the backbone phylogeny.
-#'     * `nb_missing_species` Integer. Number of species that were missing from the backbone phylogeny and are now included in the grafted phylogeny
-#'     * `nb_unsampled_species` Integer. Number of species that are neither on the backbone, nor grafted as missing. Derived from `total_richness`.
-#'     * `sampling_fraction` Numeric. Fraction of the clade richness present in the grafted phylogeny as `(nb_backbone_species + nb_missing_species) / total_richness`.
-#'       This can be used to account for clade-specific sampling fraction in downstream analyses.
 #'   * `simmap` Only if a `simmap` is provided and `return_simmap = TRUE`. The updated stochastic character map of the grafted phylogeny (class `"simmap"`):
 #'     the pieces of the branches of the backbone keep their states (cut where taxa were grafted), and every grafted clades is entirely in the state of the point where it was grafted.
 #'     With `treat_states_as_ranges = TRUE`, each grafted clade is entirely in the range it inherited (see 'Biogeographic ranges as states' in Details section).
@@ -194,15 +186,17 @@
 #'
 #' ### Unsampled species
 #'
-#' For a clade with a `total_richness` value provided: `nb_unsampled = total_richness - nb_backbone - nb_missing`, with `nb_missing` the number of taxa to graft
-#' whose sister clade is strictly nested within the clade. For a clade with no `total_richness` value (`NA`, or enclosing a sister clade without being listed),
-#' `nb_unsampled` is the sum of `nb_unsampled` over the largest clades nested within it with a `total_richness` value provided. If there is none, `nb_unsampled = 0`.
-#' The rationale is that even if `nb_unsampled` cannot be derived from its `total_richness` (as it is not provided for this clade), it has to at least account for the `nb_unsampled`
-#' species that have being identified in its own nested clades.
+#' For a focal clade with a `total_richness` value provided: `nb_unsampled = total_richness - nb_backbone - nb_missing`, with `nb_missing` the number of taxa to graft
+#' as missing clades within the focal clade (because their sister clade is nested within the focal clade), therefore to be included in this focal clade during grafting.
+#' For a clade with no `total_richness` value (`NA`, or enclosing a sister clade without being listed), `nb_unsampled` is the sum of `nb_unsampled` over the largest clades nested within it with a `total_richness` value provided.
+#' If there is none, `nb_unsampled = 0`. The rationale is that even if `nb_unsampled` cannot be derived from its `total_richness`
+#' (as it is not provided for this clade), it has to at least account for the `nb_unsampled` species that have being identified in its own nested clades.
 #'
-#' If `total_richness_per_clades = NULL`, `nb_unsampled = 0` and no `sampling_fraction_df` is returned.
-#' To obtain the `sampling_fraction_df` without informing any total richness, provide `total_richness_per_clades` with the clades and only `NA` in `$total_richness`:
-#' `nb_unsampled = 0` and `total_richness` equals the backbone plus missing species in all clades (the sampling fraction is 1).
+#' If `total_richness_per_clades = NULL`, `nb_unsampled = 0`: the clades have no unsampled species (the same as providing only `NA` in `$total_richness`).
+#'
+#' The species actually present in each focal clade, and the resulting sampling fractions for downstream analyses, may differ among grafted phylogenies,
+#' as the placement of missing clades grafted within on a clade (on its stem or nested within a larger clade) change its richness.
+#' Use [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract them a posteriori.
 #'
 #' The function stops, before any grafting, if `total_richness_per_clades` does not cover all the sister clades,
 #' if a `total_richness` provided is lower than the number of backbone species plus missing species of the clade,
@@ -445,8 +439,10 @@
 #' grafted_phy_richness <- graft_missing_clades(phy = phy, missing_taxa_list = missing_clades_list,
 #'                                              total_richness_per_clades = total_richness_per_clades,
 #'                                              verbose = FALSE, seed = 1234)
-#' grafted_phy_richness$sampling_fraction_df
 #'
+#' # Inspect the resulting clade richness and sampling fractions
+#' extract_sampling_info(phy_grafted = grafted_phy_richness,
+#'                       total_richness_per_clades = total_richness_per_clades)
 #'
 #' # --- Apply attribute-based exclusions --- #
 #'
@@ -1097,9 +1093,8 @@ graft_missing_clades <- function (phy, # Backbone phylogeny
     # With several traits: the updated composite simmap is split in one simmap per trait (named after the traits)
     if (!is.null(updated_simmap) && !is.null(tracker$traits)) { updated_simmap <- split_trait_simmap(simmap = updated_simmap, traits = tracker$traits) }
 
-    # Add the elements identifying the grafted tips and branches, and the sampling fraction table of the clades if 'total_richness_per_clades' was provided
+    # Add the elements identifying the grafted tips and branches
     phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxon_name)
-    if (!is.null(richness_info$table)) phy$sampling_fraction_df <- richness_info$table
     if (!is.null(updated_simmap)) phy$simmap <- updated_simmap
 
     # Save the complete phylogeny, which replaces the saved progress

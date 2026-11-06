@@ -1020,8 +1020,10 @@ get_missing_clade_labels <- function (groups, missing_taxa_list)
 #'   the number of unsampled species, i.e., species of the clade that are neither in the backbone nor in the list of taxa to graft.
 #'   The output is used:
 #'    * (1) to compute the sampling fraction `rho` of the birth-death models fitted during the grafting process;
-#'    * (2) to build the `sampling_fraction_df` table added to the grafted phylogeny that describes the distribution of species among
+#'    * (2) to build an a priori table (taxonomic assignments of the taxa) of the distribution of species among
 #'      `nb_backbone_species`, `nb_missing_species`, and `nb_unsampled_species`, for each clade listed in `total_richness_per_clades`.
+#'      The table is only used internally (e.g., in the signature of the temporary saves): it is not returned to the user.
+#'      The counts of the grafted phylogenies are extracted with `extract_sampling_info()`.
 #'
 #' @details
 #' ### Counts

@@ -259,8 +259,8 @@ test_that("Resuming works with the total richness of the clades (sampling fracti
   total <- list(Target_clade = list(toy$A, toy$B, toy$C, toy$s), total_richness = c(toy$nA + 12, toy$nB + 4, NA, NA))
   graft <- function (...) suppressWarnings(graft_missing_taxa(toy$phy, mtl, method = "BD_clades", total_richness_per_clades = total, seed = 3, verbose = FALSE, ...))
   resumed <- expect_resume_identical(graft, n_crash = 3, every = 1)
-  # The table of the sampling fractions is the one of the original run, not changed by the taxa grafted before the interruption
-  expect_identical(resumed$sampling_fraction_df, graft(save_temp = FALSE)$sampling_fraction_df)
+  # The realized counts of the clades are the ones of the original run
+  expect_identical(extract_sampling_info(resumed, total), extract_sampling_info(graft(save_temp = FALSE), total))
 })
 
 test_that("Resuming works with a simmap: updated simmap and states are identical", {
