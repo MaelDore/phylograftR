@@ -68,8 +68,12 @@ toy_missing_taxa_list_with_two_traits$allowed_states
 
 }
 \seealso{
-Simmap for colors: \code{\link[=toy_simmap]{phylograftR::toy_simmap}}. Simmap for elevation: \code{\link[=toy_simmap_elevation]{phylograftR::toy_simmap_elevation}}.
-Missing taxa list for colors only: \code{\link[=toy_missing_taxa_list_with_allowed_states]{phylograftR::toy_missing_taxa_list_with_allowed_states}}.
-Grafting function: \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}}.
+Other datasets and functions from phylograftR:
+\itemize{
+\item \code{\link[=toy_missing_taxa_list_with_allowed_states]{phylograftR::toy_missing_taxa_list_with_allowed_states}} for the same list, with allowed states of colors.
+\item \code{\link[=toy_simmap]{phylograftR::toy_simmap}} for the stochastic character map of colors.
+\item \code{\link[=toy_simmap_elevation]{phylograftR::toy_simmap_elevation}} for the stochastic character map of elevation.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade based on colors and elevation, using this dataset.
+}
 }
 \keyword{datasets}

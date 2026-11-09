@@ -108,16 +108,10 @@ sapply(grafted_phys, function (x) max(ape::node.depth.edgelength(x)))
 
 }
 \seealso{
-Grafting functions that produce the output to flatten:
+Other functions from phylograftR:
 \itemize{
-\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
-\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as clades sister to a clade of the backbone.
-}
-
-Functions that also accept several grafted phylogenies:
-\itemize{
-\item \code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}} to check a posteriori that grafted taxa respect their constraints,
-\item \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to identify the grafted tips and branches.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades using the list.
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades using the list.
 }
 }
 \author{

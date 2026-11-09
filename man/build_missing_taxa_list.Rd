@@ -175,10 +175,12 @@ str(build_missing_taxa_list(data = my_table_nodes, phy = toy_backbone), 2)
 \seealso{
 Other functions from phylograftR:
 \itemize{
-\item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read the table from a file,
-\item \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} and \code{\link[=import_taxonomic_table]{phylograftR::import_taxonomic_table()}} to define the clades with taxonomic names instead of tips or node IDs,
-\item \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} to convert the node IDs of a list built 'by hand' into pairs of tips defining MRCA,
-\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} that use the list for grafting.
+\item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read the table directly from an external file.
+\item \code{\link[=import_taxonomic_table]{phylograftR::import_taxonomic_table()}} to read the taxonomic tables from external files.
+\item \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} to build a \code{missing_taxa_list} from taxonomic tables, with clades defined by taxonomic names instead of tips or node IDs.
+\item \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} to convert the node IDs of a list built 'by hand' into pairs of tips defining their MRCA.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades using the list.
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades using the list.
 }
 }
 \author{

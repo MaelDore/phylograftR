@@ -69,7 +69,12 @@ toy_missing_taxa_list_with_allowed_ranges$allowed_states
 
 }
 \seealso{
-\code{\link[=toy_simmap_ranges]{phylograftR::toy_simmap_ranges}}, \code{\link[=toy_missing_taxa_list_with_allowed_states]{phylograftR::toy_missing_taxa_list_with_allowed_states}},
-\code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}}
+Other datasets and functions from phylograftR:
+\itemize{
+\item \code{\link[=toy_missing_taxa_list_with_allowed_states]{phylograftR::toy_missing_taxa_list_with_allowed_states}} for the same list, with allowed states of colors.
+\item \code{\link[=toy_simmap_ranges]{phylograftR::toy_simmap_ranges}} for the stochastic character map of biogeographic ranges.
+\item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to import such a list from an external table.
+\item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to build such a list from a data.frame.
+}
 }
 \keyword{datasets}

@@ -57,9 +57,11 @@
 #'
 #' @export
 #'
-#' @seealso [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft the taxa
-#'   (`total_richness_per_clades` is also used to account for the unsampled species when fitting the birth-death models),
-#'   and [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract where and when the taxa were grafted.
+#' @seealso Other functions from phylograftR:
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades on backbone clades.
+#'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract a posteriori information on the location of grafted lineages.
+#'  * [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary] to extract a posteriori information on the birth-death models fitted during grafting.
 #'
 #' @return A data.frame, with one row per clade and phylogeny. The columns are:
 #'   * `map` Character string. Name of the stochastic map (`NA` if no map was used).

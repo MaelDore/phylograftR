@@ -127,9 +127,11 @@
 #'  Every item is named after the taxa (`$Taxon_name`), in the same order.
 #'
 #' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to convert a data.frame already loaded in R,
-#'  * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] and [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to define the clades with taxonomic names instead of tips or node IDs,
-#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] that use the list for grafting.
+#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to convert a data.frame of missing taxa already loaded in R.
+#'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to build a `missing_taxa_list` from taxonomic tables, with clades defined by taxonomic names.
+#'  * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] to read the taxonomic tables from external files.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa using the list based on target clades and excluded subclades.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades using the list.
 #'
 #' @export
 #'

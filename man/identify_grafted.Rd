@@ -106,10 +106,12 @@ sapply(pruned_phys, function (x) sum(x$grafted_tips))
 
 }
 \seealso{
-Grafting functions, which already add internally the two elements to the grafted phylogeny with this function:
+Other functions from phylograftR:
 \itemize{
-\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade with constraints (target clades and excluded subclades),
-\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as clades sister to a clade of the backbone.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades.
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades of backbone clades.
+\item \code{\link[=extract_grafting_info]{phylograftR::extract_grafting_info()}} to extract a posteriori information on the location of grafted lineages.
+\item \code{\link[=plot_grafted]{phylograftR::plot_grafted()}} to plot grafted phylogenies with grafted lineages identified.
 }
 }
 \author{

@@ -62,7 +62,10 @@ colSums(toy_simmap_ranges$mapped.edge)
 
 }
 \seealso{
-\code{\link[=toy_simmap]{phylograftR::toy_simmap}} for a simmap with three states that are not ranges,
-\code{\link[=toy_missing_taxa_list_with_allowed_ranges]{phylograftR::toy_missing_taxa_list_with_allowed_ranges}}, \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}
+Other datasets and functions from phylograftR:
+\itemize{
+\item \code{\link[=toy_missing_taxa_list_with_allowed_ranges]{phylograftR::toy_missing_taxa_list_with_allowed_ranges}} for the list of missing taxa to graft, with associated allowed biogeographic ranges.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade based on geographic ranges, using this dataset.
+}
 }
 \keyword{datasets}

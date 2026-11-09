@@ -64,7 +64,12 @@ toy_missing_taxa_list_with_allowed_states$allowed_states
 
 }
 \seealso{
-\code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}, \code{\link[=toy_simmap]{phylograftR::toy_simmap}},
-\code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}}
+Other datasets and functions from phylograftR:
+\itemize{
+\item \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}} for the list of missing taxa to graft on the backbone, without allowed states.
+\item \code{\link[=toy_simmap]{phylograftR::toy_simmap}} for the stochastic character map of colors.
+\item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to import such a list from an external table.
+\item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to build such a list from a data.frame.
+}
 }
 \keyword{datasets}

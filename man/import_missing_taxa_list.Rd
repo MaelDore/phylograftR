@@ -171,9 +171,11 @@ plot_grafted(grafted_phy, cex = 0.7)
 \seealso{
 Other functions from phylograftR:
 \itemize{
-\item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to convert a data.frame already loaded in R,
-\item \code{\link[=import_taxonomic_table]{phylograftR::import_taxonomic_table()}} and \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} to define the clades with taxonomic names instead of tips or node IDs,
-\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} that use the list for grafting.
+\item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to convert a data.frame of missing taxa already loaded in R.
+\item \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} to build a \code{missing_taxa_list} from taxonomic tables, with clades defined by taxonomic names.
+\item \code{\link[=import_taxonomic_table]{phylograftR::import_taxonomic_table()}} to read the taxonomic tables from external files.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa using the list based on target clades and excluded subclades.
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades using the list.
 }
 }
 \author{

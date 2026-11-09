@@ -55,8 +55,10 @@
 #'
 #' @export
 #'
-#' @seealso [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft taxa,
-#'   [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny.
+#' @seealso Other functions from phylograftR:
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades of backbone clades.
+#'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny.
 #'
 #' @return `NULL`, invisibly. The function is called for its plot.
 #'

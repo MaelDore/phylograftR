@@ -25,6 +25,11 @@ ape::plot.phylo(toy_backbone, cex = 0.7)
 
 }
 \seealso{
-\code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}, \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}}
+Other datasets from phylograftR:
+\itemize{
+\item \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}} for the list of missing taxa to graft on the backbone.
+\item \code{\link[=toy_taxonomic_tables]{phylograftR::toy_taxonomic_tables}} for the taxonomic tables of the backbone and of the missing taxa.
+\item \code{\link[=toy_simmap]{phylograftR::toy_simmap}} for the stochastic character map of colors.
+}
 }
 \keyword{datasets}

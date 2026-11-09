@@ -32,6 +32,11 @@ total_richness_per_clades <- list(
 
 }
 \seealso{
-\code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}
+Other datasets and functions from phylograftR:
+\itemize{
+\item \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}} for the list of missing taxa to graft on the backbone.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade, using this dataset.
+\item \code{\link[=extract_sampling_info]{phylograftR::extract_sampling_info()}} to extract the richness and the sampling fraction of the clades of grafted phylogenies.
+}
 }
 \keyword{datasets}

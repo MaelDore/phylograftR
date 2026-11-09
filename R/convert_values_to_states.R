@@ -34,7 +34,8 @@
 #'
 #' @seealso Other functions from phylograftR:
 #'  * [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap] to obtain the `simmap` and its cut points from a continuous trait map (`contMap`).
-#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] that use the states to constrain the grafting.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades, using the states to constrain the grafting.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades, using the states to constrain the grafting.
 #'
 #' @export
 #'

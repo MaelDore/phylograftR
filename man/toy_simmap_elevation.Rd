@@ -40,8 +40,12 @@ colSums(toy_simmap_elevation$mapped.edge)
 
 }
 \seealso{
-Associated missing_taxa_list object to combine with colors: \code{\link[=toy_missing_taxa_list_with_two_traits]{phylograftR::toy_missing_taxa_list_with_two_traits}}.
-Simmap of colors: \code{\link[=toy_simmap]{phylograftR::toy_simmap}}.
-Grafting function: \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}.
+Other datasets and functions from phylograftR:
+\itemize{
+\item \code{\link[=toy_simmap]{phylograftR::toy_simmap}} for the stochastic character map of colors.
+\item \code{\link[=toy_missing_taxa_list_with_two_traits]{phylograftR::toy_missing_taxa_list_with_two_traits}} for the list of missing taxa to graft, with allowed states of colors and elevation.
+\item \code{\link[=toy_missing_taxa_list_with_ranges_and_elevation]{phylograftR::toy_missing_taxa_list_with_ranges_and_elevation}} for the list of missing taxa to graft, with allowed ranges and elevation.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade based on elevation, using this dataset.
+}
 }
 \keyword{datasets}

@@ -134,10 +134,12 @@
 #'  Every item is named after the taxa (`$Taxon_name`), in the same order.
 #'
 #' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to read the table from a file,
-#'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] and [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] to define the clades with taxonomic names instead of tips or node IDs,
-#'  * [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] to convert the node IDs of a list built 'by hand' into pairs of tips defining MRCA,
-#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] that use the list for grafting.
+#'  * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to read the table directly from an external file.
+#'  * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] to read the taxonomic tables from external files.
+#'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to build a `missing_taxa_list` from taxonomic tables, with clades defined by taxonomic names instead of tips or node IDs.
+#'  * [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] to convert the node IDs of a list built 'by hand' into pairs of tips defining their MRCA.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades using the list.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades using the list.
 #'
 #' @importFrom ape getMRCA
 #'

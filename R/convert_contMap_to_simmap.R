@@ -120,8 +120,9 @@
 #' with [`phylograftR::convert_values_to_states()`][convert_values_to_states].
 #'
 #' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] that use the `simmap` to constrain the grafting.
-#'  * [`phylograftR::convert_values_to_states()`][convert_values_to_states] to convert continuous values of the missing taxa into the same states.
+#'  * [`phylograftR::convert_values_to_states()`][convert_values_to_states] to convert continuous values of the missing taxa into the states of the `simmap`.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades, using the states to constrain the grafting.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades, using the states to constrain the grafting.
 #'
 #' @importFrom ape Ntip
 #' @importFrom stats quantile

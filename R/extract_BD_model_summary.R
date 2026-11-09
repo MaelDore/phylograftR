@@ -40,8 +40,9 @@
 #' @export
 #'
 #' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft the taxa,
-#'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract where and when the taxa were grafted,
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade, with constraints (target clades and excluded subclades).
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to clades of the backbone.
+#'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract a posteriori information on the location of grafted lineages.
 #'  * [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract the richness and the sampling fraction of the clades in each grafted phylogeny.
 #'
 #' @return A data.frame, with one row per model and phylogeny. The columns are:

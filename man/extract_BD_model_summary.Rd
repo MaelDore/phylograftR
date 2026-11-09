@@ -100,8 +100,9 @@ BD_summary[BD_summary$enclosing, c("Taxa", "initial_clade_tips", "fitted_clade_t
 \seealso{
 Other functions from phylograftR:
 \itemize{
-\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft the taxa,
-\item \code{\link[=extract_grafting_info]{phylograftR::extract_grafting_info()}} to extract where and when the taxa were grafted,
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade, with constraints (target clades and excluded subclades).
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as clades sister to clades of the backbone.
+\item \code{\link[=extract_grafting_info]{phylograftR::extract_grafting_info()}} to extract a posteriori information on the location of grafted lineages.
 \item \code{\link[=extract_sampling_info]{phylograftR::extract_sampling_info()}} to extract the richness and the sampling fraction of the clades in each grafted phylogeny.
 }
 }

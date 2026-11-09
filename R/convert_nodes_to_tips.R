@@ -82,9 +82,10 @@
 #'   * `$total_richness_per_clades` The converted `total_richness_per_clades`.
 #'
 #' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build a `missing_taxa_list` from a table, with the same conversion of node IDs,
-#'  * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to read the table and build the list directly from an external file,
-#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades] that use the list for grafting.
+#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build a `missing_taxa_list` from an internal data.frame, with the same conversion of node IDs.
+#'  * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to read a table and build the list directly from an external file, with the same conversion of node IDs.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades using the list.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades using the list.
 #'
 #' @importFrom ape Ntip
 #'

@@ -70,8 +70,13 @@
 #'
 #' @export
 #'
-#' @seealso [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and [`phylograftR::graft_missing_clades()`][graft_missing_clades], which run the same checks upfront,
-#'   and [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check the constraints on the grafted phylogenies after grafting.
+#' @seealso Other functions from phylograftR:
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades of backbone clades.
+#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints, after grafting.
+#'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract a posteriori information on the location of grafted lineages.
+#'  * [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract a posteriori  the richness and the sampling fraction of the clades in each grafted phylogeny.
+#'  * [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary] to extract a posteriori information on the birth-death models fitted during grafting.
 #'
 #' @return A data.frame with one row per taxon (`$Target_clade` list) or per missing clade (`$Sister_clade` list).
 #'

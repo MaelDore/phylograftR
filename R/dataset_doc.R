@@ -29,7 +29,10 @@
 #'
 #' @name toy_backbone
 #'
-#' @seealso [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list]
+#' @seealso Other datasets from phylograftR:
+#'  * [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list] for the list of missing taxa to graft on the backbone.
+#'  * [`phylograftR::toy_taxonomic_tables`][toy_taxonomic_tables] for the taxonomic tables of the backbone and of the missing taxa.
+#'  * [`phylograftR::toy_simmap`][toy_simmap] for the stochastic character map of colors.
 #'
 #' @examples
 #' # Import the phylogeny
@@ -64,7 +67,12 @@
 #'
 #'   See [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] for the use of the items in the grafting.
 #'
-#' @seealso [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list], [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_backbone`][toy_backbone] for the backbone phylogeny.
+#'  * [`phylograftR::toy_total_richness_per_clades`][toy_total_richness_per_clades] for the total richness of the target clades.
+#'  * [`phylograftR::toy_taxonomic_tables`][toy_taxonomic_tables] for the taxonomic tables of the backbone and of the missing taxa.
+#'  * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to import such a list from an external table.
+#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build such a list from a data.frame.
 #'
 #' @examples
 #' # Import the list from loaded datasets
@@ -97,8 +105,11 @@
 #'    in which the taxon can be grafted, or `NULL` to use the global `allowed_states` argument. `"Genus_a_sp1"`: `"red"`;
 #'    `"Genus_b_sp1"`: `"blue"` and `"green"`; `"Genus_b_sp2"`: `"green"`; `"Genus_c_sp2"`: `"blue"` and `"red"`; the others: `NULL`.
 #'
-#' @seealso [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], [`phylograftR::toy_simmap`][toy_simmap],
-#'   [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list]
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list] for the list of missing taxa to graft on the backbone, without allowed states.
+#'  * [`phylograftR::toy_simmap`][toy_simmap] for the stochastic character map of colors.
+#'  * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to import such a list from an external table.
+#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build such a list from a data.frame.
 #'
 #' @examples
 #' # Import the list
@@ -163,8 +174,11 @@
 #'    in which the taxon can be grafted, or `NULL` to use the global `allowed_states` argument. `"Genus_a_sp1"`: `"A"`;
 #'    `"Genus_b_sp1"`: `"B"` and `"BC"`; `"Genus_b_sp2"`: `"B"`; `"Genus_c_sp2"`: `"A"` and `"BC"`; the others: `NULL`.
 #'
-#' @seealso [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges], [`phylograftR::toy_missing_taxa_list_with_allowed_states`][toy_missing_taxa_list_with_allowed_states],
-#'   [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list]
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_missing_taxa_list_with_allowed_states`][toy_missing_taxa_list_with_allowed_states] for the same list, with allowed states of colors.
+#'  * [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges] for the stochastic character map of biogeographic ranges.
+#'  * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to import such a list from an external table.
+#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build such a list from a data.frame.
 #'
 #' @examples
 #' # Import the list
@@ -217,7 +231,11 @@
 #' @format A list with the items `$Target_clade` (list of character vectors of tips), `$Target_clade_name` (character vector of the names of the clades,
 #'   the same as in [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list]) and `$total_richness` (numeric vector, `NA` if unknown).
 #'
-#' @seealso [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list] for the list of missing taxa to graft on the backbone.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade, using this dataset.
+#'  * [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract the richness and the sampling fraction of the clades of grafted phylogenies.
+#'
 #' @examples
 #' # Import the data
 #' data(toy_total_richness_per_clades)
@@ -270,7 +288,11 @@
 #' @name toy_taxonomic_tables
 #' @aliases toy_backbone_taxonomic_table toy_missing_taxa_taxonomic_table
 #'
-#' @seealso [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy]
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_backbone`][toy_backbone] for the backbone phylogeny.
+#'  * [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list] for the list of missing taxa to graft on the backbone.
+#'  * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] to read such tables from files.
+#'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to build `missing_taxa_list` objects from these tables.
 #'
 #' @examples
 #' data(toy_backbone)
@@ -321,7 +343,10 @@ NULL
 #'   [`phylograftR::toy_backbone`][toy_backbone], and the additional elements `$maps` (for each branch, the duration spent in each state,
 #'   from the rootward node to the tipward node), `$mapped.edge` (total duration per state and branch), `$node.states` and `$states` (states of the nodes and tips).
 #'
-#' @seealso [`phylograftR::toy_backbone`][toy_backbone], [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_backbone`][toy_backbone] for the backbone phylogeny.
+#'  * [`phylograftR::toy_missing_taxa_list_with_allowed_states`][toy_missing_taxa_list_with_allowed_states] for the list of missing taxa to graft, with associated allowed states of colors.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade based on color states, using this dataset.
 #'
 #' @examples
 #' # Import the data
@@ -376,8 +401,9 @@ NULL
 #'   [`phylograftR::toy_backbone`][toy_backbone], and the additional elements `$maps` (for each branch, the duration spent in each range,
 #'   from the rootward node to the tipward node), `$mapped.edge` (total duration per range and branch), `$node.states` and `$states` (ranges of the nodes and tips).
 #'
-#' @seealso [`phylograftR::toy_simmap`][toy_simmap] for a simmap with three states that are not ranges,
-#'   [`phylograftR::toy_missing_taxa_list_with_allowed_ranges`][toy_missing_taxa_list_with_allowed_ranges], [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_missing_taxa_list_with_allowed_ranges`][toy_missing_taxa_list_with_allowed_ranges] for the list of missing taxa to graft, with associated allowed biogeographic ranges.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade based on geographic ranges, using this dataset.
 #'
 #' @examples
 #' # Import the data
@@ -414,9 +440,11 @@ NULL
 #'   [`phylograftR::toy_backbone`][toy_backbone], and the additional elements `$maps` (for each branch, the duration spent in each state,
 #'   from the rootward node to the tipward node), `$mapped.edge` (total duration per state and branch), `$node.states` and `$states` (states of the nodes and tips).
 #'
-#' @seealso Associated missing_taxa_list object to combine with colors: [`phylograftR::toy_missing_taxa_list_with_two_traits`][toy_missing_taxa_list_with_two_traits].
-#' Simmap of colors: [`phylograftR::toy_simmap`][toy_simmap].
-#' Grafting function: [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_simmap`][toy_simmap] for the stochastic character map of colors.
+#'  * [`phylograftR::toy_missing_taxa_list_with_two_traits`][toy_missing_taxa_list_with_two_traits] for the list of missing taxa to graft, with allowed states of colors and elevation.
+#'  * [`phylograftR::toy_missing_taxa_list_with_ranges_and_elevation`][toy_missing_taxa_list_with_ranges_and_elevation] for the list of missing taxa to graft, with allowed ranges and elevation.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade based on elevation, using this dataset.
 #'
 #' @examples
 #' # Import the data
@@ -455,9 +483,11 @@ NULL
 #'    or `NULL` to use the global `allowed_states` argument for all the traits. `"Genus_a_sp1"`: `list("red", NULL)`; `"Genus_b_sp1"`: `list(c("blue", "green"), "high")`;
 #'    `"Genus_b_sp2"`: `list(NULL, "low")`; `"Genus_c_sp2"`: `list(elevation = "high")`; the others: `NULL`.
 #'
-#' @seealso Simmap for colors: [`phylograftR::toy_simmap`][toy_simmap]. Simmap for elevation: [`phylograftR::toy_simmap_elevation`][toy_simmap_elevation].
-#'   Missing taxa list for colors only: [`phylograftR::toy_missing_taxa_list_with_allowed_states`][toy_missing_taxa_list_with_allowed_states].
-#'   Grafting function: [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list].
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_missing_taxa_list_with_allowed_states`][toy_missing_taxa_list_with_allowed_states] for the same list, with allowed states of colors.
+#'  * [`phylograftR::toy_simmap`][toy_simmap] for the stochastic character map of colors.
+#'  * [`phylograftR::toy_simmap_elevation`][toy_simmap_elevation] for the stochastic character map of elevation.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade based on colors and elevation, using this dataset.
 #'
 #' @examples
 #' # Import the list
@@ -522,10 +552,12 @@ NULL
 #'    or `NULL` to use the global `allowed_states` argument for all the traits. `"Genus_a_sp1"`: `list("A", "high")`; `"Genus_b_sp1"`: `list(c("B", "BC"), NULL)`;
 #'    `"Genus_b_sp2"`: `list(elevation = "low")`; `"Genus_c_sp2"`: `list(biogeo = c("A", "BC"), elevation = "high")`; the others: `NULL`.
 #'
-#' @seealso Simmap for ranges: [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges]. Simmap for elevation: [`phylograftR::toy_simmap_elevation`][toy_simmap_elevation].
-#'   Missing taxa list with ranges alone: [`phylograftR::toy_missing_taxa_list_with_allowed_ranges`][toy_missing_taxa_list_with_allowed_ranges].
-#'   Missing taxa list with two non-biogeographic traits: [`phylograftR::toy_missing_taxa_list_with_two_traits`][toy_missing_taxa_list_with_two_traits].
-#'   Import function: [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list].
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_missing_taxa_list_with_allowed_ranges`][toy_missing_taxa_list_with_allowed_ranges] for the same missing taxa list, with allowed biogeographic ranges.
+#'  * [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges] for the stochastic character map of biogeographic ranges.
+#'  * [`phylograftR::toy_simmap_elevation`][toy_simmap_elevation] for the stochastic character map of elevation.
+#'  * [`phylograftR::toy_missing_taxa_list_with_two_traits`][toy_missing_taxa_list_with_two_traits] for the list with allowed states of colors and elevation.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade based on ranges and elevation, using this dataset.
 #'
 #' @examples
 #' # Import the list

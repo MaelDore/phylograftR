@@ -127,9 +127,14 @@ aggregate(graft_age ~ Taxon_name, data = info, FUN = function (x) round(range(x)
 
 }
 \seealso{
-\code{\link[=check_grafting_plan]{phylograftR::check_grafting_plan()}} to check the plan before grafting,
-\code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}} to check the constraints after grafting,
-and \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to identify the grafted tips and branches.
+Other functions from phylograftR:
+\itemize{
+\item \code{\link[=check_grafting_plan]{phylograftR::check_grafting_plan()}} to check a priori the feasibility of a grafting plan, before grafting.
+\item \code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}} to check a posteriori that grafted taxa respect their constraints.
+\item \code{\link[=extract_sampling_info]{phylograftR::extract_sampling_info()}} to extract the richness and the sampling fraction of the clades in each grafted phylogeny.
+\item \code{\link[=extract_BD_model_summary]{phylograftR::extract_BD_model_summary()}} to extract a posteriori information on the birth-death models fitted during grafting.
+\item \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to identify the grafted tips and branches of a phylogeny.
+}
 }
 \author{
 Maël Doré

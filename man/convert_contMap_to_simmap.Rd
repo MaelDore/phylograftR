@@ -232,8 +232,9 @@ if (requireNamespace("deepSTRAPP", quietly = TRUE)
 \seealso{
 Other functions from phylograftR:
 \itemize{
-\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} that use the \code{simmap} to constrain the grafting.
-\item \code{\link[=convert_values_to_states]{phylograftR::convert_values_to_states()}} to convert continuous values of the missing taxa into the same states.
+\item \code{\link[=convert_values_to_states]{phylograftR::convert_values_to_states()}} to convert continuous values of the missing taxa into the states of the \code{simmap}.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades, using the states to constrain the grafting.
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades, using the states to constrain the grafting.
 }
 }
 \author{

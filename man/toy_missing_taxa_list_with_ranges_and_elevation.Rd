@@ -87,9 +87,13 @@ check_grafting_constraints(
 
 }
 \seealso{
-Simmap for ranges: \code{\link[=toy_simmap_ranges]{phylograftR::toy_simmap_ranges}}. Simmap for elevation: \code{\link[=toy_simmap_elevation]{phylograftR::toy_simmap_elevation}}.
-Missing taxa list with ranges alone: \code{\link[=toy_missing_taxa_list_with_allowed_ranges]{phylograftR::toy_missing_taxa_list_with_allowed_ranges}}.
-Missing taxa list with two non-biogeographic traits: \code{\link[=toy_missing_taxa_list_with_two_traits]{phylograftR::toy_missing_taxa_list_with_two_traits}}.
-Import function: \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}}.
+Other datasets and functions from phylograftR:
+\itemize{
+\item \code{\link[=toy_missing_taxa_list_with_allowed_ranges]{phylograftR::toy_missing_taxa_list_with_allowed_ranges}} for the same missing taxa list, with allowed biogeographic ranges.
+\item \code{\link[=toy_simmap_ranges]{phylograftR::toy_simmap_ranges}} for the stochastic character map of biogeographic ranges.
+\item \code{\link[=toy_simmap_elevation]{phylograftR::toy_simmap_elevation}} for the stochastic character map of elevation.
+\item \code{\link[=toy_missing_taxa_list_with_two_traits]{phylograftR::toy_missing_taxa_list_with_two_traits}} for the list with allowed states of colors and elevation.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade based on ranges and elevation, using this dataset.
+}
 }
 \keyword{datasets}

@@ -60,9 +60,12 @@
 #'
 #' @export
 #'
-#' @seealso [`phylograftR::check_grafting_plan()`][check_grafting_plan] to check the plan before grafting,
-#'   [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check the constraints after grafting,
-#'   and [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches.
+#' @seealso Other functions from phylograftR:
+#'  * [`phylograftR::check_grafting_plan()`][check_grafting_plan] to check a priori the feasibility of a grafting plan, before grafting.
+#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints.
+#'  * [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract the richness and the sampling fraction of the clades in each grafted phylogeny.
+#'  * [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary] to extract a posteriori information on the birth-death models fitted during grafting.
+#'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny.
 #'
 #' @return A data.frame, with one row per taxon (or per missing clade) and phylogeny.
 #'   The columns are:

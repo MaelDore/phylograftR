@@ -34,9 +34,11 @@
 #'
 #' @export
 #'
-#' @seealso Grafting functions, which already add internally the two elements to the grafted phylogeny with this function:
-#'   * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade with constraints (target clades and excluded subclades),
-#'   * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to a clade of the backbone.
+#' @seealso Other functions from phylograftR:
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades of backbone clades.
+#'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract a posteriori information on the location of grafted lineages.
+#'  * [`phylograftR::plot_grafted()`][plot_grafted] to plot grafted phylogenies with grafted lineages identified.
 #'
 #' @return The phylogeny `phy` (class `"phylo"`), with two elements added, or replaced if `phy` already had them (for a `"multiPhylo"` or a list of maps: the same object,
 #'   with each phylogeny updated:

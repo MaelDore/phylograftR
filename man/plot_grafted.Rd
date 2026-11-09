@@ -117,8 +117,12 @@ plot_grafted(grafted_phys, index = 2, cex = 0.7, main = "Simulation 2")
 
 }
 \seealso{
-\code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft taxa,
-\code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to identify the grafted tips and branches of a phylogeny.
+Other functions from phylograftR:
+\itemize{
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades.
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades of backbone clades.
+\item \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to identify the grafted tips and branches of a phylogeny.
+}
 }
 \author{
 Maël Doré

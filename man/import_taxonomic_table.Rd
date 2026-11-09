@@ -115,20 +115,17 @@ by \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missin
 \examples{
 # Paths to example tables, provided with the package
 backbone_path <- system.file("extdata", "toy_backbone_taxonomic_table.csv", package = "phylograftR")
-missing_taxa_path <- system.file("extdata", "toy_missing_taxa_taxonomic_table.csv",
-                                 package = "phylograftR")
+missing_taxa_path <- system.file("extdata", "toy_missing_taxa_taxonomic_table.csv", package = "phylograftR")
 
 # Load the associated backbone phylogeny
 data(toy_backbone)
 
 # Import the taxonomy of the backbone: one row per tip, one column per taxonomic level
-backbone_taxonomic_table <- import_taxonomic_table(file = backbone_path, type = "backbone",
-                                                   phy = toy_backbone)
+backbone_taxonomic_table <- import_taxonomic_table(file = backbone_path, type = "backbone", phy = toy_backbone)
 head(backbone_taxonomic_table)
 
 # Import the description of the taxa to graft: one row per taxon
-missing_taxa_taxonomic_table <- import_taxonomic_table(file = missing_taxa_path, type = "missing_taxa",
-                                                       phy = toy_backbone)
+missing_taxa_taxonomic_table <- import_taxonomic_table(file = missing_taxa_path, type = "missing_taxa", phy = toy_backbone)
 missing_taxa_taxonomic_table
 
 # The tables are the datasets provided with the package
@@ -154,9 +151,8 @@ grafted_phy <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = missin
 \seealso{
 Other functions from phylograftR:
 \itemize{
-\item \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} that uses the tables to build a \code{missing_taxa_list},
-\item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read a table of the missing taxa with clades defined by tips or node IDs,
-\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} that use the list for grafting.
+\item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read a table of missing taxa from a file, with clades defined by tips or node IDs (for fine-tuning).
+\item \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} to build the \code{missing_taxa_list} from the taxonomic tables.
 }
 }
 \author{

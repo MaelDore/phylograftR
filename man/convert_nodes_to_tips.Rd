@@ -128,9 +128,10 @@ converted_again$total_richness_per_clades$Target_clade
 \seealso{
 Other functions from phylograftR:
 \itemize{
-\item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to build a \code{missing_taxa_list} from a table, with the same conversion of node IDs,
-\item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read the table and build the list directly from an external file,
-\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} that use the list for grafting.
+\item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to build a \code{missing_taxa_list} from an internal data.frame, with the same conversion of node IDs.
+\item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read a table and build the list directly from an external file, with the same conversion of node IDs.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades using the list.
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades using the list.
 }
 }
 \author{

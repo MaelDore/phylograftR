@@ -124,9 +124,13 @@ tapply(X = sampling_info$sampling_fraction,
 
 }
 \seealso{
-\code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft the taxa
-(\code{total_richness_per_clades} is also used to account for the unsampled species when fitting the birth-death models),
-and \code{\link[=extract_grafting_info]{phylograftR::extract_grafting_info()}} to extract where and when the taxa were grafted.
+Other functions from phylograftR:
+\itemize{
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades.
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades on backbone clades.
+\item \code{\link[=extract_grafting_info]{phylograftR::extract_grafting_info()}} to extract a posteriori information on the location of grafted lineages.
+\item \code{\link[=extract_BD_model_summary]{phylograftR::extract_BD_model_summary()}} to extract a posteriori information on the birth-death models fitted during grafting.
+}
 }
 \author{
 Maël Doré

@@ -390,14 +390,15 @@
 #' @export
 #'
 #' @seealso Other functions from phylograftR:
-#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build 'missing_taxa_list' objects from an internal data.frame using nodes and tips to define clades,
-#'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to build 'missing_taxa_list' objects from internal data.frame using taxonomic classifications,
-#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade with constraints (target clades and excluded subclades),
-#'  * [`phylograftR::check_grafting_plan()`][check_grafting_plan] to check a priori the feasibility of a grafting plan,
-#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints,
-#'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract a posteriori information on the location of grafted lineages,
-#'  * [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary] to extract a posteriori information on birth-death models fitted during grafting (with `return_BD_model_summary = TRUE`),
-#'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny.
+#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build a `missing_taxa_list` from a data.frame loaded in R, with clades defined by tips or node IDs.
+#'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to build a `missing_taxa_list` from taxonomic tables, with clades defined by taxonomic names.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades.
+#'  * [`phylograftR::check_grafting_plan()`][check_grafting_plan] to check a priori the feasibility of a grafting plan, before grafting.
+#'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints.
+#'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract a posteriori information on the location of grafted lineages.
+#'  * [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract a posteriori the richness and the sampling fraction of the clades in each grafted phylogeny.
+#'  * [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary] to extract a posteriori information on the birth-death models fitted during grafting (with `return_BD_model_summary = TRUE`).
+#'  * [`phylograftR::plot_grafted()`][plot_grafted] to plot grafted phylogenies.
 #'
 #' @author Maël Doré
 #'

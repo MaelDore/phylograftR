@@ -64,6 +64,12 @@ system.file("extdata", "toy_missing_taxa_taxonomic_table.csv", package = "phylog
 
 }
 \seealso{
-\code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}}
+Other datasets and functions from phylograftR:
+\itemize{
+\item \code{\link[=toy_backbone]{phylograftR::toy_backbone}} for the backbone phylogeny.
+\item \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}} for the list of missing taxa to graft on the backbone.
+\item \code{\link[=import_taxonomic_table]{phylograftR::import_taxonomic_table()}} to read such tables from files.
+\item \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} to build \code{missing_taxa_list} objects from these tables.
+}
 }
 \keyword{datasets}

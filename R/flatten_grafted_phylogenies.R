@@ -52,13 +52,9 @@
 #'  * `"failed"`: data.frame with the simulations that failed in the maps kept, with the columns `map`, `seed` and `reason` (0 row if none). Not filtered by `simulations`.
 #'  * `"failed_maps"`: data.frame with the maps dropped from the output of the grafting function because none of their simulations could be obtained, with the columns `map` and `reason` (0 row if none).
 #'
-#' @seealso Grafting functions that produce the output to flatten:
-#'   * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade with constraints (target clades and excluded subclades),
-#'   * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to a clade of the backbone.
-#'
-#'   Functions that also accept several grafted phylogenies:
-#'   * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints,
-#'   * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches.
+#' @seealso Other functions from phylograftR:
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades using the list.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades using the list.
 #'
 #' @export
 #'

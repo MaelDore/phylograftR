@@ -39,6 +39,11 @@ colSums(toy_simmap$mapped.edge)
 
 }
 \seealso{
-\code{\link[=toy_backbone]{phylograftR::toy_backbone}}, \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}
+Other datasets and functions from phylograftR:
+\itemize{
+\item \code{\link[=toy_backbone]{phylograftR::toy_backbone}} for the backbone phylogeny.
+\item \code{\link[=toy_missing_taxa_list_with_allowed_states]{phylograftR::toy_missing_taxa_list_with_allowed_states}} for the list of missing taxa to graft, with associated allowed states of colors.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade based on color states, using this dataset.
+}
 }
 \keyword{datasets}

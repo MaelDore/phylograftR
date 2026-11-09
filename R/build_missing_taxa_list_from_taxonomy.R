@@ -107,10 +107,11 @@
 #'   `n_unannotated` (tips without value at this level in the clade), and `monophyletic`.
 #'
 #' @seealso Other functions from phylograftR:
-#' * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table]: to read the taxonomic tables from external files,
-#' * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]: to build a `missing_taxa_list` object from a data.frame loaded within R, defining the clades with tips or node IDs,
-#' * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list]: to build a `missing_taxa_list` object from an external table,
-#' * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa], [`phylograftR::graft_missing_clades()`][graft_missing_clades]: to use the list for grafting.
+#'  * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] to read the taxonomic tables from external files.
+#'  * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to read a table of missing taxa from a file, with clades defined by tips or node IDs.
+#'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build a `missing_taxa_list` from a data.frame loaded in R, with clades defined by tips or node IDs.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades using the list.
+#'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades using the list.
 #'
 #' @importFrom ape reorder.phylo
 #'
@@ -134,16 +135,16 @@
 #' #   The stem of the family is available (include_target_clade_stem),
 #' #   the stem of "Subfam_A1" is excluded too, but not the one of "Tribe_A2a" (exclude_subclades_stem).
 #' # * Genus_a_sp2: same target clade, but excluded subclades are a tribe and a genus with a single species ("Gen_3"),
-#' #   and the stem is excluded for the genus only.
+#'     and the stem is excluded for the genus only.
 #' # * Genus_a_sp3: same target clade, without excluded subclades and
-#' #   without access to the stem of the family.
+#'     without access to the stem of the family.
 #' # * Genus_b_sp1: grafted in the family "Family_B", written directly with the name of the group.
 #' # * Genus_b_sp2: grafted in its subfamily (Target_clade = "Subfamily", i.e., "Subfam_B1"),
-#' #   except in the genus "Gen_1".
+#'     except in the genus "Gen_1".
 #' # * Genus_c_sp1: grafted on the terminal branch of the only species
-#' #   of the genus "Gen_2" (a single tip).
+#'     of the genus "Gen_2" (a single tip).
 #' # * Genus_c_sp2: grafted in its tribe (Target_clade = "Tribe", i.e., "Tribe_B2"),
-#' #   without access to the stem.
+#'     without access to the stem.
 #'
 #' # The taxa to graft with graft_missing_clades() (Type = "clades") use sister clades:
 #' # * Genus_d_sp1 and Genus_d_sp2: belong to a new genus, and have the same sister clade ("Gen_1"),

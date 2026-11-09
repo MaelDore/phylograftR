@@ -39,6 +39,13 @@ system.file("extdata", "toy_missing_taxa.csv", package = "phylograftR")
 
 }
 \seealso{
-\code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}}, \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}}
+Other datasets and functions from phylograftR:
+\itemize{
+\item \code{\link[=toy_backbone]{phylograftR::toy_backbone}} for the backbone phylogeny.
+\item \code{\link[=toy_total_richness_per_clades]{phylograftR::toy_total_richness_per_clades}} for the total richness of the target clades.
+\item \code{\link[=toy_taxonomic_tables]{phylograftR::toy_taxonomic_tables}} for the taxonomic tables of the backbone and of the missing taxa.
+\item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to import such a list from an external table.
+\item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to build such a list from a data.frame.
+}
 }
 \keyword{datasets}

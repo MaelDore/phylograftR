@@ -63,7 +63,8 @@ convert_values_to_states(missing_values, breaks = attr(my_simmap, "breaks"),
 Other functions from phylograftR:
 \itemize{
 \item \code{\link[=convert_contMap_to_simmap]{phylograftR::convert_contMap_to_simmap()}} to obtain the \code{simmap} and its cut points from a continuous trait map (\code{contMap}).
-\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} that use the states to constrain the grafting.
+\item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades, using the states to constrain the grafting.
+\item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades, using the states to constrain the grafting.
 }
 }
 \author{
