@@ -131,13 +131,19 @@
 #' # The taxa to graft with graft_missing_taxa() (Type = "taxa") use different types of constraints:
 #' # * Genus_a_sp1: grafted in its family (Target_clade = "Family" is the family of the taxon, i.e., "Family_A"),
 #' #   but not in the subfamily "Subfam_A1" nor in the tribe "Tribe_A2a" (Excluded_subclades).
-#' #   The stem of the family is available (include_target_clade_stem), the stem of "Subfam_A1" is excluded too, but not the one of "Tribe_A2a" (exclude_subclades_stem).
-#' # * Genus_a_sp2: same target clade, but excluded subclades are a tribe and a genus with a single species ("Gen_3"), and the stem is excluded for the genus only.
-#' # * Genus_a_sp3: same target clade, without excluded subclades and without access to the stem of the family.
+#' #   The stem of the family is available (include_target_clade_stem),
+#' #   the stem of "Subfam_A1" is excluded too, but not the one of "Tribe_A2a" (exclude_subclades_stem).
+#' # * Genus_a_sp2: same target clade, but excluded subclades are a tribe and a genus with a single species ("Gen_3"),
+#' #   and the stem is excluded for the genus only.
+#' # * Genus_a_sp3: same target clade, without excluded subclades and
+#' #   without access to the stem of the family.
 #' # * Genus_b_sp1: grafted in the family "Family_B", written directly with the name of the group.
-#' # * Genus_b_sp2: grafted in its subfamily (Target_clade = "Subfamily", i.e., "Subfam_B1"), except in the genus "Gen_1".
-#' # * Genus_c_sp1: grafted on the terminal branch of the only species of the genus "Gen_2" (a single tip).
-#' # * Genus_c_sp2: grafted in its tribe (Target_clade = "Tribe", i.e., "Tribe_B2"), without access to the stem.
+#' # * Genus_b_sp2: grafted in its subfamily (Target_clade = "Subfamily", i.e., "Subfam_B1"),
+#' #   except in the genus "Gen_1".
+#' # * Genus_c_sp1: grafted on the terminal branch of the only species
+#' #   of the genus "Gen_2" (a single tip).
+#' # * Genus_c_sp2: grafted in its tribe (Target_clade = "Tribe", i.e., "Tribe_B2"),
+#' #   without access to the stem.
 #'
 #' # The taxa to graft with graft_missing_clades() (Type = "clades") use sister clades:
 #' # * Genus_d_sp1 and Genus_d_sp2: belong to a new genus, and have the same sister clade ("Gen_1"),
@@ -150,7 +156,8 @@
 #'   missing_taxa_taxonomic_table = toy_missing_taxa_taxonomic_table,
 #'   phy = toy_backbone)
 #'
-#' # Since both types of taxa to graft were provided, the output contains one list per grafting function
+#' # Since both types of taxa to graft were provided,
+#' # the output contains one list per grafting function
 #' names(missing_taxa_lists)
 #' str(missing_taxa_lists$taxa, max.level = 1) # Missing_taxa_list for graft_missing_taxa()
 #' str(missing_taxa_lists$clades, max.level = 1) # Missing_taxa_list for graft_missing_clades()

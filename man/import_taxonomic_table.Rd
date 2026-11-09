@@ -115,17 +115,20 @@ by \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missin
 \examples{
 # Paths to example tables, provided with the package
 backbone_path <- system.file("extdata", "toy_backbone_taxonomic_table.csv", package = "phylograftR")
-missing_taxa_path <- system.file("extdata", "toy_missing_taxa_taxonomic_table.csv", package = "phylograftR")
+missing_taxa_path <- system.file("extdata", "toy_missing_taxa_taxonomic_table.csv",
+                                 package = "phylograftR")
 
 # Load the associated backbone phylogeny
 data(toy_backbone)
 
 # Import the taxonomy of the backbone: one row per tip, one column per taxonomic level
-backbone_taxonomic_table <- import_taxonomic_table(file = backbone_path, type = "backbone", phy = toy_backbone)
+backbone_taxonomic_table <- import_taxonomic_table(file = backbone_path, type = "backbone",
+                                                   phy = toy_backbone)
 head(backbone_taxonomic_table)
 
 # Import the description of the taxa to graft: one row per taxon
-missing_taxa_taxonomic_table <- import_taxonomic_table(file = missing_taxa_path, type = "missing_taxa", phy = toy_backbone)
+missing_taxa_taxonomic_table <- import_taxonomic_table(file = missing_taxa_path, type = "missing_taxa",
+                                                       phy = toy_backbone)
 missing_taxa_taxonomic_table
 
 # The tables are the datasets provided with the package
