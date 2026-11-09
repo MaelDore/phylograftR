@@ -28,7 +28,7 @@ so they use the global \code{allowed_states} argument of the grafting function.
 All the allowed ranges are states of the toy simmap, so grafting does not raise warnings. Some are contained in other states of the simmap
 (\code{"A"} in \code{"AB"}, \code{"B"} in \code{"AB"} and \code{"BC"}): a lineage grafted in a branch in \code{"AB"} with the allowed range \code{"A"} inherits \code{"A"},
 which is a subset sympatric speciation event, \verb{(AB) -> (AB), (A)}.
-Such a list requires a \code{simmap} to graft.
+\strong{Such a list requires a \code{simmap} to graft.}
 }
 \examples{
 # Import the list

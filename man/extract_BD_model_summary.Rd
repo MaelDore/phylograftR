@@ -9,7 +9,7 @@ extract_BD_model_summary(phy_grafted)
 \arguments{
 \item{phy_grafted}{A grafted phylogeny (class \code{"phylo"}), a set of grafted phylogenies (class \code{"multiPhylo"}, e.g., several simulations),
 or a list of them with one element per map (output of the grafting functions with a \code{"multiSimmap"}).
-The phylogenies must have the attribute \code{"BD_model_summary"}, so they must be the output of
+\strong{The phylogenies must have the attribute \code{"BD_model_summary"}}, so they must be the output of
 \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} (with \code{method = "BD_clades"}) or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}
 run with \code{return_BD_model_summary = TRUE}.}
 }
@@ -50,15 +50,15 @@ Attributes: \code{"type"} (\code{"taxa"} for models of \code{graft_missing_taxa(
 Extract the summary of the birth-death (BD) models fitted to simulate the divergence times of the grafted taxa.
 Returns a data.frame with one row per model, per grafted phylogeny (simulation and stochastic map).
 It is similar to \code{\link[=extract_grafting_info]{phylograftR::extract_grafting_info()}}, but the summary is not computed a posteriori:
-the grafting functions record them if \code{return_BD_model_summary = TRUE}, and this function extracts the records.
+the grafting functions record them if \code{return_BD_model_summary = TRUE}, and this function \strong{extracts the records}.
 }
 \details{
-With \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}, a model is fitted per target clade, and used by all the taxa of the target clade,
+With \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}, \strong{a model is fitted per target clade}, and used by all the taxa of the target clade,
 whatever their stem availability or excluded subclades.
-With \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}, a model is fitted per missing clade, i.e., per sister clade.
+With \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}, \strong{a model is fitted per missing clade}, i.e., per sister clade.
 
 The initial clade is the target clade (or the sister clade). The model is fitted on the initial clade if it has at least \code{min_tips} tips,
-otherwise on the smallest enclosing clade that has \code{min_tips} tips (\code{enclosing = TRUE}).
+otherwise on the \strong{smallest enclosing clade} that has \code{min_tips} tips (\code{enclosing = TRUE}).
 The number of tips of the fitted clade counts the taxa already grafted when the model is fitted.
 
 Clades are identified by their node in the backbone phylogeny provided to the grafting function, and by a pair of tips that defines the clade

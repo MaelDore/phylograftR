@@ -11,31 +11,31 @@
 #' @title Graft missing taxa on a time-calibrated phylogeny
 #'
 #' @description This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny.
-#'   The position of each taxon is constrained by its taxonomic assignment (the target clade, defined in `Target_clade`),
-#'   and optionally by taxonomic exclusions (the excluded subclades, defined in `Excluded_subclades`),
-#'   and/or exclusions based on species attributes (the allowed states, defined in `allowed_states` based on the `simmap`).
+#'   The position of each taxon is constrained by its taxonomic assignment (the **target clade**, defined in `Target_clade`),
+#'   and optionally by taxonomic exclusions (the **excluded subclades**, defined in `Excluded_subclades`),
+#'   and/or exclusions based on species attributes (the **allowed states**, defined in `allowed_states` based on the `simmap`).
 #'
 #'   The divergence times of the grafted branches are either drawn uniformly along the branches (`method = "uniform"`),
 #'   or drawn from a birth-death model fitted on the target clade (`method = "BD_clades"`, default).
-#'   The backbone is never modified: only new tips are added.
+#'   **The backbone is never modified: only new tips are added.**
 #'
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which taxa are grafted.
 #'   It must be rooted, binary (no polytomies) and ultrametric (i.e., be time-calibrated).
-#' @param missing_taxa_list A list with the information on the taxa to graft. Every item provided must be named after `$Taxon_name`. Items:
-#'   * `$Taxon_name`: Character vector of the names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
-#'   * `$Target_clade`: List (named after `$Taxon_name`) of character vectors. For each taxon, the tip labels defining its target clade,
+#' @param missing_taxa_list A list with the information on the taxa to graft. **Every item provided must be named after `$Taxon_name`.** Items:
+#'   * `$Taxon_name`: Character vector of the names of the taxa to graft. **Names must be unique and absent from `phy$tip.label`.**
+#'   * `$Target_clade`: List (named after `$Taxon_name`) of character vectors. For each taxon, the tip labels defining its **target clade**,
 #'     i.e., the clade where the taxon is known to belong (e.g., its genus). A pair of tips defines the clade as their MRCA node.
 #'     A single tip defines the "clade" as the terminal branch of this tip.
-#'     Clades, including the excluded subclades (see below), must be defined by tips: node IDs are not accepted (the function stops, and lists some of them).
+#'     **Clades, including the excluded subclades (see below), must be defined by tips: node IDs are not accepted** (the function stops, and lists some of them).
 #'     Use [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] to convert node IDs into pairs of tips.
 #'   * `$Target_clade_name`: (Optional) Character vector (named after `$Taxon_name`) of the names of the target clades (`NA` if a clade has no name).
-#'     Taxa sharing the same target clade must have the same name. The names are not used for the grafting, but, if `total_richness_per_clades` is provided,
+#'     **Taxa sharing the same target clade must have the same name.** The names are not used for the grafting, but, if `total_richness_per_clades` is provided,
 #'     they are checked against its `$Target_clade_name` (a clade must have the same name in both objects).
 #'   * `$include_target_clade_stem`: (Optional) Logical vector (named after `$Taxon_name`). For each taxon, whether the stem branch of its target clade
 #'     is available for grafting. It overrides the global argument `include_target_clade_stem` for this taxon. `NA` values use the global argument.
 #'     With `NULL` (default, or no item), the global argument applies to all taxa. Ignored for single-tip target clades (their terminal branch is their only branch,
 #'     so the stem is always used; a warning lists the taxa with `FALSE`) and for target clades that are the whole tree.
-#'   * `$Excluded_subclades`: (Optional) List (named after `$Taxon_name`) of lists of character vectors. For each taxon, the subclades of its target clade
+#'   * `$Excluded_subclades`: (Optional) List (named after `$Taxon_name`) of lists of character vectors. For each taxon, the **excluded subclades** of its target clade
 #'     where the taxon is known not to belong. Each subclade is defined by a pair of tips (or a single tip, which excludes its terminal branch, see `exclude_subclades_stem`).
 #'     Use `NULL` for taxa with no excluded subclades.
 #'   * `$exclude_subclades_stem`: (Optional) List (named after `$Taxon_name`) of logical vectors. For each taxon, whether the stem of each of its excluded subclades
@@ -46,21 +46,21 @@
 #'     The excluded subclades of a taxon can also be named (e.g., `list(X1 = list(grp_A = c("t1", "t2"), grp_B = "t7"))`): these optional names are used in messages,
 #'     and must match the names of the values of `exclude_subclades_stem` of the taxon if both are named.
 #'   * `$allowed_states`: (Optional) List (named after `$Taxon_name`) of character vectors. For each taxon, the states of the `simmap` in which it can be grafted.
-#'     It overrides the global argument `allowed_states` for this taxon. `NULL` or `NA` use the global argument.
+#'     It **overrides the global argument** `allowed_states` for this taxon. `NULL` or `NA` use the global argument.
 #'     Only used with a `simmap`. For example, `allowed_states = list(X1 = c("blue", "green"), X2 = NULL)`.
 #'     With the maps of several traits, each element is a list with the states of each trait (`NULL`: no taxon-level value for the trait), e.g.,
 #'     `list(X1 = list(c("blue", "green"), "high"), X2 = list(NULL, "low"))` (see 'Several traits' in Details section).
 #' @param method Character string. Method used to draw the divergence times and the branches used for grafting.
-#'   Must be one of `"uniform"` or `"BD_clades"` (default). See Details.
+#'   Must be one of **`"uniform"`** or **`"BD_clades"`** (default). See Details.
 #' @param min_tips Integer. Only used for `method = "BD_clades"`. Minimum number of tips of the clade used to fit the birth-death model.
-#'   If the target clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
+#'   If the target clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. **Must be at least 3.** Default is `5`.
 #' @param return_BD_model_summary Logical. Only used for `method = "BD_clades"`. Whether to report the birth-death models fitted during the grafting.
 #'   If `TRUE`, each grafted phylogeny has the attribute `"BD_model_summary"`: a data.frame with one row per model (i.e., per target clade),
 #'   summarizing diversification rates and sampling fraction.
 #'   It can be extracted a posteriori with [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary]. Default is `FALSE`.
 #' @param include_target_clade_stem Logical. Whether the stem branch of target clades is available for grafting. This is the default for all taxa:
 #'   taxa with a value in `missing_taxa_list$include_target_clade_stem` use this specific instead.
-#'   If `TRUE`, a taxon can be grafted on the stem branch, and becomes sister to the target clade.
+#'   If `TRUE`, **a taxon can be grafted on the stem branch, and becomes sister to the target clade**.
 #'   Taxa already grafted on the stem can receive further grafts (see 'stem region' in Details section).
 #'   Ignored for single-tip target clades as their terminal branch is their only branch, and is therefore always available for grafting.
 #'   Ignored if the target clade is the whole tree: it has no stem. A warning is issued if the stem is requested for such a taxon.
@@ -68,18 +68,18 @@
 #' @param use_excluded_subclades Logical. Whether to avoid grafting within the excluded subclades provided in `missing_taxa_list$Excluded_subclades`. Default is `TRUE`.
 #' @param exclude_subclades_stem Logical. Whether the stem of the excluded subclades is also excluded. This is the default for all the excluded subclades:
 #'   those with a value in `missing_taxa_list$exclude_subclades_stem` use this specific value instead.
-#'   If `TRUE`, a taxon cannot be grafted on the stem of an excluded subclade (it cannot be sister to it): the subclade is excluded entirely, crown and stem.
-#'   If `FALSE`, only the branches within the subclade are excluded, and the taxon can be sister to it.
+#'   If `TRUE`, **a taxon cannot be grafted on the stem of an excluded subclade** (it cannot be sister to it): the subclade is excluded entirely, crown and stem.
+#'   If `FALSE`, **only the branches within the subclade are excluded**, and the taxon can be sister to it.
 #'   For a single-tip excluded subclade, the terminal branch is the only branch of the tip, and it is its stem: the tip excludes nothing if `FALSE`
 #'   (a warning lists these cases). Only used if `use_excluded_subclades = TRUE`. Default is `TRUE`.
 #' @param total_richness_per_clades (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
 #'   nor in `missing_taxa_list` (unsampled species). Items:
 #'   * `$Target_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Target_clade`.
-#'     Node IDs are not accepted: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
+#'     **Node IDs are not accepted**: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
 #'     so the tips of the clades match between both objects.
-#'     It must cover all the unique target clades of `missing_taxa_list`. It can include other clades, e.g., enclosing clades.
+#'     **It must cover all the unique target clades of `missing_taxa_list`.** It can include other clades, e.g., enclosing clades.
 #'   * `$Target_clade_name`: (Optional) Character vector of the names of the clades, same length as `$Target_clade` (`NA` if a clade has no name).
-#'     The names must be unique. If `missing_taxa_list$Target_clade_name` is provided, a clade must have the same name in both objects (the function stops otherwise).
+#'     The names must be unique. If `missing_taxa_list$Target_clade_name` is provided, **a clade must have the same name in both objects** (the function stops otherwise).
 #'     They are not used for the grafting, but they are reported by [`phylograftR::extract_sampling_info()`][extract_sampling_info].
 #'   * `$total_richness`: Vector of positive integers, same length as `$Target_clade`. Total number of species of each clade,
 #'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species
@@ -99,14 +99,14 @@
 #'   (e.g., a trait or a range) with discrete states along the branches of `phy`.
 #'
 #'   Alternatively, you can provide a list of `"simmap"` and/or `"multiSimmap"` objects, one per trait, that contains the maps of several traits used together as constraints.
-#'   All maps must have the same tips, topology and branch lengths as `phy`.
-#'   With a `simmap`, missing taxa can only be grafted on the parts of the branches that are in their allowed states (see `allowed_states`).
+#'   **All maps must have the same tips, topology and branch lengths as `phy`.**
+#'   With a `simmap`, **missing taxa can only be grafted on the parts of the branches that are in their allowed states** (see `allowed_states`).
 #'   Each grafted taxa inherits the state(s) of the point of the branch piece where it is grafted.
 #'
 #'   See 'Species attributes', 'Multiple stochastic maps' and 'Several traits' in Details section. Default is `NULL` (no restriction for grafting based on states).
 #' @param allowed_states Character vector. The states of `simmap` in which grafting is allowed. This is the default for all taxa:
 #'   taxa with a value in `missing_taxa_list$allowed_states` use this specific value instead. States are matched exactly with the states of the `simmap`, unless `treat_states_as_ranges = TRUE`.
-#'   Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the `simmap`.
+#'   **Taxa with no allowed states (neither a global nor a taxon-level value) can be grafted in all the states of the `simmap`.**
 #'   The function stops if some states are not in the `simmap`, or if `allowed_states` is provided without a `simmap`.
 #'   With `treat_states_as_ranges = TRUE`, a range that is not a state of the `simmap` is accepted if it is contained in some of them (e.g., `"A"` can be allowed if `"AB"` is found on the `simmap`).
 #'
@@ -115,7 +115,7 @@
 #'   (see 'Several traits' in Details section).
 #'   Default is `NULL` (all states allowed).
 #' @param treat_states_as_ranges Logical. Only used with a `simmap`. Whether the states of the `simmap` are biogeographic ranges to be treated as sets of areas, rather than as unrelated states.
-#'   Ranges must be coded as in `BioGeoBEARS`: one capital letter per area, and the letters of a multi-area range in alphabetical order (e.g., `"A"`, `"AB"`, `"ABC"`).
+#'   **Ranges must be coded as in `BioGeoBEARS`**: one capital letter per area, and the letters of a multi-area range in alphabetical order (e.g., `"A"`, `"AB"`, `"ABC"`).
 #'   If `TRUE`, an allowed range enables grafting on branch pieces in any range that contains it: `"A"` can be grafted on `"A"`, `"AB"` and `"ABC"`,
 #'   whereas `"AB"` can be grafted on `"AB"` and `"ABC"` but not `"A"`.
 #'
@@ -141,11 +141,11 @@
 #'   is restored on exit. Set to `NULL` to use the random number generator of the session. Default is `1234`.
 #'   With several simulations, it is the master seed: the first simulation uses `seed`, and the seeds of the other simulations are derived from it (see 'Multiple simulations').
 #' @param nb_simulations Integer. Number of simulations, i.e., of grafted phylogenies to produce in the same run, from the same backbone and the same `missing_taxa_list`.
-#'   The grafting is stochastic, so ideally downstream analyses should be run on a set of grafted phylogenies rather than on a single one. Default is `1`.
+#'   The grafting is stochastic, so **ideally downstream analyses should be run on a set of grafted phylogenies rather than on a single one**. Default is `1`.
 #'   See the section 'Multiple simulations' for the output, the seeds and the failures.
 #' @param force_simulations Logical. Whether to try new seeds until `nb_simulations` grafted phylogenies are obtained, up to `10 * nb_simulations` attempts
 #'   (see 'Multiple simulations' in Details section). If `FALSE`, the simulations that fail are skipped. Default is `FALSE`.
-#' @param parallel Logical or `NULL`. Whether to run the simulations in parallel, with the packages `future` and `future.apply` (they must be installed separately from phylograftR).
+#' @param parallel Logical or `NULL`. Whether to run the simulations in parallel, with the packages `future` and `future.apply` (**they must be installed separately from phylograftR**).
 #'   Default is `NULL`: the simulations are run in parallel if the user set a `future` plan with several workers beforehand (e.g., `future::plan(future::multisession, workers = 4)`), and sequentially otherwise.
 #'   `FALSE` forces a sequential run, even if a plan is set. `TRUE` execute the `future` plan, but stops with an informative error if the packages are not installed or no plan is set.
 #'   See 'Parallel computation' in Details section for recommendations on whether parallelization is useful in your case.
@@ -161,7 +161,7 @@
 #'   See 'Temporary saves and resuming' in the Details section.
 #' @param clean_temp_files Logical. Whether to delete all the temporary files of the run once it is completed without stopping/crashing. Only used if `save_temp = TRUE`.
 #'   If the run crashes or is interrupted, nothing is deleted so it can be resumed. Use `FALSE` to keep the files. Default is `TRUE`.
-#' @param resume Logical. Whether to resume an interrupted run from its temporary files, which must come from a run with the exact same arguments (see 'Temporary saves and resuming').
+#' @param resume Logical. Whether to resume an interrupted run from its temporary files, which **must come from a run with the exact same arguments** (see 'Temporary saves and resuming').
 #'   Needs `save_temp = TRUE`. Default is `FALSE`.
 #' @param ultrametric_tol Numeric. Tolerance used by `ape::is.ultrametric()` for the ultrametricity checks of the backbone and of the final phylogeny.
 #'   Default is `.Machine$double.eps^0.5`.
@@ -176,7 +176,7 @@
 #'     i.e., branches with only grafted taxa below them. Names are the IDs of the tipward nodes of the branches (`$edge[, 2]`).
 #'     Use them to color the phylogeny on plots (see examples).
 #'
-#'   These elements are not updated by functions that modify the phylogeny (e.g., `ape::drop.tip()`, which removes tips but keeps the other elements as they are,
+#'   **These elements are not updated by functions that modify the phylogeny** (e.g., `ape::drop.tip()`, which removes tips but keeps the other elements as they are,
 #'   and `ape::write.tree()`, which removes them). Use [`phylograftR::identify_grafted()`][identify_grafted] to recompute `grafted_tips` and `grafted_edges` on a manipulated phylogeny.
 #'
 #'   Optional elements can be added to the output based on what optional argument was provided:
@@ -204,7 +204,7 @@
 #' @details
 #' ### Stop conditions
 #'
-#' The function stops, before any grafting, if the backbone is not ultrametric, or is not binary (i.e., all nodes have only two descendant lineages).
+#' The function **stops, before any grafting,** if the backbone is not ultrametric, or is not binary (i.e., all nodes have only two descendant lineages).
 #' It also stops if some taxa have no branch available for grafting. The taxa concerned are listed in the error message,
 #' so the constraints (`include_target_clade_stem`, `Excluded_subclades`, `exclude_subclades_stem` or, with a `simmap`, the allowed states) can be adjusted.
 #' With `method = "BD_clades"`, the function can also stop during grafting if no usable divergence age is found after `max_age_redraws` redraws (see 'Methods').
@@ -213,16 +213,16 @@
 #'
 #' Each taxon is grafted within its target clade. The branches available for grafting are all the branches of the target clade
 #' (descending from its MRCA node), plus its stem region if the stem is available for this taxon (`missing_taxa_list$include_target_clade_stem` of the taxon if provided, otherwise the global argument `include_target_clade_stem`).
-#' Grafting on the stem places the taxon sister to the target clade.
+#' **Grafting on the stem branch places the taxon sister to the target clade.**
 #' Taxa of the same target clade can therefore differ in their stem availability: the clade is the same (same MRCA node, same richness information),
 #' but the branches and the time window available for the divergence times of these taxa differ.
 #'
-#' The stem region is not restricted to the original stem branch. A taxon grafted on the stem splits it in two pieces, and becomes itself part of the stem region:
+#' **The stem region is not restricted to the original stem branch.** A taxon grafted on the stem splits it in two pieces, and becomes itself part of the stem region:
 #' later taxa can be grafted on both pieces of the stem, and on the terminal branch of the earlier taxon (the two taxa are then sister, and together sister to the target clade).
 #' More generally, the stem region includes all the branches of the 'missing-only subtrees' hanging from the stem, i.e., subtrees containing only taxa of `missing_taxa_list$Taxon_name`,
 #' whatever their own target clade. This mirrors what happens within the crown group, where missing taxa can already be grafted on the branches of other missing taxa.
 #'
-#' Branches inside excluded subclades are removed from the pool of available branches. By default (`exclude_subclades_stem = TRUE`),
+#' **Branches inside excluded subclades are removed from the pool of available branches.** By default (`exclude_subclades_stem = TRUE`),
 #' the stem region of the excluded subclades is removed as well: the taxon can be neither nested within the excluded subclade,
 #' nor sister to it (nor sister to the missing taxa already grafted on its stem).
 #' This is the only way to exclude a single tip, as its terminal branch is its only branch.
@@ -230,7 +230,7 @@
 #' the taxon can be sister to the excluded subclade, but never nested within it. A single tip then excludes nothing.
 #' The setting is specific to each excluded subclade, so a taxon can have excluded subclades with different settings.
 #'
-#' Excluded subclades are expected to be nested within their target clade. The function checks their position before grafting:
+#' **Excluded subclades are expected to be nested within their target clade**. The function checks their position before grafting:
 #' a warning is issued if an excluded subclade is outside the target clade (the exclusion then has no effect).
 #' The function stops if an excluded subclade contains the whole target clade, or is identical to it: no branch (or only the stem branch) would be left for grafting.
 #' To graft taxa specifically on the stem branch of a clade or of a single tip, use [`phylograftR::graft_missing_clades()`][graft_missing_clades] instead.
@@ -238,7 +238,7 @@
 #'
 #' ### Methods
 #'
-#' * `"uniform"`: Taxa are grafted one by one, per target clade from the smallest to the largest, so nested clades are processed first (see below).
+#' * **`"uniform"`**: Taxa are grafted one by one, per target clade from the smallest to the largest, so nested clades are processed first (see below).
 #'   Within each target clade, taxa are grafted in random order. The branch used for grafting is drawn among the available branches
 #'   with probabilities proportional to branch lengths, and the position on the branch is drawn from a uniform distribution.
 #'   This is fast, but does not account for diversification dynamics.
@@ -246,7 +246,7 @@
 #'   with r the net diversification rate (speciation minus extinction).
 #'   A uniform draw implicitly assumes a flat density (r = 0), and gives too much weight to old divergence times compared to the expectation from a birth-death process.
 #'
-#' * `"BD_clades"`: Taxa are grafted per target clade, from the smallest to the largest, so nested clades are processed first (see below).
+#' * **`"BD_clades"`**: Taxa are grafted per target clade, from the smallest to the largest, so nested clades are processed first (see below).
 #'   For each target clade, a birth-death model is fitted with `phytools::fit.bd()` on the clade, or on the smallest enclosing clade with at least `min_tips` tips.
 #'   The sampling fraction accounts for the number of missing taxa provided for grafting in this clade.
 #'   The divergence times of all taxa missing in the target clade are then jointly drawn with `TreeSim::corsim()`, between the present and the stem age of the clade
@@ -258,9 +258,9 @@
 #'     This is repeated until all the taxa of the group are grafted, up to `max_age_redraws` times.
 #'   Taxa of the same target clade with different stem availability (or, with a `simmap`, different allowed states) are drawn in separate groups,
 #'   and the birth-death model is fitted only once per target clade.
-#'   `"BD_clades"` is the recommended grafting method, but it can be time consuming for large phylogenies.
+#'   **`"BD_clades"` is the recommended grafting method**, but it can be time consuming for large phylogenies.
 #'
-#' With both methods, nested clades are processed first, so the taxa of a larger clade are grafted on a tree that already
+#' With both methods, **nested clades are processed first**, so the taxa of a larger clade are grafted on a tree that already
 #' includes the taxa of the clades nested within it, and can be grafted on their branches.
 #' For taxa of the same clade, those without access to the stem come first.
 #' For `"BD_clades"`, it also ensures that the divergence times of nested clades are accounted for when drawing the divergence times of the larger clade.
@@ -278,7 +278,7 @@
 #' `n_present / (n_present + n_pending + n_unsampled)`, with `n_present` the tips of the fitted clade in the current tree (backbone tips and taxa already grafted),
 #' `n_pending` the taxa of `missing_taxa_list` still to graft in this clade, and `n_unsampled` the unsampled species derived from `total_richness_per_clades`.
 #' Taxa grafted in nested clades processed earlier are already in the tree, so they are not counted as missing anymore.
-#' Unsampled species are only used to fit the rates: they are not grafted, and do not compete with the grafted taxa for the branches.
+#' **Unsampled species are only used to fit the rates: they are not grafted**, and do not compete with the grafted taxa for the branches.
 #'
 #' For a clade with a `total_richness` value provided: `nb_unsampled = total_richness - nb_backbone - nb_missing`, with `nb_missing` the number of taxa to graft
 #' whose target clade is this clade or is nested within it. For a clade with no `total_richness` value (`NA`, or enclosing a target clade without being listed),
@@ -300,13 +300,13 @@
 #' ### Species attributes: allowed states of a simmap
 #'
 #' A `simmap` describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
-#' With a `simmap`, each taxon can only be grafted on the pieces of the available branches that are in its allowed states
+#' With a `simmap`, **each taxon can only be grafted on the pieces of the available branches that are in its allowed states**
 #' (`missing_taxa_list$allowed_states` of the taxon if provided, otherwise the global argument `allowed_states`).
 #' This combines with the other constraints: the available branches are those of the target clade, minus the excluded subclades, restricted to the allowed states.
 #' If all states are allowed (all states listed in `allowed_states`, or no allowed states at all), grafting is not restricted by the states,
 #' and constraints are only based on target clades and excluded subclades.
 #'
-#' A grafted taxon is assumed to be in the state of the point of the backbone where it was grafted, along its whole branch,
+#' **A grafted taxon is assumed to be in the state of the point of the backbone where it was grafted, along its whole branch**,
 #' and so are the taxa grafted on its branch later. Taxa grafted later can therefore be grafted on the branches of taxa grafted earlier,
 #' if their state is allowed.
 #'
@@ -330,7 +330,7 @@
 #' affect the rates of transitions between states, or inflate the phylogenetic signal of the trait. It also reduces the uncertainty about the state of the grafted lineages since they always inherit a unique state.
 #' It is recommended to acknowledge these potential biases when interpreting such analyses.
 #'
-#' To limit the risk of circularity, multiple approaches are possible:
+#' To **limit the risk of circularity**, multiple approaches are possible:
 #' * constrain the grafting by traits that are not the object of downstream analysis;
 #' * compare the results with and without the constraint (or on the backbone only);
 #' * keep the constraint as loose as the information allows (e.g., allowed states that include neighboring states);
@@ -342,7 +342,7 @@
 #' (one capital letter per area, and the letters of a multi-area range in alphabetical order, e.g., `"AB"`),
 #' and the allowed states are the ranges a missing clade can have.
 #'
-#' An allowed range matches a state of the `simmap` if it is contained in it: a missing taxon allowed in `"A"` can be grafted on branch pieces in `"A"`, `"AB"` or `"ABC"`,
+#' **An allowed range matches a state of the `simmap` if it is contained in it**: a missing taxon allowed in `"A"` can be grafted on branch pieces in `"A"`, `"AB"` or `"ABC"`,
 #' whereas a missing taxon allowed in `"AB"` only can be grafted on branch pieces in `"AB"` or `"ABC"`.
 #'
 #' When multiple allowed states are provided, the inherited range is drawn randomly from the allowed ranges enclosed within the range of the branch piece where it is grafted.
@@ -356,7 +356,7 @@
 #' and the simulations do not share anything but the inputs. The phylogenies are returned in a `"multiPhylo"` object (a single `"phylo"` if `nb_simulations = 1`),
 #' and the memory used grows with the number of simulations.
 #'
-#' The first simulation uses `seed`, so it is the same phylogeny as a run with `nb_simulations = 1` and the same `seed`.
+#' **The first simulation uses `seed`**, so it is the same phylogeny as a run with `nb_simulations = 1` and the same `seed`.
 #' The seeds of the other simulations are drawn from a stream started by `seed`, and returned in the attribute `"seeds"`:
 #' a simulation can be reproduced alone with its seed, and the first simulations of a longer run are the same as the ones of a shorter run.
 #' With `seed = NULL`, the simulations follow the random number generator of the session.
@@ -373,8 +373,8 @@
 #'
 #' When multiple stochastic maps of the same trait are provided as a `"multiSimmap"`, the grafting is run with each of its maps.
 #' The maps are alternative hypotheses of the evolution of the same trait (or range), used as alternative constraints.
-#' All the maps and the simulations are crossed: each map is used for `nb_simulations` simulations, so `P` maps give `P * nb_simulations` grafted phylogenies
-#' This can lead to a quick inflation of computation time, thus a warning is sent if the total number of grafted phylogenies (`P * nb_simulations`) is more than 1000.
+#' **All the maps and the simulations are crossed**: each map is used for `nb_simulations` simulations, so `P` maps give `P * nb_simulations` grafted phylogenies
+#' This can lead to a quick inflation of computation time, thus a warning is sent if the total number of grafted phylogenies (`P * nb_simulations`) is more than **1000**.
 #'
 #' The output is a list with one element per stochastic map, named after the maps (the names of the `"multiSimmap"` if it has some, otherwise `"map_1"`, ..., `"map_P"`).
 #' With `nb_simulations = 1`, each element is a grafted phylogeny. With several simulations, each element is a `"multiPhylo"` (see 'Multiple simulations')
@@ -392,7 +392,7 @@
 #' (e.g., `simmap = list(color = color_simmap, elevation = elevation_simmap)`). The elements can be named after the traits (all or none, with different names that cannot contain `;`, `,`, `=` or `|`),
 #' otherwise the traits are named `"trait_1"`, `"trait_2"`, ... All the maps must have the same tips, topology and branch lengths as the backbone `phy`.
 #'
-#' A taxon can only be grafted on the parts of the branches that are in one of its allowed states, for every trait.
+#' **A taxon can only be grafted on the parts of the branches that are in one of its allowed states, for every trait.**
 #' The allowed states are provided for each trait, in the order of the list of maps (or named after the traits):
 #' the global argument `allowed_states` is a list with one element per trait, e.g., `list(c("blue", "green"), NULL, "high")` for three traits,
 #' and `missing_taxa_list$allowed_states` has such a list for each taxon.
@@ -405,7 +405,7 @@
 #' In each simmap, a grafted branch is entirely in the state of each trait at the point where it was grafted (each trait is inherited from the lineage it was grafted on).
 #'
 #' With a list of `"multiSimmap"` provided as `simmap`, the maps of the traits are paired: the grafting is run with the map 1 of every trait, then the map 2 of every trait, and so on.
-#' All the traits must therefore have the same number of maps to be associated in a given grafting process.
+#' **All the traits must therefore have the same number of maps** to be associated in a given grafting process.
 #'
 #' One of the traits can be treated as biogeographic ranges combined with any number of other traits.
 #' Use a logical vector in `treat_states_as_ranges` to define which of the trait is to be treated as biogeographic ranges for inheritance.
@@ -415,14 +415,14 @@
 #' whereas a missing taxon allowed in `"AB;high"` only can be grafted on branch pieces in `"AB;high"` or `"ABC;high"`.
 #'
 #' The other traits are matched exactly, and are inherited as they are from the point where the taxon is grafted: with `"AB"` and `"high"` at the graft point and the allowed range `"A"`,
-#' the taxon inherits `"A"` and `"high"`. Only one trait can be treated as ranges to prevent inflation of the number of combined allowed states to consider.
+#' the taxon inherits `"A"` and `"high"`. **Only one trait can be treated as ranges** to prevent inflation of the number of combined allowed states to consider.
 #'
 #' ### Parallel computation
 #'
 #' The simulations based on the different stochastic maps and seeds are independent, so they can be run in parallel with the package `future` and `future.apply`.
-#' Both packages must be installed independently from phylograftR (they are only suggested).
+#' **Both packages must be installed independently from phylograftR**.
 #'
-#' The grafting function does not manage the workers: you must set a plan beforehand, e.g., `future::plan(future::multisession, workers = 4)`,
+#' The grafting function does not manage the workers: **you must set a plan beforehand**, e.g., `future::plan(future::multisession, workers = 4)`,
 #' and reset it afterwards with `future::plan(future::sequential)`. With the default `parallel = NULL`, the function uses the plan if there is one, `parallel = FALSE` ignores it.
 #' All the `P * nb_simulations` simulations (with `P` stochastic maps per trait) are run as one set of tasks, so the workers are used evenly.
 #'
@@ -430,7 +430,7 @@
 #' The messages, warnings and printed output of the simulations are relayed to the session when the tasks are collected (so they appear after the simulations, not live),
 #' and with `verbose = TRUE` one line is printed when each simulation is done.
 #'
-#' Setting up the workers and sending the data to them has a time cost, so parallelization only pays off with large backbone phylogenies, or many simulations or maps.
+#' Setting up the workers and sending the data to them has a time cost, so **parallelization only pays off with large backbone phylogenies, or many simulations or maps**.
 #' As a rule of thumb, use parallel computation when the sequential run would last more than a minute or so, i.e., for large backbone phylogenies (500 tips or more) and several grafted phylogenies
 #' (`nb_maps * nb_simulations`), or for 50 or more grafted phylogenies on small backbones.
 #'
@@ -452,13 +452,13 @@
 #' Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with `$simmap`, `$grafted_tips`, etc.).
 #'
 #' With `clean_temp_files = TRUE` (default), all the temporary files of the run are deleted once the function returns without crashing.
-#' A run that crashes or is interrupted never deletes its files, so it can be resumed with `resume = TRUE`.
+#' **A run that crashes or is interrupted never deletes its files**, so it can be resumed with `resume = TRUE`.
 #' Use `clean_temp_files = FALSE` to keep the files after a successful run.
 #'
 #' With `resume = TRUE`, the function must be called again with **exactly the same arguments** as the interrupted run.
 #' For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
 #'
-#' Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a `missing_taxa_list` restricted to these taxa:
+#' **Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone**, with a `missing_taxa_list` restricted to these taxa:
 #' the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
 #' the identification of the grafted tips and the updated `simmap` would be wrong, and a `simmap` of the initial backbone would not match the temporary phylogeny.
 #' Use `resume = TRUE` instead.

@@ -15,8 +15,8 @@ build_missing_taxa_list_from_taxonomy(
 \arguments{
 \item{backbone_taxonomic_table}{Data frame. Taxonomy of the tips of the backbone phylogeny, with one row per tip.
 The first column must be named \code{Taxa} and holds the tip labels of \code{phy}.
-All the other columns are taxonomic levels (e.g., \code{Family}, \code{Subfamily}, \code{Tribe}, \code{Genus}, but they can be anything), usually from the broadest to the narrowest.
-The values of a level are the names of the taxonomic groups (e.g., \code{"Homo"}). Levels do not have to be informed for all the tips: blank cells and \code{NA} are missing values.
+All the other columns are \strong{taxonomic levels} (e.g., \code{Family}, \code{Subfamily}, \code{Tribe}, \code{Genus}, but they can be anything), usually from the broadest to the narrowest.
+The values of a level are the names of the \strong{taxonomic groups} (e.g., \code{"Homo"}). Levels do not have to be informed for all the tips: blank cells and \code{NA} are missing values.
 See Details for the constraints on the names of the levels and groups.}
 
 \item{missing_taxa_taxonomic_table}{Data frame. Description of the taxa to graft, with one row per taxon.
@@ -62,14 +62,15 @@ see \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()
 \details{
 \strong{When to use taxonomic tables}
 
-Taxonomic tables are the go-to option for large phylogenies with neatly defined taxonomic levels (e.g., Family, Subfamily, Tribe, Genus). The taxonomy of the backbone is provided once,
+\strong{Taxonomic tables are the go-to option for large phylogenies with neatly defined taxonomic levels} (e.g., Family, Subfamily, Tribe, Genus). The taxonomy of the backbone is provided once,
 and each taxon to graft only needs its own taxonomic levels: the constraints (target clade, sister clade, excluded subclades) are written with the names of the groups or of the taxonomic levels to use,
 and the clades are retrieved from the phylogeny. The same group is therefore always the same clade, whatever the number of taxa, which avoids the typos and
 inconsistencies of clades written taxon by taxon, and the tables can be taken as such from a taxonomic database.
 
 The limit is that only the taxonomic groups of the backbone table can be used as clades. To fine-tune the grafting of some taxa with any other node of the phylogeny
-(e.g., a clade without a name, a part of a group, or a group of several genera), define their clades by tips or node IDs with
+(e.g., a clade without a name, a part of a group, or a group of several genera), \strong{define their clades by tips or node IDs} with
 \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} or \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} (see 'Fine-tuning the clades' in their Details sections).
+
 Both routes return the same \code{missing_taxa_list}, so a list built from taxonomic tables can be adjusted afterwards.
 
 \strong{Backbone taxonomic table}
@@ -84,7 +85,7 @@ Names of taxonomic levels (the column names; e.g., \code{"Genus"}) and names of 
 
 \strong{Missing taxa taxonomic table}
 \itemize{
-\item \code{Taxa} (Required): Names of the taxa to graft. Names must be unique and absent from \code{phy$tip.label}.
+\item \code{Taxa} (Required): Names of the taxa to graft. \strong{Names must be unique and absent from \code{phy$tip.label}.}
 \item \code{Type} (Required): \code{"taxa"} for taxa grafted with \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} within a target clade,
 or \code{"clades"} for taxa grafted with \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} as a sister of a clade.
 \item Taxonomic levels (Optional): Same columns as in \code{backbone_taxonomic_table}. They are used to retrieve the taxonomic group of the taxon when \code{Target_clade}, \code{Sister_clade},
@@ -93,7 +94,7 @@ Columns that are not levels of the backbone, nor one of the columns listed here,
 \item \code{Target_clade} (Required for \code{Type = "taxa"}) or \code{Sister_clade} (Required for \code{Type = "clades"}): A single taxonomic group, written either as the name of the group
 (e.g., \code{"Homo"}), or as the name of a taxonomic level (e.g., \code{"Genus"}). If a taxonomic level is provided, the group will be identified as recorded in the column of the same name
 in \code{missing_taxa_taxonomic_table} (e.g., \code{"Genus"} with \code{Genus = "Camponotus"} gives the clade of the genus \code{Camponotus}).
-It is an error if the group is absent from the backbone, or if the taxon has no value at the requested level.
+\strong{It is an error if the group is absent from the backbone, or if the taxon has no value at the requested level.}
 \item \code{Excluded_subclades} (Optional, \code{Type = "taxa"}): Subclades of the target clade where the taxon is known not to belong, separated by semicolons (e.g., \code{"Pheidole; Camponotus"}).
 Each one is a group or a level name, as in \code{Target_clade}.
 \item \verb{$include_target_clade_stem} (Optional, \code{Type = "taxa"}): Logical. Whether the stem branch of the target clade is a valid placement to graft this taxa (\code{NA} uses the global argument set in the grafting function).
@@ -109,7 +110,7 @@ It is accepted with both \code{Target_clade} and \code{Sister_clade}. (\code{NA}
 
 What to do when a taxonomic group is not monophyletic in \code{phy}, i.e., when the clade defined by the MRCA of its tips also holds tips of other groups of the same level?
 \itemize{
-\item \code{non_monophyletic = "exclude"} (default): For target clades, intruders (i.e., tips from other groups descending from the MRCA) are added to the
+\item \code{non_monophyletic = "exclude"} (default): For target clades, \strong{intruders} (i.e., tips from other groups descending from the MRCA) are added to the
 \code{Excluded_subclades} of the taxon (with their stem, \code{exclude_subclades_stem = TRUE}), so the taxon is never grafted among intruders.
 Intruders nested within an excluded subclade provided by the user are not added.
 Intruders cannot be removed from a sister clade or from a group of \code{Excluded_subclades}: the clade of the MRCA is used with a warning (as for \code{"mrca"}).
@@ -129,21 +130,22 @@ data(toy_missing_taxa_taxonomic_table)
 toy_missing_taxa_taxonomic_table
 
 # The taxa to graft with graft_missing_taxa() (Type = "taxa") use different types of constraints:
-# * Genus_a_sp1: grafted in its family (Target_clade = "Family" is the family of the taxon, i.e., "Family_A"),
-#   but not in the subfamily "Subfam_A1" nor in the tribe "Tribe_A2a" (Excluded_subclades).
+# * Genus_a_sp1: grafted in its family (Target_clade = "Family" is the family of the taxon,
+#   i.e., "Family_A"), but not in the subfamily "Subfam_A1" nor in the tribe "Tribe_A2a"
+#   (Excluded_subclades).
 #   The stem of the family is available (include_target_clade_stem),
 #   the stem of "Subfam_A1" is excluded too, but not the one of "Tribe_A2a" (exclude_subclades_stem).
-# * Genus_a_sp2: same target clade, but excluded subclades are a tribe and a genus with a single species ("Gen_3"),
-    and the stem is excluded for the genus only.
+# * Genus_a_sp2: same target clade, but excluded subclades are a tribe
+#   and a genus with a single species ("Gen_3"), and the stem is excluded for the genus only.
 # * Genus_a_sp3: same target clade, without excluded subclades and
-    without access to the stem of the family.
+#   without access to the stem of the family.
 # * Genus_b_sp1: grafted in the family "Family_B", written directly with the name of the group.
 # * Genus_b_sp2: grafted in its subfamily (Target_clade = "Subfamily", i.e., "Subfam_B1"),
-    except in the genus "Gen_1".
+#   except in the genus "Gen_1".
 # * Genus_c_sp1: grafted on the terminal branch of the only species
-    of the genus "Gen_2" (a single tip).
+#   of the genus "Gen_2" (a single tip).
 # * Genus_c_sp2: grafted in its tribe (Target_clade = "Tribe", i.e., "Tribe_B2"),
-    without access to the stem.
+#   without access to the stem.
 
 # The taxa to graft with graft_missing_clades() (Type = "clades") use sister clades:
 # * Genus_d_sp1 and Genus_d_sp2: belong to a new genus, and have the same sister clade ("Gen_1"),

@@ -28,7 +28,7 @@ or \verb{$Sister_clade} (missing clades, for \code{graft_missing_clades()}), wit
 Exactly one of \verb{$Target_clade} and \verb{$Sister_clade} must be provided: it defines the type of the plan.}
 
 \item{min_tips}{Numeric. Same as in the grafting functions. With \code{method = "BD_clades"}, a birth-death model is fitted on the target clade (or the sister clade) of each taxon,
-or on the smallest enclosing clade with at least \code{min_tips} tips. Here, no model is fitted: the enclosing clade is only reported. Default is \code{5}.}
+or on the smallest enclosing clade with at least \code{min_tips} tips. Here, \strong{no model is fitted: the enclosing clade is only reported.} Default is \code{5}.}
 
 \item{include_target_clade_stem, use_excluded_subclades, exclude_subclades_stem}{Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}.
 Only used with a \verb{$Target_clade} list.}
@@ -98,14 +98,14 @@ With several maps, the causes found across all maps are concatenated, separated 
 Attributes: \code{"type"} (\code{"taxa"} or \code{"clades"}), \code{"min_tips"}, \code{"min_valid_fraction"}, \code{"n_maps"}, and \code{"per_map"} (with several maps: the diagnostic table of each map, with a \code{map} column).
 }
 \description{
-Check, before any grafting, whether the taxa (or missing clades) of \code{missing_taxa_list} can be grafted on the backbone \code{phy} with the constraints chosen
+Check, before any grafting, whether the taxa (or missing clades) of \code{missing_taxa_list} can be grafted** on the backbone \code{phy} with the constraints chosen
 (target clades, excluded subclades, stem availability, species attributes), and report what is available for each of them: the number of branches, the share of
 the available branches that is in the allowed states (if \code{simmap} is used as a constraint), the time window of the divergence ages and the share of it where grafting is possible,
 and the allowed states found along the valid branches.
 
-The goal is to help fine-tune the grafting constraints before committing to a long run:
+The goal is to \strong{help fine-tune the grafting constraints before committing to a long run}:
 the same checks are run at the start of \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}
-(which stop if a taxon cannot be grafted), but here the problems are reported for all the taxa at once, and the table can be explored.
+(which stop if a taxon cannot be grafted), but here \strong{the problems are reported for all the taxa at once}, and the table can be explored.
 }
 \details{
 \subsection{Taxa (\verb{$Target_clade} list)}{
@@ -116,7 +116,7 @@ With a \code{simmap}, the pool is then restricted to the pieces of the branches 
 
 \subsection{Missing clades (\verb{$Sister_clade} list)}{
 
-Taxa with the same sister clade are grafted together as one missing clade.
+\strong{Taxa with the same sister clade are grafted together as one missing clade.}
 The missing clade is grafted on the stem branch of its sister clade (see \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}).
 With a \code{simmap} the share of the stem branch in the allowed states is both the valid fraction and the share of the time window available.
 The taxa of a missing clade must share their allowed states.
@@ -130,14 +130,16 @@ With \code{method = "BD_clades"}, it is used to fit the Birth-Death model and es
 It is reported so users can tune \code{min_tips} accordingly to define more relevant enclosing clades.
 During the grafting, taxa already grafted in a clade count in its number of tips. The chosen enclosing clade used can therefore be the reported clade or a clade nested within it.
 It can contain more tips than the one reported here, although the reported clade is the oldest one that can be used, and the number of tips reported is its number of backbone tips.
-The sampling fractions of the birth-death models are not reported: they depend on the taxa already grafted in the clade, so they cannot be known before grafting.
+
+\strong{The sampling fractions of the birth-death models are not reported}: they depend on the taxa already grafted in the clade, so they cannot be known before grafting.
+Use \code{\link[=extract_BD_model_summary]{phylograftR::extract_BD_model_summary()}} to extract \strong{a posteriori} the effective sampling fraction and diversification rates used during the grafting process.
 }
 
 \subsection{Several maps}{
 
 With a \code{"multiSimmap"}, the plan is checked for each map, as attribute-based constraints are different across maps, and the table summarizes values across all maps
 (i.e., minimum, mean and maximum of the valid fraction and of the time coverage, and the number of maps in which the taxon cannot be grafted).
-The table per map is stored in the attribute \code{"per_map"}.
+The table per map is stored in the attribute \strong{\code{"per_map"}}.
 }
 }
 \examples{

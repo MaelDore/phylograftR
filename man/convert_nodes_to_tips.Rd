@@ -13,7 +13,7 @@ convert_nodes_to_tips(
 }
 \arguments{
 \item{missing_taxa_list}{A list with the information on the taxa to graft, as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}
-or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}, except that clades can be defined by node IDs. Every item provided must be named after \verb{$Taxon_name}. Items:
+or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}, except that clades can be defined by node IDs. \strong{Every item provided must be named after \verb{$Taxon_name}.} Items:
 \itemize{
 \item \verb{$Taxon_name}: Character vector of the names of the taxa to graft.
 \item \verb{$Target_clade} (or \verb{$Sister_clade}): List (named after \verb{$Taxon_name}) of clades, one per taxon. Each clade is defined by a
@@ -28,7 +28,7 @@ The inner names of the subclades are kept.
 
 \item{total_richness_per_clades}{(Optional) List with the total richness of clades, as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}
 or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}. Its \verb{$Target_clade} (or \verb{$Sister_clade}) clades can also be defined by node IDs, and are converted the same way.
-Default is \code{NULL}. It must be provided in the same call as its \code{missing_taxa_list} (see Details).
+Default is \code{NULL}. \strong{It must be provided in the same call as its \code{missing_taxa_list}} (see Details).
 Its optional \verb{$Target_clade_name} (or \verb{$Sister_clade_name}) item is returned unchanged.}
 
 \item{verbose}{Logical. Whether to print the conversions of the node IDs into tips. Default is \code{TRUE}.}
@@ -45,9 +45,9 @@ If \code{total_richness_per_clades} is provided, a list with two items:
 \description{
 Clades (target clades, sister clades, and excluded subclades) of a \code{missing_taxa_list} can be defined by tips
 or by the ID of the node of the backbone phylogeny they correspond to.
-This function converts all the node IDs into tips, so that the list has the tips-only format required by
+This function \strong{converts all the node IDs into tips}, so that the list has the tips-only format required by
 \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}.
-Tips and node IDs can be mixed, within the list and within the items. The conversions are printed for transparency:
+\strong{Tips and node IDs can be mixed, within the list and within the items.} The conversions are printed for transparency:
 the warnings and errors of the grafting functions then refer to tips that can be traced back to the node IDs provided.
 
 The same conversion is done internally by \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}}
@@ -62,7 +62,7 @@ A node ID is recognized as being exclusively made of digits: either a number (e.
 \strong{Tip labels must therefore include at least one other character than digits} to be distinguished.
 The function stops if a node ID is used while some tip labels of \code{phy} are only made of digits. In this case, you need to rename these tips first.
 
-A clade is defined either by tips, or by one node ID. The two cannot be mixed within the same clade (e.g., \code{c("t8", "34")} is an error),
+\strong{A clade is defined either by tips, or by one node ID. The two cannot be mixed within the same clade} (e.g., \code{c("t8", "34")} is an error),
 and a node ID alone defines one clade (several node IDs, e.g., \code{c(34, 35)}, are an error). However, different clades can be defined differently.
 For example, \code{Excluded_subclades = list(X1 = list(50, c("t5", "t12"), "t30"))} mixes an internal node ID, a pair of tips and a single tip.
 
@@ -72,9 +72,9 @@ i.e., the terminal branch of the tip, and an internal node is equivalent to the 
 
 \subsection{Conversion}{
 
-A tip node is converted into the label of the tip. An internal node is converted into one pair of tips whose most recent common ancestor (MRCA) is the node.
+A \strong{tip node} is converted into the label of the tip. An \strong{internal node} is converted into one pair of tips whose most recent common ancestor (MRCA) is the node.
 The pair is chosen in deterministic fashion: for each of the first two descendant lineages of the node (in the order of \code{phy$edge}), the first tip of each lineage is selected.
-This ensures that the MRCA node of this pair always defines the same clade, even when other species are grafted inside.
+This ensures that \strong{the MRCA node of this pair always defines the same clade}, even when other species are grafted inside.
 The conversions are printed, grouped by node ID, with the items and taxa where each node ID was used.
 }
 
@@ -82,7 +82,7 @@ The conversions are printed, grouped by node ID, with the items and taxa where e
 
 If a clade is already defined by tips in \code{missing_taxa_list} (written by hand, or converted before), a node ID with the same MRCA node is converted
 into these tips instead of the default pair, so the same clade is always defined by the same tips. This holds for \code{missing_taxa_list} and \code{total_richness_per_clades}.
-\code{total_richness_per_clades} must be converted at the same time as its associated \code{missing_taxa_list} (same call to the function), so that the tips defining a clade match between the two objects.
+\code{total_richness_per_clades} \strong{must be converted at the same time} as its associated \code{missing_taxa_list} (same call to the function), so that the tips defining a clade match between the two objects.
 It can be converted together with the initial \code{missing_taxa_list} (both converted at the same time), or together with the \code{missing_taxa_list} that was already converted,
 used as a template (the tips it already uses for the clades are matched to the node IDs).
 

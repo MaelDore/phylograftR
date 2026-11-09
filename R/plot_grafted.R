@@ -12,14 +12,14 @@
 #'
 #' @description Plot a phylogeny returned by the grafting functions, with the grafted branches and/or the grafted tips highlighted.
 #'   If the phylogeny has a `$simmap` (grafting with a `simmap`), the updated stochastic character map is plotted instead of the plain phylogeny:
-#'   the colors of the states are kept, the grafted branches are drawn dashed, and the grafted tips are labelled with the highlight color.
+#'   the colors of the states are kept, the grafted branches are drawn dashed lines, and the grafted tips are labelled with the highlight color.
 #'
 #'   The function uses the plotting functions of `ape` and `phytools` (`plot.phylo()`, `phytools::plotSimmap()` and `ape::tiplabels()`):
 #'   it only prepares the colors and the dashes, and other plotting arguments are passed to these functions.
 #'
 #' @param phy_grafted A grafted phylogeny (class `"phylo"`, with the elements `$grafted_tips` and `$grafted_edges`, see [`phylograftR::identify_grafted()`][identify_grafted]),
 #'   a set of grafted phylogenies (class `"multiPhylo"`, e.g., several simulations), or a list of them with one element per map (output of the grafting functions with a `"multiSimmap"`).
-#'   Only one phylogeny is plotted: see `index`.
+#'   **Only one phylogeny is plotted**: see `index`.
 #' @param which Character string. What to highlight: `"both"` (default) for the grafted branches and tips, `"edges"` for the grafted branches only, or `"tips"` for the grafted tips only.
 #' @param color Character string. Color used to highlight the grafted elements. Default is `"red"`.
 #'   For a plain phylogeny, the grafted branches and the grafted tip labels are drawn in this color.
@@ -43,7 +43,7 @@
 #' ### Simmap
 #'
 #' A branch of a simmap is drawn in the color of its state, so the grafted branches cannot be highlighted by a color without hiding their state.
-#' They are drawn as dashed lines instead, with `which = "edges"` or `"both"`.
+#' They are **drawn as dashed lines** instead, with `which = "edges"` or `"both"`.
 #' The labels of the grafted tips, with `which = "tips"` or `"both"`, are drawn in `color`.
 #' Only rightwards phylograms (`direction = "rightwards"`) are supported for simmaps.
 #'

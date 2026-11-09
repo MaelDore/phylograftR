@@ -24,11 +24,11 @@
 #'
 #'   The function accepts a single contMap, typically built with [`phytools::contMap()`][phytools::contMap],
 #'   or a list of contMaps typically obtained from continuous stochastic mapping approach such as the one featured in the `contsimmap` R package.
-#'   A single `contMap` gives a single `simmap`. A list of `contMap`s, typically covering the uncertainty of the reconstruction
-#'   (e.g., one `contMap` per stochastic history of a continuous trait), gives a `multiSimmap`, with one `simmap` per `contMap`.
+#'   **A single `contMap` gives a single `simmap`.** A list of `contMap`s, typically covering the uncertainty of the reconstruction
+#'   (e.g., one `contMap` per stochastic history of a continuous trait), gives a **`multiSimmap`**, with **one `simmap` per `contMap`**.
 #'
 #' @param contMap An object of class `"contMap"`, or a list of such objects.
-#'   All the `contMap`s of a list must be built on the same phylogeny (same tips, topology, branch lengths and order of the edges).
+#'   **All the `contMap`s of a list must be built on the same phylogeny** (same tips, topology, branch lengths and order of the edges).
 #'   A list is named after the names of the `contMap`s, with `map_1`, `map_2`, ... if no names are provided.
 #' @param breaks Numeric vector. The interior cut points between the bins, in the units of the trait. Values lower than the first
 #'   cut point belong to the first state, and so on. They must be provided in increasing order, be different values, and lie within the range of the trait values (see Details).
@@ -39,7 +39,7 @@
 #'   They must be provided in increasing order and be different values, otherwise a warning is sent and they are sorted and/or the duplicated values removed
 #'   (e.g., `c(1/3, 2/3)` for three bins of equal numbers of tips). Exactly one of `breaks`, `n_bins` and `probs` arguments must be provided.
 #' @param states Character vector. The names of the states, from the bin with the lowest values to the bin with the highest values.
-#'   Its length must match the number of bins: the number of interior cut points + 1.
+#'   Its length must match the number of bins: **the number of interior cut points + 1**.
 #' @param min_segment_proportion Numeric between 0 (included) and 1 (excluded). The minimum duration of a segment of a branch, as a proportion of the depth of the tree (root age). Default is `0.01`.
 #'   Shorter segments are merged into their longest neighbour on the branch (see Details for why this may matter). Use `0` to keep every crossing of a cut point.
 #' @param verbose Logical. Whether to print the progress of the conversion (every 10% of the `contMap`s) when a list of several `contMap`s is provided. Default is `TRUE`.
@@ -52,11 +52,11 @@
 #' and linearly interpolated along the branches.
 #'
 #' During discretization, each segment is assigned to the bin its value falls in, and consecutive segments of the same bin are merged.
-#' A value equal to a cut point belongs to the bin above it. The result is a `simmap` (as in [`phytools::make.simmap()`][phytools::make.simmap]) where the states are the bins.
+#' **A value equal to a cut point belongs to the bin above it.** The result is a `simmap` (as in [`phytools::make.simmap()`][phytools::make.simmap]) where the states are the bins.
 #'
 #' ### Cutting the trait values
 #'
-#' Provide exactly one of the three arguments:
+#' **Provide exactly one of the three arguments:**
 #'   * `breaks`: the cut points are chosen by the user.
 #'   * `n_bins`: uses bins of equal width over the range of the tip values.
 #'   * `probs`: uses bins defined by quantiles of the tip values.
@@ -67,13 +67,13 @@
 #' As a consequence, bins defined from the tips will contain a smaller share of the internal branches for the extreme states than for the intermediate states.
 #'
 #' `breaks` must be interior cut points: they must lie within the range of the trait values, i.e.,
-#' between the minimum and the maximum of the values of all the `contMap`s. A cut point beyond this range is an error.
+#' between the minimum and the maximum of the values of all the `contMap`s. **A cut point beyond this range is an error.**
 #' A cut point equal to the minimum or the maximum is ignored with a warning, because it would define an empty bin.
 #'
 #' The cut points must be in increasing order and different values. This is checked for the three arguments, including the cut points derived from `n_bins` and `probs`
 #' (e.g., many tips sharing the same value can give identical quantiles). Unsorted cut points are sorted, and duplicated values are removed, with an informative warning.
 #'
-#' The number of `states` must be equal to the number of bins (the number of cut points + 1, after the cut points equal to the boundaries were ignored).
+#' **The number of `states` must be equal to the number of bins** (the number of cut points + 1, after the cut points equal to the boundaries were ignored).
 #' Removing cut points reduces the number of bins, so `states` must match the number of bins left.
 #'
 #' ### Short segments
@@ -81,7 +81,7 @@
 #' When using `contMap`s derived from continuous stochastic mapping processes such as the one featured in the `contsimmap` R package,
 #' trait values can wander around a cut point: the trait evolutionary history can crosses the threshold several times over short distances,
 #' resulting in tiny segments alternating states.
-#' Segments shorter than `min_segment_proportion` times the depth of the tree are merged, from the shortest to the longest, into their longest neighbour on the same branch.
+#' **Segments shorter than `min_segment_proportion` times the depth of the tree are merged**, from the shortest to the longest, into their longest neighbour on the same branch.
 #' A branch shorter than the minimum length gets a single state: the one with the longest total duration, or the state of the tip for a terminal branch.
 #' On a terminal branch, the segment at the tip is never merged away to ensure tip states matched with observed tip data.
 #' Setting `min_segment_proportion = 0` keeps all the crossings.
@@ -93,7 +93,7 @@
 #' ### Cautions for interpretation
 #'
 #' * The resulting `simmap`s is/are a discretization of the reconstructed trait to constrain the grafting of missing taxa.
-#'   It is not a stochastic map of a discrete trait: the number of transitions depends on the resolution of the `contMap` and on `min_segment_proportion`
+#'   **It is not a stochastic map of a discrete trait**: the number of transitions depends on the resolution of the `contMap` and on `min_segment_proportion`
 #'   and should not be interpreted as a rate of evolution of discrete states.
 #'
 #' * Nodes with reconstructed values close to a cut point have uncertain states. Providing a list of `contMap`s
@@ -106,7 +106,7 @@
 #'
 #' A single `contMap` is a point estimate. To cover the uncertainty of the reconstruction, provide a list of `contMap`s, each one built from one possible history of the trait.
 #' For example, the `contsimmap` R package samples histories of a continuous trait on a phylogeny, and the function [`deepSTRAPP::convert_contsimmap_to_contMaps()`][deepSTRAPP::convert_contsimmap_to_contMaps]
-#' converts them into a list of `contMap`s (see Examples). The output of this function is then a `multiSimmap`, that can be used in the grafting functions like any `multiSimmap`,
+#' converts them into a list of `contMap`s (see Examples). The output of this function is then a **`multiSimmap`**, that can be used in the grafting functions like any `multiSimmap`,
 #' to account for uncertainty in the ancestral trait reconstructions.
 #'
 #'
@@ -114,8 +114,8 @@
 #' * If `contMap` is a single `contMap`: an object of class `"simmap"`.
 #' * If `contMap` is a list of `contMap`s: an object of class `"multiSimmap"` in which each element is a `"simmap"` ordered to match the initial `contMap`s.
 #'
-#' The interior cut points used to discretize the trait values are stored in the attribute `"breaks"` of the output,
-#' and the names of the states (from the lowest to the highest values) in its attribute `"states"`.
+#' The interior cut points used to discretize the trait values are stored in the attribute **`"breaks"`** of the output,
+#' and the names of the states (from the lowest to the highest values) in its attribute **`"states"`**.
 #' They allow to convert other values, e.g., the trait values of the missing taxa, into the same states
 #' with [`phylograftR::convert_values_to_states()`][convert_values_to_states].
 #'

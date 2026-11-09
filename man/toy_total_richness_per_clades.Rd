@@ -12,7 +12,7 @@ the same as in \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa
 data(toy_total_richness_per_clades)
 }
 \description{
-List usable as \code{total_richness_per_clades} with \code{\link[=toy_backbone]{phylograftR::toy_backbone}} and \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}.
+*List usable as \code{total_richness_per_clades} with \code{\link[=toy_backbone]{phylograftR::toy_backbone}} and \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}.
 It is built from the table \code{system.file("extdata", "toy_total_richness.csv", package = "phylograftR")}, with the tips of each clade separated by commas (see the examples).
 }
 \examples{

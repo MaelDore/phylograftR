@@ -13,7 +13,7 @@ from the rootward node to the tipward node), \verb{$mapped.edge} (total duration
 data(toy_simmap_elevation)
 }
 \description{
-Stochastic character map (simmap) of \code{\link[=toy_backbone]{phylograftR::toy_backbone}} with two elevation states, \code{"high"} and \code{"low"},
+Stochastic character map (simmap) of \code{\link[=toy_backbone]{phylograftR::toy_backbone}} with \strong{two elevation states}, \code{"high"} and \code{"low"},
 to combine with \code{\link[=toy_simmap]{phylograftR::toy_simmap}} (color) or \code{\link[=toy_simmap_ranges]{phylograftR::toy_simmap_ranges}} (biogeographic ranges)
 as examples of attribute-based constraints applied on two traits at once.
 

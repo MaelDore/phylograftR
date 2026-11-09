@@ -29,17 +29,17 @@ Tables to build a \code{missing_taxa_list} from taxonomic names with
 \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}}, consistent with \code{\link[=toy_backbone]{phylograftR::toy_backbone}}.
 
 \code{toy_backbone_taxonomic_table} gives the taxonomy of the 30 tips of the backbone, with four levels (\code{Family}, \code{Subfamily}, \code{Tribe}, \code{Genus}).
-All the groups are monophyletic. Some tips have no group at the finest levels (\code{NA}), as often in real data.
+\strong{All the groups are monophyletic.} Some tips have no group at the finest levels (\code{NA}), as often in real data.
 
-\code{toy_missing_taxa_taxonomic_table} describes 10 taxa to graft. The first seven (\code{Type = "taxa"}) are the taxa of
+\code{toy_missing_taxa_taxonomic_table} describes 10 taxa to graft. The first seven (\strong{\code{Type = "taxa"}}) are the taxa of
 \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}, written with taxonomic names: the clades, excluded subclades and stem settings are the same.
-The last three (\code{Type = "clades"}) are taxa to graft as sister clades with \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}:
+The last three (\strong{\code{Type = "clades"}}) are taxa to graft as sister clades with \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}:
 \code{Genus_d_sp1} and \code{Genus_d_sp2} belong to a new genus sister to the genus \code{Gen_1}, so they are grafted together as a missing clade, and \code{Genus_e_sp1} is sister to its own tribe.
 The target and sister clades are written with the name of a group (e.g., \code{"Family_B"}) or of a level (e.g., \code{"Family"}, meaning the family of the taxon itself).
 Both tables are also provided as \code{.csv} files in \code{system.file("extdata", package = "phylograftR")}
 (\code{toy_backbone_taxonomic_table.csv} and \code{toy_missing_taxa_taxonomic_table.csv}).
 
-The clades are named after their taxonomic groups (e.g., \code{"Family_A"}), as in \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}
+\strong{The clades are named after their taxonomic groups} (e.g., \code{"Family_A"}), as in \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}
 and \code{\link[=toy_total_richness_per_clades]{phylograftR::toy_total_richness_per_clades}}, so the lists built from the taxonomy can be used with this richness list.
 }
 \examples{

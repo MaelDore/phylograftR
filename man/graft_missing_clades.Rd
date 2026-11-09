@@ -33,27 +33,27 @@ graft_missing_clades(
 \item{phy}{An object of class \code{"phylo"}. The backbone phylogeny on which taxa are grafted.
 It must be rooted, binary (no polytomies) and ultrametric (i.e., be time-calibrated).}
 
-\item{missing_taxa_list}{A list with the information on the taxa to graft. Items:
+\item{missing_taxa_list}{A list with the information on the taxa to graft. \strong{Every item provided must be named after \verb{$Taxon_name}.} Items:
 \itemize{
-\item \verb{$Taxon_name}: Character vector of the names of the taxa to graft. Names must be unique and absent from \code{phy$tip.label}.
-\item \verb{$Sister_clade}: List (named after \verb{$Taxon_name}) of character vectors. For each taxon, the tip labels defining the clade of the backbone
-that is sister to the missing clade. Taxa with the same sister clade are grafted together as one missing clade.
+\item \verb{$Taxon_name}: Character vector of the names of the taxa to graft. \strong{Names must be unique and absent from \code{phy$tip.label}.}
+\item \verb{$Sister_clade}: List (named after \verb{$Taxon_name}) of character vectors. For each taxon, the tip labels defining the \strong{sister clade}, i.e., the clade of the backbone
+that is sister to the missing clade. \strong{Taxa with the same sister clade are grafted together as one missing clade.}
 A pair of tips defines the clade as their MRCA node. A single tip defines the "clade" as the terminal branch of this tip.
-Clades, including the excluded subclades (see below), must be defined by tips: node IDs are not accepted (the function stops, and lists some of them).
+\strong{Clades must be defined by tips: node IDs are not accepted} (the function stops, and lists some of them).
 Use \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} to convert node IDs into pairs of tips.
 \item \verb{$Sister_clade_name}: (Optional) Character vector (named after \verb{$Taxon_name}) of the names of the sister clades (\code{NA} if a clade has no name).
-Taxa sharing the same sister clade must have the same name. The names are not used for the grafting, but, if \code{total_richness_per_clades} is provided,
+\strong{Taxa sharing the same sister clade must have the same name.} The names are not used for the grafting, but, if \code{total_richness_per_clades} is provided,
 they are checked against its \verb{$Sister_clade_name} (a clade must have the same name in both objects).
 \item \verb{$allowed_states}: (Optional) List (named after \verb{$Taxon_name}) of character vectors. For each taxon, the states of the \code{simmap} in which its missing clade
-can be grafted on the stem branch of its sister clade. It overrides the global argument \code{allowed_states} for this taxon. \code{NULL} or \code{NA} use the global argument.
-Only used with a \code{simmap}. Taxa with the same sister clade are grafted together as one missing clade, so they must have the same allowed states
+can be grafted on the stem branch of its sister clade. It \strong{overrides the global argument} \code{allowed_states} for this taxon. \code{NULL} or \code{NA} use the global argument.
+Only used with a \code{simmap}. Taxa with the same sister clade are grafted together as one missing clade, so \strong{they must have the same allowed states}
 (the function stops otherwise, and lists the clades concerned).
 With the maps of several traits, each element is a list with the states of each trait (\code{NULL}: no taxon-level value for the trait), e.g.,
 \code{list(M1 = list(c("blue", "green"), "high"), M2 = list(NULL, "low"))} (see 'Several traits' in Details section).
 }}
 
 \item{min_tips}{Integer. Minimum number of tips of the clade used to fit the birth-death model.
-If the sister clade has fewer tips, the smallest enclosing clade with at least \code{min_tips} tips is used instead. Must be at least 3. Default is \code{5}.}
+If the sister clade has fewer tips, the smallest enclosing clade with at least \code{min_tips} tips is used instead. \strong{Must be at least 3.} Default is \code{5}.}
 
 \item{return_BD_model_summary}{Logical. Whether to report the birth-death models fitted during the grafting.
 If \code{TRUE}, each grafted phylogeny has the attribute \code{"BD_model_summary"}: a data.frame with one row per model (i.e., per missing clade),
@@ -64,19 +64,18 @@ It can be extracted a posteriori with \code{\link[=extract_BD_model_summary]{phy
 nor in \code{missing_taxa_list} (i.e., unsampled species) when fitting the birth-death models. Items:
 \itemize{
 \item \verb{$Sister_clade}: List of character vectors of tips, defining clades as in \code{missing_taxa_list$Sister_clade}.
-Node IDs are not accepted: convert them with \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} in the same call as \code{missing_taxa_list},
+\strong{Node IDs are not accepted}: convert them with \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} in the same call as \code{missing_taxa_list},
 so the tips of the clades match between both objects.
-It must cover all the unique sister clades of \code{missing_taxa_list}. It can include other clades, e.g., enclosing clades.
+\strong{It must cover all the unique sister clades of \code{missing_taxa_list}.} It can include other clades, e.g., enclosing clades.
 \item \verb{$Sister_clade_name}: (Optional) Character vector of the names of the clades, same length as \verb{$Sister_clade} (\code{NA} if a clade has no name).
-The names must be unique. If \code{missing_taxa_list$Sister_clade_name} is provided, a clade must have the same name in both objects (the function stops otherwise).
+The names must be unique. If \code{missing_taxa_list$Sister_clade_name} is provided, \strong{a clade must have the same name in both objects} (the function stops otherwise).
 They are not used for the grafting, but they are reported by \code{\link[=extract_sampling_info]{phylograftR::extract_sampling_info()}}.
 \item \verb{$total_richness}: Vector of positive integers, same length as \verb{$Sister_clade}. Total number of species of each clade,
 i.e., backbone species, missing species nested within the clade, and unsampled species. Use \code{NA} if unknown: the unsampled species
 are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
 }
 
-With \code{NULL} (default), missing species to graft and backbone species
-are assumed to cover all species in the focal group (no unsampled species).
+With \code{NULL} (default), missing species to graft and backbone species are assumed to cover all species in the focal group (no unsampled species).
 If the list is provided with only \code{NA} in \verb{$total_richness}, the fits are identical (no unsampled species in any clade, \code{total_richness} = backbone + missing species).
 
 To obtain a posteriori the species richness and the effective sampling fraction of the clades in each grafted phylogeny,
@@ -140,7 +139,7 @@ See 'Multiple simulations' in Details section for handling of the output, the se
 \item{force_simulations}{Logical. Whether to try new seeds until \code{nb_simulations} grafted phylogenies are obtained, up to \code{10 * nb_simulations} attempts
 (see 'Multiple simulations' in Details section). If \code{FALSE}, the simulations that fail are skipped. Default is \code{FALSE}.}
 
-\item{parallel}{Logical or \code{NULL}. Whether to run the simulations in parallel, with the packages \code{future} and \code{future.apply} (they must be installed separately from phylograftR).
+\item{parallel}{Logical or \code{NULL}. Whether to run the simulations in parallel, with the packages \code{future} and \code{future.apply} (\strong{they must be installed separately from phylograftR}).
 Default is \code{NULL}: the simulations are run in parallel if the user set a \code{future} plan with several workers beforehand (e.g., \code{future::plan(future::multisession, workers = 4)}), and sequentially otherwise.
 \code{FALSE} forces a sequential run, even if a plan is set. \code{TRUE} execute the \code{future} plan, but stops with an informative error if the packages are not installed or no plan is set.
 See 'Parallel computation' in Details section for recommendations on whether parallelization is useful in your case.}
@@ -160,7 +159,7 @@ See 'Temporary saves and resuming' in the Details section.}
 \item{clean_temp_files}{Logical. Whether to delete all the temporary files of the run once it is completed without stopping/crashing. Only used if \code{save_temp = TRUE}.
 If the run crashes or is interrupted, nothing is deleted so it can be resumed. Use \code{FALSE} to keep the files. Default is \code{TRUE}.}
 
-\item{resume}{Logical. Whether to resume an interrupted run from its temporary files, which must come from a run with the exact same arguments (see 'Temporary saves and resuming').
+\item{resume}{Logical. Whether to resume an interrupted run from its temporary files, which \strong{must come from a run with the exact same arguments} (see 'Temporary saves and resuming').
 Needs \code{save_temp = TRUE}. Default is \code{FALSE}.}
 
 \item{ultrametric_tol}{Numeric. Tolerance used by \code{ape::is.ultrametric()} for the ultrametricity checks of the backbone and of the final phylogeny.
@@ -181,7 +180,7 @@ i.e., branches with only grafted taxa descending from them. Names are the IDs of
 Use them to color the phylogeny on plots (see examples).
 }
 
-These elements are not updated by functions that modify the phylogeny (e.g., \code{ape::drop.tip()}, which removes tips but keeps the other elements as they are,
+\strong{These elements are not updated by functions that modify the phylogeny} (e.g., \code{ape::drop.tip()}, which removes tips but keeps the other elements as they are,
 and \code{ape::write.tree()}, which removes them). Use \code{\link[=identify_grafted]{phylograftR::identify_grafted()}} to recompute \code{grafted_tips} and \code{grafted_edges} on a manipulated phylogeny.
 
 Optional elements can be added to the output based on what optional argument was provided:
@@ -209,7 +208,7 @@ The phylogenies have the attributes \code{"seed"} (their seed, unless \code{seed
 }
 \description{
 This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny as clades sister to clades of the backbone.
-Missing taxa sharing the same sister clade are grafted together as ONE missing clade, on the stem branch of their sister clade.
+Missing taxa sharing the same sister clade are \strong{grafted together as one missing clade}, on the stem branch of their sister clade.
 
 The divergence time of the missing clade is drawn from a birth-death model fitted on the sister clade,
 and the missing clade is grown under the same model, conditioned on its number of taxa and its stem age.
@@ -217,12 +216,12 @@ and the missing clade is grown under the same model, conditioned on its number o
 \details{
 \subsection{Stop conditions}{
 
-The function stops, before any grafting, if the backbone is not ultrametric, or if a sister clade is the whole tree (it has no stem branch to graft on).
+The function \strong{stops, before any grafting,} if the backbone is not ultrametric, or if a sister clade is the whole tree (it has no stem branch to graft on).
 }
 
 \subsection{Grafting process}{
 
-Groups of missing taxa sharing the same sister clade are ordered by the size of the sister clade, so nested sister clades are processed first.
+Groups of missing taxa sharing the same sister clade are ordered by the size of the sister clade, so \strong{nested sister clades are processed first}.
 For each group:
 \enumerate{
 \item A birth-death model is fitted with \code{phytools::fit.bd()} on the sister clade, or on the smallest enclosing clade with at least \code{min_tips} tips.
@@ -266,7 +265,7 @@ If there is none, \code{nb_unsampled = 0}. The rationale is that even if \code{n
 
 If \code{total_richness_per_clades = NULL}, \code{nb_unsampled = 0}: the clades have no unsampled species (the same as providing only \code{NA} in \verb{$total_richness}).
 
-Each missing clade is grafted on the stem branch of its sister clade in all the grafted phylogenies: only the divergence times vary among simulations and maps.
+\strong{Each missing clade is grafted on the stem branch of its sister clade in all the grafted phylogenies: only the divergence times vary among simulations and maps.}
 The species present in each listed sister clade, and the resulting sampling fractions for downstream analyses, are therefore the same in all the grafted phylogenies.
 Use \code{\link[=extract_sampling_info]{phylograftR::extract_sampling_info()}} to extract them a posteriori.
 
@@ -279,20 +278,20 @@ or if a clade has fewer unsampled species than the sum of the clades with an inf
 
 A \code{simmap} describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
 Missing clades are grafted on the stem branch of a clade of the backbone, and the function assumes that the user considers this stem branch a valid place for them.
-Restricting the grafting to some states of the stem branch is therefore only useful when the user has a strong hypothesis about a change of state
-along the stem branch that should affect where the missing clade can be grafted. For most uses, the \code{simmap} is not needed.
+\strong{Restricting the grafting to some states of the stem branch is therefore only useful when the user has a strong hypothesis about a change of state
+along the stem branch that should affect where the missing clade can be grafted. For most uses, the \code{simmap} is not needed.}
 
 For example, in biogeography: a stem fossil is found in range A, and the sister clade is in range A, while the missing clade is in range B.
 If the shift from range B to range A on the stem branch of the sister clade is estimated to have occurred before the age of the fossil,
 the missing clade can be restricted to the part of the stem branch before the shift, with \code{allowed_states = "B"}.
 
-With a \code{simmap}, a missing clade is only grafted on the pieces of the stem branch of its sister clade that are in its allowed states
+With a \code{simmap}, \strong{a missing clade is only grafted on the pieces of the stem branch of its sister clade that are in its allowed states}
 (\code{missing_taxa_list$allowed_states} of its taxa if provided, otherwise the global argument \code{allowed_states}).
 The divergence time of the missing clade is drawn with \code{TreeSim::corsim()} as without a \code{simmap}: if it falls in a part of the stem branch that is not in an allowed state,
 it is drawn again, up to \code{max_age_redraws} times.
 
-The \code{simmap} can also be provided so that the states are updated alongside the phylogeny: the whole missing clade (all its taxa and branches)
-inherits the state of the point of the stem branch where it is grafted. The updated \code{simmap} is returned in \verb{$simmap}, if \code{return_simmap = TRUE}).
+The \code{simmap} can also be provided so that the states are updated alongside the phylogeny: \strong{the whole missing clade (all its taxa and branches)
+inherits the state of the point of the stem branch where it is grafted.} The updated \code{simmap} is returned in \verb{$simmap}, if \code{return_simmap = TRUE}).
 The allowed states are not required: without any allowed states, all the states are allowed, grafting is not restricted by the states,
 but the simmap will be updated, assuming grafted clades inherit the state of the point where they are grafted.
 
@@ -321,7 +320,7 @@ With \code{treat_states_as_ranges = TRUE}, the states of the \code{simmap} are b
 (one capital letter per area, and the letters of a multi-area range in alphabetical order, e.g., \code{"AB"}),
 and the allowed states are the ranges a missing clade can have.
 
-An allowed range matches a state of the \code{simmap} if it is contained in it: a missing clade allowed in \code{"A"} can be grafted on the parts of the stem branch in \code{"A"}, \code{"AB"} or \code{"ABC"},
+\strong{An allowed range matches a state of the \code{simmap} if it is contained in it}: a missing clade allowed in \code{"A"} can be grafted on the parts of the stem branch in \code{"A"}, \code{"AB"} or \code{"ABC"},
 whereas a missing clade allowed in \code{"AB"} only can be grafted on the parts of the stem branch in \code{"AB"} or \code{"ABC"}.
 
 When multiple allowed states are provided, the inherited range is drawn randomly from the allowed ranges enclosed within the range of the stem branch piece where it is grafted.
@@ -336,7 +335,7 @@ Each simulation starts again from the backbone: the birth-death models are fitte
 and the simulations do not share anything but the inputs. The phylogenies are returned in a \code{"multiPhylo"} object (a single \code{"phylo"} if \code{nb_simulations = 1}),
 and the memory used grows with the number of simulations.
 
-The first simulation uses \code{seed}, so it is the same phylogeny as a run with \code{nb_simulations = 1} and the same \code{seed}.
+\strong{The first simulation uses \code{seed}}, so it is the same phylogeny as a run with \code{nb_simulations = 1} and the same \code{seed}.
 The seeds of the other simulations are drawn from a stream started by \code{seed}, and returned in the attribute \code{"seeds"}:
 a simulation can be reproduced alone with its seed, and the first simulations of a longer run are the same as the ones of a shorter run.
 With \code{seed = NULL}, the simulations follow the random number generator of the session.
@@ -355,8 +354,8 @@ With \code{save_temp = TRUE}, each simulation saves its own temporary file (see 
 
 When multiple stochastic maps of the same trait are provided as a \code{"multiSimmap"}, the grafting is run with each of its maps.
 The maps are alternative hypotheses of the evolution of the same trait (or range), used as alternative constraints.
-All the maps and the simulations are crossed: each map is used for \code{nb_simulations} simulations, so \code{P} maps give \code{P * nb_simulations} grafted phylogenies.
-This can lead to a quick inflation of computation time, thus a warning is sent if the total number of grafted phylogenies (\code{P * nb_simulations}) is more than 1000.
+\strong{All the maps and the simulations are crossed}: each map is used for \code{nb_simulations} simulations, so \code{P} maps give \code{P * nb_simulations} grafted phylogenies.
+This can lead to a quick inflation of computation time, thus a warning is sent if the total number of grafted phylogenies (\code{P * nb_simulations}) is more than \strong{1000}.
 
 The output is a list with one element per stochastic map, named after the maps (the names of the \code{"multiSimmap"} if it has some, otherwise \code{"map_1"}, ..., \code{"map_P"}).
 With \code{nb_simulations = 1}, each element is a grafted phylogeny. With several simulations, each element is a \code{"multiPhylo"} (see 'Multiple simulations')
@@ -375,7 +374,7 @@ The maps of several traits can be used at once to constrain grafting. \code{simm
 (e.g., \code{simmap = list(color = color_simmap, elevation = elevation_simmap)}). The elements can be named after the traits (with different names that cannot contain \verb{;}, \verb{,}, \code{=} or \code{|}),
 otherwise the traits are named \code{"trait_1"}, \code{"trait_2"}, ... All the maps must have the same tips, topology and branch lengths as the backbone \code{phy}.
 
-A taxon can only be grafted on the parts of the branches that are in one of its allowed states, for every trait.
+\strong{A taxon can only be grafted on the parts of the branches that are in one of its allowed states, for every trait.}
 The allowed states are provided for each trait, in the order of the list of maps (or named after the traits):
 the global argument \code{allowed_states} is a list with one element per trait, e.g., \code{list(c("blue", "green"), NULL, "high")} for three traits,
 and \code{missing_taxa_list$allowed_states} has such a list for each taxon.
@@ -388,7 +387,7 @@ With \code{return_simmap = TRUE}, \verb{$simmap} is a list of updated simmaps, o
 In each simmap, a grafted branch is entirely in the state of each trait at the point where it was grafted (each trait is inherited from the lineage it was grafted on).
 
 With a list of \code{"multiSimmap"} provided as \code{simmap}, the maps of the traits are paired: the grafting is run with the map 1 of every trait, then the map 2 of every trait, and so on.
-All the traits must therefore have the same number of maps to be associated in a given grafting process.
+\strong{All the traits must therefore have the same number of maps} to be associated in a given grafting process.
 
 One of the traits can be treated as biogeographic ranges combined with any number of other traits.
 Use a logical vector in \code{treat_states_as_ranges}to define which of the trait is to be treated as biogeographic ranges for inheritance.
@@ -398,15 +397,15 @@ For instance, a missing clade allowed in \code{"A;high"} can be grafted on stem 
 whereas a missing clade allowed in \code{"AB;high"} only can be grafted on stem branch pieces in \code{"AB;high"} or \code{"ABC;high"}.
 
 The other traits are matched exactly, and are inherited as they are from the point where the clade is grafted: with \code{"AB"} and \code{"high"} at the graft point and the allowed range \code{"A"},
-the whole missing clade inherits \code{"A"} and \code{"high"}. Only one trait can be treated as ranges to prevent inflation of the number of combined allowed states to consider.
+the whole missing clade inherits \code{"A"} and \code{"high"}. \strong{Only one trait can be treated as ranges} to prevent inflation of the number of combined allowed states to consider.
 }
 
 \subsection{Parallel computation}{
 
 The simulations based on the different stochastic maps and seeds are independent, so they can be run in parallel with the package \code{future} and \code{future.apply}.
-Both packages must be installed independently from phylograftR (they are only suggested).
+\strong{Both packages must be installed independently from phylograftR}.
 
-The grafting function does not manage the workers: you must set a plan beforehand, e.g., \code{future::plan(future::multisession, workers = 4)},
+The grafting function does not manage the workers: \strong{you must set a plan beforehand}, e.g., \code{future::plan(future::multisession, workers = 4)},
 and reset it afterwards with \code{future::plan(future::sequential)}. With the default \code{parallel = NULL}, the function uses the plan if there is one, \code{parallel = FALSE} ignores it.
 All the \code{P * nb_simulations} simulations (with \code{P} stochastic maps per trait) are run as one set of tasks, so the workers are used evenly.
 
@@ -414,7 +413,7 @@ The output is exactly the same as without parallelization.
 The messages, warnings and printed output of the simulations are relayed to the session when the tasks are collected (so they appear after the simulations, not live),
 and with \code{verbose = TRUE} one line is printed when each simulation is done.
 
-Setting up the workers and sending the data to them has a time cost, so parallelization only pays off with large backbone phylogenies, or many simulations or maps.
+Setting up the workers and sending the data to them has a time cost, so \strong{parallelization only pays off with large backbone phylogenies, or many simulations or maps}.
 As a rule of thumb, use parallel computation when the sequential run would last more than a minute or so, i.e., for large backbone phylogenies (500 tips or more) and several grafted phylogenies
 (\code{nb_maps * nb_simulations}), or for 50 or more grafted phylogenies on small backbones.
 }
@@ -439,13 +438,13 @@ The object is a regular \code{"phylo"} with the attribute \code{"phylograftR_tem
 Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with \verb{$simmap}, \verb{$grafted_tips}, etc.).
 
 With \code{clean_temp_files = TRUE} (default), all the temporary files of the run are deleted once the function returns without crashing.
-A run that crashes or is interrupted never deletes its files, so it can be resumed with \code{resume = TRUE}.
+\strong{A run that crashes or is interrupted never deletes its files}, so it can be resumed with \code{resume = TRUE}.
 Use \code{clean_temp_files = FALSE} to keep the files after a successful run.
 
 With \code{resume = TRUE}, the function must be called again with \strong{exactly the same arguments} as the interrupted run.
 For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
 
-Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a \code{missing_taxa_list} restricted to these taxa:
+\strong{Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone}, with a \code{missing_taxa_list} restricted to these taxa:
 the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
 the identification of the grafted tips and the updated \code{simmap} would be wrong, and a \code{simmap} of the initial backbone would not match the temporary phylogeny.
 Use \code{resume = TRUE} instead.

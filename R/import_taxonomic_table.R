@@ -17,7 +17,7 @@
 #'   Two tables are used to build a `missing_taxa_list` from taxonomy: the taxonomy of the tips of the backbone phylogeny (`type = "backbone"`),
 #'   and the description of the taxa to graft (`type = "missing_taxa"`). Each one is read with a call of the function.
 #'
-#'   Taxonomic tables are the go-to option for large phylogenies with neatly defined taxonomic levels (see Details).
+#'   **Taxonomic tables are the go-to option for large phylogenies with neatly defined taxonomic levels** (see Details).
 #'
 #' @param file Character string. Path to the file with the table.
 #'   The format is chosen from the extension of the file: `".csv"` (comma-separated), `".tsv"`, `".tab"` or `".txt"` (tab-separated),
@@ -28,11 +28,11 @@
 #'   * `"missing_taxa"` for the description of the taxa to graft (one row per taxon).
 #'   See Details for the columns of each one.
 #' @param phy An object of class `"phylo"`, or `NULL`. Optional backbone phylogeny, used to check the table against its tips:
-#'   all the tips of a `"backbone"` table must be tips of `phy`, and no taxon of a `"missing_taxa"` table can already be a tip of `phy`.
+#'   **all the tips of a `"backbone"` table must be tips of `phy`, and no taxon of a `"missing_taxa"` table can already be a tip of `phy`.**
 #'   Default is `NULL`, with no check against the phylogeny (it is anyway done by [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy]).
 #' @param sep Character string. Field separator of a text file. Default is `NULL`, to choose it from the extension of the file:
 #'   `","` for `.csv`, and a tab for `.tsv`, `.tab` and `.txt`. Semicolons are also used inside the cells of the table of the missing taxa (to separate the excluded subclades, and their stems),
-#'   so do not use them as field separator, and quote the cells that contain commas (e.g., `allowed_states`).
+#'   so do not use them as field separator, and **quote the cells that contain commas** (e.g., `allowed_states`).
 #' @param sheet Character string or integer. Only used for Excel files. Name or position of the sheet to read. Default is `1`.
 #'   Both taxonomic tables can be stored in two sheets of the same Excel file, and read with two calls.
 #' @param reader Function. Optional function used to read `file`, to import any other format (e.g., `.ods`, or an export of an online spreadsheet).
@@ -44,22 +44,22 @@
 #' @details
 #' **When to use taxonomic tables**
 #'
-#' Taxonomic tables are the go-to option for large phylogenies with neatly defined taxonomic levels (e.g., Family, Subfamily, Tribe, Genus). The taxonomy of the backbone is provided once,
+#' **Taxonomic tables are the go-to option for large phylogenies with neatly defined taxonomic levels** (e.g., Family, Subfamily, Tribe, Genus). The taxonomy of the backbone is provided once,
 #' and each taxon to graft only needs its own taxonomic levels: the constraints (target clade, sister clade, excluded subclades) are written with the names of the groups or of the taxonomic levels to use,
 #' and the clades are retrieved from the phylogeny. The same group is therefore always the same clade, whatever the number of taxa, which avoids the typos and
 #' inconsistencies of clades written taxon by taxon, and the tables can be taken as such from a taxonomic database.
 #'
-#' The limit is that only the taxonomic groups of the backbone table can be used as clades. To fine-tune the grafting of some taxa with any other node of the phylogeny
-#' (e.g., a clade without a name, a part of a group, or a group of several genera), define their clades by tips or node IDs with
+#' **The limit is that only the taxonomic groups of the backbone table can be used as clades.** To fine-tune the grafting of some taxa with any other node of the phylogeny
+#' (e.g., a clade without a name, a part of a group, or a group of several genera), **define their clades by tips or node IDs** with
 #' [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] or [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] (see 'Fine-tuning the clades' in their Details sections).
 #'
-#' Both routes return the same `missing_taxa_list`, so a list built from taxonomic tables can be adjusted afterwards.
+#' **Both routes return the same `missing_taxa_list`**, so a list built from taxonomic tables can be adjusted afterwards.
 #'
 #' **Backbone table** (`type = "backbone"`)
 #'
-#' One row per tip of the backbone phylogeny. The column `Taxa` (Required) holds the tip labels, and must have unique values.
-#' All the other columns are taxonomic levels (e.g., `Family`, `Subfamily`, `Tribe`, `Genus`, but they can be anything), usually from the broadest to the narrowest.
-#' At least one level is required. The values of a level are the names of the taxonomic groups (e.g., `"Homo"` for a `"Genus"`).
+#' One row per tip of the backbone phylogeny. The column `Taxa` (Required) holds the tip labels, and **must have unique values**.
+#' All the other columns are **taxonomic levels** (e.g., `Family`, `Subfamily`, `Tribe`, `Genus`, but they can be anything), usually from the broadest to the narrowest.
+#' **At least one level is required.** The values of a level are the names of the **taxonomic groups** (e.g., `"Homo"` for a `"Genus"`).
 #' Levels do not have to be informed for all the tips: blank cells and `NA` are missing values.
 #'
 #' **Missing taxa table** (`type = "missing_taxa"`)
@@ -69,7 +69,7 @@
 #' * `Target_clade` (Required for `Type = "taxa"`) or `Sister_clade` (Required for `Type = "clades"`): A single taxonomic group, written either as the name of the group
 #'   (e.g., `"Homo"`), or as the name of a taxonomic level (e.g., `"Genus"`). If a taxonomic level is provided, the group will be identified as recorded in the column of the same name
 #'   in `missing_taxa_taxonomic_table` (e.g., `"Genus"` with `Genus = "Camponotus"` gives the clade of the genus `Camponotus`).
-#'   It is an error if the group is absent from the backbone, or if the taxon has no value at the requested level.
+#'   **It is an error if the group is absent from the backbone, or if the taxon has no value at the requested level.**
 #' * `Excluded_subclades` (Optional, `Type = "taxa"`): Subclades of the target clade where the taxon is known not to belong, separated by semicolons (e.g., `"Pheidole; Camponotus"`).
 #'   Each one is a group or a level name, as in `Target_clade`.
 #' * `$include_target_clade_stem` (Optional, `Type = "taxa"`): Logical. Whether the stem branch of the target clade is a valid placement to graft this taxa (`NA` or empty cell uses the global argument set in the grafting function).
@@ -110,11 +110,13 @@
 #' data(toy_backbone)
 #'
 #' # Import the taxonomy of the backbone: one row per tip, one column per taxonomic level
-#' backbone_taxonomic_table <- import_taxonomic_table(file = backbone_path, type = "backbone", phy = toy_backbone)
+#' backbone_taxonomic_table <- import_taxonomic_table(file = backbone_path, type = "backbone",
+#'                                                    phy = toy_backbone)
 #' head(backbone_taxonomic_table)
 #'
 #' # Import the description of the taxa to graft: one row per taxon
-#' missing_taxa_taxonomic_table <- import_taxonomic_table(file = missing_taxa_path, type = "missing_taxa", phy = toy_backbone)
+#' missing_taxa_taxonomic_table <- import_taxonomic_table(file = missing_taxa_path, type = "missing_taxa",
+#'                                                        phy = toy_backbone)
 #' missing_taxa_taxonomic_table
 #'
 #' # The tables are the datasets provided with the package

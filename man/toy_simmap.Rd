@@ -13,7 +13,7 @@ from the rootward node to the tipward node), \verb{$mapped.edge} (total duration
 data(toy_simmap)
 }
 \description{
-Stochastic character map (simmap) of \code{\link[=toy_backbone]{phylograftR::toy_backbone}} with three states, \code{"blue"}, \code{"green"} and \code{"red"},
+Stochastic character map (simmap) of \code{\link[=toy_backbone]{phylograftR::toy_backbone}} with \strong{three states}, \code{"blue"}, \code{"green"} and \code{"red"},
 named after colors to ease their visualization. It can be used as \code{simmap} to restrict grafting to branches in some states
 (see the examples of the grafting functions).
 

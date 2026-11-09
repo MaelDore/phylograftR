@@ -26,8 +26,8 @@
 #'
 #' @param backbone_taxonomic_table Data frame. Taxonomy of the tips of the backbone phylogeny, with one row per tip.
 #'   The first column must be named `Taxa` and holds the tip labels of `phy`.
-#'   All the other columns are taxonomic levels (e.g., `Family`, `Subfamily`, `Tribe`, `Genus`, but they can be anything), usually from the broadest to the narrowest.
-#'   The values of a level are the names of the taxonomic groups (e.g., `"Homo"`). Levels do not have to be informed for all the tips: blank cells and `NA` are missing values.
+#'   All the other columns are **taxonomic levels** (e.g., `Family`, `Subfamily`, `Tribe`, `Genus`, but they can be anything), usually from the broadest to the narrowest.
+#'   The values of a level are the names of the **taxonomic groups** (e.g., `"Homo"`). Levels do not have to be informed for all the tips: blank cells and `NA` are missing values.
 #'   See Details for the constraints on the names of the levels and groups.
 #' @param missing_taxa_taxonomic_table Data frame. Description of the taxa to graft, with one row per taxon.
 #'   Columns `Taxa` (names of the taxa to graft) and `Type` (`"taxa"` or `"clades"`) are required, as well as the column of the clade to use for grafting (`Target_clade` or `Sister_clade`).
@@ -44,14 +44,15 @@
 #' @details
 #' **When to use taxonomic tables**
 #'
-#' Taxonomic tables are the go-to option for large phylogenies with neatly defined taxonomic levels (e.g., Family, Subfamily, Tribe, Genus). The taxonomy of the backbone is provided once,
+#' **Taxonomic tables are the go-to option for large phylogenies with neatly defined taxonomic levels** (e.g., Family, Subfamily, Tribe, Genus). The taxonomy of the backbone is provided once,
 #' and each taxon to graft only needs its own taxonomic levels: the constraints (target clade, sister clade, excluded subclades) are written with the names of the groups or of the taxonomic levels to use,
 #' and the clades are retrieved from the phylogeny. The same group is therefore always the same clade, whatever the number of taxa, which avoids the typos and
 #' inconsistencies of clades written taxon by taxon, and the tables can be taken as such from a taxonomic database.
 #'
 #' The limit is that only the taxonomic groups of the backbone table can be used as clades. To fine-tune the grafting of some taxa with any other node of the phylogeny
-#' (e.g., a clade without a name, a part of a group, or a group of several genera), define their clades by tips or node IDs with
+#' (e.g., a clade without a name, a part of a group, or a group of several genera), **define their clades by tips or node IDs** with
 #' [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] or [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] (see 'Fine-tuning the clades' in their Details sections).
+#'
 #' Both routes return the same `missing_taxa_list`, so a list built from taxonomic tables can be adjusted afterwards.
 #'
 #' **Backbone taxonomic table**
@@ -65,7 +66,7 @@
 #'
 #' **Missing taxa taxonomic table**
 #'
-#' * `Taxa` (Required): Names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
+#' * `Taxa` (Required): Names of the taxa to graft. **Names must be unique and absent from `phy$tip.label`.**
 #' * `Type` (Required): `"taxa"` for taxa grafted with [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] within a target clade,
 #'   or `"clades"` for taxa grafted with [`phylograftR::graft_missing_clades()`][graft_missing_clades] as a sister of a clade.
 #' * Taxonomic levels (Optional): Same columns as in `backbone_taxonomic_table`. They are used to retrieve the taxonomic group of the taxon when `Target_clade`, `Sister_clade`,
@@ -74,7 +75,7 @@
 #' * `Target_clade` (Required for `Type = "taxa"`) or `Sister_clade` (Required for `Type = "clades"`): A single taxonomic group, written either as the name of the group
 #'   (e.g., `"Homo"`), or as the name of a taxonomic level (e.g., `"Genus"`). If a taxonomic level is provided, the group will be identified as recorded in the column of the same name
 #'   in `missing_taxa_taxonomic_table` (e.g., `"Genus"` with `Genus = "Camponotus"` gives the clade of the genus `Camponotus`).
-#'   It is an error if the group is absent from the backbone, or if the taxon has no value at the requested level.
+#'   **It is an error if the group is absent from the backbone, or if the taxon has no value at the requested level.**
 #' * `Excluded_subclades` (Optional, `Type = "taxa"`): Subclades of the target clade where the taxon is known not to belong, separated by semicolons (e.g., `"Pheidole; Camponotus"`).
 #'   Each one is a group or a level name, as in `Target_clade`.
 #' * `$include_target_clade_stem` (Optional, `Type = "taxa"`): Logical. Whether the stem branch of the target clade is a valid placement to graft this taxa (`NA` uses the global argument set in the grafting function).
@@ -89,7 +90,7 @@
 #'
 #' What to do when a taxonomic group is not monophyletic in `phy`, i.e., when the clade defined by the MRCA of its tips also holds tips of other groups of the same level?
 #'
-#' * `non_monophyletic = "exclude"` (default): For target clades, intruders (i.e., tips from other groups descending from the MRCA) are added to the
+#' * `non_monophyletic = "exclude"` (default): For target clades, **intruders** (i.e., tips from other groups descending from the MRCA) are added to the
 #'   `Excluded_subclades` of the taxon (with their stem, `exclude_subclades_stem = TRUE`), so the taxon is never grafted among intruders.
 #'   Intruders nested within an excluded subclade provided by the user are not added.
 #'   Intruders cannot be removed from a sister clade or from a group of `Excluded_subclades`: the clade of the MRCA is used with a warning (as for `"mrca"`).
@@ -130,21 +131,22 @@
 #' toy_missing_taxa_taxonomic_table
 #'
 #' # The taxa to graft with graft_missing_taxa() (Type = "taxa") use different types of constraints:
-#' # * Genus_a_sp1: grafted in its family (Target_clade = "Family" is the family of the taxon, i.e., "Family_A"),
-#' #   but not in the subfamily "Subfam_A1" nor in the tribe "Tribe_A2a" (Excluded_subclades).
+#' # * Genus_a_sp1: grafted in its family (Target_clade = "Family" is the family of the taxon,
+#' #   i.e., "Family_A"), but not in the subfamily "Subfam_A1" nor in the tribe "Tribe_A2a"
+#' #   (Excluded_subclades).
 #' #   The stem of the family is available (include_target_clade_stem),
 #' #   the stem of "Subfam_A1" is excluded too, but not the one of "Tribe_A2a" (exclude_subclades_stem).
-#' # * Genus_a_sp2: same target clade, but excluded subclades are a tribe and a genus with a single species ("Gen_3"),
-#'     and the stem is excluded for the genus only.
+#' # * Genus_a_sp2: same target clade, but excluded subclades are a tribe
+#' #   and a genus with a single species ("Gen_3"), and the stem is excluded for the genus only.
 #' # * Genus_a_sp3: same target clade, without excluded subclades and
-#'     without access to the stem of the family.
+#' #   without access to the stem of the family.
 #' # * Genus_b_sp1: grafted in the family "Family_B", written directly with the name of the group.
 #' # * Genus_b_sp2: grafted in its subfamily (Target_clade = "Subfamily", i.e., "Subfam_B1"),
-#'     except in the genus "Gen_1".
+#' #   except in the genus "Gen_1".
 #' # * Genus_c_sp1: grafted on the terminal branch of the only species
-#'     of the genus "Gen_2" (a single tip).
+#' #   of the genus "Gen_2" (a single tip).
 #' # * Genus_c_sp2: grafted in its tribe (Target_clade = "Tribe", i.e., "Tribe_B2"),
-#'     without access to the stem.
+#' #   without access to the stem.
 #'
 #' # The taxa to graft with graft_missing_clades() (Type = "clades") use sister clades:
 #' # * Genus_d_sp1 and Genus_d_sp2: belong to a new genus, and have the same sister clade ("Gen_1"),

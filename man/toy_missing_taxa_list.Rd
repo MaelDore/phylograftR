@@ -5,7 +5,7 @@
 \alias{toy_missing_taxa_list}
 \title{Toy list of missing taxa}
 \format{
-A named list with 7 taxa and the following items. Every item is named after the taxa (\verb{$Taxon_name}), in the same order.
+A named list with 7 taxa and the following items. \strong{Every item is named after the taxa (\verb{$Taxon_name}), in the same order.}
 \itemize{
 \item \verb{$Taxon_name} Character vector. Names of the taxa to graft.
 \item \verb{$Target_clade} List of character vectors of tips defining the target clade of each taxon (one tip: the terminal branch of this tip).

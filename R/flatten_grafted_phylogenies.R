@@ -25,24 +25,24 @@
 #' The arguments `maps` and `simulations` can be used to subset the object and retain only a specific sets of grafted phylogenies
 #' based on their associated stochastic map, and/or their simulation index.
 #'
-#' Additionally, the function can trim out the updated stochastic maps stored in the `$simmap` element of each grafted function to save memory space
+#' Additionally, the function can **trim out the updated stochastic maps** stored in the `$simmap` element of each grafted function to save memory space
 #' if those updated grafted stochastic maps are not required for downstream analyses.
 #'
 #' @param phy_grafted The output of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
 #'   a list with one element per stochastic map (each a `"phylo"` or a `"multiPhylo"`), a `"multiPhylo"`, or a `"phylo"`.
 #'   A `"multiPhylo"` or a `"phylo"` object is already flat, but the function can still be used to select a subset of phylogenies and remove their associated simmaps if requested.
 #' @param maps Character vector. Names of the maps to keep (the names of the elements of the list, as in the column `map` of the attribute `"phylogenies"`).
-#'   Default is `NULL`, which keeps all the maps. The function stops if some names are not found.
+#'   Default is `NULL`, which keeps all the maps. **The function stops if some names are not found.**
 #' @param simulations Integer vector. Indices of the simulations to keep (the numbers in the names `"sim_k"` of the phylogenies, which are the same in each map:
 #'   `1` for the first simulation of each map, etc.). Default is `NULL`, which keeps all the simulations.
-#' @param keep_simmap Logical. Whether to keep the element `$simmap` (the updated simmap) of the phylogenies, if they have one. Set to `FALSE` to save memory
+#' @param keep_simmap Logical. Whether to keep the element `$simmap` (the updated simmap) of the phylogenies, if they have one. Set to `FALSE` **to save memory**
 #'   when the stochastic maps are not needed in downstream analyses. Default is `TRUE`.
 #'
 #' @details The phylogenies are returned in the order of the input (map by map, then simulation by simulation), with their names as in the input:
 #' the names of the maps for a list of phylogenies (one simulation per map), and `"<map>_sim_k"` for a list of sets of phylogenies (several simulations per map).
-#' If two phylogenies have the same name, the names are made unique with a warning.
+#' **If two phylogenies have the same name, the names are made unique with a warning.**
 #'
-#' Each phylogeny keeps its attributes `"map"` and `"seed"`. When `maps` and `simulations` are used, the selection is applied to all the phylogenies together:
+#' Each phylogeny keeps its attributes `"map"` and `"seed"`. When `maps` and `simulations` are used, **the selection is applied to all the phylogenies together**:
 #' the phylogenies kept are the ones from the maps in `maps` and with the simulation index in `simulations`.
 #'
 #' @return If `phy_grafted` is an object of class `"phylo"`, the output is also a phylogeny, with its `$simmap` removed if `keep_simmap = FALSE` (otherwise unchanged).

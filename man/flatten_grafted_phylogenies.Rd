@@ -17,12 +17,12 @@ a list with one element per stochastic map (each a \code{"phylo"} or a \code{"mu
 A \code{"multiPhylo"} or a \code{"phylo"} object is already flat, but the function can still be used to select a subset of phylogenies and remove their associated simmaps if requested.}
 
 \item{maps}{Character vector. Names of the maps to keep (the names of the elements of the list, as in the column \code{map} of the attribute \code{"phylogenies"}).
-Default is \code{NULL}, which keeps all the maps. The function stops if some names are not found.}
+Default is \code{NULL}, which keeps all the maps. \strong{The function stops if some names are not found.}}
 
 \item{simulations}{Integer vector. Indices of the simulations to keep (the numbers in the names \code{"sim_k"} of the phylogenies, which are the same in each map:
 \code{1} for the first simulation of each map, etc.). Default is \code{NULL}, which keeps all the simulations.}
 
-\item{keep_simmap}{Logical. Whether to keep the element \verb{$simmap} (the updated simmap) of the phylogenies, if they have one. Set to \code{FALSE} to save memory
+\item{keep_simmap}{Logical. Whether to keep the element \verb{$simmap} (the updated simmap) of the phylogenies, if they have one. Set to \code{FALSE} \strong{to save memory}
 when the stochastic maps are not needed in downstream analyses. Default is \code{TRUE}.}
 }
 \value{
@@ -44,15 +44,15 @@ The associated stochastic map ID, the simulation ID and the seed of each phyloge
 The arguments \code{maps} and \code{simulations} can be used to subset the object and retain only a specific sets of grafted phylogenies
 based on their associated stochastic map, and/or their simulation index.
 
-Additionally, the function can trim out the updated stochastic maps stored in the \verb{$simmap} element of each grafted function to save memory space
+Additionally, the function can \strong{trim out the updated stochastic maps} stored in the \verb{$simmap} element of each grafted function to save memory space
 if those updated grafted stochastic maps are not required for downstream analyses.
 }
 \details{
 The phylogenies are returned in the order of the input (map by map, then simulation by simulation), with their names as in the input:
 the names of the maps for a list of phylogenies (one simulation per map), and \code{"<map>_sim_k"} for a list of sets of phylogenies (several simulations per map).
-If two phylogenies have the same name, the names are made unique with a warning.
+\strong{If two phylogenies have the same name, the names are made unique with a warning.}
 
-Each phylogeny keeps its attributes \code{"map"} and \code{"seed"}. When \code{maps} and \code{simulations} are used, the selection is applied to all the phylogenies together:
+Each phylogeny keeps its attributes \code{"map"} and \code{"seed"}. When \code{maps} and \code{simulations} are used, \strong{the selection is applied to all the phylogenies together}:
 the phylogenies kept are the ones from the maps in \code{maps} and with the simulation index in \code{simulations}.
 }
 \examples{

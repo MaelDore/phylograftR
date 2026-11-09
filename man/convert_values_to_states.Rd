@@ -17,7 +17,7 @@ Alternatively, leave it as \code{NULL} and provide \code{breaks} and \code{state
 \item{breaks}{Numeric vector. Only used if \code{simmap = NULL}. The interior cut points between the states, in increasing order and different from each other.}
 
 \item{states}{Character vector. Only used if \code{simmap = NULL}. The names of the states, from the lowest to the highest values.
-Must have one more element than \code{breaks}, because N interior cuts (\code{breaks}) produce N+1 groups.}
+\strong{Must have one more element than \code{breaks}}, because N interior cuts (\code{breaks}) produce N+1 groups.}
 }
 \value{
 A character vector with the state of each value, named as in \code{values}.
@@ -29,10 +29,10 @@ This is typically used to convert the continuous trait values of the missing tax
 e.g., to fill the \code{allowed_states} of the taxa.
 }
 \details{
-Each state covers the values from its lower cut point (included) up to its upper cut point (excluded): a value equal to a cut point belongs to the state above it.
+Each state covers the values from its lower cut point (included) up to its upper cut point (excluded): \strong{a value equal to a cut point belongs to the state above it.}
 The first and last states are open-ended, so values below the first cut point or above the last one are assigned to the lowest and highest states.
 
-Each value is assigned to a unique state. If you wish to include uncertainty by assigning multiple states to values close to cut points (as possible for \code{allowed_states}),
+\strong{Each value is assigned to a unique state.} If you wish to include uncertainty by assigning multiple states to values close to cut points (as possible for \code{allowed_states}),
 you must edit the output after the conversion.
 }
 \examples{

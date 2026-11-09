@@ -14,9 +14,9 @@ The phylogenies must have the elements \verb{$grafted_tips} and \verb{$grafted_e
 \item{total_richness_per_clades}{A list with the total number of species of the clades, as used for the grafting. Items:
 \itemize{
 \item \verb{$Target_clade} (clades defined for the taxa grafted with \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}) or \verb{$Sister_clade}
-(sister clades of the missing clades grafted with \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}). Exactly one of them must be provided.
+(sister clades of the missing clades grafted with \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}). \strong{Exactly one of them must be provided.}
 List of character vectors of tips of the backbone: a pair of tips defines the clade as their most recent common ancestor (MRCA), and a single tip defines a terminal branch.
-Node IDs are not accepted: convert them with \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}}.
+\strong{Node IDs are not accepted}: convert them with \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}}.
 \item \verb{$Target_clade_name} or \verb{$Sister_clade_name}: (Optional) Character vector of the names of the clades, same length as the clades (\code{NA} if a clade has no name).
 The names must be unique. They are reported in the \code{Clade_name} column of the output.
 \item \verb{$total_richness}: Vector of positive integers, same length as the clades. Total number of species of each clade,
@@ -44,18 +44,18 @@ Attributes: \code{"type"} (\code{"taxa"} if the clades are \verb{$Target_clade},
 \description{
 Summarize, in each grafted phylogeny, the species of each clade listed in \code{total_richness_per_clades}:
 species of the backbone, grafted species, and unsampled species (species of the clade that are neither in the backbone nor grafted).
-It then derives the sampling fraction of each clade that can be used in downstream analyses
+It then derives the \strong{sampling fraction} of each clade that can be used in downstream analyses
 to account for the clade-specific sampling fractions (e.g., diversification models).
 
-The function works a posteriori, on the output of \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}
+The function works \strong{a posteriori}, on the output of \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}
 (a phylogeny, a set of simulations, or the list of maps obtained with a \code{"multiSimmap"}).
-The counts are taken in each grafted phylogeny. With \code{graft_missing_taxa()}, they can differ among simulations and maps, as a taxon can end up in different clades.
-With \code{graft_missing_clades()}, they are the same in all the phylogenies, as each missing clade is always grafted on the stem of its sister clade.
+The counts are taken in each grafted phylogeny. With \code{graft_missing_taxa()}, \strong{they can differ among simulations and maps}, as a taxon can end up in different clades.
+With \code{graft_missing_clades()}, \strong{they are the same in all the phylogenies}, as each missing clade is always grafted on the stem of its sister clade.
 }
 \details{
 \subsection{Species of a clade}{
 
-The species of a clade are the tips that descend from its MRCA in the grafted phylogeny: the backbone species of the clade, and the grafted taxa that were grafted within it.
+\strong{The species of a clade are the tips that descend from its MRCA in the grafted phylogeny}: the backbone species of the clade, and the grafted taxa that were grafted within it.
 It depends on the phylogeny, as a taxon grafted in a target clade can fall in a clade nested within it, and as the taxa grafted on the stem branch of a clade
 are sister to the clade, so they are not part of it. The exception is the clade of a single tip of \verb{$Target_clade}: its terminal branch is its only branch,
 so the taxa grafted on it are part of the clade. For \verb{$Sister_clade}, the missing clades are grafted on the stem branch of the sister clade and are never part of it.
@@ -66,7 +66,7 @@ so the taxa grafted on it are part of the clade. For \verb{$Sister_clade}, the m
 For a clade with a total richness provided, \code{nb_unsampled_species = total_richness - nb_backbone_species - nb_grafted_species}.
 For a clade without a total richness (\code{NA}), the unsampled species are those identified in the largest clades nested within it that have a total richness (none if there is none),
 and its total richness is derived as \code{nb_backbone_species + nb_grafted_species + nb_unsampled_species} (it can differ among phylogenies).
-The sampling fraction is \code{(nb_backbone_species + nb_grafted_species) / total_richness}.
+The \strong{sampling fraction} is \code{(nb_backbone_species + nb_grafted_species) / total_richness}.
 
 In problematic cases, the number of species of a clade can be higher than its total richness: for example, a taxon known to belong to a genus can be grafted in a subclade
 of this genus whose provided total richness did not include it. The number of unsampled species is then negative and the sampling fraction is higher than 1.

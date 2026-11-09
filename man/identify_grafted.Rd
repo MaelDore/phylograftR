@@ -12,7 +12,7 @@ It can also be a set of phylogenies (class \code{"multiPhylo"}, e.g., the output
 or a list of them with one element per stochastic map (output of the grafting functions with a \code{"multiSimmap"}): the elements are then added to each phylogeny.}
 
 \item{grafted_taxa}{Character vector. Labels of the grafted taxa (e.g., \code{missing_taxa_list$Taxon_name}).
-Labels that are not tips of \code{phy} are ignored, with a warning.}
+\strong{Labels that are not tips of \code{phy} are ignored, with a warning.}}
 }
 \value{
 The phylogeny \code{phy} (class \code{"phylo"}), with two elements added, or replaced if \code{phy} already had them (for a \code{"multiPhylo"} or a list of maps: the same object,
@@ -26,18 +26,20 @@ with each phylogeny updated:
 }
 \description{
 Identify which tips and which branches of a phylogeny are grafted, as opposed to backbone.
-The information is added to the phylogeny as two elements, \code{grafted_tips} and \code{grafted_edges}, which can be used to color the phylogeny on plots (see examples).
-The function is also useful to update these elements after the phylogeny has been manipulated
+The information is added to the phylogeny as two elements, \strong{\code{grafted_tips}} and \strong{\code{grafted_edges}}, which can be used to color the phylogeny on plots (see examples).
+The function is also useful to \strong{update these elements after the phylogeny has been manipulated}
 (e.g., with \code{ape::drop.tip()}, which does not update the elements of the phylogeny it does not know).
 }
 \details{
 A tip is grafted if its label is in \code{grafted_taxa}.
-A branch is grafted if all the tips descending from it are grafted taxa (this includes the terminal branches of grafted taxa,
+
+\strong{A branch is grafted if all the tips descending from it are grafted taxa} (this includes the terminal branches of grafted taxa,
 and the internal branches of clades made only of grafted taxa).
-A branch with at least one backbone tip below it is a backbone branch, even if a grafted taxon was added on it
+
+\strong{A branch with at least one backbone tip below it is a backbone branch}, even if a grafted taxon was added on it
 (the backbone branch is then split in two pieces, which are both backbone branches).
 
-Node IDs are renumbered by functions that remove tips, such as \code{ape::drop.tip()}:
+\strong{Node IDs are renumbered by functions that remove tips}, such as \code{ape::drop.tip()}:
 use this function again to update the \code{grafted_tips} and \code{grafted_edges} elements in that case.
 }
 \examples{

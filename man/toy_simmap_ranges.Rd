@@ -13,7 +13,7 @@ from the rootward node to the tipward node), \verb{$mapped.edge} (total duration
 data(toy_simmap_ranges)
 }
 \description{
-Stochastic character map (simmap) of \code{\link[=toy_backbone]{phylograftR::toy_backbone}} with four states that are biogeographic ranges
+Stochastic character map (simmap) of \code{\link[=toy_backbone]{phylograftR::toy_backbone}} with \strong{four states that are biogeographic ranges}
 coded as in BioGeoBEARS: \code{"A"}, \code{"B"}, \code{"AB"} and \code{"BC"} (areas A, B and C; the area C is only found in \code{"BC"}).
 It can be used as \code{simmap} with \code{treat_states_as_ranges = TRUE} to graft taxa on branches in ranges that contain their allowed ranges
 (see the Details section "Biogeographic ranges as states" of \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and the examples of
@@ -32,13 +32,13 @@ As a simulated history only has anagenetic changes, some of them were then moved
 \details{
 Events represented in the map, with the syntax of BioGeoBEARS.
 
-Anagenetic changes (along the branches, 12 in total):
+\strong{Anagenetic changes} (along the branches, 12 in total):
 \itemize{
 \item 8 \code{"d"} (range expansion, gain of one area): 5 \code{"A"} -> \code{"AB"} and 3 \code{"B"} -> \code{"BC"}.
 \item 4 \code{"e"} (range contraction, loss of one area): 3 \code{"AB"} -> \code{"A"} and 1 \code{"AB"} -> \code{"B"}.
 }
 
-Cladogenetic events (at the 29 nodes, from the range of the lineage above the node and the ranges at the start of the two descendant branches):
+\strong{Cladogenetic events} (at the 29 nodes, from the range of the lineage above the node and the ranges at the start of the two descendant branches):
 \itemize{
 \item 5 \code{"s"} (subset sympatry), such as \verb{(AB) -> (AB), (A)}: one descendant keeps the widespread range, the other starts in a single area within it.
 They are the events that are produced by the grafting functions when a taxon inherits an allowed range smaller than the range of the lineage it is grafted on

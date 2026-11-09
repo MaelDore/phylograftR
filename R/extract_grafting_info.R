@@ -10,9 +10,9 @@
 
 #' @title Extract the grafting information from grafted phylogenies
 #'
-#' @description Summarize, in a table, where and when each grafted taxon (or missing clade) was grafted on the backbone:
+#' @description **Summarize, in a table, where and when each grafted taxon (or missing clade) was grafted on the backbone**:
 #'   the age of the graft, the backbone branch it was grafted on (the parent clade), and, with a `simmap`, the state at the graft point and the state inherited by the grafted lineage.
-#'   The function works a posteriori, on the output of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades]
+#'   **The function works a posteriori**, on the output of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades]
 #'   (a phylogeny, a set of simulations, or the list of maps obtained with a `"multiSimmap"`).
 #'
 #'   The table is meant to check the plausibility of the grafting against the backbone, and, over a set of phylogenies, to describe the uncertainty of the grafting
@@ -22,14 +22,14 @@
 #'   or a list of them with one element per map (output of the grafting functions with a `"multiSimmap"`).
 #' @param missing_taxa_list The list of missing taxa used for the grafting. Items: `$Taxon_name`, and `$Target_clade` (taxa, grafted with
 #'   [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]) or `$Sister_clade` (missing clades, grafted with [`phylograftR::graft_missing_clades()`][graft_missing_clades]).
-#'   Exactly one of them must be provided: it defines the type of the table.
+#'   **Exactly one of them must be provided**: it defines the type of the table.
 #' @param phy_backbone Optional. The backbone phylogeny used for the grafting (class `"phylo"`). If `NULL` (default), the backbone is rebuilt by removing the grafted taxa from
-#'   the grafted phylogeny (same topology and branch lengths). The node IDs of the backbone (`parent_node`) can only be given if `phy_backbone` is provided.
+#'   the grafted phylogeny (same topology and branch lengths). **The node IDs of the backbone (`parent_node`) can only be given if `phy_backbone` is provided.**
 #'
 #' @details
 #' ### What is extracted depends on the type of grafting
 #'
-#' **Taxa** (`$Target_clade` list): one row per taxon.
+#' **Taxa** (`$Target_clade` list): **one row per taxon**.
 #' A taxon can be grafted on a branch of the backbone, or on a branch of a taxon grafted before it (and so on):
 #' the grafted taxa that hang together form a *grafted subtree* attached to the backbone at a *graft point*.
 #' The summary table reports:
@@ -39,22 +39,22 @@
 #' * The parent clade is the clade of the backbone subtended by the branch of the graft point: `parent_tips` gives two tips defining it (one if the branch is terminal),
 #'   and `parent_node` its node ID in `phy_backbone`.
 #'
-#' **Missing clades** (`$Sister_clade` list): one row per missing clade (the taxa with the same sister clade, grafted together).
+#' **Missing clades** (`$Sister_clade` list): **one row per missing clade** (the taxa with the same sister clade, grafted together).
 #' The missing clade is attached to the stem branch of its sister clade at a *graft point*.
 #' The summary table reports:
 #' * `graft_age`: the age of the graft point;
 #' * `crown_age`: the age of the most recent common ancestor of the taxa of the clade (`NA` for a single taxon);
 #' * The parent clade is the backbone clade subtended by the branch it was attached to (the sister clade, if the constraints were respected, see [`phylograftR::check_grafting_constraints()`][check_grafting_constraints]).
-#' If the taxa of a missing clade do not form a clade in the phylogeny, the values of the row are `NA`, with a warning.
+#' **If the taxa of a missing clade do not form a clade in the phylogeny, the values of the row are `NA`, with a warning.**
 #'
 #' ### States
 #'
 #' If the phylogeny has a `$simmap` (output of the grafting with a `simmap` and `return_simmap = TRUE`), the states are extracted:
 #' `parent_state` is the state of the branch of the backbone at the graft point, and `tip_state` (taxa) or `clade_state` (missing clades) the state inherited by the grafted lineage.
 #'
-#' They are different if `treat_states_as_ranges = TRUE`: a taxon grafted on a branch in the range "AB" can inherit the range "A".
+#' **They are different if `treat_states_as_ranges = TRUE`**: a taxon grafted on a branch in the range "AB" can inherit the range "A".
 #' With the maps of several traits (`$simmap` is a list), there is one column per trait (`parent_state_<trait>`, `tip_state_<trait>`).
-#' The states are `NA` for phylogenies without `$simmap`, or whose `$simmap` does not match the phylogeny (e.g., after removing tips).
+#' **The states are `NA` for phylogenies without `$simmap`**, or whose `$simmap` does not match the phylogeny (e.g., after removing tips).
 #'
 #' @importFrom ape Ntip reorder.phylo node.depth.edgelength drop.tip getMRCA
 #'

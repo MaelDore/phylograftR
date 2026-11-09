@@ -11,23 +11,25 @@
 #' @title Identify the grafted tips and branches of a phylogeny
 #'
 #' @description Identify which tips and which branches of a phylogeny are grafted, as opposed to backbone.
-#'   The information is added to the phylogeny as two elements, `grafted_tips` and `grafted_edges`, which can be used to color the phylogeny on plots (see examples).
-#'   The function is also useful to update these elements after the phylogeny has been manipulated
+#'   The information is added to the phylogeny as two elements, **`grafted_tips`** and **`grafted_edges`**, which can be used to color the phylogeny on plots (see examples).
+#'   The function is also useful to **update these elements after the phylogeny has been manipulated**
 #'   (e.g., with `ape::drop.tip()`, which does not update the elements of the phylogeny it does not know).
 #'
 #' @param phy An object of class `"phylo"`. The phylogeny, including the grafted taxa.
 #'   It can also be a set of phylogenies (class `"multiPhylo"`, e.g., the output of the grafting functions with `nb_simulations > 1`),
 #'   or a list of them with one element per stochastic map (output of the grafting functions with a `"multiSimmap"`): the elements are then added to each phylogeny.
 #' @param grafted_taxa Character vector. Labels of the grafted taxa (e.g., `missing_taxa_list$Taxon_name`).
-#'   Labels that are not tips of `phy` are ignored, with a warning.
+#'   **Labels that are not tips of `phy` are ignored, with a warning.**
 #'
 #' @details A tip is grafted if its label is in `grafted_taxa`.
-#'   A branch is grafted if all the tips descending from it are grafted taxa (this includes the terminal branches of grafted taxa,
+#'
+#'   **A branch is grafted if all the tips descending from it are grafted taxa** (this includes the terminal branches of grafted taxa,
 #'   and the internal branches of clades made only of grafted taxa).
-#'   A branch with at least one backbone tip below it is a backbone branch, even if a grafted taxon was added on it
+#'
+#'   **A branch with at least one backbone tip below it is a backbone branch**, even if a grafted taxon was added on it
 #'   (the backbone branch is then split in two pieces, which are both backbone branches).
 #'
-#'   Node IDs are renumbered by functions that remove tips, such as `ape::drop.tip()`:
+#'   **Node IDs are renumbered by functions that remove tips**, such as `ape::drop.tip()`:
 #'   use this function again to update the `grafted_tips` and `grafted_edges` elements in that case.
 #'
 #' @importFrom ape Ntip reorder.phylo

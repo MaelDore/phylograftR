@@ -23,8 +23,8 @@ in which each taxon can be grafted. It is used to showcase the grafting constrai
 
 It is the output of \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} applied to the table
 \code{system.file("extdata", "toy_missing_taxa_with_two_traits.csv", package = "phylograftR")}.
-In the column \code{allowed_states}, the states of the traits are separated by semicolons
-(in the order of the maps provided in \code{simmap}: the color, then the elevation), and the states of a trait by commas. Open that file to see the different syntaxes:
+In the column \code{allowed_states}, \strong{the states of the traits are separated by semicolons}
+(in the order of the maps provided in \code{simmap}: the color, then the elevation), \strong{and the states of a trait by commas}. Open that file to see the different syntaxes:
 \itemize{
 \item \code{"red;"}: the color is \code{"red"}, and the elevation has no taxon-level value (the global value is used).
 \item \code{"blue, green;high"}: color \code{"blue"} or \code{"green"}, and elevation \code{"high"}.

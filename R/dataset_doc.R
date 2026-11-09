@@ -57,7 +57,7 @@
 #'   Clades and excluded subclades are named after the taxonomic groups of [`phylograftR::toy_backbone_taxonomic_table`][toy_taxonomic_tables] (e.g., `"Family_A"`).
 #'
 #' @usage data(toy_missing_taxa_list)
-#' @format A named list with 7 taxa and the following items. Every item is named after the taxa (`$Taxon_name`), in the same order.
+#' @format A named list with 7 taxa and the following items. **Every item is named after the taxa (`$Taxon_name`), in the same order.**
 #'  * `$Taxon_name` Character vector. Names of the taxa to graft.
 #'  * `$Target_clade` List of character vectors of tips defining the target clade of each taxon (one tip: the terminal branch of this tip).
 #'  * `$Target_clade_name` Character vector. Labels of the target clades. Not used for the grafting, but checked against the names of `total_richness_per_clades`, if provided.
@@ -166,7 +166,7 @@
 #'   All the allowed ranges are states of the toy simmap, so grafting does not raise warnings. Some are contained in other states of the simmap
 #'   (`"A"` in `"AB"`, `"B"` in `"AB"` and `"BC"`): a lineage grafted in a branch in `"AB"` with the allowed range `"A"` inherits `"A"`,
 #'   which is a subset sympatric speciation event, `(AB) -> (AB), (A)`.
-#'   Such a list requires a `simmap` to graft.
+#'   **Such a list requires a `simmap` to graft.**
 #'
 #' @usage data(toy_missing_taxa_list_with_allowed_ranges)
 #' @format A named list with the same 7 taxa and items as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], and the extra item:
@@ -224,7 +224,7 @@
 
 #' @title Toy total richness of the target clades
 #'
-#' @description List usable as `total_richness_per_clades` with [`phylograftR::toy_backbone`][toy_backbone] and [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list].
+#' @description *List usable as `total_richness_per_clades` with [`phylograftR::toy_backbone`][toy_backbone] and [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list].
 #' It is built from the table `system.file("extdata", "toy_total_richness.csv", package = "phylograftR")`, with the tips of each clade separated by commas (see the examples).
 #'
 #' @usage data(toy_total_richness_per_clades)
@@ -262,17 +262,17 @@
 #'   [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy], consistent with [`phylograftR::toy_backbone`][toy_backbone].
 #'
 #'   `toy_backbone_taxonomic_table` gives the taxonomy of the 30 tips of the backbone, with four levels (`Family`, `Subfamily`, `Tribe`, `Genus`).
-#'   All the groups are monophyletic. Some tips have no group at the finest levels (`NA`), as often in real data.
+#'   **All the groups are monophyletic.** Some tips have no group at the finest levels (`NA`), as often in real data.
 #'
-#'   `toy_missing_taxa_taxonomic_table` describes 10 taxa to graft. The first seven (`Type = "taxa"`) are the taxa of
+#'   `toy_missing_taxa_taxonomic_table` describes 10 taxa to graft. The first seven (**`Type = "taxa"`**) are the taxa of
 #'   [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], written with taxonomic names: the clades, excluded subclades and stem settings are the same.
-#'   The last three (`Type = "clades"`) are taxa to graft as sister clades with [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
+#'   The last three (**`Type = "clades"`**) are taxa to graft as sister clades with [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
 #'   `Genus_d_sp1` and `Genus_d_sp2` belong to a new genus sister to the genus `Gen_1`, so they are grafted together as a missing clade, and `Genus_e_sp1` is sister to its own tribe.
 #'   The target and sister clades are written with the name of a group (e.g., `"Family_B"`) or of a level (e.g., `"Family"`, meaning the family of the taxon itself).
 #'   Both tables are also provided as `.csv` files in `system.file("extdata", package = "phylograftR")`
 #'   (`toy_backbone_taxonomic_table.csv` and `toy_missing_taxa_taxonomic_table.csv`).
 #'
-#'   The clades are named after their taxonomic groups (e.g., `"Family_A"`), as in [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list]
+#'   **The clades are named after their taxonomic groups** (e.g., `"Family_A"`), as in [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list]
 #'   and [`phylograftR::toy_total_richness_per_clades`][toy_total_richness_per_clades], so the lists built from the taxonomy can be used with this richness list.
 #'
 #' @usage
@@ -327,7 +327,7 @@ NULL
 
 #' @title Toy stochastic character map of the toy backbone phylogeny
 #'
-#' @description Stochastic character map (simmap) of [`phylograftR::toy_backbone`][toy_backbone] with three states, `"blue"`, `"green"` and `"red"`,
+#' @description Stochastic character map (simmap) of [`phylograftR::toy_backbone`][toy_backbone] with **three states**, `"blue"`, `"green"` and `"red"`,
 #'   named after colors to ease their visualization. It can be used as `simmap` to restrict grafting to branches in some states
 #'   (see the examples of the grafting functions).
 #'
@@ -366,7 +366,7 @@ NULL
 
 #' @title Toy stochastic character map of biogeographic ranges of the toy backbone phylogeny
 #'
-#' @description Stochastic character map (simmap) of [`phylograftR::toy_backbone`][toy_backbone] with four states that are biogeographic ranges
+#' @description Stochastic character map (simmap) of [`phylograftR::toy_backbone`][toy_backbone] with **four states that are biogeographic ranges**
 #'   coded as in BioGeoBEARS: `"A"`, `"B"`, `"AB"` and `"BC"` (areas A, B and C; the area C is only found in `"BC"`).
 #'   It can be used as `simmap` with `treat_states_as_ranges = TRUE` to graft taxa on branches in ranges that contain their allowed ranges
 #'   (see the Details section "Biogeographic ranges as states" of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and the examples of
@@ -383,11 +383,11 @@ NULL
 #' @details
 #' Events represented in the map, with the syntax of BioGeoBEARS.
 #'
-#' Anagenetic changes (along the branches, 12 in total):
+#' **Anagenetic changes** (along the branches, 12 in total):
 #' * 8 `"d"` (range expansion, gain of one area): 5 `"A"` -> `"AB"` and 3 `"B"` -> `"BC"`.
 #' * 4 `"e"` (range contraction, loss of one area): 3 `"AB"` -> `"A"` and 1 `"AB"` -> `"B"`.
 #'
-#' Cladogenetic events (at the 29 nodes, from the range of the lineage above the node and the ranges at the start of the two descendant branches):
+#' **Cladogenetic events** (at the 29 nodes, from the range of the lineage above the node and the ranges at the start of the two descendant branches):
 #' * 5 `"s"` (subset sympatry), such as `(AB) -> (AB), (A)`: one descendant keeps the widespread range, the other starts in a single area within it.
 #'   They are the events that are produced by the grafting functions when a taxon inherits an allowed range smaller than the range of the lineage it is grafted on
 #'   (subset sympatric speciation, see [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]).
@@ -423,7 +423,7 @@ NULL
 
 #' @title Toy stochastic character map of elevation states
 #'
-#' @description Stochastic character map (simmap) of [`phylograftR::toy_backbone`][toy_backbone] with two elevation states, `"high"` and `"low"`,
+#' @description Stochastic character map (simmap) of [`phylograftR::toy_backbone`][toy_backbone] with **two elevation states**, `"high"` and `"low"`,
 #'   to combine with [`phylograftR::toy_simmap`][toy_simmap] (color) or [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges] (biogeographic ranges)
 #'   as examples of attribute-based constraints applied on two traits at once.
 #'
@@ -469,8 +469,8 @@ NULL
 #'
 #'   It is the output of [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] applied to the table
 #'   `system.file("extdata", "toy_missing_taxa_with_two_traits.csv", package = "phylograftR")`.
-#'   In the column `allowed_states`, the states of the traits are separated by semicolons
-#'   (in the order of the maps provided in `simmap`: the color, then the elevation), and the states of a trait by commas. Open that file to see the different syntaxes:
+#'   In the column `allowed_states`, **the states of the traits are separated by semicolons**
+#'   (in the order of the maps provided in `simmap`: the color, then the elevation), **and the states of a trait by commas**. Open that file to see the different syntaxes:
 #'   * `"red;"`: the color is `"red"`, and the elevation has no taxon-level value (the global value is used).
 #'   * `"blue, green;high"`: color `"blue"` or `"green"`, and elevation `"high"`.
 #'   * `";low"`: no taxon-level value for the color, elevation `"low"`.
@@ -536,15 +536,15 @@ NULL
 #'
 #'   It is the output of [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] applied to the table
 #'   `system.file("extdata", "toy_missing_taxa_with_ranges_and_elevation.csv", package = "phylograftR")`.
-#'   In the column `allowed_states`, the states of the traits are separated by semicolons
-#'   (in the order of the maps provided in `simmap`: the ranges, then the elevation), and the states of a trait by commas. Open that file to see the different syntaxes:
+#'   In the column `allowed_states`, **the states of the traits are separated by semicolons**
+#'   (in the order of the maps provided in `simmap`: the ranges, then the elevation), **and the states of a trait by commas**. Open that file to see the different syntaxes:
 #'   * `"A;high"`: the range is `"A"`, and the elevation is `"high"`.
 #'   * `"B, BC;"`: the range is `"B"` or `"BC"`, and the elevation has no taxon-level value (the global value is used).
 #'   * `"elevation=low"`: traits named, so the ranges can be omitted (they have no taxon-level value).
 #'   * `"biogeo=A, BC; elevation=high"`: all the traits named, in any order.
 #'   * Blank cell: no taxon-level value for any trait, so the global `allowed_states` argument is used for both.
 #'
-#'   The names of the traits (`biogeo` and `elevation`) must match the names of the maps provided in `simmap` to use the syntax with names.
+#'   **The names of the traits (`biogeo` and `elevation`) must match the names of the maps provided in `simmap`** to use the syntax with names.
 #'
 #' @usage data(toy_missing_taxa_list_with_ranges_and_elevation)
 #' @format A named list with the same 7 taxa and items as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], and the extra item:

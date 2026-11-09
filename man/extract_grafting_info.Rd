@@ -12,10 +12,10 @@ or a list of them with one element per map (output of the grafting functions wit
 
 \item{missing_taxa_list}{The list of missing taxa used for the grafting. Items: \verb{$Taxon_name}, and \verb{$Target_clade} (taxa, grafted with
 \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}) or \verb{$Sister_clade} (missing clades, grafted with \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}).
-Exactly one of them must be provided: it defines the type of the table.}
+\strong{Exactly one of them must be provided}: it defines the type of the table.}
 
 \item{phy_backbone}{Optional. The backbone phylogeny used for the grafting (class \code{"phylo"}). If \code{NULL} (default), the backbone is rebuilt by removing the grafted taxa from
-the grafted phylogeny (same topology and branch lengths). The node IDs of the backbone (\code{parent_node}) can only be given if \code{phy_backbone} is provided.}
+the grafted phylogeny (same topology and branch lengths). \strong{The node IDs of the backbone (\code{parent_node}) can only be given if \code{phy_backbone} is provided.}}
 }
 \value{
 A data.frame, with one row per taxon (or per missing clade) and phylogeny.
@@ -52,9 +52,9 @@ With a \code{simmap}: \code{parent_state} and \code{tip_state} (taxa) or \code{c
 Attributes: \code{"type"} (\code{"taxa"} or \code{"clades"}).
 }
 \description{
-Summarize, in a table, where and when each grafted taxon (or missing clade) was grafted on the backbone:
+\strong{Summarize, in a table, where and when each grafted taxon (or missing clade) was grafted on the backbone}:
 the age of the graft, the backbone branch it was grafted on (the parent clade), and, with a \code{simmap}, the state at the graft point and the state inherited by the grafted lineage.
-The function works a posteriori, on the output of \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}
+\strong{The function works a posteriori}, on the output of \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}
 (a phylogeny, a set of simulations, or the list of maps obtained with a \code{"multiSimmap"}).
 
 The table is meant to check the plausibility of the grafting against the backbone, and, over a set of phylogenies, to describe the uncertainty of the grafting
@@ -63,7 +63,7 @@ The table is meant to check the plausibility of the grafting against the backbon
 \details{
 \subsection{What is extracted depends on the type of grafting}{
 
-\strong{Taxa} (\verb{$Target_clade} list): one row per taxon.
+\strong{Taxa} (\verb{$Target_clade} list): \strong{one row per taxon}.
 A taxon can be grafted on a branch of the backbone, or on a branch of a taxon grafted before it (and so on):
 the grafted taxa that hang together form a \emph{grafted subtree} attached to the backbone at a \emph{graft point}.
 The summary table reports:
@@ -75,14 +75,14 @@ and younger for a taxon attached to another grafted taxon (\code{grafted_on} the
 and \code{parent_node} its node ID in \code{phy_backbone}.
 }
 
-\strong{Missing clades} (\verb{$Sister_clade} list): one row per missing clade (the taxa with the same sister clade, grafted together).
+\strong{Missing clades} (\verb{$Sister_clade} list): \strong{one row per missing clade} (the taxa with the same sister clade, grafted together).
 The missing clade is attached to the stem branch of its sister clade at a \emph{graft point}.
 The summary table reports:
 \itemize{
 \item \code{graft_age}: the age of the graft point;
 \item \code{crown_age}: the age of the most recent common ancestor of the taxa of the clade (\code{NA} for a single taxon);
 \item The parent clade is the backbone clade subtended by the branch it was attached to (the sister clade, if the constraints were respected, see \code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}}).
-If the taxa of a missing clade do not form a clade in the phylogeny, the values of the row are \code{NA}, with a warning.
+\strong{If the taxa of a missing clade do not form a clade in the phylogeny, the values of the row are \code{NA}, with a warning.}
 }
 }
 
@@ -91,9 +91,9 @@ If the taxa of a missing clade do not form a clade in the phylogeny, the values 
 If the phylogeny has a \verb{$simmap} (output of the grafting with a \code{simmap} and \code{return_simmap = TRUE}), the states are extracted:
 \code{parent_state} is the state of the branch of the backbone at the graft point, and \code{tip_state} (taxa) or \code{clade_state} (missing clades) the state inherited by the grafted lineage.
 
-They are different if \code{treat_states_as_ranges = TRUE}: a taxon grafted on a branch in the range "AB" can inherit the range "A".
+\strong{They are different if \code{treat_states_as_ranges = TRUE}}: a taxon grafted on a branch in the range "AB" can inherit the range "A".
 With the maps of several traits (\verb{$simmap} is a list), there is one column per trait (\verb{parent_state_<trait>}, \verb{tip_state_<trait>}).
-The states are \code{NA} for phylogenies without \verb{$simmap}, or whose \verb{$simmap} does not match the phylogeny (e.g., after removing tips).
+\strong{The states are \code{NA} for phylogenies without \verb{$simmap}}, or whose \verb{$simmap} does not match the phylogeny (e.g., after removing tips).
 }
 }
 \examples{

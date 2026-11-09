@@ -10,14 +10,14 @@
 
 #' @title Check that grafted taxa and missing clades respect their grafting constraints
 #'
-#' @description This function checks, a posteriori, that each taxon grafted on a phylogeny sits in a valid position.
+#' @description This function checks, **a posteriori**, that each taxon grafted on a phylogeny sits in a valid position.
 #' For missing taxa grafted with `graft_missing_taxa()`: within its target clade (or on its stem branch if allowed), and outside its excluded subclades.
 #' For missing clades grafted with `graft_missing_clades()`: each missing clade (the taxa sharing the same sister clade) must form one clade, grafted on the stem branch of its sister clade.
 #'
 #' The type of grafting is detected from `missing_taxa_list`: a `$Target_clade` item for taxa, a `$Sister_clade` item for missing clades (see 'Missing clades' in Details section).
 #' With a `simmap`, the validity of the states of the taxa or of the missing clades are checked too.
 #'
-#' The function can also check that the backbone phylogeny is preserved by the grafting once the grafted taxa are pruned.
+#' The function can also **check that the backbone phylogeny is preserved** by the grafting once the grafted taxa are pruned.
 #'
 #' @param phy_grafted An object of class `"phylo"`. The phylogeny after grafting. It can also be a set of grafted phylogenies (class `"multiPhylo"`, from `nb_simulations > 1`),
 #'   or a list with one element per stochastic map (a `"phylo"` or a `"multiPhylo"`, from the grafting functions used with a `"multiSimmap"` to account for multiple alternative trait evolutionary histories).
@@ -44,7 +44,7 @@
 #'   The function stops if some states are not in the `simmap`. Default is `NULL` (all states allowed for the taxa without a taxon-level value).
 #' @param treat_states_as_ranges Logical. Same as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]: whether the states of the `simmap` and the allowed states are treated as biogeographic ranges:
 #'   an allowed range enables grafting on branch pieces in any range that contains it: `"A"` can be grafted on `"A"`, `"AB"` and `"ABC"`, whereas `"AB"` can be grafted on `"AB"` and `"ABC"` but not `"A"`.
-#'   Only used if `phy_grafted` has a `$simmap` item, otherwise the function stops if `TRUE`.
+#'   Only used if `phy_grafted` has a `$simmap` item, **otherwise the function stops if `TRUE`**.
 #'   With a `$simmap` item that is a list of the simmaps of several traits, takes a logical vector with one value per trait, with at most one `TRUE` to identify
 #'   the trait treated as ranges (positional, or named after the traits in any order, as in the grafting functions; a single `FALSE` is accepted, a single `TRUE` stops).
 #'   States / ranges are coded as in BioGeoBEARS (see the Details section "Biogeographic ranges as states").
@@ -58,7 +58,7 @@
 #'
 #' @return The structure of the output depends on the type of elements grafted, and their associated grafting function used in the process.
 #'
-#' **Missing taxa** With a `$Target_clade` list (for missing taxa), the function assumed that [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] was used for the grafting.
+#' **Missing taxa.** With a `$Target_clade` list (for missing taxa), the function assumed that [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] was used for the grafting.
 #' It returns a data.frame with one row per taxon in `missing_taxa_list` (in the original order) for each phylogeny checked, and the following columns:
 #'
 #' * `$map`: Name of the stochastic map used to constrain grafting based on species attributes. `NA` if none was used.
@@ -83,11 +83,11 @@
 #' * `$ranges_ok`: Logical. Only checked with `treat_states_as_ranges = TRUE` (or a range trait with several traits) and a `$simmap` item: whether the range inherited by the taxon is contained in the state of the lineage at the graft point
 #'      (see the Details section "Biogeographic ranges as states"). `NA` if not checked, or if the taxon is grafted at the root (no parent lineage).
 #'      This differs from `$states_ok` that checks only the validity of the terminal tip state. Here, the validity of the inherited range is assessed against the range of the backbone lineage it was grafted on.
-#' * `$ok`: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
+#' * **`$ok`**: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
 #'
 #' (with a `$Sister_clade` list, see 'Missing clades' below)
 #'
-#' **Missing clades** With a `$Sister_clade` list (for missing clades), the function assumed that [`phylograftR::graft_missing_clades()`][graft_missing_clades] was used for the grafting.
+#' **Missing clades.** With a `$Sister_clade` list (for missing clades), the function assumed that [`phylograftR::graft_missing_clades()`][graft_missing_clades] was used for the grafting.
 #' It returns a data.frame with one row per missing clade, i.e., per group of taxa sharing the same sister clade, numbered in the order of their first appearance in `missing_taxa_list`, for each phylogeny checked.
 #'
 #' The columns `$map`, `$simulation` and `$seed` are the same as above, followed by:
@@ -105,9 +105,9 @@
 #'      With the maps of several traits, `TRUE` if this is the case for all the traits, and `$states_ok_<trait>` gives the result of each trait.
 #'      With `treat_states_as_ranges = TRUE`, the single state is the range inherited by the missing clade, which must be one of its allowed ranges (any range if none).
 #' * `$ranges_ok`: Logical. Only checked with `treat_states_as_ranges = TRUE` (or a range trait): whether the range inherited by the missing clade is contained in the state of the lineage at the graft point.
-#' * `$ok`: Logical. Whether the missing clade is in the tree, monophyletic, on the stem of its sister clade, and in an allowed state and range (if checked).
+#' * **`$ok`**: Logical. Whether the missing clade is in the tree, monophyletic, on the stem of its sister clade, and in an allowed state and range (if checked).
 #'
-#' **Multiple maps** With a list of maps as `phy_grafted`, the function returns a list of such data.frames (one per map, named after the maps, with the attribute `"all_ok"` for all the maps),
+#' **Multiple maps.** With a list of maps as `phy_grafted`, the function returns a list of such data.frames (one per map, named after the maps, with the attribute `"all_ok"` for all the maps),
 #' since the maps have their own constraints: in each data.frame, the rows of all the simulations of the map are merged.
 #'
 #' The data.frame has the following attributes (for several phylogenies: `"topology_preserved"` and `"backbone_preserved"` are `TRUE` if they are `TRUE` for all the phylogenies,
@@ -117,7 +117,7 @@
 #' * `"max_branch_length_deviation"`: Numeric. Maximum absolute deviation in backbone branch lengths (`NA` if the topology is not preserved).
 #' * `"max_branch_length_deviation_relative"`: Numeric. Same, relative to the depth of the backbone.
 #' * `"backbone_preserved"`: Logical. Whether both topology and branch lengths are preserved, within `tolerance` (`NA` if `check_backbone = FALSE`).
-#' * `"all_ok"`: Logical. Whether all taxa respect their constraints and the backbone is preserved (if checked).
+#' * **`"all_ok"`**: Logical. Whether all taxa respect their constraints and the backbone is preserved (if checked).
 #' * `"trait_names"`: Character vector. Names of the traits checked (only with the maps of several traits, otherwise `NULL`).
 #' * `"range_trait"`: Character string. Name of the trait treated as ranges (only with the maps of several traits, otherwise `NULL`).
 #' * `"phylogenies"`: data.frame with one row per phylogeny checked (columns `map`, `simulation`, `seed`, `n_failed` (number of taxa, or of missing clades, that failed), `backbone_preserved` and `all_ok`).
@@ -128,20 +128,20 @@
 #' @details
 #' ### Missing taxa
 #'
-#' A taxon respects its target clade if it is found within the clade, or on its stem branch if the stem is accepted for this taxon:
+#' **A taxon respects its target clade if it is found within the clade, or on its stem branch if the stem is accepted for this taxon**:
 #' global `include_target_clade_stem = TRUE`, or `missing_taxa_list$include_target_clade_stem` of this taxon
 #' (the taxon is then sister to the target clade, or to other missing taxa sister to the target clade, with no other backbone tip in between).
 #' For a single-tip target clade, the taxon must be on the branch of the tip, with no other backbone tip in between.
 #'
-#' The 'stem' position is not restricted to a taxon being directly sister to the target clade: taxa grafted on the stem can receive further grafts,
-#' so several missing taxa can form together a group sister to the target clade (i.e, a missing-only subtree grafted on the the stem).
+#' The 'stem' position is not restricted to a taxon being directly sister to the target clade: **taxa grafted on the stem can receive further grafts**,
+#' so several missing taxa can form together a group sister to the target clade (i.e, a **missing-only subtree** grafted on the the stem).
 #' Only backbone tips are considered when checking the position of a taxon (missing taxa are ignored), so such configurations are valid.
 #'
 #' If `phy_grafted` has a `$simmap` item (the updated `simmap` returned by the grafting functions when a `simmap` is provided), the states are also checked:
 #' a grafted taxon is in the state of the point where it was grafted, along its whole terminal branch, so the states of its terminal branch in the `simmap` must be allowed.
 #' The `simmap` item is used as it is: it is not compared to the backbone.
 #'
-#' A taxon respects its excluded subclades if it is not nested within any of them.
+#' **A taxon respects its excluded subclades if it is not nested within any of them.**
 #' If the stem of an excluded subclade is excluded (`exclude_subclades_stem = TRUE`, the default), the taxon must also not be on its stem, i.e., sister to the subclade
 #' (or to other missing taxa sister to the subclade), with no other backbone tip in between. For a single-tip excluded subclade, the taxon must not be on the branch of the tip.
 #' As in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa], if the stem of the subclade is not excluded, the taxon can be sister to the subclade, not within it.
@@ -151,7 +151,7 @@
 #'
 #' ### Missing clades
 #'
-#' `graft_missing_clades()` grafts the taxa sharing the same sister clade together, as ONE missing clade, on the stem branch of their sister clade.
+#' `graft_missing_clades()` grafts the taxa sharing the same sister clade together, as **one missing clade**, on the stem branch of their sister clade.
 #' With a `$Sister_clade` list, this function checks each missing clade (the taxa whose sister clades have the same backbone tips, whatever the pair of tips used to define them) for:
 #' * its presence (`$in_tree`): all its taxa must be in the grafted phylogeny ;
 #' * its monophyly (`$monophyletic`): its taxa must form one clade of the grafted phylogeny, free of any other tip ;
@@ -161,7 +161,7 @@
 #'   which must be allowed. The taxa of a missing clade are grafted together, so they must share their allowed states (the function stops otherwise, as the grafting function does).
 #'   With `treat_states_as_ranges = TRUE`, the whole missing clade inherits one range, which must be contained in the state of the lineage at the graft point (see 'Biogeographic ranges as states').
 #'
-#' The arguments `include_target_clade_stem`, `use_excluded_subclades` and `exclude_subclades_stem` only apply to taxa and are ignored. The backbone is checked as for taxa.
+#' *e arguments `include_target_clade_stem`, `use_excluded_subclades` and `exclude_subclades_stem` only apply to taxa and are ignored. The backbone is checked as for taxa.
 #' Several phylogenies, maps and traits are handled as described in the corresponding sections. With `verbose = TRUE`, the summary counts missing clades instead of taxa.
 #'
 #' ### Several traits
@@ -171,7 +171,7 @@
 #' the states of the terminal branch of the taxon in the simmap of each trait must be allowed for this trait.
 #' The allowed states of each taxon and trait are resolved as in the grafting functions: the value of `missing_taxa_list$allowed_states` for this trait if provided,
 #' otherwise the global `allowed_states` for this trait, otherwise all the states of the trait (see [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]).
-#' `$states_ok_<trait>` gives the result for each trait, and `$states_ok` is `TRUE` only if all traits are allowed.
+#' `$states_ok_<trait>` gives the result for each trait, and **`$states_ok` is `TRUE` only if all traits are ok**.
 #' With `verbose = TRUE`, the number of violations is also given for each trait.
 #'
 #' With a trait treated as ranges (`treat_states_as_ranges`, one `TRUE` in the vector), the checks of 'Biogeographic ranges as states' are performed on this trait:

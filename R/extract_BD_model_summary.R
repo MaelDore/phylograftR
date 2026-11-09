@@ -13,21 +13,21 @@
 #' @description Extract the summary of the birth-death (BD) models fitted to simulate the divergence times of the grafted taxa.
 #'   Returns a data.frame with one row per model, per grafted phylogeny (simulation and stochastic map).
 #'   It is similar to [`phylograftR::extract_grafting_info()`][extract_grafting_info], but the summary is not computed a posteriori:
-#'   the grafting functions record them if `return_BD_model_summary = TRUE`, and this function extracts the records.
+#'   the grafting functions record them if `return_BD_model_summary = TRUE`, and this function **extracts the records**.
 #'
 #' @param phy_grafted A grafted phylogeny (class `"phylo"`), a set of grafted phylogenies (class `"multiPhylo"`, e.g., several simulations),
 #'   or a list of them with one element per map (output of the grafting functions with a `"multiSimmap"`).
-#'   The phylogenies must have the attribute `"BD_model_summary"`, so they must be the output of
+#'   **The phylogenies must have the attribute `"BD_model_summary"`**, so they must be the output of
 #'   [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] (with `method = "BD_clades"`) or [`phylograftR::graft_missing_clades()`][graft_missing_clades]
 #'   run with `return_BD_model_summary = TRUE`.
 #'
 #' @details
-#' With [`phylograftR::graft_missing_taxa()`][graft_missing_taxa], a model is fitted per target clade, and used by all the taxa of the target clade,
+#' With [`phylograftR::graft_missing_taxa()`][graft_missing_taxa], **a model is fitted per target clade**, and used by all the taxa of the target clade,
 #' whatever their stem availability or excluded subclades.
-#' With [`phylograftR::graft_missing_clades()`][graft_missing_clades], a model is fitted per missing clade, i.e., per sister clade.
+#' With [`phylograftR::graft_missing_clades()`][graft_missing_clades], **a model is fitted per missing clade**, i.e., per sister clade.
 #'
 #' The initial clade is the target clade (or the sister clade). The model is fitted on the initial clade if it has at least `min_tips` tips,
-#' otherwise on the smallest enclosing clade that has `min_tips` tips (`enclosing = TRUE`).
+#' otherwise on the **smallest enclosing clade** that has `min_tips` tips (`enclosing = TRUE`).
 #' The number of tips of the fitted clade counts the taxa already grafted when the model is fitted.
 #'
 #' Clades are identified by their node in the backbone phylogeny provided to the grafting function, and by a pair of tips that defines the clade

@@ -25,8 +25,8 @@ with \code{treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE)}
 
 It is the output of \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} applied to the table
 \code{system.file("extdata", "toy_missing_taxa_with_ranges_and_elevation.csv", package = "phylograftR")}.
-In the column \code{allowed_states}, the states of the traits are separated by semicolons
-(in the order of the maps provided in \code{simmap}: the ranges, then the elevation), and the states of a trait by commas. Open that file to see the different syntaxes:
+In the column \code{allowed_states}, \strong{the states of the traits are separated by semicolons}
+(in the order of the maps provided in \code{simmap}: the ranges, then the elevation), \strong{and the states of a trait by commas}. Open that file to see the different syntaxes:
 \itemize{
 \item \code{"A;high"}: the range is \code{"A"}, and the elevation is \code{"high"}.
 \item \code{"B, BC;"}: the range is \code{"B"} or \code{"BC"}, and the elevation has no taxon-level value (the global value is used).
@@ -35,7 +35,7 @@ In the column \code{allowed_states}, the states of the traits are separated by s
 \item Blank cell: no taxon-level value for any trait, so the global \code{allowed_states} argument is used for both.
 }
 
-The names of the traits (\code{biogeo} and \code{elevation}) must match the names of the maps provided in \code{simmap} to use the syntax with names.
+\strong{The names of the traits (\code{biogeo} and \code{elevation}) must match the names of the maps provided in \code{simmap}} to use the syntax with names.
 }
 \examples{
 # Import the list

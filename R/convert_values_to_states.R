@@ -22,12 +22,12 @@
 #'   Alternatively, leave it as `NULL` and provide `breaks` and `states` (e.g., for a `simmap` built from tip values binned by yourself).
 #' @param breaks Numeric vector. Only used if `simmap = NULL`. The interior cut points between the states, in increasing order and different from each other.
 #' @param states Character vector. Only used if `simmap = NULL`. The names of the states, from the lowest to the highest values.
-#'   Must have one more element than `breaks`, because N interior cuts (`breaks`) produce N+1 groups.
+#'   **Must have one more element than `breaks`**, because N interior cuts (`breaks`) produce N+1 groups.
 #'
-#' @details Each state covers the values from its lower cut point (included) up to its upper cut point (excluded): a value equal to a cut point belongs to the state above it.
+#' @details Each state covers the values from its lower cut point (included) up to its upper cut point (excluded): **a value equal to a cut point belongs to the state above it.**
 #'   The first and last states are open-ended, so values below the first cut point or above the last one are assigned to the lowest and highest states.
 #'
-#'   Each value is assigned to a unique state. If you wish to include uncertainty by assigning multiple states to values close to cut points (as possible for `allowed_states`),
+#'   **Each value is assigned to a unique state.** If you wish to include uncertainty by assigning multiple states to values close to cut points (as possible for `allowed_states`),
 #'   you must edit the output after the conversion.
 #'
 #' @return A character vector with the state of each value, named as in `values`.

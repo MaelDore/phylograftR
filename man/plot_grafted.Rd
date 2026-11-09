@@ -18,7 +18,7 @@ plot_grafted(
 \arguments{
 \item{phy_grafted}{A grafted phylogeny (class \code{"phylo"}, with the elements \verb{$grafted_tips} and \verb{$grafted_edges}, see \code{\link[=identify_grafted]{phylograftR::identify_grafted()}}),
 a set of grafted phylogenies (class \code{"multiPhylo"}, e.g., several simulations), or a list of them with one element per map (output of the grafting functions with a \code{"multiSimmap"}).
-Only one phylogeny is plotted: see \code{index}.}
+\strong{Only one phylogeny is plotted}: see \code{index}.}
 
 \item{which}{Character string. What to highlight: \code{"both"} (default) for the grafted branches and tips, \code{"edges"} for the grafted branches only, or \code{"tips"} for the grafted tips only.}
 
@@ -46,7 +46,7 @@ A title can be added with \code{main} (and \code{sub}).}
 \description{
 Plot a phylogeny returned by the grafting functions, with the grafted branches and/or the grafted tips highlighted.
 If the phylogeny has a \verb{$simmap} (grafting with a \code{simmap}), the updated stochastic character map is plotted instead of the plain phylogeny:
-the colors of the states are kept, the grafted branches are drawn dashed, and the grafted tips are labelled with the highlight color.
+the colors of the states are kept, the grafted branches are drawn dashed lines, and the grafted tips are labelled with the highlight color.
 
 The function uses the plotting functions of \code{ape} and \code{phytools} (\code{plot.phylo()}, \code{phytools::plotSimmap()} and \code{ape::tiplabels()}):
 it only prepares the colors and the dashes, and other plotting arguments are passed to these functions.
@@ -61,7 +61,7 @@ This is the equivalent of passing \code{edge.color} and \code{tip.color} to \cod
 \subsection{Simmap}{
 
 A branch of a simmap is drawn in the color of its state, so the grafted branches cannot be highlighted by a color without hiding their state.
-They are drawn as dashed lines instead, with \code{which = "edges"} or \code{"both"}.
+They are \strong{drawn as dashed lines} instead, with \code{which = "edges"} or \code{"both"}.
 The labels of the grafted tips, with \code{which = "tips"} or \code{"both"}, are drawn in \code{color}.
 Only rightwards phylograms (\code{direction = "rightwards"}) are supported for simmaps.
 }

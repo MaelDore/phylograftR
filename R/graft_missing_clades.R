@@ -9,31 +9,31 @@
 #' @title Graft missing clades on a time-calibrated phylogeny
 #'
 #' @description This function grafts missing taxa onto an ultrametric, time-calibrated backbone phylogeny as clades sister to clades of the backbone.
-#'   Missing taxa sharing the same sister clade are grafted together as ONE missing clade, on the stem branch of their sister clade.
+#'   Missing taxa sharing the same sister clade are **grafted together as one missing clade**, on the stem branch of their sister clade.
 #'
 #'   The divergence time of the missing clade is drawn from a birth-death model fitted on the sister clade,
 #'   and the missing clade is grown under the same model, conditioned on its number of taxa and its stem age.
 #'
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which taxa are grafted.
 #'   It must be rooted, binary (no polytomies) and ultrametric (i.e., be time-calibrated).
-#' @param missing_taxa_list A list with the information on the taxa to graft. Items:
-#'   * `$Taxon_name`: Character vector of the names of the taxa to graft. Names must be unique and absent from `phy$tip.label`.
-#'   * `$Sister_clade`: List (named after `$Taxon_name`) of character vectors. For each taxon, the tip labels defining the clade of the backbone
-#'     that is sister to the missing clade. Taxa with the same sister clade are grafted together as one missing clade.
+#' @param missing_taxa_list A list with the information on the taxa to graft. **Every item provided must be named after `$Taxon_name`.** Items:
+#'   * `$Taxon_name`: Character vector of the names of the taxa to graft. **Names must be unique and absent from `phy$tip.label`.**
+#'   * `$Sister_clade`: List (named after `$Taxon_name`) of character vectors. For each taxon, the tip labels defining the **sister clade**, i.e., the clade of the backbone
+#'     that is sister to the missing clade. **Taxa with the same sister clade are grafted together as one missing clade.**
 #'     A pair of tips defines the clade as their MRCA node. A single tip defines the "clade" as the terminal branch of this tip.
-#'     Clades, including the excluded subclades (see below), must be defined by tips: node IDs are not accepted (the function stops, and lists some of them).
+#'     **Clades must be defined by tips: node IDs are not accepted** (the function stops, and lists some of them).
 #'     Use [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] to convert node IDs into pairs of tips.
 #'   * `$Sister_clade_name`: (Optional) Character vector (named after `$Taxon_name`) of the names of the sister clades (`NA` if a clade has no name).
-#'     Taxa sharing the same sister clade must have the same name. The names are not used for the grafting, but, if `total_richness_per_clades` is provided,
+#'     **Taxa sharing the same sister clade must have the same name.** The names are not used for the grafting, but, if `total_richness_per_clades` is provided,
 #'     they are checked against its `$Sister_clade_name` (a clade must have the same name in both objects).
 #'   * `$allowed_states`: (Optional) List (named after `$Taxon_name`) of character vectors. For each taxon, the states of the `simmap` in which its missing clade
-#'     can be grafted on the stem branch of its sister clade. It overrides the global argument `allowed_states` for this taxon. `NULL` or `NA` use the global argument.
-#'     Only used with a `simmap`. Taxa with the same sister clade are grafted together as one missing clade, so they must have the same allowed states
+#'     can be grafted on the stem branch of its sister clade. It **overrides the global argument** `allowed_states` for this taxon. `NULL` or `NA` use the global argument.
+#'     Only used with a `simmap`. Taxa with the same sister clade are grafted together as one missing clade, so **they must have the same allowed states**
 #'     (the function stops otherwise, and lists the clades concerned).
 #'     With the maps of several traits, each element is a list with the states of each trait (`NULL`: no taxon-level value for the trait), e.g.,
 #'     `list(M1 = list(c("blue", "green"), "high"), M2 = list(NULL, "low"))` (see 'Several traits' in Details section).
 #' @param min_tips Integer. Minimum number of tips of the clade used to fit the birth-death model.
-#'   If the sister clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. Must be at least 3. Default is `5`.
+#'   If the sister clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. **Must be at least 3.** Default is `5`.
 #' @param return_BD_model_summary Logical. Whether to report the birth-death models fitted during the grafting.
 #'   If `TRUE`, each grafted phylogeny has the attribute `"BD_model_summary"`: a data.frame with one row per model (i.e., per missing clade),
 #'   summarizing diversification rates and sampling fraction.
@@ -41,18 +41,17 @@
 #' @param total_richness_per_clades (Optional) List with the total number of species of the clades, to account for species that are neither in the backbone
 #'   nor in `missing_taxa_list` (i.e., unsampled species) when fitting the birth-death models. Items:
 #'   * `$Sister_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Sister_clade`.
-#'     Node IDs are not accepted: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
+#'     **Node IDs are not accepted**: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
 #'     so the tips of the clades match between both objects.
-#'     It must cover all the unique sister clades of `missing_taxa_list`. It can include other clades, e.g., enclosing clades.
+#'     **It must cover all the unique sister clades of `missing_taxa_list`.** It can include other clades, e.g., enclosing clades.
 #'   * `$Sister_clade_name`: (Optional) Character vector of the names of the clades, same length as `$Sister_clade` (`NA` if a clade has no name).
-#'     The names must be unique. If `missing_taxa_list$Sister_clade_name` is provided, a clade must have the same name in both objects (the function stops otherwise).
+#'     The names must be unique. If `missing_taxa_list$Sister_clade_name` is provided, **a clade must have the same name in both objects** (the function stops otherwise).
 #'     They are not used for the grafting, but they are reported by [`phylograftR::extract_sampling_info()`][extract_sampling_info].
 #'   * `$total_richness`: Vector of positive integers, same length as `$Sister_clade`. Total number of species of each clade,
 #'     i.e., backbone species, missing species nested within the clade, and unsampled species. Use `NA` if unknown: the unsampled species
 #'     are then assumed to be those of the clades with an informed total richness nested within the clade (none if there are no such clades).
 #'
-#'   With `NULL` (default), missing species to graft and backbone species
-#'   are assumed to cover all species in the focal group (no unsampled species).
+#'   With `NULL` (default), missing species to graft and backbone species are assumed to cover all species in the focal group (no unsampled species).
 #'   If the list is provided with only `NA` in `$total_richness`, the fits are identical (no unsampled species in any clade, `total_richness` = backbone + missing species).
 #'
 #'   To obtain a posteriori the species richness and the effective sampling fraction of the clades in each grafted phylogeny,
@@ -106,7 +105,7 @@
 #'   See 'Multiple simulations' in Details section for handling of the output, the seeds and the failures.
 #' @param force_simulations Logical. Whether to try new seeds until `nb_simulations` grafted phylogenies are obtained, up to `10 * nb_simulations` attempts
 #'   (see 'Multiple simulations' in Details section). If `FALSE`, the simulations that fail are skipped. Default is `FALSE`.
-#' @param parallel Logical or `NULL`. Whether to run the simulations in parallel, with the packages `future` and `future.apply` (they must be installed separately from phylograftR).
+#' @param parallel Logical or `NULL`. Whether to run the simulations in parallel, with the packages `future` and `future.apply` (**they must be installed separately from phylograftR**).
 #'   Default is `NULL`: the simulations are run in parallel if the user set a `future` plan with several workers beforehand (e.g., `future::plan(future::multisession, workers = 4)`), and sequentially otherwise.
 #'   `FALSE` forces a sequential run, even if a plan is set. `TRUE` execute the `future` plan, but stops with an informative error if the packages are not installed or no plan is set.
 #'   See 'Parallel computation' in Details section for recommendations on whether parallelization is useful in your case.
@@ -121,12 +120,13 @@
 #'   See 'Temporary saves and resuming' in the Details section.
 #' @param clean_temp_files Logical. Whether to delete all the temporary files of the run once it is completed without stopping/crashing. Only used if `save_temp = TRUE`.
 #'   If the run crashes or is interrupted, nothing is deleted so it can be resumed. Use `FALSE` to keep the files. Default is `TRUE`.
-#' @param resume Logical. Whether to resume an interrupted run from its temporary files, which must come from a run with the exact same arguments (see 'Temporary saves and resuming').
+#' @param resume Logical. Whether to resume an interrupted run from its temporary files, which **must come from a run with the exact same arguments** (see 'Temporary saves and resuming').
 #'   Needs `save_temp = TRUE`. Default is `FALSE`.
 #' @param ultrametric_tol Numeric. Tolerance used by `ape::is.ultrametric()` for the ultrametricity checks of the backbone and of the final phylogeny.
 #'   Default is `.Machine$double.eps^0.5`.
 #' @param verbose Logical. Whether to display progress. Messages print every 10 missing clades.
 #'   If computation is run in parallel, only a message is printed when each simulation is done. Default is `TRUE`.
+#'
 #' @return The function returns an object of class `"phylo"`: the backbone phylogeny with the grafted taxa added as new tips.
 #'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
 #'
@@ -136,7 +136,7 @@
 #'     i.e., branches with only grafted taxa descending from them. Names are the IDs of the tipward nodes of the branches (`$edge[, 2]`).
 #'     Use them to color the phylogeny on plots (see examples).
 #'
-#'   These elements are not updated by functions that modify the phylogeny (e.g., `ape::drop.tip()`, which removes tips but keeps the other elements as they are,
+#'   **These elements are not updated by functions that modify the phylogeny** (e.g., `ape::drop.tip()`, which removes tips but keeps the other elements as they are,
 #'   and `ape::write.tree()`, which removes them). Use [`phylograftR::identify_grafted()`][identify_grafted] to recompute `grafted_tips` and `grafted_edges` on a manipulated phylogeny.
 #'
 #'   Optional elements can be added to the output based on what optional argument was provided:
@@ -164,11 +164,11 @@
 #' @details
 #' ### Stop conditions
 #'
-#' The function stops, before any grafting, if the backbone is not ultrametric, or if a sister clade is the whole tree (it has no stem branch to graft on).
+#' The function **stops, before any grafting,** if the backbone is not ultrametric, or if a sister clade is the whole tree (it has no stem branch to graft on).
 #'
 #' ### Grafting process
 #'
-#' Groups of missing taxa sharing the same sister clade are ordered by the size of the sister clade, so nested sister clades are processed first.
+#' Groups of missing taxa sharing the same sister clade are ordered by the size of the sister clade, so **nested sister clades are processed first**.
 #' For each group:
 #' 1. A birth-death model is fitted with `phytools::fit.bd()` on the sister clade, or on the smallest enclosing clade with at least `min_tips` tips.
 #'    The model is fitted on the crown group of this clade, with the sampling fraction of this crown group (see Sampling fraction and unsampled species).
@@ -207,7 +207,7 @@
 #'
 #' If `total_richness_per_clades = NULL`, `nb_unsampled = 0`: the clades have no unsampled species (the same as providing only `NA` in `$total_richness`).
 #'
-#' Each missing clade is grafted on the stem branch of its sister clade in all the grafted phylogenies: only the divergence times vary among simulations and maps.
+#' **Each missing clade is grafted on the stem branch of its sister clade in all the grafted phylogenies: only the divergence times vary among simulations and maps.**
 #' The species present in each listed sister clade, and the resulting sampling fractions for downstream analyses, are therefore the same in all the grafted phylogenies.
 #' Use [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract them a posteriori.
 #'
@@ -219,20 +219,20 @@
 #'
 #' A `simmap` describes the states of a discrete attribute (e.g., a trait or a range) along the branches of the backbone: each branch is cut in pieces, each piece being in one state.
 #' Missing clades are grafted on the stem branch of a clade of the backbone, and the function assumes that the user considers this stem branch a valid place for them.
-#' Restricting the grafting to some states of the stem branch is therefore only useful when the user has a strong hypothesis about a change of state
-#' along the stem branch that should affect where the missing clade can be grafted. For most uses, the `simmap` is not needed.
+#' **Restricting the grafting to some states of the stem branch is therefore only useful when the user has a strong hypothesis about a change of state
+#' along the stem branch that should affect where the missing clade can be grafted. For most uses, the `simmap` is not needed.**
 #'
 #' For example, in biogeography: a stem fossil is found in range A, and the sister clade is in range A, while the missing clade is in range B.
 #' If the shift from range B to range A on the stem branch of the sister clade is estimated to have occurred before the age of the fossil,
 #' the missing clade can be restricted to the part of the stem branch before the shift, with `allowed_states = "B"`.
 #'
-#' With a `simmap`, a missing clade is only grafted on the pieces of the stem branch of its sister clade that are in its allowed states
+#' With a `simmap`, **a missing clade is only grafted on the pieces of the stem branch of its sister clade that are in its allowed states**
 #' (`missing_taxa_list$allowed_states` of its taxa if provided, otherwise the global argument `allowed_states`).
 #' The divergence time of the missing clade is drawn with `TreeSim::corsim()` as without a `simmap`: if it falls in a part of the stem branch that is not in an allowed state,
 #' it is drawn again, up to `max_age_redraws` times.
 #'
-#' The `simmap` can also be provided so that the states are updated alongside the phylogeny: the whole missing clade (all its taxa and branches)
-#' inherits the state of the point of the stem branch where it is grafted. The updated `simmap` is returned in `$simmap`, if `return_simmap = TRUE`).
+#' The `simmap` can also be provided so that the states are updated alongside the phylogeny: **the whole missing clade (all its taxa and branches)
+#' inherits the state of the point of the stem branch where it is grafted.** The updated `simmap` is returned in `$simmap`, if `return_simmap = TRUE`).
 #' The allowed states are not required: without any allowed states, all the states are allowed, grafting is not restricted by the states,
 #' but the simmap will be updated, assuming grafted clades inherit the state of the point where they are grafted.
 #'
@@ -258,7 +258,7 @@
 #' (one capital letter per area, and the letters of a multi-area range in alphabetical order, e.g., `"AB"`),
 #' and the allowed states are the ranges a missing clade can have.
 #'
-#' An allowed range matches a state of the `simmap` if it is contained in it: a missing clade allowed in `"A"` can be grafted on the parts of the stem branch in `"A"`, `"AB"` or `"ABC"`,
+#' **An allowed range matches a state of the `simmap` if it is contained in it**: a missing clade allowed in `"A"` can be grafted on the parts of the stem branch in `"A"`, `"AB"` or `"ABC"`,
 #' whereas a missing clade allowed in `"AB"` only can be grafted on the parts of the stem branch in `"AB"` or `"ABC"`.
 #'
 #' When multiple allowed states are provided, the inherited range is drawn randomly from the allowed ranges enclosed within the range of the stem branch piece where it is grafted.
@@ -272,7 +272,7 @@
 #' and the simulations do not share anything but the inputs. The phylogenies are returned in a `"multiPhylo"` object (a single `"phylo"` if `nb_simulations = 1`),
 #' and the memory used grows with the number of simulations.
 #'
-#' The first simulation uses `seed`, so it is the same phylogeny as a run with `nb_simulations = 1` and the same `seed`.
+#' **The first simulation uses `seed`**, so it is the same phylogeny as a run with `nb_simulations = 1` and the same `seed`.
 #' The seeds of the other simulations are drawn from a stream started by `seed`, and returned in the attribute `"seeds"`:
 #' a simulation can be reproduced alone with its seed, and the first simulations of a longer run are the same as the ones of a shorter run.
 #' With `seed = NULL`, the simulations follow the random number generator of the session.
@@ -290,8 +290,8 @@
 #'
 #' When multiple stochastic maps of the same trait are provided as a `"multiSimmap"`, the grafting is run with each of its maps.
 #' The maps are alternative hypotheses of the evolution of the same trait (or range), used as alternative constraints.
-#' All the maps and the simulations are crossed: each map is used for `nb_simulations` simulations, so `P` maps give `P * nb_simulations` grafted phylogenies.
-#' This can lead to a quick inflation of computation time, thus a warning is sent if the total number of grafted phylogenies (`P * nb_simulations`) is more than 1000.
+#' **All the maps and the simulations are crossed**: each map is used for `nb_simulations` simulations, so `P` maps give `P * nb_simulations` grafted phylogenies.
+#' This can lead to a quick inflation of computation time, thus a warning is sent if the total number of grafted phylogenies (`P * nb_simulations`) is more than **1000**.
 #'
 #' The output is a list with one element per stochastic map, named after the maps (the names of the `"multiSimmap"` if it has some, otherwise `"map_1"`, ..., `"map_P"`).
 #' With `nb_simulations = 1`, each element is a grafted phylogeny. With several simulations, each element is a `"multiPhylo"` (see 'Multiple simulations')
@@ -309,7 +309,7 @@
 #' (e.g., `simmap = list(color = color_simmap, elevation = elevation_simmap)`). The elements can be named after the traits (with different names that cannot contain `;`, `,`, `=` or `|`),
 #' otherwise the traits are named `"trait_1"`, `"trait_2"`, ... All the maps must have the same tips, topology and branch lengths as the backbone `phy`.
 #'
-#' A taxon can only be grafted on the parts of the branches that are in one of its allowed states, for every trait.
+#' **A taxon can only be grafted on the parts of the branches that are in one of its allowed states, for every trait.**
 #' The allowed states are provided for each trait, in the order of the list of maps (or named after the traits):
 #' the global argument `allowed_states` is a list with one element per trait, e.g., `list(c("blue", "green"), NULL, "high")` for three traits,
 #' and `missing_taxa_list$allowed_states` has such a list for each taxon.
@@ -322,7 +322,7 @@
 #' In each simmap, a grafted branch is entirely in the state of each trait at the point where it was grafted (each trait is inherited from the lineage it was grafted on).
 #'
 #' With a list of `"multiSimmap"` provided as `simmap`, the maps of the traits are paired: the grafting is run with the map 1 of every trait, then the map 2 of every trait, and so on.
-#' All the traits must therefore have the same number of maps to be associated in a given grafting process.
+#' **All the traits must therefore have the same number of maps** to be associated in a given grafting process.
 #'
 #' One of the traits can be treated as biogeographic ranges combined with any number of other traits.
 #' Use a logical vector in `treat_states_as_ranges`to define which of the trait is to be treated as biogeographic ranges for inheritance.
@@ -332,14 +332,14 @@
 #' whereas a missing clade allowed in `"AB;high"` only can be grafted on stem branch pieces in `"AB;high"` or `"ABC;high"`.
 #'
 #' The other traits are matched exactly, and are inherited as they are from the point where the clade is grafted: with `"AB"` and `"high"` at the graft point and the allowed range `"A"`,
-#' the whole missing clade inherits `"A"` and `"high"`. Only one trait can be treated as ranges to prevent inflation of the number of combined allowed states to consider.
+#' the whole missing clade inherits `"A"` and `"high"`. **Only one trait can be treated as ranges** to prevent inflation of the number of combined allowed states to consider.
 #'
 #' ### Parallel computation
 #'
 #' The simulations based on the different stochastic maps and seeds are independent, so they can be run in parallel with the package `future` and `future.apply`.
-#' Both packages must be installed independently from phylograftR (they are only suggested).
+#' **Both packages must be installed independently from phylograftR**.
 #'
-#' The grafting function does not manage the workers: you must set a plan beforehand, e.g., `future::plan(future::multisession, workers = 4)`,
+#' The grafting function does not manage the workers: **you must set a plan beforehand**, e.g., `future::plan(future::multisession, workers = 4)`,
 #' and reset it afterwards with `future::plan(future::sequential)`. With the default `parallel = NULL`, the function uses the plan if there is one, `parallel = FALSE` ignores it.
 #' All the `P * nb_simulations` simulations (with `P` stochastic maps per trait) are run as one set of tasks, so the workers are used evenly.
 #'
@@ -347,7 +347,7 @@
 #' The messages, warnings and printed output of the simulations are relayed to the session when the tasks are collected (so they appear after the simulations, not live),
 #' and with `verbose = TRUE` one line is printed when each simulation is done.
 #'
-#' Setting up the workers and sending the data to them has a time cost, so parallelization only pays off with large backbone phylogenies, or many simulations or maps.
+#' Setting up the workers and sending the data to them has a time cost, so **parallelization only pays off with large backbone phylogenies, or many simulations or maps**.
 #' As a rule of thumb, use parallel computation when the sequential run would last more than a minute or so, i.e., for large backbone phylogenies (500 tips or more) and several grafted phylogenies
 #' (`nb_maps * nb_simulations`), or for 50 or more grafted phylogenies on small backbones.
 #'
@@ -369,13 +369,13 @@
 #' Once the phylogeny is fully grafted, the file is replaced by the complete output of the simulation (with `$simmap`, `$grafted_tips`, etc.).
 #'
 #' With `clean_temp_files = TRUE` (default), all the temporary files of the run are deleted once the function returns without crashing.
-#' A run that crashes or is interrupted never deletes its files, so it can be resumed with `resume = TRUE`.
+#' **A run that crashes or is interrupted never deletes its files**, so it can be resumed with `resume = TRUE`.
 #' Use `clean_temp_files = FALSE` to keep the files after a successful run.
 #'
 #' With `resume = TRUE`, the function must be called again with **exactly the same arguments** as the interrupted run.
 #' For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
 #'
-#' Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone, with a `missing_taxa_list` restricted to these taxa:
+#' **Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone**, with a `missing_taxa_list` restricted to these taxa:
 #' the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
 #' the identification of the grafted tips and the updated `simmap` would be wrong, and a `simmap` of the initial backbone would not match the temporary phylogeny.
 #' Use `resume = TRUE` instead.
