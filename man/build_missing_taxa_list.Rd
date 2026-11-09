@@ -9,14 +9,17 @@ build_missing_taxa_list(data, phy, verbose = TRUE)
 \arguments{
 \item{data}{A data frame, with one row per taxon to graft.
 Its columns are the items of \code{missing_taxa_list} as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}.
-See Details for a full description. All the columns are read as text.  Blank cells and \code{NA} are missing values.}
+See Details for a full description. All the columns are read as text.  Blank cells and \code{NA} are missing values.
+A column \code{Type} (\code{"taxa"} or \code{"clades"}), or both columns \code{Target_clade} and \code{Sister_clade}, allow for describing both types of taxa in the same data.frame.}
 
 \item{phy}{An object of class \code{"phylo"}. The backbone phylogeny on which the taxa will be grafted. It is used to check the tips and clades, and to convert node IDs into tips.}
 
 \item{verbose}{Logical. Whether to print the conversions of node IDs into tips (if any). Default is \code{TRUE}.}
 }
 \value{
-A \code{missing_taxa_list}: a list, ready to be used in the grafting functions, with the following items:
+A \code{missing_taxa_list}: a list, ready to be used in the grafting functions, with the following items.
+If the table describes both types of taxa, a list with two \code{missing_taxa_list}: \verb{$taxa} (with \verb{$Target_clade}, for \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}})
+and \verb{$clades} (with \verb{$Sister_clade}, for \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}).
 \itemize{
 \item \verb{$Taxon_name} Character vector.
 \item \verb{$Target_clade} (or \verb{$Sister_clade}) List of character vectors of tips.
@@ -33,10 +36,15 @@ Every item is named after the taxa (\verb{$Taxon_name}), in the same order.
 \description{
 Build a valid \code{missing_taxa_list} from a data.frame describing the taxa to graft (one row per taxon, e.g., read from a .csv file),
 for \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}.
-Lists of tips (or node IDs, see Details) are written in the cells of the table, and the function parses them and names every item after the taxa (as required by the grafting functions),
+Lists of tips (or node IDs, see Details) are written as values of the data.frame, and the function parses them and names every item after the taxa (as required by the grafting functions),
 and runs all the checks of validity against the backbone phylogeny.
 
-Use \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read the table directly from a file.
+The same data.frame can describe \strong{both types of taxa}: taxa to graft within a target clade (\code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}),
+and taxa to graft as missing clades sister to a clade (\code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}).
+The function then returns \strong{one list per type}, built from the same backbone, as done by \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}}
+(see 'Taxa and missing clades in the same data.frame' in Details).
+
+Use \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read the table directly from an external file.
 
 Clades are defined by tips or node IDs, which allows for fine-tuning the constraints of each taxon (see 'Fine-tuning the clades' in Details).
 For large phylogenies with neatly defined taxonomic levels, taxonomic tables are likely easier to prepare:
@@ -48,7 +56,9 @@ Column names must be written exactly as below. Tips are separated by commas (\ve
 Values are \code{TRUE} or \code{FALSE} (also \code{T}, \code{F}, \code{yes}, \code{no}, \code{1}, \code{0}), or \code{NA}.
 \itemize{
 \item \code{Taxon_name} (Required): Names of the taxa to graft. \strong{Names must be unique and absent from \code{phy$tip.label}.}
-\item \code{Target_clade} or \code{Sister_clade} (Required): Tip labels defining a \strong{target clade} per taxon, i.e., the clade where the taxon is known to belong (e.g., its genus);
+\item \code{Type}: (Optional) \code{"taxa"} for taxa to graft within a target clade, or \code{"clades"} for taxa to graft as missing clades sister to a clade (case is ignored).
+Only needed to describe both types in the same table with a single clade column (see 'Taxa and missing clades in the same table' below).
+\item \code{Target_clade} and/or \code{Sister_clade} (Required): Tip labels defining a \strong{target clade} per taxon, i.e., the clade where the taxon is known to belong (e.g., its genus);
 or a \strong{sister clade}, i.e., the clade on whose stem branch the taxon is grafted, as its sister.
 A pair of tips defines the clade as their MRCA node (e.g., \code{"t26, t18"}).
 A single tip defines the "clade" as the terminal branch of this tip (e.g., \code{"t15"}).
@@ -83,7 +93,37 @@ Ex: \code{"group_1; group_2; tip_t7"}. \strong{There must be one label per subcl
 If provided, they are used as names of the subclades in the \code{Excluded_subclades} item of the list, and in the messages of the grafting functions.
 }
 
-\strong{Other columns are ignored, with a warning.}
+Other columns are ignored, with a warning.
+\subsection{Taxa and missing clades in the same data.frame}{
+
+\strong{A data.frame can describe both types of taxa}, so a single call prepares the lists for \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}
+and \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}, on the same backbone and with the same clades written with the same tips.
+The type of each taxon is given by:
+\itemize{
+\item The column \code{Type}, with \code{"taxa"} (target clade) or \code{"clades"} (sister clade): the clade is then read from \code{Target_clade} or \code{Sister_clade}, respectively.
+\item Otherwise, without \code{Type}, by the clade column that is filled in its row, when the data.frame has both \code{Target_clade} and \code{Sister_clade} columns.
+\strong{Each row must fill exactly one of them} (the function stops if both or none are filled).
+}
+
+The columns specific to a type are only read for the taxa of this type (e.g., \code{Excluded_subclades} for taxa with a target clade), and are ignored for the others, with a warning if they are filled.
+\code{allowed_states} is read for both types. A clade written in the column of the other type than \code{Type} is ignored with a warning.
+
+The function returns:
+\itemize{
+\item \strong{A single \code{missing_taxa_list}} if all the taxa have the same type, whether \code{Type} is provided or not.
+\item \strong{A list of two \code{missing_taxa_list}}, named \verb{$taxa} and \verb{$clades}, if both types are present.
+Each one is a standard \code{missing_taxa_list}, and the taxa of both lists are named differently (names must be unique across the table).
+Use \verb{$taxa} in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and \verb{$clades} in \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}.
+}
+
+Clade labels are also checked across both lists (the same clade has the same label as a target clade and as a sister clade),
+so that they can be matched with the names of \code{total_richness_per_clades}.
+
+\strong{Recommended sequence:} graft the missing taxa within target clades first with \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}},
+then use the grafted phylogeny as the backbone to graft the missing clades \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}.
+The clades are defined by tips of the backbone, so they stay valid even when the grafted phylogeny is used for the second step.
+}
+
 \subsection{Node IDs}{
 
 Clades (\code{Target_clade}, \code{Sister_clade}, and each subclade of \code{Excluded_subclades}) are typically defined by (pairs of) tips.
@@ -92,7 +132,7 @@ However, the function also accepts clades defined by the ID of a node of \code{p
 Node IDs are integers: \code{1} to N, with N being the number of tips (\code{ape::Ntip(phy)}) correspond to terminal nodes, and thus define single-tip clades.
 Following IDs are the internal nodes, as shown by \code{ape::nodelabels()}, and correspond to clades with multiple descending species.
 
-A value made only of digits is a node ID, so \strong{tip labels must include at least one other character than digits} to be distinguinshed.
+A value made only of digits is a node ID, so \strong{tip labels must include at least one other character than digits} to be distinguished.
 A clade is defined by tips or by one node ID, not both, and one node ID defines the clade alone.
 Node IDs are converted into tips before any other check, as done by \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}},
 and the conversions are printed if \code{verbose = TRUE}.
@@ -170,6 +210,20 @@ my_table_nodes <- data.frame(Taxon_name = c("M1", "M2"),
                              Target_clade = c("34", "t5, t12"),
                              Excluded_subclades = c("50", NA))
 str(build_missing_taxa_list(data = my_table_nodes, phy = toy_backbone), 2)
+
+# A table can describe both types of taxa: here, with a column 'Type'.
+# Taxa to graft within a target clade and taxa to graft as missing clades are returned as two lists, for the two grafting functions.
+my_table_both <- data.frame(Taxon_name = c("M1", "M2", "M3"),
+                            Type = c("taxa", "taxa", "clades"),
+                            Target_clade = c("t26, t18", "t5, t12", NA),
+                            Sister_clade = c(NA, NA, "t10, t19"),
+                            Excluded_subclades = c("t26, t4", NA, NA))
+lists <- build_missing_taxa_list(data = my_table_both, phy = toy_backbone)
+str(lists, 2)
+
+# Without 'Type', each row fills the clade column of its type
+my_table_both$Type <- NULL
+identical(build_missing_taxa_list(data = my_table_both, phy = toy_backbone), lists)
 
 }
 \seealso{

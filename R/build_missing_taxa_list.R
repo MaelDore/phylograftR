@@ -12,10 +12,15 @@
 #'
 #' @description Build a valid `missing_taxa_list` from a data.frame describing the taxa to graft (one row per taxon, e.g., read from a .csv file),
 #'   for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades].
-#'   Lists of tips (or node IDs, see Details) are written in the cells of the table, and the function parses them and names every item after the taxa (as required by the grafting functions),
+#'   Lists of tips (or node IDs, see Details) are written as values of the data.frame, and the function parses them and names every item after the taxa (as required by the grafting functions),
 #'   and runs all the checks of validity against the backbone phylogeny.
 #'
-#'   Use [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to read the table directly from a file.
+#'   The same data.frame can describe **both types of taxa**: taxa to graft within a target clade ([`phylograftR::graft_missing_taxa()`][graft_missing_taxa]),
+#'   and taxa to graft as missing clades sister to a clade ([`phylograftR::graft_missing_clades()`][graft_missing_clades]).
+#'   The function then returns **one list per type**, built from the same backbone, as done by [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy]
+#'   (see 'Taxa and missing clades in the same data.frame' in Details).
+#'
+#'   Use [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to read the table directly from an external file.
 #'
 #'   Clades are defined by tips or node IDs, which allows for fine-tuning the constraints of each taxon (see 'Fine-tuning the clades' in Details).
 #'   For large phylogenies with neatly defined taxonomic levels, taxonomic tables are likely easier to prepare:
@@ -24,6 +29,7 @@
 #' @param data A data frame, with one row per taxon to graft.
 #'   Its columns are the items of `missing_taxa_list` as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades].
 #'   See Details for a full description. All the columns are read as text.  Blank cells and `NA` are missing values.
+#'   A column `Type` (`"taxa"` or `"clades"`), or both columns `Target_clade` and `Sister_clade`, allow for describing both types of taxa in the same data.frame.
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which the taxa will be grafted. It is used to check the tips and clades, and to convert node IDs into tips.
 #' @param verbose Logical. Whether to print the conversions of node IDs into tips (if any). Default is `TRUE`.
 #'
@@ -33,7 +39,9 @@
 #' Values are `TRUE` or `FALSE` (also `T`, `F`, `yes`, `no`, `1`, `0`), or `NA`.
 #'
 #'  * `Taxon_name` (Required): Names of the taxa to graft. **Names must be unique and absent from `phy$tip.label`.**
-#'  * `Target_clade` or `Sister_clade` (Required): Tip labels defining a **target clade** per taxon, i.e., the clade where the taxon is known to belong (e.g., its genus);
+#'  * `Type`: (Optional) `"taxa"` for taxa to graft within a target clade, or `"clades"` for taxa to graft as missing clades sister to a clade (case is ignored).
+#'    Only needed to describe both types in the same table with a single clade column (see 'Taxa and missing clades in the same table' below).
+#'  * `Target_clade` and/or `Sister_clade` (Required): Tip labels defining a **target clade** per taxon, i.e., the clade where the taxon is known to belong (e.g., its genus);
 #'    or a **sister clade**, i.e., the clade on whose stem branch the taxon is grafted, as its sister.
 #'    A pair of tips defines the clade as their MRCA node (e.g., `"t26, t18"`).
 #'    A single tip defines the "clade" as the terminal branch of this tip (e.g., `"t15"`).
@@ -65,7 +73,32 @@
 #'    Ex: `"group_1; group_2; tip_t7"`. **There must be one label per subclade.**
 #'    If provided, they are used as names of the subclades in the `Excluded_subclades` item of the list, and in the messages of the grafting functions.
 #'
-#'  **Other columns are ignored, with a warning.**
+#'  Other columns are ignored, with a warning.
+#'
+#' ### Taxa and missing clades in the same data.frame
+#'
+#' **A data.frame can describe both types of taxa**, so a single call prepares the lists for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
+#' and [`phylograftR::graft_missing_clades()`][graft_missing_clades], on the same backbone and with the same clades written with the same tips.
+#' The type of each taxon is given by:
+#'  * The column `Type`, with `"taxa"` (target clade) or `"clades"` (sister clade): the clade is then read from `Target_clade` or `Sister_clade`, respectively.
+#'  * Otherwise, without `Type`, by the clade column that is filled in its row, when the data.frame has both `Target_clade` and `Sister_clade` columns.
+#'    **Each row must fill exactly one of them** (the function stops if both or none are filled).
+#'
+#' The columns specific to a type are only read for the taxa of this type (e.g., `Excluded_subclades` for taxa with a target clade), and are ignored for the others, with a warning if they are filled.
+#' `allowed_states` is read for both types. A clade written in the column of the other type than `Type` is ignored with a warning.
+#'
+#' The function returns:
+#'  * **A single `missing_taxa_list`** if all the taxa have the same type, whether `Type` is provided or not.
+#'  * **A list of two `missing_taxa_list`**, named `$taxa` and `$clades`, if both types are present.
+#'    Each one is a standard `missing_taxa_list`, and the taxa of both lists are named differently (names must be unique across the table).
+#'    Use `$taxa` in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and `$clades` in [`phylograftR::graft_missing_clades()`][graft_missing_clades].
+#'
+#' Clade labels are also checked across both lists (the same clade has the same label as a target clade and as a sister clade),
+#' so that they can be matched with the names of `total_richness_per_clades`.
+#'
+#' **Recommended sequence:** graft the missing taxa within target clades first with [`phylograftR::graft_missing_taxa()`][graft_missing_taxa],
+#' then use the grafted phylogeny as the backbone to graft the missing clades [`phylograftR::graft_missing_clades()`][graft_missing_clades].
+#' The clades are defined by tips of the backbone, so they stay valid even when the grafted phylogeny is used for the second step.
 #'
 #' ### Node IDs
 #'
@@ -75,7 +108,7 @@
 #' Node IDs are integers: `1` to N, with N being the number of tips (`ape::Ntip(phy)`) correspond to terminal nodes, and thus define single-tip clades.
 #' Following IDs are the internal nodes, as shown by `ape::nodelabels()`, and correspond to clades with multiple descending species.
 #'
-#' A value made only of digits is a node ID, so **tip labels must include at least one other character than digits** to be distinguinshed.
+#' A value made only of digits is a node ID, so **tip labels must include at least one other character than digits** to be distinguished.
 #' A clade is defined by tips or by one node ID, not both, and one node ID defines the clade alone.
 #' Node IDs are converted into tips before any other check, as done by [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips],
 #' and the conversions are printed if `verbose = TRUE`.
@@ -121,7 +154,9 @@
 #'
 #' The messages give the names of the problematic taxa and the numbers of the rows in the table.
 #'
-#' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions, with the following items:
+#' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions, with the following items.
+#'  If the table describes both types of taxa, a list with two `missing_taxa_list`: `$taxa` (with `$Target_clade`, for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa])
+#'  and `$clades` (with `$Sister_clade`, for [`phylograftR::graft_missing_clades()`][graft_missing_clades]).
 #'  * `$Taxon_name` Character vector.
 #'  * `$Target_clade` (or `$Sister_clade`) List of character vectors of tips.
 #'  * `$Target_clade_name` (or `$Sister_clade_name`) Only if the column was provided. Character vector of labels (`NA` if none). Not used for the grafting, but checked against the names of `total_richness_per_clades`, if provided (see the grafting functions).
@@ -174,10 +209,171 @@
 #'                              Excluded_subclades = c("50", NA))
 #' str(build_missing_taxa_list(data = my_table_nodes, phy = toy_backbone), 2)
 #'
+#' # A table can describe both types of taxa: here, with a column 'Type'.
+#' # Taxa to graft within a target clade and taxa to graft as missing clades are returned as two lists, for the two grafting functions.
+#' my_table_both <- data.frame(Taxon_name = c("M1", "M2", "M3"),
+#'                             Type = c("taxa", "taxa", "clades"),
+#'                             Target_clade = c("t26, t18", "t5, t12", NA),
+#'                             Sister_clade = c(NA, NA, "t10, t19"),
+#'                             Excluded_subclades = c("t26, t4", NA, NA))
+#' lists <- build_missing_taxa_list(data = my_table_both, phy = toy_backbone)
+#' str(lists, 2)
+#'
+#' # Without 'Type', each row fills the clade column of its type
+#' my_table_both$Type <- NULL
+#' identical(build_missing_taxa_list(data = my_table_both, phy = toy_backbone), lists)
+#'
 
 build_missing_taxa_list <- function (data, # Data frame, one row per taxon
                                      phy, # Backbone phylogeny
                                      verbose = TRUE) # Print the conversions of node IDs into tips
+{
+  ## 1.1/ Check the inputs ####
+
+  if (!inherits(phy, "phylo")) { stop("'phy' must be a phylogeny of class 'phylo'") }
+  if (!is.data.frame(data)) { stop("'data' must be a data frame") }
+  if (nrow(data) == 0) { stop("'data' has no rows") }
+
+  # Clean the table: names of the columns without extra spaces, and every cell as trimmed text. Blank cells and "NA" are missing values (NA)
+  data <- as.data.frame(data, stringsAsFactors = FALSE)
+  names(data) <- trimws(names(data))
+  if (anyDuplicated(names(data))) { stop("Some columns have the same name: ", paste(unique(names(data)[duplicated(names(data))]), collapse = ", ")) }
+  data[] <- lapply(data, function (x) { x <- trimws(as.character(x)); x[!is.na(x) & x %in% c("", "NA")] <- NA; x })
+
+  ## 1.2/ A single type of taxa: build the list directly ####
+
+  # Taxa to graft within target clades (graft_missing_taxa()) and taxa to graft as missing clades (graft_missing_clades()) can be described in the same table.
+  # This is the case with a column 'Type', or with both columns 'Target_clade' and 'Sister_clade'. Otherwise, the table is processed as a whole.
+  has_type <- "Type" %in% names(data)
+  has_target <- "Target_clade" %in% names(data)
+  has_sister <- "Sister_clade" %in% names(data)
+  if (!has_type && !(has_target && has_sister)) { return(build_single_missing_taxa_list(data = data, phy = phy, verbose = verbose)) }
+
+  ## 1.3/ Two types of taxa: split the table, and build one list per type ####
+
+  if (!("Taxon_name" %in% names(data))) { stop("The table must have a column 'Taxon_name'") }
+  n_rows <- nrow(data)
+  taxon_name <- data$Taxon_name
+  if (anyNA(taxon_name)) { stop("'Taxon_name' is empty in the row(s): ", paste(which(is.na(taxon_name)), collapse = ", ")) }
+  # Names must be unique across the whole table, as the two lists are meant to be used on the same backbone
+  if (anyDuplicated(taxon_name)) { stop("'Taxon_name' must be unique. Duplicated: ", paste(unique(taxon_name[duplicated(taxon_name)]), collapse = ", ")) }
+  if (any(taxon_name %in% phy$tip.label))
+  {
+    stop("'Taxon_name' must be absent from the backbone phylogeny (these are taxa to graft). Present in 'phy': ", paste(taxon_name[taxon_name %in% phy$tip.label], collapse = ", "))
+  }
+  label_row <- function (rows) paste0("'", taxon_name[rows], "' (row ", rows, ")", collapse = ", ")
+
+  columns_taxa <- c("Taxon_name", "Target_clade", "Target_clade_name", "include_target_clade_stem",
+                    "Excluded_subclades", "Excluded_subclades_names", "exclude_subclades_stem", "allowed_states")
+  columns_clades <- c("Taxon_name", "Sister_clade", "Sister_clade_name", "allowed_states")
+  unknown <- setdiff(names(data), c(columns_taxa, columns_clades, "Type"))
+  if (length(unknown) > 0)
+  {
+    warning("Unknown columns ignored: ", paste0("'", unknown, "'", collapse = ", "), ".\n",
+            "Recognized columns: ", paste(unique(c("Type", columns_taxa, columns_clades)), collapse = ", "), ".", call. = FALSE)
+  }
+
+  # Type of each taxon: from the column 'Type', or from the clade column that is filled
+  filled_target <- if (has_target) !is.na(data$Target_clade) else rep(FALSE, n_rows)
+  filled_sister <- if (has_sister) !is.na(data$Sister_clade) else rep(FALSE, n_rows)
+  if (has_type)
+  {
+    type <- tolower(data$Type)
+    bad_type <- is.na(type) | !(type %in% c("taxa", "clades"))
+    if (any(bad_type))
+    {
+      stop("'Type' must be 'taxa' or 'clades' (case is ignored). Invalid or empty for: ", label_row(which(bad_type)))
+    }
+    for (what in c("taxa", "clades"))
+    {
+      needed <- if (what == "taxa") "Target_clade" else "Sister_clade"
+      if (any(type == what) && !(needed %in% names(data)))
+      {
+        stop("The table needs a column '", needed, "' for the rows with Type = '", what, "'")
+      }
+    }
+    # A clade written in the column of the other type is not used
+    wrong_column <- (type == "taxa" & filled_sister) | (type == "clades" & filled_target)
+    if (any(wrong_column))
+    {
+      warning("'Sister_clade' is not used with Type = 'taxa', and 'Target_clade' is not used with Type = 'clades': ignored for ", label_row(which(wrong_column)), ".", call. = FALSE)
+      if (has_sister) { data$Sister_clade[type == "taxa"] <- NA }
+      if (has_target) { data$Target_clade[type == "clades"] <- NA }
+    }
+  } else {
+    both_filled <- filled_target & filled_sister
+    if (any(both_filled))
+    {
+      stop("Rows with both 'Target_clade' and 'Sister_clade' filled: ", label_row(which(both_filled)), ".\n",
+           "A taxon is grafted either within a target clade (graft_missing_taxa()) or as a missing clade sister to a clade (graft_missing_clades()): fill only one of the two columns.")
+    }
+    none_filled <- !filled_target & !filled_sister
+    if (any(none_filled))
+    {
+      stop("Neither 'Target_clade' nor 'Sister_clade' is filled for: ", label_row(which(none_filled)), ".")
+    }
+    type <- ifelse(filled_target, "taxa", "clades")
+  }
+
+  # The clades written in the table, whatever their type, are used to define the lookup that converts node IDs into tips:
+  # the same clade is written with the same tips in both lists.
+  known <- list()
+  for (column in c("Target_clade", "Sister_clade", "Excluded_subclades"))
+  {
+    if (!(column %in% names(data))) { next }
+    cells <- data[[column]][!is.na(data[[column]])]
+    pieces <- unlist(lapply(cells, function (cell) if (column == "Excluded_subclades") trimws(strsplit(cell, ";", fixed = TRUE)[[1]]) else cell))
+    known <- c(known, lapply(pieces, function (piece) trimws(strsplit(piece, ",", fixed = TRUE)[[1]])))
+  }
+  lookup <- build_tips_lookup(phy, known)
+
+  # Sub-table of one type: only the columns used by the type, and no optional column left empty
+  make_sub_table <- function (what)
+  {
+    rows <- which(type == what)
+    used <- if (what == "taxa") columns_taxa else columns_clades
+    sub <- data[rows, intersect(names(data), used), drop = FALSE]
+    not_used <- setdiff(intersect(names(data), c(columns_taxa, columns_clades)), used)
+    filled <- not_used[vapply(not_used, function (column) any(!is.na(data[[column]][rows])), logical(1))]
+    if (length(filled) > 0)
+    {
+      warning("Columns not used with Type = '", what, "' ignored: ", paste0("'", filled, "'", collapse = ", "), ".", call. = FALSE)
+    }
+    clade_column <- if (what == "taxa") "Target_clade" else "Sister_clade"
+    keep <- names(sub) %in% c("Taxon_name", clade_column) | vapply(sub, function (x) any(!is.na(x)), logical(1))
+    list(table = sub[, keep, drop = FALSE], rows = rows)
+  }
+
+  lists <- list()
+  for (what in c("taxa", "clades"))
+  {
+    if (!any(type == what)) { next }
+    sub <- make_sub_table(what)
+    lists[[what]] <- build_single_missing_taxa_list(data = sub$table, phy = phy, verbose = verbose, row_ids = sub$rows, lookup = lookup, check_columns = FALSE)
+  }
+
+  # Labels must also be consistent between the two lists: a clade can be a target clade and a sister clade, and keeps the same label
+  if (length(lists) == 2 && !is.null(lists$taxa$Target_clade_name) && !is.null(lists$clades$Sister_clade_name))
+  {
+    labels <- c(lists$taxa$Target_clade_name, lists$clades$Sister_clade_name)
+    clade_tips <- unname(c(lists$taxa$Target_clade, lists$clades$Sister_clade))
+    nodes <- vapply(clade_tips, function (tips) get_clade_node(phy, tips), numeric(1))
+    check_clade_labels(labels = unname(labels), nodes = nodes, tips = clade_tips, taxon_name = c(lists$taxa$Taxon_name, lists$clades$Taxon_name),
+                       what = "Target_clade_name and Sister_clade_name")
+  }
+
+  # One list if all the taxa have the same type, otherwise a list with the lists for graft_missing_taxa() ($taxa) and for graft_missing_clades() ($clades)
+  if (length(lists) == 1) { return(lists[[1]]) }
+  return(lists)
+}
+
+
+### 2/ Internal function: build one list, for a single type of taxa ####
+
+# Same arguments as the main function, and:
+# 'row_ids' = rows of 'data' in the original table (for the messages), 'lookup' = tips already used for the clades of the original table (see 1.3),
+# 'check_columns' = whether to warn about the columns not recognized or not used (FALSE if already done on the original table).
+build_single_missing_taxa_list <- function (data, phy, verbose = TRUE, row_ids = NULL, lookup = NULL, check_columns = TRUE)
 {
   ## 2.1/ Check the inputs ####
 
@@ -213,12 +409,12 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
   # Columns not recognized (typos) or not used with the clade column provided: warn, and keep only the usable columns
   unknown <- setdiff(names(data), all_columns)
   not_used <- setdiff(intersect(names(data), all_columns), allowed_columns)
-  if (length(unknown) > 0)
+  if (check_columns && length(unknown) > 0)
   {
     warning("Unknown columns ignored: ", paste0("'", unknown, "'", collapse = ", "), ".\n",
             "Recognized columns: ", paste(allowed_columns, collapse = ", "), ".", call. = FALSE)
   }
-  if (length(not_used) > 0)
+  if (check_columns && length(not_used) > 0)
   {
     warning("Columns not used with '", clade_item, "' ignored: ", paste0("'", not_used, "'", collapse = ", "), ".", call. = FALSE)
   }
@@ -232,7 +428,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
   ## 2.1.2/ Check Taxa ####
 
   n_taxa <- nrow(data)
-  row_id <- seq_len(n_taxa)
+  row_id <- if (is.null(row_ids)) seq_len(n_taxa) else row_ids # Rows of the original table, for the messages
   taxon_name <- data$Taxon_name
   if (anyNA(taxon_name)) { stop("'Taxon_name' is empty in the row(s): ", paste(row_id[is.na(taxon_name)], collapse = ", ")) }
   if (anyDuplicated(taxon_name)) { stop("'Taxon_name' must be unique. Duplicated: ", paste(unique(taxon_name[duplicated(taxon_name)]), collapse = ", ")) }
@@ -243,7 +439,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
   }
 
   # Label of a taxon in messages
-  label_taxon <- function (i) paste0("'", taxon_name[i], "' (row ", i, ")")
+  label_taxon <- function (i) paste0("'", taxon_name[i], "' (row ", row_id[i], ")")
 
   ## 2.1.3/ Convert the node IDs into tips ####
 
@@ -282,7 +478,8 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
     known <- c(known, unlist(lapply(seq_len(n_taxa), function (i) split_cell(data$Excluded_subclades[i], TRUE)), recursive = FALSE))
   }
   # Keep the clades written with tips (valid in 'phy'), and associate each to its MRCA node
-  lookup <- build_tips_lookup(phy, known)
+  # If a lookup is provided (built on the whole original table), it is used instead
+  if (is.null(lookup)) { lookup <- build_tips_lookup(phy, known) }
 
   # Step B. Build a function to rewrite one cell, replacing its node IDs by tips.
 
@@ -324,7 +521,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
   clade_cells <- data[[clade_item]]
   if (anyNA(clade_cells)) { stop("'", clade_item, "' is empty for: ", paste(label_taxon(which(is.na(clade_cells))), collapse = ", ")) }
   clade_tips <- lapply(seq_len(n_taxa), function (i) parse_tips(clade_cells[i], label_taxon(i), clade_item))
-  check_tips_in_phy(clade_tips, phy, taxon_name, clade_item)
+  check_tips_in_phy(clade_tips, phy, taxon_name, clade_item, row_id = row_id)
   clade_nodes <- vapply(clade_tips, function (tips) get_clade_node(phy, tips), numeric(1))
 
   # Optional labels of the clades: the same clade (same MRCA node) must have the same label across taxa, and different clades different labels
@@ -388,7 +585,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
     }
 
     # Tips of the excluded subclades must be in the backbone
-    check_tips_in_phy(lapply(excluded, function (x) unique(unlist(x))), phy, taxon_name, "Excluded_subclades")
+    check_tips_in_phy(lapply(excluded, function (x) unique(unlist(x))), phy, taxon_name, "Excluded_subclades", row_id = row_id)
 
     # Labels of the excluded subclades: the same clade (same MRCA node) must have the same label, and different clades different labels
     if ("Excluded_subclades_names" %in% names(data))
@@ -499,7 +696,7 @@ build_missing_taxa_list <- function (data, # Data frame, one row per taxon
 }
 
 
-### 2/ Internal helpers ####
+### 3/ Internal helpers ####
 
 #' @title Split the tips of a cell
 #'
@@ -563,13 +760,14 @@ parse_states <- function (cell, taxon_label, column)
 #' @param phy Phylogeny of class `"phylo"`.
 #' @param taxon_name Character vector. Name of the taxa.
 #' @param column Character string. Name of the column, for the messages.
+#' @param row_id Integer vector. Row of each taxon in the original table, for the messages.
 #'
 #' @noRd
 #'
 #' @return Nothing. Stops if tips are missing from `phy`.
 #'
 
-check_tips_in_phy <- function (tips_list, phy, taxon_name, column)
+check_tips_in_phy <- function (tips_list, phy, taxon_name, column, row_id = seq_along(tips_list))
 {
   absent <- lapply(tips_list, function (tips) setdiff(tips, phy$tip.label))
   has_absent <- which(vapply(absent, length, integer(1)) > 0)
@@ -577,7 +775,7 @@ check_tips_in_phy <- function (tips_list, phy, taxon_name, column)
   {
     n_show <- min(length(has_absent), 10)
     stop("Some tips of '", column, "' are missing from the backbone phylogeny (check the spelling of the tips, or the separators):\n",
-         paste0("  - ", taxon_name[has_absent[seq_len(n_show)]], " (row ", has_absent[seq_len(n_show)], "): ",
+         paste0("  - ", taxon_name[has_absent[seq_len(n_show)]], " (row ", row_id[has_absent[seq_len(n_show)]], "): ",
                 vapply(absent[has_absent[seq_len(n_show)]], paste, character(1), collapse = ", "), collapse = "\n"),
          if (length(has_absent) > n_show) paste0("\n  ... and ", length(has_absent) - n_show, " more") else "")
   }

@@ -16,6 +16,10 @@
 #'   The table is converted by [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list], which also runs all the checks of validity
 #'   against the backbone phylogeny to ensure the `missing_taxa_list` provides information that are valid to process the grafting.
 #'
+#'   The same table can describe **both types of taxa**: taxa to graft within a target clade, and taxa to graft as missing clades sister to a clade.
+#'   Two lists are then returned, one for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] (`$taxa`) and one for [`phylograftR::graft_missing_clades()`][graft_missing_clades] (`$clades`),
+#'   as done by [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] (see 'Taxa and missing clades in the same table' in Details).
+#'
 #'   Clades are defined by tips or node IDs, which allows for fine-tuning the constraints of each taxon (see 'Fine-tuning the clades' in Details).
 #'   For large phylogenies with neatly defined taxonomic levels, taxonomic tables are likely easier to prepare:
 #'   see [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] and [`phylograftR::import_taxonomic_table()`][import_taxonomic_table].
@@ -28,6 +32,7 @@
 #'   Its columns are the items of `missing_taxa_list` as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] or [`phylograftR::graft_missing_clades()`][graft_missing_clades].
 #'   See Details for a full description. All the columns are read as text.
 #'   Blank cells and `NA` are missing values.
+#'   A column `Type` (`"taxa"` or `"clades"`), or both columns `Target_clade` and `Sister_clade`, allow for describing both types of taxa in the same table.
 #'
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which the taxa will be grafted. It is used to check the validity of the tips and clades provided.
 #' @param sep Character string. Field separator of a text file. Default is `NULL`, to choose it from the extension of the file:
@@ -46,13 +51,15 @@
 #' Values are `TRUE` or `FALSE` (also accepts `T`, `F`, `yes`, `no`, `1`, `0`), or `NA`.
 #'
 #' * `Taxon_name` (Required): Names of the taxa to graft. **Names must be unique and absent from `phy$tip.label`.**
-#' * `Target_clade` or `Sister_clade` (Required): Tip labels defining a **target clade** per taxon, i.e., the clade where the taxon is known to belong (e.g., its genus);
+#' * `Type`: (Optional) `"taxa"` for taxa to graft within a target clade, or `"clades"` for taxa to graft as missing clades sister to a clade.
+#'   Used to discriminate between both types of missing lineages in the same table (see 'Taxa and missing clades in the same table' below).
+#' * `Target_clade` and/or `Sister_clade` (Required): Tip labels defining a **target clade** per taxon, i.e., the clade where the taxon is known to belong (e.g., its genus);
 #'   or a **sister clade**, i.e., the clade on whose stem branch the taxon is grafted, as its sister.
 #'   A pair of tips defines the clade as their MRCA node (e.g., `"t26, t18"`).
 #'   A single tip defines the "clade" as the terminal branch of this tip (e.g., `"t15"`).
 #'   A node ID of `phy` (digits only, e.g., `"34"`) also defines the clade, see 'Node IDs' below.
 #'   Use `Sister_clade` to prepare a list for [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
-#'   the columns specific to [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] below (`Target_clade_name`, `include_target_clade_stem`, `Excluded_subclades`, `Excluded_subclades_names` and `exclude_subclades_stem`) are ignored, with a warning.
+#'   the columns specific to [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] below are then ignored, with a warning.
 #' * `include_target_clade_stem`: (Optional) Logical values. For each taxon, whether the stem branch of its target clade is available for grafting.
 #'   `NA` values and blank cells use the global `include_target_clade_stem` argument of [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
 #' * `Excluded_subclades`: (Optional) For each taxon, tip labels defining the **excluded subclades** of its target clade where the taxon is known not to belong.
@@ -80,6 +87,28 @@
 #'   If provided, they are used as names of the subclades in the `Excluded_subclades` item of the list, and in the messages of the grafting functions.
 #'
 #' Other columns are ignored, with a warning.
+#'
+#' ### Taxa and missing clades in the same table
+#'
+#' **A table can describe both types of taxa**, so a single call prepares the lists for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
+#' and [`phylograftR::graft_missing_clades()`][graft_missing_clades], on the same backbone and with the same clades written with the same tips.
+#' The type of each taxon is given by:
+#'  * The column `Type`, with `"taxa"` (target clade) or `"clades"` (sister clade): the clade is then read from `Target_clade` or `Sister_clade`, respectively.
+#'  * Otherwise, without `Type`, by the clade column that is filled in its row, when the table has both `Target_clade` and `Sister_clade` columns.
+#'    **Each row must fill exactly one of them** (the function stops if both or none are filled).
+#'
+#' The function returns:
+#'  * **A single `missing_taxa_list`** if all the taxa have the same type, whether `Type` is provided or not.
+#'  * **A list of two `missing_taxa_list`**, named `$taxa` and `$clades`, if both types are present.
+#'    Each one is a standard `missing_taxa_list`, and the taxa of both lists are named differently (names must be unique across the table).
+#'    Use `$taxa` in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] and `$clades` in [`phylograftR::graft_missing_clades()`][graft_missing_clades].
+#'
+#' Clade labels are also checked across both lists (the same clade has the same label as a target clade and as a sister clade),
+#' so that they can be matched with the names of `total_richness_per_clades`.
+#'
+#' **Recommended sequence:** graft the missing taxa within target clades first with [`phylograftR::graft_missing_taxa()`][graft_missing_taxa],
+#' then use the grafted phylogeny as the backbone to graft the missing clades [`phylograftR::graft_missing_clades()`][graft_missing_clades].
+#' The clades are defined by tips of the backbone, so they stay valid even when the grafted phylogeny is used for the second step.
 #'
 #' ### Node IDs
 #'
@@ -114,7 +143,9 @@
 #'
 #' **Both routes return the same `missing_taxa_list`**, so they can be combined: build a list from taxonomic tables, and then adjust the clades of a few taxa with node IDs or tips.
 #'
-#' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions, with the following items:
+#' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions, with the following items.
+#'  If the table describes both types of taxa, a list with two `missing_taxa_list`: `$taxa` (with `$Target_clade`, for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa])
+#'  and `$clades` (with `$Sister_clade`, for [`phylograftR::graft_missing_clades()`][graft_missing_clades]).
 #'  * `$Taxon_name` Character vector.
 #'  * `$Target_clade` (or `$Sister_clade`) List of character vectors of tips.
 #'  * `$Target_clade_name` (or `$Sister_clade_name`) Only if the column was provided. Character vector of labels (`NA` if none). Not used for the grafting, but checked against the names of `total_richness_per_clades`, if provided (see the grafting functions).
@@ -160,6 +191,17 @@
 #'
 #' # Plot the pruned phylogeny with the updated colors
 #' plot_grafted(grafted_phy, cex = 0.7)
+#'
+#' # A table can describe both types of taxa (here, with the column 'Type'), saved here in a temporary file
+#' both_types <- data.frame(Taxon_name = c("M1", "M2", "M3"),
+#'                          Type = c("taxa", "taxa", "clades"),
+#'                          Target_clade = c("t26, t18", "t5, t12", NA),
+#'                          Sister_clade = c(NA, NA, "t10, t19"))
+#' both_file <- tempfile(fileext = ".csv")
+#' write.csv(both_types, file = both_file, row.names = FALSE)
+#' lists <- import_missing_taxa_list(file = both_file, phy = toy_backbone)
+#' names(lists)
+#' # Use '$taxa' for graft_missing_taxa(), and '$clades' for graft_missing_clades()
 #'
 
 import_missing_taxa_list <- function (file, # Path to the table
