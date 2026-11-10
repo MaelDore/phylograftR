@@ -193,3 +193,40 @@ identify_grafted_one <- function (phy, grafted_taxa)
   phy$grafted_edges <- is_grafted_edge
   return(phy)
 }
+
+
+### 2/ Get the taxa already grafted on a phylogeny ####
+
+#' @title Get the taxa already grafted on a phylogeny
+#'
+#' @description Return the labels of the tips flagged as grafted in `phy$grafted_tips`, if `phy` is already the output of a grafting function.
+#'   It is used by [`graft_missing_taxa()`][graft_missing_taxa] and [`graft_missing_clades()`][graft_missing_clades] to **accumulate** the grafted tips
+#'   when grafting is done in several steps on the same phylogeny.
+#'
+#' @param phy An object of class `"phylo"`.
+#'
+#' @return A character vector of tip labels (`character(0)` if `phy` has no `grafted_tips` element, or no grafted tips).
+#'   Labels that are not tips of `phy` (e.g., `grafted_tips` left unchanged after `ape::drop.tip()`) are dropped, with a warning.
+#'
+#' @noRd
+#'
+
+get_previously_grafted <- function (phy)
+{
+  flags <- phy$grafted_tips
+  if (is.null(flags)) return(character(0))
+  if (!is.logical(flags) || is.null(names(flags)))
+  {
+    warning("'phy$grafted_tips' is not a named logical vector: it is ignored. Use identify_grafted() to recompute it.", call. = FALSE)
+    return(character(0))
+  }
+  previously_grafted <- names(flags)[flags %in% TRUE]
+  stale <- setdiff(names(flags), phy$tip.label)
+  if (length(stale) > 0 || !all(phy$tip.label %in% names(flags)))
+  {
+    warning("'phy$grafted_tips' does not match the tips of 'phy' (phylogeny modified after grafting?): only the flagged tips that are in 'phy' are kept as previously grafted. ",
+            "Use identify_grafted() to recompute them.", call. = FALSE)
+    previously_grafted <- intersect(previously_grafted, phy$tip.label)
+  }
+  return(previously_grafted)
+}

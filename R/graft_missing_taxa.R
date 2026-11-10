@@ -21,6 +21,7 @@
 #'
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which taxa are grafted.
 #'   It must be rooted, binary (no polytomies) and ultrametric (i.e., be time-calibrated).
+#'   It can be the output of a previous grafting: the grafted tips then accumulate (see 'Successive graftings').
 #' @param missing_taxa_list A list with the information on the taxa to graft. **Every item provided must be named after `$Taxon_name`.** Items:
 #'   * `$Taxon_name`: Character vector of the names of the taxa to graft. **Names must be unique and absent from `phy$tip.label`.**
 #'   * `$Target_clade`: List (named after `$Taxon_name`) of character vectors. For each taxon, the tip labels defining its **target clade**,
@@ -174,7 +175,7 @@
 #'   Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
 #'
 #'   In addition to the standard elements of a `"phylo"` object, the phylogeny has the following elements:
-#'   * `grafted_tips` Named logical vector with one value per tip, in the order of `$tip.label`. `TRUE` for grafted tips. Names are the tip labels.
+#'   * `grafted_tips` Named logical vector with one value per tip, in the order of `$tip.label`. `TRUE` for grafted tips (including the tips grafted by a previous grafting if `phy` was already grafted). Names are the tip labels.
 #'   * `grafted_edges` Named logical vector with one value per branch, in the order of the rows of `$edge`. `TRUE` for grafted branches,
 #'     i.e., branches with only grafted taxa below them. Names are the IDs of the tipward nodes of the branches (`$edge[, 2]`).
 #'     Use them to color the phylogeny on plots (see examples).
@@ -465,6 +466,23 @@
 #' the taxa already grafted would be treated as backbone species, so the sampling fractions of the birth-death models, the stem of the target clades,
 #' the identification of the grafted tips and the updated `simmap` would be wrong, and a `simmap` of the initial backbone would not match the temporary phylogeny.
 #' Use `resume = TRUE` instead.
+#'
+#' ### Successive graftings
+#'
+#' The output of this function can be used as the `phy` of the next grafting, to **combine the grafting of missing taxa and of missing clades** on the same backbone.
+#' Typically, the missing taxa list (and the total richness per clade) is built once on the backbone, with [`build_missing_taxa_list()`][build_missing_taxa_list]
+#' or [`import_missing_taxa_list()`][import_missing_taxa_list], which return `list(taxa, clades)` if both types are provided.
+#'
+#' The taxa are grafted first with [`graft_missing_taxa()`][graft_missing_taxa], then the missing clades with [`graft_missing_clades()`][graft_missing_clades].
+#'
+#' **The grafted tips and branches accumulate**: if `phy` has the `grafted_tips` element of a previous grafting, its flagged tips are kept as grafted
+#' (they are still treated as backbone species by the grafting itself, e.g., to count the species used for the sampling fractions),
+#' and the new taxa are added to them.
+#' `grafted_tips` and `grafted_edges` of the output thus identify **all** the grafted taxa, not only those of the last step.
+#' A warning is sent if `grafted_tips` does not match the tips of `phy` (e.g., after `ape::drop.tip()`):
+#' use [`identify_grafted()`][identify_grafted] to recompute them first.
+#'
+#' If a `simmap` is used, provide the updated `simmap` of the previous step (`phy$simmap`, obtained with `return_simmap = TRUE`) to keep the same trait history.
 #'
 #'
 #' @importFrom ape Ntip branching.times extract.clade getMRCA is.ultrametric
@@ -1078,6 +1096,9 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
 
   ### ---- Simulations ---- ###
 
+  # Taxa already grafted on the input phylogeny, if it is the output of a previous grafting (see 'Successive graftings')
+  previously_grafted <- get_previously_grafted(phy)
+
   # Function to produce one simulation = one grafted phylogeny, from the backbone, the tracker for states and the list of taxa of a map (prepared above), and the associated seed and index
   simulate_one <- function (tracker, missing_taxa_list, map_name, sim_seed, sim_index, verbose_sim)
   {
@@ -1482,7 +1503,8 @@ graft_missing_taxa <- function (phy, # Backbone phylogeny
     if (!is.null(updated_simmap) && !is.null(tracker$traits)) { updated_simmap <- split_trait_simmap(simmap = updated_simmap, traits = tracker$traits) }
 
     # Add the elements identifying the grafted tips and branches
-    phy <- identify_grafted(phy = phy, grafted_taxa = missing_taxa_list$Taxon_name)
+    # Previously grafted tips are kept if 'phy' was already grafted (the flags accumulate over successive graftings)
+    phy <- identify_grafted(phy = phy, grafted_taxa = c(previously_grafted, missing_taxa_list$Taxon_name))
     if (!is.null(updated_simmap)) phy$simmap <- updated_simmap
     # Summary of the birth-death models fitted (one per target clade)
     if (return_BD_model_summary) { attr(phy, "BD_model_summary") <- assemble_bd_summary(lapply(BD_cache, function (x) x$record), type = "taxa") }
