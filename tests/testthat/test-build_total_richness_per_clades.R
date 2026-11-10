@@ -77,6 +77,44 @@ test_that("the richness table reports the richness and the sampling fraction of 
   expect_false(is.na(tab$total_richness[tab$Clade_name == "Family_B"]))
 })
 
+test_that("the richness table is returned by default and only on request",
+{
+  lists <- toy_lists()
+  expect_false(is.null(attr(build_tr(toy_richness_table(), lists), "richness_table")))
+  expect_false(is.null(attr(build_tr(toy_richness_table(), lists, return_richness_table = TRUE), "richness_table")))
+  r <- build_tr(toy_richness_table(), lists, return_richness_table = FALSE)
+  expect_null(attr(r, "richness_table"))
+  # The rest of the output is the same
+  with_table <- build_tr(toy_richness_table(), lists)
+  attr(with_table, "richness_table") <- NULL
+  expect_identical(r, with_table)
+  # The message points to the table only if it is returned
+  expect_message(build_total_richness_per_clades(toy_richness_table(), phylograftR::toy_backbone, lists, verbose = TRUE), "attr\\(, \"richness_table\"\\)")
+  msg <- testthat::capture_messages(build_total_richness_per_clades(toy_richness_table(), phylograftR::toy_backbone, lists, return_richness_table = FALSE, verbose = TRUE))
+  expect_false(any(grepl("richness_table", msg)))
+  expect_error(build_tr(toy_richness_table(), lists, return_richness_table = NA), "'return_richness_table' must be TRUE or FALSE")
+  expect_error(build_tr(toy_richness_table(), lists, return_richness_table = "yes"), "'return_richness_table' must be TRUE or FALSE")
+})
+
+test_that("the expected sampling fractions of the table can differ from the effective ones extracted after grafting",
+{
+  lists <- toy_lists()
+  r <- build_tr(toy_richness_table(), lists)
+  expected <- attr(r, "richness_table")
+  g <- graft_missing_taxa(phylograftR::toy_backbone, lists$taxa, total_richness_per_clades = r$taxa, nb_simulations = 5, seed = 1, verbose = FALSE)
+  # The effective richness and sampling fraction of the clades are extracted a posteriori, with the same total richness
+  effective <- extract_sampling_info(g, total_richness_per_clades = r$taxa)
+  expect_s3_class(effective, "data.frame")
+  expect_true(all(c("Clade_name", "simulation", "sampling_fraction") %in% names(effective)))
+  fam_a <- effective[effective$Clade_name == "Family_A", ]
+  expect_equal(nrow(fam_a), 5)
+  # The table counts all the taxa of both types in the clade, whereas only the taxa are grafted so far
+  expect_false(isTRUE(all.equal(fam_a$sampling_fraction, rep(expected$sampling_fraction[expected$Clade_name == "Family_A"], 5))))
+  # The effective sampling fraction of a clade can vary among simulations, as taxa are not grafted at the same place
+  varies <- vapply(split(effective$sampling_fraction, effective$Clade_name), function (x) length(unique(round(x, 8))) > 1, logical(1))
+  expect_true(any(varies))
+})
+
 test_that("the lists can be used in the grafting functions in sequence, with the same richness table",
 {
   lists <- toy_lists()
@@ -215,6 +253,7 @@ test_that("build_total_richness_per_clades() checks the inputs",
   expect_error(build_total_richness_per_clades(d, phy), "'missing_taxa_list' must be provided")
   expect_error(build_total_richness_per_clades(d, phy, "x"), "'missing_taxa_list' must be provided")
   expect_error(build_total_richness_per_clades(d, phy, lists, verbose = NA), "'verbose'")
+  expect_error(build_total_richness_per_clades(d, phy, lists, return_richness_table = NULL), "'return_richness_table'")
   expect_error(build_tr(d[, "total_richness", drop = FALSE], lists), "must have a column 'Clade'")
   expect_error(build_tr(d[, "Clade", drop = FALSE], lists), "must have a column 'total_richness'")
   d2 <- d; d2$Target_clade <- d2$Clade
@@ -260,6 +299,8 @@ test_that("import_total_richness_per_clades() reads a file, with the same result
   utils::write.csv(toy_richness_table(), f, row.names = FALSE)
   imported <- import_total_richness_per_clades(f, phy = phylograftR::toy_backbone, missing_taxa_list = lists, verbose = FALSE)
   expect_identical(imported, build_tr(toy_richness_table(), lists))
+  # The argument to return the richness table is passed on
+  expect_null(attr(import_total_richness_per_clades(f, phy = phylograftR::toy_backbone, missing_taxa_list = lists, return_richness_table = FALSE, verbose = FALSE), "richness_table"))
   # Text file with another separator
   f2 <- tempfile(fileext = ".txt")
   utils::write.table(toy_richness_table(), f2, sep = "\t", row.names = FALSE, quote = FALSE)

@@ -40,6 +40,10 @@
 #' @param reader Function. Optional function used to read `file`, to import any other format (e.g., `.ods`, or an export of an online spreadsheet).
 #'   It must take the path of the file as first argument and return a data frame. If provided, it is used whatever the extension of the file.
 #'   Default is `NULL`.
+#' @param return_richness_table Logical. Whether to return the expected richness and sampling fraction of each clade in the attribute `"richness_table"` of the output.
+#'   It is computed before any grafting, from the backbone, the `missing_taxa_list` and the total richness. It is a tool to **examine a priori the sampling fraction
+#'   expected in each clade**. The actual **effective sampling fractions of the grafted phylogenies**, accessible with [`phylograftR::extract_sampling_info()`][extract_sampling_info],
+#'   may differ (see 'Richness table' in Details). Default is `TRUE`.
 #' @param verbose Logical. Whether to print the conversions of node IDs into tips (if any), and a summary of the table. Default is `TRUE`.
 #' @param ... Further arguments passed to the function reading the file (`utils::read.table()` for text files, `readxl::read_excel()` for Excel files, or `reader`).
 #'
@@ -80,7 +84,22 @@
 #' The function checks the richness against all the taxa to graft at once: **the function stops if the total richness of a clade is lower than the number of species it contains**
 #' (backbone species and all the taxa to graft within it, or within clades nested within it),
 #' or if a clade has fewer unsampled species than the clades with a total richness nested within it.
-#' The resulting richness and sampling fraction of each clade, before any grafting, are returned in the attribute `"richness_table"`.
+#'
+#' ### Richness table
+#'
+#' With `return_richness_table = TRUE`, the output has the attribute `"richness_table"`: a data.frame that reports, **before any grafting**,
+#' the richness and the sampling fraction expected in each clade (see Value for details on its columns). It can be used to **examine a priori the sampling fraction of the clades**
+#' and to spot errors in the total richness: e.g., an unlikely low sampling fraction, or clades with an unknown richness (`NA`) for which unsampled species were derived from nested clades, or assumed to be none.
+#' It can also be used to compare the sampling of different clades, or to decide which clades need a better estimate of their richness.
+#'
+#' **The sampling fractions of the table are expectations, and the effective sampling fractions of the grafted phylogenies may differ.**
+#' The table assumes that all the taxa to graft end up in the clade where they belong: a taxon counts for all the clades that are, or enclose, its target clade,
+#' and a missing clade counts for the clades that enclose its sister clade (it is grafted on the stem of the sister clade, so not within the sister clade itself).
+#' However, where taxa are actually grafted varies among the grafted phylogenies (and among the stochastic maps, if any):
+#' a taxon can be grafted on the stem of its target clade, which is outside of the clade, or within a clade nested in its target clade, which changes the richness of these clades.
+#' The actual effective richness and sampling fraction of each clade, in each grafted phylogeny, are extracted **a posteriori** with [`phylograftR::extract_sampling_info()`][extract_sampling_info]
+#' on the output of the grafting functions, using the same `total_richness_per_clades`.
+#'
 #'
 #' @return If `file` contains one type of taxa, a `total_richness_per_clades` list;
 #'   if it contains both types (`$taxa` and `$clades`), a list with two `total_richness_per_clades` named `$taxa` (for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]) and `$clades`
@@ -91,9 +110,11 @@
 #'  * `$Target_clade_name` (or `$Sister_clade_name`) Only if some clades have a name. Character vector (`NA` if a clade has no name).
 #'  * `$total_richness` Integer vector of the total richness of the clades (`NA` if unknown).
 #'
-#'  The output has the attribute `"richness_table"`, a data.frame with one row per clade: `Clade_name`, `Clade_tips`, `total_richness_provided`
+#'  If `return_richness_table = TRUE`, the output has the attribute `"richness_table"`, a data.frame with one row per clade: `Clade_name`, `Clade_tips`, `total_richness_provided`
 #'  (the value of the table), `total_richness` (as used for the grafting, derived from the nested clades if unknown), `nb_backbone_species`,
-#'  `nb_missing_species` (all the taxa to graft in the clade, of both types), `nb_unsampled_species`, and `sampling_fraction` (`(nb_backbone_species + nb_missing_species) / total_richness`).
+#'  `nb_missing_species` (all the taxa to graft in the clade, of both types), `nb_unsampled_species`, and `sampling_fraction` (`(nb_backbone_species + nb_missing_species) / total_richness`),
+#'  the **expected** sampling fraction before grafting (see [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades]).
+#'  Without it, the output does not have this attribute.
 #'
 #' @seealso Other functions from phylograftR:
 #'  * [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades] to convert a data.frame of clades already loaded in R.
@@ -131,6 +152,7 @@ import_total_richness_per_clades <- function (file, # Path to the table
                                               sep = NULL, # Field separator of text files. By default, from the extension
                                               sheet = 1, # Sheet of Excel files
                                               reader = NULL, # Optional function to read other formats
+                                              return_richness_table = TRUE, # Return the expected richness and sampling fraction of each clade as an attribute
                                               verbose = TRUE, # Print the conversions of node IDs into tips
                                               ...)
 {
@@ -141,5 +163,6 @@ import_total_richness_per_clades <- function (file, # Path to the table
 
   ## 1.2/ Convert it ####
 
-  build_total_richness_per_clades(data = data, phy = phy, missing_taxa_list = missing_taxa_list, verbose = verbose)
+  build_total_richness_per_clades(data = data, phy = phy, missing_taxa_list = missing_taxa_list,
+                                  return_richness_table = return_richness_table, verbose = verbose)
 }
