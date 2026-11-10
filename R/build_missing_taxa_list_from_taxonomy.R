@@ -111,6 +111,7 @@
 #'  * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] to read the taxonomic tables from external files.
 #'  * [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] to read a table of missing taxa from a file, with clades defined by tips or node IDs.
 #'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build a `missing_taxa_list` from a data.frame loaded in R, with clades defined by tips or node IDs.
+#'  * [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades] and [`phylograftR::import_total_richness_per_clades()`][import_total_richness_per_clades] to prepare `total_richness_per_clades` for the unsampled species.
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades using the list.
 #'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades using the list.
 #'

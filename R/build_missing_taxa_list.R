@@ -116,7 +116,8 @@
 #' The warnings and errors that follow, and the grafting functions, therefore use the tips that are traced back to your node IDs in the messages.
 #' If a clade is already defined by tips in the table, a node ID of the same clade is converted into the same tips.
 #' Convert `total_richness_per_clades` (if you use it) at the same time as the list, with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips],
-#' so the tips of the clades match between both objects.
+#' so the tips of the clades match between both objects. Alternatively, build it from a table of clades with
+#' [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades], which matches the clades with those of the `missing_taxa_list`.
 #'
 #' ### Fine-tuning the clades
 #'
@@ -173,6 +174,7 @@
 #'  * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] to read the taxonomic tables from external files.
 #'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to build a `missing_taxa_list` from taxonomic tables, with clades defined by taxonomic names instead of tips or node IDs.
 #'  * [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] to convert the node IDs of a list built 'by hand' into pairs of tips defining their MRCA.
+#'  * [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades] and [`phylograftR::import_total_richness_per_clades()`][import_total_richness_per_clades] to prepare `total_richness_per_clades` for the unsampled species.
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades using the list.
 #'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades using the list.
 #'

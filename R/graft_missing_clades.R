@@ -43,6 +43,9 @@
 #'   * `$Sister_clade`: List of character vectors of tips, defining clades as in `missing_taxa_list$Sister_clade`.
 #'     **Node IDs are not accepted**: convert them with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] in the same call as `missing_taxa_list`,
 #'     so the tips of the clades match between both objects.
+#'     The easiest way to obtain this list is to build it from a table of clades with [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades]
+#'     or [`phylograftR::import_total_richness_per_clades()`][import_total_richness_per_clades]: the clades can be written with names, tips or node IDs,
+#'     they are matched with the clades of `missing_taxa_list`, and the richness is checked against all the taxa to graft.
 #'     **It must cover all the unique sister clades of `missing_taxa_list`.** It can include other clades, e.g., enclosing clades.
 #'   * `$Sister_clade_name`: (Optional) Character vector of the names of the clades, same length as `$Sister_clade` (`NA` if a clade has no name).
 #'     The names must be unique. If `missing_taxa_list$Sister_clade_name` is provided, **a clade must have the same name in both objects** (the function stops otherwise).
@@ -392,6 +395,7 @@
 #' @seealso Other functions from phylograftR:
 #'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build a `missing_taxa_list` from a data.frame loaded in R, with clades defined by tips or node IDs.
 #'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to build a `missing_taxa_list` from taxonomic tables, with clades defined by taxonomic names.
+#'  * [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades] and [`phylograftR::import_total_richness_per_clades()`][import_total_richness_per_clades] to prepare `total_richness_per_clades` for the unsampled species.
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades.
 #'  * [`phylograftR::check_grafting_plan()`][check_grafting_plan] to check a priori the feasibility of a grafting plan, before grafting.
 #'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints.

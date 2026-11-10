@@ -126,7 +126,8 @@
 #' The warnings and errors that follow, and the grafting functions, therefore use the tips that are traced back to your node IDs in the messages.
 #' If a clade is already defined by tips in the table, a node ID of the same clade is converted into the same tips.
 #' Convert `total_richness_per_clades` (if you use it) at the same time as the list, with [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips],
-#' so the tips of the clades match between both objects.
+#' so the tips of the clades match between both objects. Alternatively, build it from a table of clades with
+#' [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades], which matches the clades with those of the list.
 #'
 #' ### Fine-tuning the clades
 #'
@@ -143,9 +144,10 @@
 #'
 #' **Both routes return the same `missing_taxa_list`**, so they can be combined: build a list from taxonomic tables, and then adjust the clades of a few taxa with node IDs or tips.
 #'
-#' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions, with the following items.
+#' @return A `missing_taxa_list`: a list, ready to be used in the grafting functions.
 #'  If the table describes both types of taxa, a list with two `missing_taxa_list`: `$taxa` (with `$Target_clade`, for [`phylograftR::graft_missing_taxa()`][graft_missing_taxa])
 #'  and `$clades` (with `$Sister_clade`, for [`phylograftR::graft_missing_clades()`][graft_missing_clades]).
+#'  Each list comprises the following items:
 #'  * `$Taxon_name` Character vector.
 #'  * `$Target_clade` (or `$Sister_clade`) List of character vectors of tips.
 #'  * `$Target_clade_name` (or `$Sister_clade_name`) Only if the column was provided. Character vector of labels (`NA` if none). Not used for the grafting, but checked against the names of `total_richness_per_clades`, if provided (see the grafting functions).
@@ -161,6 +163,7 @@
 #'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to convert a data.frame of missing taxa already loaded in R.
 #'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to build a `missing_taxa_list` from taxonomic tables, with clades defined by taxonomic names.
 #'  * [`phylograftR::import_taxonomic_table()`][import_taxonomic_table] to read the taxonomic tables from external files.
+#'  * [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades] and [`phylograftR::import_total_richness_per_clades()`][import_total_richness_per_clades] to prepare `total_richness_per_clades` for the unsampled species.
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa using the list based on target clades and excluded subclades.
 #'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades using the list.
 #'
