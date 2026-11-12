@@ -75,7 +75,9 @@ vary across the tree.
 - **Missing clades.** Besides single taxa, entire missing clades can be
   grafted as a unit, sister to a clade of the backbone phylogeny, with
   their internal diversification process simulated under the same
-  birth-death model than their sister-clade.
+  birth-death model than their sister-clade. Both types of missing
+  lineages (taxa and clades) can be grafted in one unique run with
+  `graft_missing_taxa_and_clades()`.
 
 Grafting is stochastic, so **phylograftR** is designed to produce *sets*
 of grafted phylogenies (several simulations, and optionally several
@@ -114,7 +116,8 @@ a trait where the taxon can be grafted (i.e., allowed states).
 
 `missing_taxa_list` can be imported from external tables with
 `import_missing_taxa_list()`, or built from a data.frame object within R
-with `build_missing_taxa_list()`.
+with `build_missing_taxa_list()`. The `missing_taxa_list` can also cover
+missing clades (see step 4).
 
 **2. Available branches and Attribute-based grafting.** For each taxon,
 the branches of the backbone available for grafting are those of its
@@ -167,6 +170,10 @@ clade attached to the stem branch of their designated sister clade. The
 divergence time of the missing clade is drawn under the birth-death
 model fitted on its sister clade, and the clade is grown under the same
 model, conditioned on its number of taxa and its stem age.
+
+Both types of missing lineages (taxa and clades) can be grafted in one
+run with `graft_missing_taxa_and_clades()` using a single set of
+arguments and a unique seed.
 
 **5. Outputs and checks.** The outputs are grafted phylogenies (a single
 one, a set of simulations, or a list of sets, one per stochastic map
@@ -438,6 +445,9 @@ missing_taxa_list <- build_missing_taxa_list_from_taxonomy(
 # Taxa with their own `allowed_states` follow them,
 # and the others are restricted to the global argument: here, the states `"blue"` and `"green"`.
 
+# To graft both the missing taxa and the missing clades of the table in one run,
+# use `graft_missing_taxa_and_clades()`: see 'vignette("combine_missing_taxa_and_clades")' for a dedicated tutorial.
+
 grafted_phy <- graft_missing_taxa(phy = toy_backbone,
                                   missing_taxa_list = missing_taxa_list,
                                   simmap = toy_simmap, allowed_states = c("blue", "green"),
@@ -503,6 +513,12 @@ and in this vignette: `vignette("phylograftR")`.
 - [Format **inputs** prior to
   grafting](https://maeldore.github.io/deepSTRAPP/articles/format_inputs.html):
   `vignette("format_inputs")`.
+
+**4/ Grafting options**
+
+- [Graft **both missing taxa and missing clades** in one
+  run](https://maeldore.github.io/phylograftR/articles/combine_missing_taxa_and_clades.html):
+  `vignette("combine_missing_taxa_and_clades")`.
 
 Alternatively, if you prefer to view the vignettes in R, you can install
 the package with `build_vignettes = TRUE`.
