@@ -28,10 +28,13 @@ Suggests:
     deepSTRAPP (>= 1.1.0),
     future (>= 1.33.1),
     future.apply (>= 1.11.1),
+    knitr (>= 1.50),
     readxl (>= 1.5.0.1),
+    rmarkdown (>= 2.29),
     testthat (>= 3.3.2),
     writexl (>= 2.0.1)
 Additional_repositories:
     https://maeldore.github.io/drat
 Config/testthat/edition: 3
+VignetteBuilder: knitr
 LazyData: true

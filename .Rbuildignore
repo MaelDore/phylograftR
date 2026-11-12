@@ -13,3 +13,11 @@ R/_benchmark_parallel.R
 
 ^R_temp/*
 ^data-raw$
+
+# Vignettes and pkgdown website
+^doc$
+^Meta$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$

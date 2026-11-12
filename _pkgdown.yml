@@ -1,0 +1,73 @@
+url: https://maeldore.github.io/phylograftR/
+template:
+  light-switch: yes
+  bootstrap: 5
+  assets:
+    - pkgdown/extra.css
+home:
+  sidebar:
+    structure: [links, license, citation, authors, dev]
+navbar:
+  components:
+    intro:
+      text: Tutorials
+      href: articles/phylograftR.html
+    reference:
+      text: References / Functions
+      href: reference/index.html
+    articles:
+      text: Articles / Vignettes
+      menu:
+      - text: Overview of the tutorials
+        href: articles/phylograftR.html
+      # Add the entries of each vignette here when it is built, by category
+      - text: '-------'
+      - text: 1/ Inputs
+      - text: Format inputs prior to grafting
+        href: articles/format_inputs.html
+reference:
+- title: Graft missing lineages
+  desc: |
+    Graft missing taxa and/or missing clades on a backbone phylogeny.
+  contents:
+  - graft_missing_taxa_and_clades
+  - graft_missing_taxa
+  - graft_missing_clades
+- title: Format inputs
+  desc: |
+    Build or import the list of missing taxa and the total richness of clades.
+  contents:
+  - import_taxonomic_table
+  - build_missing_taxa_list_from_taxonomy
+  - build_missing_taxa_list
+  - import_missing_taxa_list
+  - convert_nodes_to_tips
+  - build_total_richness_per_clades
+  - import_total_richness_per_clades
+- title: Prepare species attributes
+  desc: |
+    Prepare stochastic maps (simmaps) used to constrain grafting.
+  contents:
+  - convert_contMap_to_simmap
+  - convert_values_to_states
+- title: Check grafting and extract information
+  desc: |
+    Check the grafting plan before grafting and the constraints after grafting, and extract information on the grafted phylogenies.
+  contents:
+  - check_grafting_plan
+  - check_grafting_constraints
+  - extract_grafting_info
+  - extract_sampling_info
+  - extract_BD_model_summary
+- title: Handle grafted phylogenies
+  desc: |
+    Identify grafted elements, flatten sets of grafted phylogenies, and plot them.
+  contents:
+  - identify_grafted
+  - flatten_grafted_phylogenies
+  - plot_grafted
+- title: Datasets
+  desc: |
+    Toy datasets used to run examples and tutorials.
+  contents:
+  - starts_with("toy_")

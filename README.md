@@ -505,16 +505,16 @@ par(mfrow = c(1, 1))
 Tutorials are available to explore **all usages** of phylograftR.
 
 They are listed below, in the [companion
-website](https://maeldore.github.io/deepSTRAPP/articles/phylograftR.html),
+website](https://maeldore.github.io/phylograftR/articles/phylograftR.html),
 and in this vignette: `vignette("phylograftR")`.
 
-**1/ Format inputs**
+**1/ Inputs**
 
 - [Format **inputs** prior to
-  grafting](https://maeldore.github.io/deepSTRAPP/articles/format_inputs.html):
+  grafting](https://maeldore.github.io/phylograftR/articles/format_inputs.html):
   `vignette("format_inputs")`.
 
-**4/ Grafting options**
+**3/ Grafting options**
 
 - [Graft **both missing taxa and missing clades** in one
   run](https://maeldore.github.io/phylograftR/articles/combine_missing_taxa_and_clades.html):

@@ -11,3 +11,9 @@ R_temp/*
 /Claude_outputs/*
 
 R/_benchmark_ranges_traits.R
+
+# Vignettes
+inst/doc
+/Meta/
+/doc/
+docs
