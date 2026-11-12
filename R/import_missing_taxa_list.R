@@ -198,7 +198,8 @@
 #' # Plot the pruned phylogeny with the updated colors
 #' plot_grafted(grafted_phy, cex = 0.7)
 #'
-#' # A table can describe both types of taxa (here, with the column 'Type'), saved here in a temporary file
+#' # A table can describe both types of taxa (here, with the column 'Type'),
+#' # saved here in a temporary file
 #' both_types <- data.frame(Taxon_name = c("M1", "M2", "M3"),
 #'                          Type = c("taxa", "taxa", "clades"),
 #'                          Target_clade = c("t26, t18", "t5, t12", NA),

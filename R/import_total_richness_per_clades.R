@@ -136,8 +136,10 @@
 #' data(toy_missing_taxa_list)
 #'
 #' # Import it as a 'total_richness_per_clades' object, checked against the backbone and the list
-#' total_richness_per_clades <- import_total_richness_per_clades(file = file_path, phy = toy_backbone,
-#'                                                               missing_taxa_list = toy_missing_taxa_list)
+#' total_richness_per_clades <- import_total_richness_per_clades(
+#'     file = file_path,
+#'     phy = toy_backbone,
+#'     missing_taxa_list = toy_missing_taxa_list)
 #' str(total_richness_per_clades, max.level = 1)
 #'
 #' # Use it to graft the taxa

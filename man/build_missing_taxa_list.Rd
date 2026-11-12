@@ -215,7 +215,8 @@ my_table_nodes <- data.frame(Taxon_name = c("M1", "M2"),
 str(build_missing_taxa_list(data = my_table_nodes, phy = toy_backbone), 2)
 
 # A table can describe both types of taxa: here, with a column 'Type'.
-# Taxa to graft within a target clade and taxa to graft as missing clades are returned as two lists, for the two grafting functions.
+# Taxa to graft within a target clade and taxa to graft as missing clades
+# are returned as two lists, for the two grafting functions.
 my_table_both <- data.frame(Taxon_name = c("M1", "M2", "M3"),
                             Type = c("taxa", "taxa", "clades"),
                             Target_clade = c("t26, t18", "t5, t12", NA),

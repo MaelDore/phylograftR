@@ -216,10 +216,14 @@ phy$edge.length <- phy$edge.length / max(ape::node.depth.edgelength(phy)) * 50
 missing_taxa_list <- list(
   # Taxa grafted in their target clades
   taxa = list(Taxon_name = c("X1", "X2", "X3"),
-              Target_clade = list(X1 = c("t26", "t18"), X2 = c("t8", "t22"), X3 = "t5")),
+              Target_clade = list(X1 = c("t26", "t18"),
+                                  X2 = c("t8", "t22"),
+                                  X3 = "t5")),
   # Taxa grafted as sister clades. M1 and M2 share the same sister clade: they are grafted together
   clades = list(Taxon_name = c("M1", "M2", "M3"),
-                Sister_clade = list(M1 = c("t8", "t22"), M2 = c("t8", "t22"), M3 = c("t26", "t18"))))
+                Sister_clade = list(M1 = c("t8", "t22"),
+                                    M2 = c("t8", "t22"),
+                                    M3 = c("t26", "t18"))))
 
 # --- Perform grafting of both types of missing lineages at once --- #
 
@@ -249,8 +253,10 @@ sapply(grafted_phys, function (x) sum(x$grafted_tips))
 # Provide the total richness of the clades of both types of taxa
 # to account for unsampled species (not in the backbone, nor grafted)
 total_richness_per_clades <- list(
-  taxa = list(Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5"), total_richness = c(30, 25, 4)),
-  clades = list(Sister_clade = list(c("t8", "t22"), c("t26", "t18")), total_richness = c(25, NA)))
+  taxa = list(Target_clade = list(c("t26", "t18"), c("t8", "t22"), "t5"),
+              total_richness = c(30, 25, 4)),
+  clades = list(Sister_clade = list(c("t8", "t22"), c("t26", "t18")),
+                total_richness = c(25, NA)))
 
 # Graft while accounting for unsampled species
 # (Modify the sampling fractions used during fitting)
@@ -277,8 +283,10 @@ toy_multiSimmap <- phytools::make.simmap(toy_backbone, tip_states,
 
 # Build shared missing_taxa_list
 toy_missing_list <- list(
-  taxa = list(Taxon_name = c("X1", "X2"), Target_clade = list(X1 = c("t26", "t18"), X2 = c("t26", "t18"))),
-  clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = "t14", M2 = "t14")))
+  taxa = list(Taxon_name = c("X1", "X2"),
+              Target_clade = list(X1 = c("t26", "t18"), X2 = c("t26", "t18"))),
+  clades = list(Taxon_name = c("M1", "M2"),
+                Sister_clade = list(M1 = "t14", M2 = "t14")))
 
 # Produce grafted phylogenies using the same maps to constrain both steps
 # Here, we only allow grafting on "green" portions of branches

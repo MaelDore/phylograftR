@@ -137,7 +137,8 @@
 #' #   i.e., "Family_A"), but not in the subfamily "Subfam_A1" nor in the tribe "Tribe_A2a"
 #' #   (Excluded_subclades).
 #' #   The stem of the family is available (include_target_clade_stem),
-#' #   the stem of "Subfam_A1" is excluded too, but not the one of "Tribe_A2a" (exclude_subclades_stem).
+#' #   the stem of "Subfam_A1" is excluded too,
+#' #   but not the one of "Tribe_A2a" (exclude_subclades_stem).
 #' # * Genus_a_sp2: same target clade, but excluded subclades are a tribe
 #' #   and a genus with a single species ("Gen_3"), and the stem is excluded for the genus only.
 #' # * Genus_a_sp3: same target clade, without excluded subclades and

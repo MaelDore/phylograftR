@@ -147,10 +147,13 @@
 #' richness_table <- data.frame(Clade = c("Family_A", "Family_B", "Subfam_B1", "Tribe_B2"),
 #'                              total_richness = c(25, NA, 14, 8))
 #'
-#' # Use the the function to validate this richness table against the backbone tree and missing taxon lists
-#' richness_per_clades <- build_total_richness_per_clades(data = richness_table, phy = toy_backbone, missing_taxa_list = lists)
+#' # Use the the function to validate this richness table
+#' # against the backbone tree and missing taxon lists
+#' richness_per_clades <- build_total_richness_per_clades(data = richness_table, phy = toy_backbone,
+#'                                                        missing_taxa_list = lists)
 #'
-#' # Output = one list for each grafting function, with the clades of both lists and the same tips as in 'lists'
+#' # Output = one list for each grafting function,
+#' # with the clades of both lists and the same tips as in 'lists'
 #' str(richness_per_clades, 2)
 #'
 #' # Expected richness and sampling fraction of each clade, examined before any grafting
