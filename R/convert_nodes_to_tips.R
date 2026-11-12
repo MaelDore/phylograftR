@@ -236,8 +236,22 @@ convert_nodes_to_tips <- function (missing_taxa_list, # List of missing taxa wit
 
 ##### 2/ Internal helpers #####
 
-## Convert the node IDs of one type of taxa (see convert_nodes_to_tips())
-# 'recorder': environment recording the conversions (shared by the types); 'lookup': tips already used for the nodes (shared by the types)
+#' @title Convert the node IDs of one type of taxa into tips
+#'
+#' @description Converts the clades of one `missing_taxa_list` (missing taxa or missing clades) and of its `total_richness_per_clades`,
+#'   recording the conversions and reusing the tips already used for a node. Called by [`phylograftR::convert_nodes_to_tips()`][convert_nodes_to_tips] for each type of taxa.
+#'
+#' @param missing_taxa_list A list of one type of taxa (with `$Target_clade` or `$Sister_clade`).
+#' @param phy Phylogeny of class `"phylo"`.
+#' @param total_richness_per_clades List with the total richness of the clades of this type, or `NULL`.
+#' @param recorder Environment with a list `rows` where conversions are recorded (shared by the types).
+#' @param lookup Named list (names are node IDs) of the tips already used for a node (shared by the types).
+#'
+#' @noRd
+#'
+#' @return A list with the items `missing_taxa_list` and `total_richness_per_clades` (`NULL` if not provided), converted.
+#'
+
 convert_nodes_to_tips_typed <- function (missing_taxa_list, phy, total_richness_per_clades, recorder, lookup)
 {
   ## 1/ Check the inputs ####

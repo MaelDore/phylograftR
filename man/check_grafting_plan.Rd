@@ -25,7 +25,11 @@ check_grafting_plan(
 \item{missing_taxa_list}{A list, as given to the grafting functions (see \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} and
 \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}). Items: \verb{$Taxon_name}, and \verb{$Target_clade} (taxa, for \code{graft_missing_taxa()})
 or \verb{$Sister_clade} (missing clades, for \code{graft_missing_clades()}), with the optional items of the grafting function.
-Exactly one of \verb{$Target_clade} and \verb{$Sister_clade} must be provided: it defines the type of the plan.}
+Exactly one of \verb{$Target_clade} and \verb{$Sister_clade} must be provided: it defines the type of the plan.
+
+It can also be \strong{the list of both types of lineages to graft}, \code{list(taxa = ..., clades = ...)}, as returned by \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}}
+when both types are provided, to be used with \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}}. Each part is then planned on the same backbone
+and the output is a named list (see 'Value').}
 
 \item{min_tips}{Numeric. Same as in the grafting functions. With \code{method = "BD_clades"}, a birth-death model is fitted on the target clade (or the sister clade) of each taxon,
 or on the smallest enclosing clade with at least \code{min_tips} tips. Here, \strong{no model is fitted: the enclosing clade is only reported.} Default is \code{5}.}
@@ -47,6 +51,8 @@ Used to constrain grafting based on the matching of the \code{allowed_states} of
 }
 \value{
 A data.frame with one row per taxon (\verb{$Target_clade} list) or per missing clade (\verb{$Sister_clade} list).
+With a \code{list(taxa, clades)} covering both types of missing lineages, the output is a named list with the elements \code{taxa} and \code{clades},
+each data.frame containing the output of its type (as described below), and the overarching attribute \code{"all_feasible"} (\code{TRUE} if all the missing taxa and missing clades can be grafted).
 
 Columns for missing taxa:
 \itemize{
@@ -69,7 +75,7 @@ Columns for missing clades:
 \item \code{enclosing_n_tips}, \code{enclosing_age} Integer and numeric. Number of tips in the backbone phylogeny, and crown age of the enclosing clade (see Details).
 }
 
-Columns for both, with a \code{simmap}:
+Columns for any type, with a \code{simmap}:
 \itemize{
 \item \code{allowed_states} Character string. The allowed states (resolved among the states of the simmap).
 \item \code{states_available} Character string. The states found in the available branches.
@@ -172,6 +178,17 @@ plan_states <- check_grafting_plan(phy = phy, missing_taxa_list = missing_taxa_l
                                    simmap = simmap, allowed_states = "B")
 # Inspect availability of branches in the allowed states
 plan_states[, c("Taxon_name", "states_available", "valid_fraction", "time_coverage", "feasible")]
+
+# --- Check both types of missing lineages at once --- #
+
+# With list(taxa, clades), each part is planned on the same backbone: the output is a named list
+both_list <- list(
+  taxa = missing_taxa_list,
+  clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = c("t8", "t22"), M2 = "t5")))
+plans <- check_grafting_plan(phy = phy, missing_taxa_list = both_list, verbose = FALSE)
+names(plans)
+# "all_feasible" is TRUE if both types of missing lineages are feasible
+attr(plans, "all_feasible")
 
 
 }

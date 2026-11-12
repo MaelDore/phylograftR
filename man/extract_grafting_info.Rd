@@ -12,13 +12,21 @@ or a list of them with one element per map (output of the grafting functions wit
 
 \item{missing_taxa_list}{The list of missing taxa used for the grafting. Items: \verb{$Taxon_name}, and \verb{$Target_clade} (taxa, grafted with
 \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}) or \verb{$Sister_clade} (missing clades, grafted with \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}).
-\strong{Exactly one of them must be provided}: it defines the type of the table.}
+\strong{Exactly one of them must be provided per list}.
+
+Alternatively, you can provide \strong{the list of both types of missing lineages taxa} as \code{list(taxa = ..., clades = ...)}, as returned by \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}}
+when both types are provided (e.g., to use with \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}}). The output is then a named list (see 'Value').}
 
 \item{phy_backbone}{Optional. The backbone phylogeny used for the grafting (class \code{"phylo"}). If \code{NULL} (default), the backbone is rebuilt by removing the grafted taxa from
-the grafted phylogeny (same topology and branch lengths). \strong{The node IDs of the backbone (\code{parent_node}) can only be given if \code{phy_backbone} is provided.}}
+the grafted phylogeny (same topology and branch lengths): the taxa of \code{missing_taxa_list} (both types if a \code{list(taxa, clades)} is provided), and the tips flagged in \verb{$grafted_tips}.
+\strong{The node IDs of the backbone (\code{parent_node}) can only be reported if \code{phy_backbone} is provided.}}
 }
 \value{
 A data.frame, with one row per taxon (or per missing clade) and phylogeny.
+
+With a \code{list(taxa, clades)} covering both types of missing lineages, the output is a named list with the elements \code{taxa} and \code{clades},
+each data.frame containing the output of its type (as described below).
+
 The columns are:
 \itemize{
 \item \code{map} Character string. Name of the stochastic map (\code{NA} if no map was used).
@@ -26,7 +34,7 @@ The columns are:
 \item \code{seed} Integer. Seed of the simulation (\code{NA} if unknown).
 }
 
-For taxa:
+For \strong{missing taxa}:
 \itemize{
 \item \code{Taxon_name} Character string. Name of the taxon.
 \item \code{parent_node} Integer. Node ID in \code{phy_backbone} of the tipward end of the backbone branch of the graft point (\code{NA} without \code{phy_backbone}).
@@ -36,7 +44,7 @@ For taxa:
 \item \code{grafted_on} Character string. Taxa grafted on the sister lineage (first five), \code{NA} if the taxon is attached directly to the backbone.
 }
 
-For missing clades:
+For \strong{missing clades}:
 \itemize{
 \item \code{Missing_clade} Integer. Clade ID.
 \item \code{Taxa} Character string. Taxa of the missing clade, separated by commas.
@@ -63,7 +71,7 @@ The table is meant to check the plausibility of the grafting against the backbon
 \details{
 \subsection{What is extracted depends on the type of grafting}{
 
-\strong{Taxa} (\verb{$Target_clade} list): \strong{one row per taxon}.
+\strong{Missing taxa} (\verb{$Target_clade} list): \strong{one row per taxon}.
 A taxon can be grafted on a branch of the backbone, or on a branch of a taxon grafted before it (and so on):
 the grafted taxa that hang together form a \emph{grafted subtree} attached to the backbone at a \emph{graft point}.
 The summary table reports:
@@ -123,6 +131,19 @@ head(info)
 # Inspect uncertainty of the graft age of each taxon over the simulations
 # Average minimum and maximum graft age across simulations
 aggregate(graft_age ~ Taxon_name, data = info, FUN = function (x) round(range(x), 1))
+
+# --- Both types of missing lineages, grafted in one run --- #
+
+# With list(taxa, clades), the information is extracted for each type, with the same backbone
+both_list <- list(
+  taxa = missing_taxa_list,
+  clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = c("t8", "t22"), M2 = "t5")))
+grafted_both <- graft_missing_taxa_and_clades(phy = phy, missing_taxa_list = both_list,
+                                              nb_simulations = 3, verbose = FALSE, seed = 1234)
+info_both <- extract_grafting_info(phy_grafted = grafted_both, missing_taxa_list = both_list,
+                                   phy_backbone = phy)
+names(info_both)
+head(info_both$clades)
 
 
 }

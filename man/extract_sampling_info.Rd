@@ -21,10 +21,17 @@ List of character vectors of tips of the backbone: a pair of tips defines the cl
 The names must be unique. They are reported in the \code{Clade_name} column of the output.
 \item \verb{$total_richness}: Vector of positive integers, same length as the clades. Total number of species of each clade,
 i.e., backbone species, grafted species, and unsampled species. Use \code{NA} if unknown.
-}}
+}
+
+It can also be \strong{the list of both types of missing lineages} as \code{list(taxa = ..., clades = ...)}, as returned by \code{\link[=build_total_richness_per_clades]{phylograftR::build_total_richness_per_clades()}}
+and \code{\link[=import_total_richness_per_clades]{phylograftR::import_total_richness_per_clades()}} when both types are provided (e.g., to use with
+\code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}}).}
 }
 \value{
-A data.frame, with one row per clade and phylogeny. The columns are:
+A data.frame, with one row per clade and phylogeny.
+
+With a \code{list(taxa, clades)} covering both types of missing lineages, the output is a named list with the elements \code{taxa} and \code{clades},
+each data.frame containing the following columns:
 \itemize{
 \item \code{map} Character string. Name of the stochastic map (\code{NA} if no map was used).
 \item \code{simulation} Integer. Index of the simulation.
@@ -120,6 +127,26 @@ sampling_info[, c("simulation", "Clade_name", "nb_backbone_species", "nb_grafted
 tapply(X = sampling_info$sampling_fraction,
        INDEX = list(sampling_info$Clade_name, sampling_info$simulation),
        FUN = mean)
+
+# --- Both types of missing lineages, grafted in one run --- #
+
+# With graft_missing_taxa_and_clades(), the totals of both types are provided as list(taxa, clades)
+both_list <- list(
+  taxa = missing_taxa_list,
+  clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = clade_B, M2 = "t5")))
+both_richness <- list(
+  taxa = total_richness_per_clades,
+  clades = list(Sister_clade = list(clade_B, "t5"), total_richness = c(12, 4)))
+
+grafted_both <- graft_missing_taxa_and_clades(phy = phy, missing_taxa_list = both_list,
+                                              total_richness_per_clades = both_richness,
+                                              nb_simulations = 3, verbose = FALSE, seed = 1234)
+
+# Output: a named list with the table of each type
+sampling_both <- extract_sampling_info(phy_grafted = grafted_both,
+                                       total_richness_per_clades = both_richness)
+names(sampling_both)
+sampling_both$clades[, c("simulation", "Clade_tips", "nb_grafted_species", "sampling_fraction")]
 
 
 }

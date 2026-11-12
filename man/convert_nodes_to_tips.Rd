@@ -13,7 +13,8 @@ convert_nodes_to_tips(
 }
 \arguments{
 \item{missing_taxa_list}{A list with the information on the taxa to graft, as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}
-or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}, except that clades can be defined by node IDs. \strong{Every item provided must be named after \verb{$Taxon_name}.} Items:
+or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}, except that clades can be defined by node IDs. \strong{Every item provided must be named after \verb{$Taxon_name}.}
+Items:
 \itemize{
 \item \verb{$Taxon_name}: Character vector of the names of the taxa to graft.
 \item \verb{$Target_clade} (or \verb{$Sister_clade}): List (named after \verb{$Taxon_name}) of clades, one per taxon. Each clade is defined by a
@@ -22,14 +23,18 @@ character vector of tips, or by a single node ID (see Details).
 is known not to belong, each defined by a character vector of tips or by a single node ID. Use \code{NULL} for taxa with no excluded subclades.
 The inner names of the subclades are kept.
 \item Other items (e.g., \verb{$include_target_clade_stem}, \verb{$exclude_subclades_stem}) are returned unchanged.
-}}
+}
+
+It can also be \strong{the list of both types of missing lineages} as \code{list(taxa = ..., clades = ...)}, as returned by \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}}
+when both types are provided, to use with \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}}. Both parts are converted in the same call (see Details).}
 
 \item{phy}{An object of class \code{"phylo"}. The backbone phylogeny on which the taxa will be grafted. The node IDs refer to the nodes of this phylogeny.}
 
 \item{total_richness_per_clades}{(Optional) List with the total richness of clades, as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}
 or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}. Its \verb{$Target_clade} (or \verb{$Sister_clade}) clades can also be defined by node IDs, and are converted the same way.
 Default is \code{NULL}. \strong{It must be provided in the same call as its \code{missing_taxa_list}} (see Details).
-Its optional \verb{$Target_clade_name} (or \verb{$Sister_clade_name}) item is returned unchanged.}
+Its optional \verb{$Target_clade_name} (or \verb{$Sister_clade_name}) item is returned unchanged.
+With a \code{list(taxa, clades)} as \code{missing_taxa_list}, it must be a \code{list(taxa = ..., clades = ...)} too, and each part must match a type present in \code{missing_taxa_list}.}
 
 \item{verbose}{Logical. Whether to print the conversions of the node IDs into tips. Default is \code{TRUE}.}
 }
@@ -41,6 +46,9 @@ If \code{total_richness_per_clades} is provided, a list with two items:
 \item \verb{$missing_taxa_list} The converted \code{missing_taxa_list}.
 \item \verb{$total_richness_per_clades} The converted \code{total_richness_per_clades}.
 }
+
+\strong{With a \code{list(taxa, clades)}, the output has the same structure as the input}: a list with the elements \code{taxa} and \code{clades},
+each converted (and, if \code{total_richness_per_clades} is provided, the two items above, each being a \code{list(taxa, clades)}).
 }
 \description{
 Clades (target clades, sister clades, and excluded subclades) of a \code{missing_taxa_list} can be defined by tips
@@ -85,6 +93,14 @@ into these tips instead of the default pair, so the same clade is always defined
 \code{total_richness_per_clades} \strong{must be converted at the same time} as its associated \code{missing_taxa_list} (same call to the function), so that the tips defining a clade match between the two objects.
 It can be converted together with the initial \code{missing_taxa_list} (both converted at the same time), or together with the \code{missing_taxa_list} that was already converted,
 used as a template (the tips it already uses for the clades are matched to the node IDs).
+}
+
+\subsection{Both types of taxa}{
+
+With a \code{list(taxa, clades)} provided as \code{missing_taxa_list}, the two parts (and their total richness) are converted in one call with a shared record of the clades: a clade is defined by the same tips
+wherever it appears (target clades of the taxa, sister clades of the missing clades, excluded subclades, total richness), so that \strong{all the objects remain consistent when used together}
+with \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}}. The tips already used for a clade are those of the first part where it appears (\code{taxa} before \code{clades}).
+The conversions of both parts are printed together.
 
 The function also checks that the structure of the list is valid (items named after \verb{$Taxon_name}), that node IDs are in \code{phy}, and that the tips are in \code{phy}.
 It stops with an informative message otherwise.
@@ -123,6 +139,20 @@ converted_again <- convert_nodes_to_tips(converted$missing_taxa_list, phy = toy_
                                          total_richness_per_clades = list(Target_clade = list(34),
                                                                           total_richness = 14))
 converted_again$total_richness_per_clades$Target_clade
+
+# --- Convert nodes ID for both types of missing lineages --- #
+
+# With list(taxa, clades), both parts are converted at once, with a shared record of the clades
+both_list <- list(
+  taxa = my_missing_taxa_list,
+  clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = 34, M2 = "t26")))
+
+converted_both <- convert_nodes_to_tips(both_list, phy = toy_backbone)
+names(converted_both)
+
+# Node 34 is defined by the same tips in the target clade of X1 and the sister clade of M1
+converted_both$taxa$Target_clade$X1
+converted_both$clades$Sister_clade$M1
 
 }
 \seealso{

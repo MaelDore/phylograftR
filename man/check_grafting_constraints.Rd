@@ -30,7 +30,12 @@ See 'Several grafted phylogenies' in Details section.}
 Items: \verb{$Taxon_name}, \verb{$Target_clade} (taxa grafted with \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}) or \verb{$Sister_clade} (missing clades grafted with
 \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}), and optionally \verb{$include_target_clade_stem}, \verb{$Excluded_subclades} and \verb{$exclude_subclades_stem} (taxa only), and \verb{$allowed_states}.
 Exactly one of \verb{$Target_clade} and \verb{$Sister_clade} must be provided: it defines the type of the check.
-Every item provided must be named after \verb{$Taxon_name} (same names, same order), as in the grafting functions, see these functions for details.}
+Every item provided must be named after \verb{$Taxon_name} (same names, same order), as in the grafting functions, see these functions for details.
+
+It can also be \strong{the list of both types of lineages to graft}, \code{list(taxa = ..., clades = ...)}, as returned by \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}}
+when both types are provided, to check the output of \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}}. Each part is then checked on the same phylogenies
+and the output is a named list (see 'Value').
+\strong{In a missing clade, tips grafted as missing taxa, during the other grafting step, are tolerated}: when the missing clades are grafted first, taxa can be grafted within them afterwards.}
 
 \item{include_target_clade_stem}{Logical. Same as in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}: whether grafting on the stem branch of target clades is accepted.
 Taxa with a value in \code{missing_taxa_list$include_target_clade_stem} use it instead (\code{NA} or no item: this global value is used). Ignored for missing clades. Default is \code{TRUE}.}
@@ -99,8 +104,6 @@ This differs from \verb{$states_ok} that checks only the validity of the termina
 \item \strong{\verb{$ok}}: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
 }
 
-(with a \verb{$Sister_clade} list, see 'Missing clades' below)
-
 \strong{Missing clades.} With a \verb{$Sister_clade} list (for missing clades), the function assumed that \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} was used for the grafting.
 It returns a data.frame with one row per missing clade, i.e., per group of taxa sharing the same sister clade, numbered in the order of their first appearance in \code{missing_taxa_list}, for each phylogeny checked.
 
@@ -122,6 +125,9 @@ With \code{treat_states_as_ranges = TRUE}, the single state is the range inherit
 \item \verb{$ranges_ok}: Logical. Only checked with \code{treat_states_as_ranges = TRUE} (or a range trait): whether the range inherited by the missing clade is contained in the state of the lineage at the graft point.
 \item \strong{\verb{$ok}}: Logical. Whether the missing clade is in the tree, monophyletic, on the stem of its sister clade, and in an allowed state and range (if checked).
 }
+
+\strong{With a \code{list(taxa, clades)} covering both types of missing lineages}, the output is a named list with the elements \code{taxa} and \code{clades}**,
+each element contains the output of its type (as described above), with the overarching attribute \code{"all_ok"} (\code{TRUE} if all the constraints are respected for both types of grafted lineages).
 
 \strong{Multiple maps.} With a list of maps as \code{phy_grafted}, the function returns a list of such data.frames (one per map, named after the maps, with the attribute \code{"all_ok"} for all the maps),
 since the maps have their own constraints: in each data.frame, the rows of all the simulations of the map are merged.
@@ -333,6 +339,21 @@ check_traits <- check_grafting_constraints(
     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE))
 check_traits[, c("Taxon_name", "states_ok", "states_ok_biogeo", "states_ok_elevation",
                  "ranges_ok", "ok")]
+
+# --- Check both types of missing lineages grafted in one run --- #
+
+# With list(taxa, clades), both parts are checked on the same phylogenies
+both_list <- list(
+  taxa = missing_taxa_list,
+  clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = c("t8", "t22"), M2 = "t5")))
+
+grafted_both <- graft_missing_taxa_and_clades(phy = phy, missing_taxa_list = both_list,
+                                              verbose = FALSE, seed = 1234)
+
+checks_both <- check_grafting_constraints(phy_grafted = grafted_both, phy_backbone = phy,
+                                          missing_taxa_list = both_list, verbose = FALSE)
+names(checks_both)
+attr(checks_both, "all_ok") # "all_ok" is TRUE if both types of missing lineages are ok
 
 
 }
