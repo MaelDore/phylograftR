@@ -1,0 +1,90 @@
+---
+title: "phylograftR: All tutorials"
+author: "Maël Doré"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{phylograftR: All tutorials}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r set_options, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Main tutorial
+
+### Quick-to-run example
+
+A **simple use-case** that grafts missing taxa on a toy backbone phylogeny is available in the README of the package, and a **full workflow from scratch** is presented in the main workflow tutorial (*in preparation*): `vignette("main_workflow")`.
+
+For more advanced uses, please refer to the tutorials below.
+
+
+## Which tutorial do I need?
+
+| I want to... | Tutorial |
+|:---|:---|
+| Format my data into a `missing_taxa_list` (tables, node IDs, MRCA tips) | [`format_inputs`](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")` |
+| Build stochastic maps (simmaps) of species attributes from tip data | `prepare_trait_data` *(in preparation)* |
+| See a full analysis from scratch, from tip data to a grafted phylogeny | `main_workflow` *(in preparation)* |
+| Graft missing taxa within target clades, and tune the options | `graft_taxa` *(in preparation)* |
+| Graft missing clades as sisters of clades of the backbone | `graft_clades` *(in preparation)* |
+| Graft both types of missing lineages in one run | `combine_missing_taxa_and_clades` *(in preparation)* |
+| Check the grafting plan before, and the grafted phylogenies after | `check_grafting` *(in preparation)* |
+| Constrain grafting with biogeographic ranges | `biogeographic_data` *(in preparation)* |
+| Constrain grafting with several traits | `multiple_traits` *(in preparation)* |
+| Constrain grafting with a continuous trait | `continuous_data` *(in preparation)* |
+| Account for uncertainty: several simulations, several maps | `handle_uncertainty` *(in preparation)* |
+| Speed up grafting with parallel computation | `parallel_grafting` *(in preparation)* |
+| Resume a crashed or interrupted run | `resume_crashed_run` *(in preparation)* |
+
+
+## Advanced uses / tutorials
+
+The following tutorials present the **usages** of phylograftR in detail.
+They provide explanations on available arguments and interpretations of results across multiple types of data.
+Tutorials *in preparation* become links, with their `vignette()` call, once they are available.
+
+### **1/ Inputs**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; [1.1/ Format __inputs__ prior to grafting](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")`.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 1.2/ Prepare __trait data__ and build stochastic maps with deepSTRAPP: `prepare_trait_data` *(in preparation)*.
+
+### **2/ Classic workflow (from scratch)**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; Full __grafting workflow__, from a phylogeny and tip data to the checked grafted phylogenies: `main_workflow` *(in preparation)*.
+
+### **3/ Grafting options**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.1/ Graft __missing taxa__ within target clades: `graft_taxa` *(in preparation)*.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.2/ Graft __missing clades__ as sisters of clades of the backbone: `graft_clades` *(in preparation)*.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.3/ Graft __both types__ of missing lineages: `combine_missing_taxa_and_clades` *(in preparation)*.
+
+### **4/ Checks**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; Check the __grafting plan__ and the __grafted phylogenies__, and extract information: `check_grafting` *(in preparation)*.
+
+### **5/ Data types**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.1/ __Biogeographic__ range data: `biogeographic_data` *(in preparation)*.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.2/ __Multiple traits__: `multiple_traits` *(in preparation)*.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.3/ __Continuous__ trait data: `continuous_data` *(in preparation)*.
+
+### **6/ Uncertainty and scaling**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.1/ Handle __uncertainty__ with several simulations and stochastic maps: `handle_uncertainty` *(in preparation)*.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.2/ Run grafting in __parallel__: `parallel_grafting` *(in preparation)*.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.3/ __Resume__ a crashed or interrupted run: `resume_crashed_run` *(in preparation)*.
+<br>
