@@ -180,6 +180,7 @@ Other functions from phylograftR:
 \itemize{
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades.
 \item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades of backbone clades.
+\item \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}} to graft missing taxa and missing clades in one run, with a single set of inputs.
 \item \code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}} to check a posteriori that grafted taxa respect their constraints, after grafting.
 \item \code{\link[=extract_grafting_info]{phylograftR::extract_grafting_info()}} to extract a posteriori information on the location of grafted lineages.
 \item \code{\link[=extract_sampling_info]{phylograftR::extract_sampling_info()}} to extract a posteriori  the richness and the sampling fraction of the clades in each grafted phylogeny.

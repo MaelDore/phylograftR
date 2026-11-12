@@ -114,6 +114,7 @@
 #'  * [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades] and [`phylograftR::import_total_richness_per_clades()`][import_total_richness_per_clades] to prepare `total_richness_per_clades` for the unsampled species.
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades using the list.
 #'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades using the list.
+#'  * [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades] to graft missing taxa and missing clades in one run, with a single set of inputs.
 #'
 #' @importFrom ape reorder.phylo
 #'

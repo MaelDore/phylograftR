@@ -207,6 +207,7 @@
 #'  * [`phylograftR::check_grafting_plan()`][check_grafting_plan] to check a priori the feasibility of a grafting plan, before grafting.
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades.
 #'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades of backbone clades.
+#'  * [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades] to graft missing taxa and missing clades in one run, with a single set of inputs.
 #'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract a posteriori information on the location of grafted lineages.
 #'  * [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract a posteriori  the richness and the sampling fraction of the clades in each grafted phylogeny.
 #'  * [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary] to extract a posteriori information on the birth-death models fitted during grafting.

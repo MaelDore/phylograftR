@@ -386,11 +386,10 @@
 #'
 #' ### Successive graftings
 #'
-#' The output of this function can be used as the `phy` of the next grafting, to **combine the grafting of missing taxa and of missing clades** on the same backbone.
-#' Typically, the missing taxa list (and the total richness per clade) is built once on the backbone, with [`build_missing_taxa_list()`][build_missing_taxa_list]
-#' or [`import_missing_taxa_list()`][import_missing_taxa_list], which return `list(taxa, clades)` if both types are provided.
+#' To graft the missing taxa and the missing clades on the same backbone, use [`graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades],
+#' which chains both steps with a single set of inputs and a single seed, including with several simulations and/or stochastic maps.
 #'
-#' The taxa are grafted first with [`graft_missing_taxa()`][graft_missing_taxa], then the missing clades with [`graft_missing_clades()`][graft_missing_clades].
+#' The output of this function can also be used as the `phy` of another grafting (e.g., to chain the steps by hand for a single grafted phylogeny).
 #'
 #' **The grafted tips and branches accumulate**: if `phy` has the `grafted_tips` element of a previous grafting, its flagged tips are kept as grafted
 #' (they are still treated as backbone species by the grafting itself, e.g., to count the species used for the sampling fractions),
@@ -415,6 +414,7 @@
 #'  * [`phylograftR::build_missing_taxa_list_from_taxonomy()`][build_missing_taxa_list_from_taxonomy] to build a `missing_taxa_list` from taxonomic tables, with clades defined by taxonomic names.
 #'  * [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades] and [`phylograftR::import_total_richness_per_clades()`][import_total_richness_per_clades] to prepare `total_richness_per_clades` for the unsampled species.
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa based on target clades and excluded subclades.
+#'  * [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades] to graft missing taxa and missing clades in one run, with a single set of inputs.
 #'  * [`phylograftR::check_grafting_plan()`][check_grafting_plan] to check a priori the feasibility of a grafting plan, before grafting.
 #'  * [`phylograftR::check_grafting_constraints()`][check_grafting_constraints] to check a posteriori that grafted taxa respect their constraints.
 #'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract a posteriori information on the location of grafted lineages.

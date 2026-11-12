@@ -31,7 +31,8 @@ graft_missing_clades(
 }
 \arguments{
 \item{phy}{An object of class \code{"phylo"}. The backbone phylogeny on which taxa are grafted.
-It must be rooted, binary (no polytomies) and ultrametric (i.e., be time-calibrated).}
+It must be rooted, binary (no polytomies) and ultrametric (i.e., be time-calibrated).
+It can be the output of a previous grafting: the grafted tips then accumulate (see 'Successive graftings').}
 
 \item{missing_taxa_list}{A list with the information on the taxa to graft. \strong{Every item provided must be named after \verb{$Taxon_name}.} Items:
 \itemize{
@@ -66,6 +67,9 @@ nor in \code{missing_taxa_list} (i.e., unsampled species) when fitting the birth
 \item \verb{$Sister_clade}: List of character vectors of tips, defining clades as in \code{missing_taxa_list$Sister_clade}.
 \strong{Node IDs are not accepted}: convert them with \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}} in the same call as \code{missing_taxa_list},
 so the tips of the clades match between both objects.
+The easiest way to obtain this list is to build it from a table of clades with \code{\link[=build_total_richness_per_clades]{phylograftR::build_total_richness_per_clades()}}
+or \code{\link[=import_total_richness_per_clades]{phylograftR::import_total_richness_per_clades()}}: the clades can be written with names, tips or node IDs,
+they are matched with the clades of \code{missing_taxa_list}, and the richness is checked against all the taxa to graft.
 \strong{It must cover all the unique sister clades of \code{missing_taxa_list}.} It can include other clades, e.g., enclosing clades.
 \item \verb{$Sister_clade_name}: (Optional) Character vector of the names of the clades, same length as \verb{$Sister_clade} (\code{NA} if a clade has no name).
 The names must be unique. If \code{missing_taxa_list$Sister_clade_name} is provided, \strong{a clade must have the same name in both objects} (the function stops otherwise).
@@ -174,7 +178,7 @@ Backbone branch lengths are untouched, and the grafted phylogeny is ultrametric.
 
 In addition to the standard elements of a \code{"phylo"} object, the phylogeny has the following elements:
 \itemize{
-\item \code{grafted_tips} Named logical vector with one value per tip, in the order of \verb{$tip.label}. \code{TRUE} for grafted tips. Names are the tip labels.
+\item \code{grafted_tips} Named logical vector with one value per tip, in the order of \verb{$tip.label}. \code{TRUE} for grafted tips (including the tips grafted by a previous grafting if \code{phy} was already grafted). Names are the tip labels.
 \item \code{grafted_edges} Named logical vector with one value per branch, in the order of the rows of \verb{$edge}. \code{TRUE} for grafted branches,
 i.e., branches with only grafted taxa descending from them. Names are the IDs of the tipward nodes of the branches (\verb{$edge[, 2]}).
 Use them to color the phylogeny on plots (see examples).
@@ -449,6 +453,23 @@ the taxa already grafted would be treated as backbone species, so the sampling f
 the identification of the grafted tips and the updated \code{simmap} would be wrong, and a \code{simmap} of the initial backbone would not match the temporary phylogeny.
 Use \code{resume = TRUE} instead.
 }
+
+\subsection{Successive graftings}{
+
+To graft the missing taxa and the missing clades on the same backbone, use \code{\link[=graft_missing_taxa_and_clades]{graft_missing_taxa_and_clades()}},
+which chains both steps with a single set of inputs and a single seed, including with several simulations and/or stochastic maps.
+
+The output of this function can also be used as the \code{phy} of another grafting (e.g., to chain the steps by hand for a single grafted phylogeny).
+
+\strong{The grafted tips and branches accumulate}: if \code{phy} has the \code{grafted_tips} element of a previous grafting, its flagged tips are kept as grafted
+(they are still treated as backbone species by the grafting itself, e.g., to count the species used for the sampling fractions),
+and the new taxa are added to them.
+\code{grafted_tips} and \code{grafted_edges} of the output thus identify \strong{all} the grafted taxa, not only those of the last step.
+A warning is sent if \code{grafted_tips} does not match the tips of \code{phy} (e.g., after \code{ape::drop.tip()}):
+use \code{\link[=identify_grafted]{identify_grafted()}} to recompute them first.
+
+If a \code{simmap} is used, provide the updated \code{simmap} of the previous step (\code{phy$simmap}, obtained with \code{return_simmap = TRUE}) to keep the same trait history.
+}
 }
 \examples{
 # --- Prepare data --- #
@@ -509,6 +530,7 @@ grafted_phy_richness <- graft_missing_clades(phy = phy, missing_taxa_list = miss
 # Inspect the resulting clade richness and sampling fractions
 extract_sampling_info(phy_grafted = grafted_phy_richness,
                       total_richness_per_clades = total_richness_per_clades)
+
 
 # --- Apply attribute-based exclusions --- #
 
@@ -635,7 +657,9 @@ Other functions from phylograftR:
 \itemize{
 \item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to build a \code{missing_taxa_list} from a data.frame loaded in R, with clades defined by tips or node IDs.
 \item \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} to build a \code{missing_taxa_list} from taxonomic tables, with clades defined by taxonomic names.
+\item \code{\link[=build_total_richness_per_clades]{phylograftR::build_total_richness_per_clades()}} and \code{\link[=import_total_richness_per_clades]{phylograftR::import_total_richness_per_clades()}} to prepare \code{total_richness_per_clades} for the unsampled species.
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades.
+\item \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}} to graft missing taxa and missing clades in one run, with a single set of inputs.
 \item \code{\link[=check_grafting_plan]{phylograftR::check_grafting_plan()}} to check a priori the feasibility of a grafting plan, before grafting.
 \item \code{\link[=check_grafting_constraints]{phylograftR::check_grafting_constraints()}} to check a posteriori that grafted taxa respect their constraints.
 \item \code{\link[=extract_grafting_info]{phylograftR::extract_grafting_info()}} to extract a posteriori information on the location of grafted lineages.

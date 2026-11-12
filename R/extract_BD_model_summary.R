@@ -13,11 +13,11 @@
 #' @description Extract the summary of the birth-death (BD) models fitted to simulate the divergence times of the grafted taxa.
 #'   Returns a data.frame with one row per model, per grafted phylogeny (simulation and stochastic map).
 #'   It is similar to [`phylograftR::extract_grafting_info()`][extract_grafting_info], but the summary is not computed a posteriori:
-#'   the grafting functions record them if `return_BD_model_summary = TRUE`, and this function **extracts the records**.
+#'   the grafting functions record them if `return_BD_model_summary = TRUE`, and this function extracts the records.
 #'
 #' @param phy_grafted A grafted phylogeny (class `"phylo"`), a set of grafted phylogenies (class `"multiPhylo"`, e.g., several simulations),
 #'   or a list of them with one element per map (output of the grafting functions with a `"multiSimmap"`).
-#'   **The phylogenies must have the attribute `"BD_model_summary"`**, so they must be the output of
+#'   The phylogenies must have the attribute `"BD_model_summary"`, so they must be the output of
 #'   [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] (with `method = "BD_clades"`) or [`phylograftR::graft_missing_clades()`][graft_missing_clades]
 #'   run with `return_BD_model_summary = TRUE`.
 #'
@@ -42,6 +42,7 @@
 #' @seealso Other functions from phylograftR:
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa within a target clade, with constraints (target clades and excluded subclades).
 #'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as clades sister to clades of the backbone.
+#'  * [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades] to graft missing taxa and missing clades in one run, with a single set of inputs.
 #'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract a posteriori information on the location of grafted lineages.
 #'  * [`phylograftR::extract_sampling_info()`][extract_sampling_info] to extract the richness and the sampling fraction of the clades in each grafted phylogeny.
 #'
@@ -73,7 +74,7 @@
 #'   * `n_pending` Integer. Number of taxa still to graft in the fitted clade when the model was fitted.
 #'   * `n_unsampled` Numeric. Number of unsampled species in the fitted clade (see `total_richness_per_clades` in the grafting functions).
 #'
-#'   Attributes: `"type"` (`"taxa"` for models of `graft_missing_taxa()`, `"clades"` for models of `graft_missing_clades()`).
+#'   Attributes: `"type"` (`"taxa"` for models of `graft_missing_taxa()`, `"clades"` for models of `graft_missing_clades()`, `"taxa_and_clades"` for models of `graft_missing_taxa_and_clades()`, which have a column `step`).
 #'
 #' @author Maël Doré
 #'

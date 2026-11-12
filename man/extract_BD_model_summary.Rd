@@ -9,7 +9,7 @@ extract_BD_model_summary(phy_grafted)
 \arguments{
 \item{phy_grafted}{A grafted phylogeny (class \code{"phylo"}), a set of grafted phylogenies (class \code{"multiPhylo"}, e.g., several simulations),
 or a list of them with one element per map (output of the grafting functions with a \code{"multiSimmap"}).
-\strong{The phylogenies must have the attribute \code{"BD_model_summary"}}, so they must be the output of
+The phylogenies must have the attribute \code{"BD_model_summary"}, so they must be the output of
 \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} (with \code{method = "BD_clades"}) or \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}
 run with \code{return_BD_model_summary = TRUE}.}
 }
@@ -44,13 +44,13 @@ A data.frame, with one row per model and phylogeny. The columns are:
 \item \code{n_unsampled} Numeric. Number of unsampled species in the fitted clade (see \code{total_richness_per_clades} in the grafting functions).
 }
 
-Attributes: \code{"type"} (\code{"taxa"} for models of \code{graft_missing_taxa()}, \code{"clades"} for models of \code{graft_missing_clades()}).
+Attributes: \code{"type"} (\code{"taxa"} for models of \code{graft_missing_taxa()}, \code{"clades"} for models of \code{graft_missing_clades()}, \code{"taxa_and_clades"} for models of \code{graft_missing_taxa_and_clades()}, which have a column \code{step}).
 }
 \description{
 Extract the summary of the birth-death (BD) models fitted to simulate the divergence times of the grafted taxa.
 Returns a data.frame with one row per model, per grafted phylogeny (simulation and stochastic map).
 It is similar to \code{\link[=extract_grafting_info]{phylograftR::extract_grafting_info()}}, but the summary is not computed a posteriori:
-the grafting functions record them if \code{return_BD_model_summary = TRUE}, and this function \strong{extracts the records}.
+the grafting functions record them if \code{return_BD_model_summary = TRUE}, and this function extracts the records.
 }
 \details{
 With \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}}, \strong{a model is fitted per target clade}, and used by all the taxa of the target clade,
@@ -102,6 +102,7 @@ Other functions from phylograftR:
 \itemize{
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa within a target clade, with constraints (target clades and excluded subclades).
 \item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as clades sister to clades of the backbone.
+\item \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}} to graft missing taxa and missing clades in one run, with a single set of inputs.
 \item \code{\link[=extract_grafting_info]{phylograftR::extract_grafting_info()}} to extract a posteriori information on the location of grafted lineages.
 \item \code{\link[=extract_sampling_info]{phylograftR::extract_sampling_info()}} to extract the richness and the sampling fraction of the clades in each grafted phylogeny.
 }

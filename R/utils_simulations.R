@@ -308,7 +308,9 @@ run_attempts <- function (simulate_attempt, n_maps, map_names, nb_simulations, f
       s$warnings <- c(s$warnings, outcome$warnings)
       if (inherits(outcome$out, "phylograftR_simulation_error"))
       {
-        s$failures[[length(s$failures) + 1]] <- list(seed = if (is.null(outcome$seed)) NA else outcome$seed, reason = conditionMessage(outcome$out), condition = outcome$out)
+        # The step that failed is recorded if the simulation has several steps (see graft_missing_taxa_and_clades())
+        failed_step <- if (is.null(outcome$out$step)) NA_character_ else outcome$out$step
+        s$failures[[length(s$failures) + 1]] <- list(seed = if (is.null(outcome$seed)) NA else outcome$seed, reason = conditionMessage(outcome$out), condition = outcome$out, step = failed_step)
       } else {
         phy <- outcome$out
         # The seed of the simulation is kept with the phylogeny
@@ -348,6 +350,9 @@ summarise_simulations <- function (state, nb_simulations, force_simulations, see
 
   failed <- data.frame(seed = vapply(failures, function (f) as.numeric(f$seed), numeric(1)),
                        reason = vapply(failures, function (f) f$reason, character(1)), stringsAsFactors = FALSE)
+  # Column with the step that failed, only for the simulations made of several steps
+  failed_steps <- vapply(failures, function (f) if (is.null(f$step)) NA_character_ else f$step, character(1))
+  if (any(!is.na(failed_steps))) { failed$step <- failed_steps }
 
   ## No simulation obtained
   if (length(results) == 0)

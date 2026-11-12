@@ -187,8 +187,10 @@ Other functions from phylograftR:
 \item \code{\link[=import_taxonomic_table]{phylograftR::import_taxonomic_table()}} to read the taxonomic tables from external files.
 \item \code{\link[=import_missing_taxa_list]{phylograftR::import_missing_taxa_list()}} to read a table of missing taxa from a file, with clades defined by tips or node IDs.
 \item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to build a \code{missing_taxa_list} from a data.frame loaded in R, with clades defined by tips or node IDs.
+\item \code{\link[=build_total_richness_per_clades]{phylograftR::build_total_richness_per_clades()}} and \code{\link[=import_total_richness_per_clades]{phylograftR::import_total_richness_per_clades()}} to prepare \code{total_richness_per_clades} for the unsampled species.
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa based on target clades and excluded subclades using the list.
 \item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades using the list.
+\item \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}} to graft missing taxa and missing clades in one run, with a single set of inputs.
 }
 }
 \author{

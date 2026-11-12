@@ -42,9 +42,10 @@ Default is \code{NULL}.}
 \item{...}{Further arguments passed to the function reading the file (\code{utils::read.table()} for text files, \code{readxl::read_excel()} for Excel files, or \code{reader}).}
 }
 \value{
-A \code{missing_taxa_list}: a list, ready to be used in the grafting functions, with the following items.
+A \code{missing_taxa_list}: a list, ready to be used in the grafting functions.
 If the table describes both types of taxa, a list with two \code{missing_taxa_list}: \verb{$taxa} (with \verb{$Target_clade}, for \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}})
 and \verb{$clades} (with \verb{$Sister_clade}, for \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}).
+Each list comprises the following items:
 \itemize{
 \item \verb{$Taxon_name} Character vector.
 \item \verb{$Target_clade} (or \verb{$Sister_clade}) List of character vectors of tips.
@@ -139,8 +140,10 @@ Use \verb{$taxa} in \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_
 Clade labels are also checked across both lists (the same clade has the same label as a target clade and as a sister clade),
 so that they can be matched with the names of \code{total_richness_per_clades}.
 
-\strong{Recommended sequence:} graft the missing taxa within target clades first with \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}},
-then use the grafted phylogeny as the backbone to graft the missing clades \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}.
+\strong{Recommended use:} provide the whole list (\verb{$taxa} and \verb{$clades}) to \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}},
+which grafts the missing taxa first and then the missing clades, with a single set of inputs.
+The two steps can also be chained by hand: graft the missing taxa with \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}},
+then use the grafted phylogeny as the backbone to graft the missing clades with \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}.
 The clades are defined by tips of the backbone, so they stay valid even when the grafted phylogeny is used for the second step.
 }
 
@@ -160,7 +163,8 @@ and the conversions are printed if \code{verbose = TRUE}.
 The warnings and errors that follow, and the grafting functions, therefore use the tips that are traced back to your node IDs in the messages.
 If a clade is already defined by tips in the table, a node ID of the same clade is converted into the same tips.
 Convert \code{total_richness_per_clades} (if you use it) at the same time as the list, with \code{\link[=convert_nodes_to_tips]{phylograftR::convert_nodes_to_tips()}},
-so the tips of the clades match between both objects.
+so the tips of the clades match between both objects. Alternatively, build it from a table of clades with
+\code{\link[=build_total_richness_per_clades]{phylograftR::build_total_richness_per_clades()}}, which matches the clades with those of the list.
 }
 
 \subsection{Fine-tuning the clades}{
@@ -221,8 +225,10 @@ Other functions from phylograftR:
 \item \code{\link[=build_missing_taxa_list]{phylograftR::build_missing_taxa_list()}} to convert a data.frame of missing taxa already loaded in R.
 \item \code{\link[=build_missing_taxa_list_from_taxonomy]{phylograftR::build_missing_taxa_list_from_taxonomy()}} to build a \code{missing_taxa_list} from taxonomic tables, with clades defined by taxonomic names.
 \item \code{\link[=import_taxonomic_table]{phylograftR::import_taxonomic_table()}} to read the taxonomic tables from external files.
+\item \code{\link[=build_total_richness_per_clades]{phylograftR::build_total_richness_per_clades()}} and \code{\link[=import_total_richness_per_clades]{phylograftR::import_total_richness_per_clades()}} to prepare \code{total_richness_per_clades} for the unsampled species.
 \item \code{\link[=graft_missing_taxa]{phylograftR::graft_missing_taxa()}} to graft taxa using the list based on target clades and excluded subclades.
 \item \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}} to graft groups of missing taxa as sister clades using the list.
+\item \code{\link[=graft_missing_taxa_and_clades]{phylograftR::graft_missing_taxa_and_clades()}} to graft missing taxa and missing clades in one run, with a single set of inputs.
 }
 }
 \author{

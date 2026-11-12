@@ -106,8 +106,10 @@
 #' Clade labels are also checked across both lists (the same clade has the same label as a target clade and as a sister clade),
 #' so that they can be matched with the names of `total_richness_per_clades`.
 #'
-#' **Recommended sequence:** graft the missing taxa within target clades first with [`phylograftR::graft_missing_taxa()`][graft_missing_taxa],
-#' then use the grafted phylogeny as the backbone to graft the missing clades [`phylograftR::graft_missing_clades()`][graft_missing_clades].
+#' **Recommended use:** provide the whole list (`$taxa` and `$clades`) to [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades],
+#' which grafts the missing taxa first and then the missing clades, with a single set of inputs.
+#' The two steps can also be chained by hand: graft the missing taxa with [`phylograftR::graft_missing_taxa()`][graft_missing_taxa],
+#' then use the grafted phylogeny as the backbone to graft the missing clades with [`phylograftR::graft_missing_clades()`][graft_missing_clades].
 #' The clades are defined by tips of the backbone, so they stay valid even when the grafted phylogeny is used for the second step.
 #'
 #' ### Node IDs
@@ -166,6 +168,7 @@
 #'  * [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades] and [`phylograftR::import_total_richness_per_clades()`][import_total_richness_per_clades] to prepare `total_richness_per_clades` for the unsampled species.
 #'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa using the list based on target clades and excluded subclades.
 #'  * [`phylograftR::graft_missing_clades()`][graft_missing_clades] to graft groups of missing taxa as sister clades using the list.
+#'  * [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades] to graft missing taxa and missing clades in one run, with a single set of inputs.
 #'
 #' @export
 #'

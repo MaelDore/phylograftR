@@ -2,6 +2,7 @@
 
 export(build_missing_taxa_list)
 export(build_missing_taxa_list_from_taxonomy)
+export(build_total_richness_per_clades)
 export(check_grafting_constraints)
 export(check_grafting_plan)
 export(convert_contMap_to_simmap)
@@ -13,9 +14,11 @@ export(extract_sampling_info)
 export(flatten_grafted_phylogenies)
 export(graft_missing_clades)
 export(graft_missing_taxa)
+export(graft_missing_taxa_and_clades)
 export(identify_grafted)
 export(import_missing_taxa_list)
 export(import_taxonomic_table)
+export(import_total_richness_per_clades)
 export(plot_grafted)
 importFrom(TreeSim,
   corsim,
