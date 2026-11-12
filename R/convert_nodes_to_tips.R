@@ -26,7 +26,8 @@
 #'   and [`phylograftR::import_missing_taxa_list()`][import_missing_taxa_list] when a table includes node IDs.
 #'
 #' @param missing_taxa_list A list with the information on the taxa to graft, as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
-#'   or [`phylograftR::graft_missing_clades()`][graft_missing_clades], except that clades can be defined by node IDs. **Every item provided must be named after `$Taxon_name`.** Items:
+#'   or [`phylograftR::graft_missing_clades()`][graft_missing_clades], except that clades can be defined by node IDs. **Every item provided must be named after `$Taxon_name`.**
+#'   Items:
 #'   * `$Taxon_name`: Character vector of the names of the taxa to graft.
 #'   * `$Target_clade` (or `$Sister_clade`): List (named after `$Taxon_name`) of clades, one per taxon. Each clade is defined by a
 #'     character vector of tips, or by a single node ID (see Details).
@@ -34,11 +35,15 @@
 #'     is known not to belong, each defined by a character vector of tips or by a single node ID. Use `NULL` for taxa with no excluded subclades.
 #'     The inner names of the subclades are kept.
 #'   * Other items (e.g., `$include_target_clade_stem`, `$exclude_subclades_stem`) are returned unchanged.
+#'
+#'   It can also be **the list of both types of missing lineages** as `list(taxa = ..., clades = ...)`, as returned by [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]
+#'   when both types are provided, to use with [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades]. Both parts are converted in the same call (see Details).
 #' @param phy An object of class `"phylo"`. The backbone phylogeny on which the taxa will be grafted. The node IDs refer to the nodes of this phylogeny.
 #' @param total_richness_per_clades (Optional) List with the total richness of clades, as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]
 #'   or [`phylograftR::graft_missing_clades()`][graft_missing_clades]. Its `$Target_clade` (or `$Sister_clade`) clades can also be defined by node IDs, and are converted the same way.
 #'   Default is `NULL`. **It must be provided in the same call as its `missing_taxa_list`** (see Details).
 #'   Its optional `$Target_clade_name` (or `$Sister_clade_name`) item is returned unchanged.
+#'   With a `list(taxa, clades)` as `missing_taxa_list`, it must be a `list(taxa = ..., clades = ...)` too, and each part must match a type present in `missing_taxa_list`.
 #' @param verbose Logical. Whether to print the conversions of the node IDs into tips. Default is `TRUE`.
 #'
 #' @details
@@ -72,14 +77,24 @@
 #' It can be converted together with the initial `missing_taxa_list` (both converted at the same time), or together with the `missing_taxa_list` that was already converted,
 #' used as a template (the tips it already uses for the clades are matched to the node IDs).
 #'
+#' ### Both types of taxa
+#'
+#' With a `list(taxa, clades)` provided as `missing_taxa_list`, the two parts (and their total richness) are converted in one call with a shared record of the clades: a clade is defined by the same tips
+#' wherever it appears (target clades of the taxa, sister clades of the missing clades, excluded subclades, total richness), so that **all the objects remain consistent when used together**
+#' with [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades]. The tips already used for a clade are those of the first part where it appears (`taxa` before `clades`).
+#' The conversions of both parts are printed together.
+#'
 #' The function also checks that the structure of the list is valid (items named after `$Taxon_name`), that node IDs are in `phy`, and that the tips are in `phy`.
 #' It stops with an informative message otherwise.
 #'
 #' @return A list with the same items as `missing_taxa_list`, with all the clades defined by tips.
-#'   The items, the names of the items and of the subclades are unchanged.
-#'   If `total_richness_per_clades` is provided, a list with two items:
+#' The items, the names of the items and of the subclades are unchanged.
+#' If `total_richness_per_clades` is provided, a list with two items:
 #'   * `$missing_taxa_list` The converted `missing_taxa_list`.
 #'   * `$total_richness_per_clades` The converted `total_richness_per_clades`.
+#'
+#' **With a `list(taxa, clades)`, the output has the same structure as the input**: a list with the elements `taxa` and `clades`,
+#' each converted (and, if `total_richness_per_clades` is provided, the two items above, each being a `list(taxa, clades)`).
 #'
 #' @seealso Other functions from phylograftR:
 #'  * [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list] to build a `missing_taxa_list` from an internal data.frame, with the same conversion of node IDs.
@@ -127,10 +142,24 @@
 #'                                                                           total_richness = 14))
 #' converted_again$total_richness_per_clades$Target_clade
 #'
+#' # --- Convert nodes ID for both types of missing lineages --- #
+#'
+#' # With list(taxa, clades), both parts are converted at once, with a shared record of the clades
+#' both_list <- list(
+#'   taxa = my_missing_taxa_list,
+#'   clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = 34, M2 = "t26")))
+#'
+#' converted_both <- convert_nodes_to_tips(both_list, phy = toy_backbone)
+#' names(converted_both)
+#'
+#' # Node 34 is defined by the same tips in the target clade of X1 and the sister clade of M1
+#' converted_both$taxa$Target_clade$X1
+#' converted_both$clades$Sister_clade$M1
+#'
 
-convert_nodes_to_tips <- function (missing_taxa_list, # List of missing taxa with clades defined by tips and/or node IDs
+convert_nodes_to_tips <- function (missing_taxa_list, # List of missing taxa with clades defined by tips and/or node IDs, or list(taxa, clades)
                                    phy, # Backbone phylogeny
-                                   total_richness_per_clades = NULL, # Optional list with the total richness of clades
+                                   total_richness_per_clades = NULL, # Optional list with the total richness of clades (list(taxa, clades) with both types)
                                    verbose = TRUE) # Print the conversions
 {
   ## 1/ Check the inputs ####
@@ -138,6 +167,80 @@ convert_nodes_to_tips <- function (missing_taxa_list, # List of missing taxa wit
   if (!inherits(phy, "phylo")) { stop("'phy' must be a phylogeny of class 'phylo'") }
   if (!is.list(missing_taxa_list)) { stop("'missing_taxa_list' must be a list") }
   if (!is.logical(verbose) || length(verbose) != 1 || is.na(verbose)) { stop("'verbose' must be TRUE or FALSE") }
+
+  ## 2/ Identify the types of taxa ####
+
+  # Type ("taxa" or "clades") of a single-type list, from its clade item (an invalid list is left to the checks of the conversion)
+  type_of <- function (x, items) { if (!is.null(x[[items[1]]]) && is.null(x[[items[2]]])) "taxa" else if (is.null(x[[items[1]]]) && !is.null(x[[items[2]]])) "clades" else "taxa" }
+  typed <- split_typed_list(missing_taxa_list, arg = "missing_taxa_list")
+  as_typed <- function (x) { out <- list(x); names(out) <- type_of(x, c("Target_clade", "Sister_clade")); out }
+  lists <- if (typed$typed) typed$lists else as_typed(missing_taxa_list)
+
+  richness <- NULL
+  if (!is.null(total_richness_per_clades))
+  {
+    if (!is.list(total_richness_per_clades)) { stop("'total_richness_per_clades' must be a list") }
+    tr_typed <- split_typed_list(total_richness_per_clades, arg = "total_richness_per_clades")
+    richness <- if (tr_typed$typed) tr_typed$lists else as_typed(total_richness_per_clades)
+    if (!all(names(richness) %in% names(lists)))
+    {
+      stop("'total_richness_per_clades' includes the type '", paste(setdiff(names(richness), names(lists)), collapse = "', '"), "' that is not in 'missing_taxa_list'.", call. = FALSE)
+    }
+    if (length(lists) == 2 && !tr_typed$typed)
+    {
+      stop("'missing_taxa_list' includes both types of taxa: 'total_richness_per_clades' must be a list(taxa = , clades = ) too.", call. = FALSE)
+    }
+  }
+
+  ## 3/ Convert each type, with a shared record of the clades ####
+
+  # Record of the conversions, and of the clades already defined by tips (written by hand, or converted earlier) in 'missing_taxa_list':
+  # a node ID is converted into the tips already used for this node, so the same clade is always defined by the same tips, in all the objects
+  recorder <- new.env(parent = emptyenv())
+  recorder$rows <- list()
+  known <- unlist(lapply(lists, function (x)
+  {
+    k <- list(if (!is.null(x$Target_clade)) x$Target_clade else x$Sister_clade)
+    if (is.list(x$Excluded_subclades)) { k <- c(k, unlist(lapply(x$Excluded_subclades, function (y) if (is.list(y)) list(y) else NULL), recursive = FALSE)) }
+    unlist(k, recursive = FALSE)
+  }), recursive = FALSE)
+  lookup <- build_tips_lookup(phy, known)
+
+  converted <- lapply(names(lists), function (type)
+  {
+    convert_nodes_to_tips_typed(missing_taxa_list = lists[[type]], phy = phy, total_richness_per_clades = richness[[type]], recorder = recorder, lookup = lookup)
+  })
+  names(converted) <- names(lists)
+
+  ## 4/ Report the conversions ####
+
+  n_converted <- report_node_conversions(recorder$rows, phy = phy, verbose = verbose)
+  if (verbose && n_converted == 0)
+  {
+    message("No node ID found: all the clades are already defined by tips.")
+  }
+
+  ## 5/ Output with the structure of the input ####
+
+  if (length(converted) == 1)
+  {
+    if (is.null(richness)) { return(converted[[1]]$missing_taxa_list) }
+    return(list(missing_taxa_list = converted[[1]]$missing_taxa_list, total_richness_per_clades = converted[[1]]$total_richness_per_clades))
+  }
+  converted_lists <- lapply(converted, function (x) x$missing_taxa_list)
+  if (is.null(richness)) { return(converted_lists) }
+  converted_richness <- lapply(converted[names(richness)], function (x) x$total_richness_per_clades)
+  return(list(missing_taxa_list = converted_lists, total_richness_per_clades = converted_richness))
+}
+
+
+##### 2/ Internal helpers #####
+
+## Convert the node IDs of one type of taxa (see convert_nodes_to_tips())
+# 'recorder': environment recording the conversions (shared by the types); 'lookup': tips already used for the nodes (shared by the types)
+convert_nodes_to_tips_typed <- function (missing_taxa_list, phy, total_richness_per_clades, recorder, lookup)
+{
+  ## 1/ Check the inputs ####
 
   has_target <- !is.null(missing_taxa_list$Target_clade)
   has_sister <- !is.null(missing_taxa_list$Sister_clade)
@@ -148,16 +251,6 @@ convert_nodes_to_tips <- function (missing_taxa_list, # List of missing taxa wit
   # Check structure: items must be named after Taxon_name
   validate_missing_taxa_list(missing_taxa_list, clade_item = clade_item, allow_node_ids = TRUE)
   taxon_name <- missing_taxa_list$Taxon_name
-
-  # Create internal environment to record matches between tips and node_ID
-  recorder <- new.env(parent = emptyenv())
-  recorder$rows <- list()
-
-  # Record clades already defined by tips (written by hand, or converted earlier) in 'missing_taxa_list':
-  # a node ID is converted into the tips already used for this node, so the same clade is always defined by the same tips, in all the objects
-  known <- list(missing_taxa_list[[clade_item]])
-  if (is.list(missing_taxa_list$Excluded_subclades)) { known <- c(known, unlist(lapply(missing_taxa_list$Excluded_subclades, function (x) if (is.list(x)) list(x) else NULL), recursive = FALSE)) }
-  lookup <- build_tips_lookup(phy, unlist(known, recursive = FALSE))
 
   ## 2/ Convert the clades of the taxa ####
 
@@ -223,20 +316,9 @@ convert_nodes_to_tips <- function (missing_taxa_list, # List of missing taxa wit
     total_richness_per_clades[[tr_item]] <- new_tr_clades
   }
 
-  ## 5/ Report the conversions ####
-
-  n_converted <- report_node_conversions(recorder$rows, phy = phy, verbose = verbose)
-  if (verbose && n_converted == 0)
-  {
-    message("No node ID found: all the clades are already defined by tips.")
-  }
-
-  if (is.null(total_richness_per_clades)) { return(missing_taxa_list) }
   return(list(missing_taxa_list = missing_taxa_list, total_richness_per_clades = total_richness_per_clades))
 }
 
-
-##### 2/ Internal helpers #####
 
 #' @title Convert a node ID into tips
 #'
