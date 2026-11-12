@@ -22,14 +22,18 @@
 #'   or a list of them with one element per map (output of the grafting functions with a `"multiSimmap"`).
 #' @param missing_taxa_list The list of missing taxa used for the grafting. Items: `$Taxon_name`, and `$Target_clade` (taxa, grafted with
 #'   [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]) or `$Sister_clade` (missing clades, grafted with [`phylograftR::graft_missing_clades()`][graft_missing_clades]).
-#'   **Exactly one of them must be provided**: it defines the type of the table.
+#'   **Exactly one of them must be provided per list**.
+#'
+#'   Alternatively, you can provide **the list of both types of missing lineages taxa** as `list(taxa = ..., clades = ...)`, as returned by [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]
+#'   when both types are provided (e.g., to use with [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades]). The output is then a named list (see 'Value').
 #' @param phy_backbone Optional. The backbone phylogeny used for the grafting (class `"phylo"`). If `NULL` (default), the backbone is rebuilt by removing the grafted taxa from
-#'   the grafted phylogeny (same topology and branch lengths). **The node IDs of the backbone (`parent_node`) can only be given if `phy_backbone` is provided.**
+#'   the grafted phylogeny (same topology and branch lengths): the taxa of `missing_taxa_list` (both types if a `list(taxa, clades)` is provided), and the tips flagged in `$grafted_tips`.
+#'   **The node IDs of the backbone (`parent_node`) can only be reported if `phy_backbone` is provided.**
 #'
 #' @details
 #' ### What is extracted depends on the type of grafting
 #'
-#' **Taxa** (`$Target_clade` list): **one row per taxon**.
+#' **Missing taxa** (`$Target_clade` list): **one row per taxon**.
 #' A taxon can be grafted on a branch of the backbone, or on a branch of a taxon grafted before it (and so on):
 #' the grafted taxa that hang together form a *grafted subtree* attached to the backbone at a *graft point*.
 #' The summary table reports:
@@ -68,12 +72,16 @@
 #'  * [`phylograftR::identify_grafted()`][identify_grafted] to identify the grafted tips and branches of a phylogeny.
 #'
 #' @return A data.frame, with one row per taxon (or per missing clade) and phylogeny.
-#'   The columns are:
+#'
+#' With a `list(taxa, clades)` covering both types of missing lineages, the output is a named list with the elements `taxa` and `clades`,
+#' each data.frame containing the output of its type (as described below).
+#'
+#' The columns are:
 #'   * `map` Character string. Name of the stochastic map (`NA` if no map was used).
 #'   * `simulation` Integer. Index of the simulation.
 #'   * `seed` Integer. Seed of the simulation (`NA` if unknown).
 #'
-#'   For taxa:
+#' For **missing taxa**:
 #'   * `Taxon_name` Character string. Name of the taxon.
 #'   * `parent_node` Integer. Node ID in `phy_backbone` of the tipward end of the backbone branch of the graft point (`NA` without `phy_backbone`).
 #'   * `parent_tips` Character string. Tips defining the parent clade.
@@ -81,7 +89,7 @@
 #'   * `divergence_age` Numeric. Age of the node where the taxon splits from its sister lineage.
 #'   * `grafted_on` Character string. Taxa grafted on the sister lineage (first five), `NA` if the taxon is attached directly to the backbone.
 #'
-#'   For missing clades:
+#' For **missing clades**:
 #'   * `Missing_clade` Integer. Clade ID.
 #'   * `Taxa` Character string. Taxa of the missing clade, separated by commas.
 #'   * `n_taxa` Integer. Number of taxa in the grafted clade.
@@ -90,9 +98,9 @@
 #'   * `graft_age` Numeric. Age of the graft point = stem age of the grafted clade.
 #'   * `crown_age` Numeric. Crown age of the grafted clade.
 #'
-#'   With a `simmap`: `parent_state` and `tip_state` (taxa) or `clade_state` (missing clades), or one column per trait.
+#' With a `simmap`: `parent_state` and `tip_state` (taxa) or `clade_state` (missing clades), or one column per trait.
 #'
-#'   Attributes: `"type"` (`"taxa"` or `"clades"`).
+#' Attributes: `"type"` (`"taxa"` or `"clades"`).
 #'
 #' @author Maël Doré
 #'
@@ -124,11 +132,45 @@
 #' # Average minimum and maximum graft age across simulations
 #' aggregate(graft_age ~ Taxon_name, data = info, FUN = function (x) round(range(x), 1))
 #'
+#' # --- Both types of missing lineages, grafted in one run --- #
+#'
+#' # With list(taxa, clades), the information is extracted for each type, with the same backbone
+#' both_list <- list(
+#'   taxa = missing_taxa_list,
+#'   clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = c("t8", "t22"), M2 = "t5")))
+#' grafted_both <- graft_missing_taxa_and_clades(phy = phy, missing_taxa_list = both_list,
+#'                                               nb_simulations = 3, verbose = FALSE, seed = 1234)
+#' info_both <- extract_grafting_info(phy_grafted = grafted_both, missing_taxa_list = both_list,
+#'                                    phy_backbone = phy)
+#' names(info_both)
+#' head(info_both$clades)
+#'
 #'
 
 extract_grafting_info <- function (phy_grafted, # Output of the grafting functions: phylo, multiPhylo, or list of maps
-                                   missing_taxa_list, # Same list as used for grafting. Items: Taxon_name, Target_clade (or Sister_clade)
+                                   missing_taxa_list, # Same list as used for grafting. Items: Taxon_name, Target_clade (or Sister_clade), or list(taxa = , clades = )
                                    phy_backbone = NULL) # Backbone phylogeny used for the grafting. NULL: rebuilt by removing the grafted taxa
+{
+  ## Both types of taxa, as list(taxa, clades): each type is extracted with the taxa of the other type known as grafted (the backbone is the same)
+  typed <- split_typed_list(missing_taxa_list, arg = "missing_taxa_list")
+  if (typed$both)
+  {
+    infos <- lapply(names(typed$lists), function (type)
+    {
+      other <- setdiff(names(typed$lists), type)
+      extract_grafting_info_typed(phy_grafted = phy_grafted, missing_taxa_list = typed$lists[[type]], phy_backbone = phy_backbone, other_taxa = typed$lists[[other]]$Taxon_name)
+    })
+    names(infos) <- names(typed$lists)
+    return(infos)
+  }
+  if (typed$typed) { missing_taxa_list <- typed$lists[[1]] }
+  extract_grafting_info_typed(phy_grafted = phy_grafted, missing_taxa_list = missing_taxa_list, phy_backbone = phy_backbone)
+}
+
+
+## Extract the grafting information for one type of taxa (see extract_grafting_info())
+# 'other_taxa': taxa of the other type grafted on the same phylogenies (known as grafted, so they are not part of the backbone)
+extract_grafting_info_typed <- function (phy_grafted, missing_taxa_list, phy_backbone = NULL, other_taxa = character(0))
 {
   ## Type of the table: taxa ('Target_clade') or missing clades ('Sister_clade')
   if (!is.list(missing_taxa_list)) { stop("'missing_taxa_list' must be a list") }
@@ -145,11 +187,15 @@ extract_grafting_info <- function (phy_grafted, # Output of the grafting functio
   ## List the phylogenies
   listed <- list_grafted_phylogenies(phy_grafted, arg = "phy_grafted")
 
+  ## Grafted taxa: the taxa of the list, the taxa of the other type, and the tips flagged as grafted in the phylogenies (e.g., by a previous grafting step)
+  flagged <- unique(unlist(lapply(listed$phylos, function (p) { g <- p$grafted_tips; if (is.logical(g) && !is.null(names(g))) names(g)[g %in% TRUE] })))
+  grafted_all <- union(union(taxa, other_taxa), flagged)
+
   ## Backbone: provided, or rebuilt from the first phylogeny (all the phylogenies share the topology of the backbone)
-  rebuild_backbone <- function (phy) { ape::drop.tip(phy, intersect(taxa, phy$tip.label)) }
+  rebuild_backbone <- function (phy) { ape::drop.tip(phy, intersect(grafted_all, phy$tip.label)) }
   if (!is.null(phy_backbone))
   {
-    expected <- setdiff(listed$phylos[[1]]$tip.label, taxa)
+    expected <- setdiff(listed$phylos[[1]]$tip.label, grafted_all)
     if (!setequal(expected, phy_backbone$tip.label))
     {
       stop("The tips of 'phy_backbone' differ from the tips of 'phy_grafted' without the grafted taxa (",
@@ -174,7 +220,7 @@ extract_grafting_info <- function (phy_grafted, # Output of the grafting functio
   ## Extract the information of each phylogeny (the same warnings are sent once)
   results <- with_unique_warnings(lapply(listed$phylos, function (phy)
   {
-    extract_grafting_info_one(phy = phy, taxa = taxa, backbone = backbone, is_clades = is_clades, groups = groups, node_ids = !is.null(phy_backbone))
+    extract_grafting_info_one(phy = phy, taxa = taxa, backbone = backbone, is_clades = is_clades, groups = groups, node_ids = !is.null(phy_backbone), grafted_all = grafted_all)
   }))
 
   ## Long table
@@ -197,13 +243,14 @@ extract_grafting_info <- function (phy_grafted, # Output of the grafting functio
 #' @param is_clades Logical. Missing clades (rows per missing clade) or taxa (rows per taxon).
 #' @param groups Output of `group_and_order_clades()` for the sister clades (missing clades only).
 #' @param node_ids Logical. Is `backbone` provided by the user? (Its node IDs are returned.)
+#' @param grafted_all Character vector. All the grafted taxa of the phylogeny (the taxa of the list, and the taxa of the other type grafted on the same phylogeny). Default is `taxa`.
 #'
 #' @noRd
 #'
 #' @return A data.frame with the columns of `extract_grafting_info()` except `map`, `simulation` and `seed`.
 #'
 
-extract_grafting_info_one <- function (phy, taxa, backbone, is_clades, groups, node_ids)
+extract_grafting_info_one <- function (phy, taxa, backbone, is_clades, groups, node_ids, grafted_all = taxa)
 {
   n_tips <- ape::Ntip(phy)
   n_nodes <- n_tips + phy$Nnode
@@ -213,7 +260,7 @@ extract_grafting_info_one <- function (phy, taxa, backbone, is_clades, groups, n
   parent <- integer(n_nodes); parent[edge[, 2]] <- edge[, 1]
   children <- split(edge[, 2], factor(edge[, 1], levels = seq_len(n_nodes)))
   age <- { depth <- ape::node.depth.edgelength(phy); max(depth[seq_len(n_tips)]) - depth }
-  is_grafted <- phy$tip.label %in% taxa
+  is_grafted <- phy$tip.label %in% grafted_all
   # Number of tips and of backbone tips (not grafted) below each node (tips included)
   n_below <- c(rep(1, n_tips), rep(0, phy$Nnode))
   n_backbone <- c(as.numeric(!is_grafted), rep(0, phy$Nnode))
@@ -265,7 +312,7 @@ extract_grafting_info_one <- function (phy, taxa, backbone, is_clades, groups, n
     if (is.null(cache[[key]]))
     {
       backbone_tips <- phy$tip.label[tips_below(lineage)]
-      backbone_tips <- backbone_tips[!(backbone_tips %in% taxa)]
+      backbone_tips <- backbone_tips[!(backbone_tips %in% grafted_all)]
       node <- if (length(backbone_tips) == 1) match(backbone_tips, backbone$tip.label) else ape::getMRCA(backbone, backbone_tips)
       cache[[key]] <- list(node = if (node_ids) as.integer(node) else NA_integer_, tips = paste(node_to_tips(backbone, node), collapse = ", "))
     }
@@ -305,7 +352,8 @@ extract_grafting_info_one <- function (phy, taxa, backbone, is_clades, groups, n
       members <- match(group_taxa[[g]], phy$tip.label)
       if (anyNA(members)) { return(NULL) }
       root <- if (length(members) == 1) members else ape::getMRCA(phy, phy$tip.label[members])
-      if (n_below[root] != length(members) || parent[root] == 0)
+      # The taxa of a missing clade form a clade, which can only contain other tips grafted afterwards (taxa of the other type grafted within it)
+      if (!all(phy$tip.label[tips_below(root)] %in% c(group_taxa[[g]], setdiff(grafted_all, taxa))) || parent[root] == 0)
       {
         return(list(monophyletic = FALSE))
       }

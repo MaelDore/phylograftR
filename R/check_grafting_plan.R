@@ -24,6 +24,10 @@
 #'   [`phylograftR::graft_missing_clades()`][graft_missing_clades]). Items: `$Taxon_name`, and `$Target_clade` (taxa, for `graft_missing_taxa()`)
 #'   or `$Sister_clade` (missing clades, for `graft_missing_clades()`), with the optional items of the grafting function.
 #'   Exactly one of `$Target_clade` and `$Sister_clade` must be provided: it defines the type of the plan.
+#'
+#'   It can also be **the list of both types of lineages to graft**, `list(taxa = ..., clades = ...)`, as returned by [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]
+#'   when both types are provided, to be used with [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades]. Each part is then planned on the same backbone
+#'   and the output is a named list (see 'Value').
 #' @param min_tips Numeric. Same as in the grafting functions. With `method = "BD_clades"`, a birth-death model is fitted on the target clade (or the sister clade) of each taxon,
 #'   or on the smallest enclosing clade with at least `min_tips` tips. Here, **no model is fitted: the enclosing clade is only reported.** Default is `5`.
 #' @param include_target_clade_stem,use_excluded_subclades,exclude_subclades_stem Same as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa].
@@ -82,6 +86,8 @@
 #'  * [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary] to extract a posteriori information on the birth-death models fitted during grafting.
 #'
 #' @return A data.frame with one row per taxon (`$Target_clade` list) or per missing clade (`$Sister_clade` list).
+#'   With a `list(taxa, clades)` covering both types of missing lineages, the output is a named list with the elements `taxa` and `clades`,
+#'   each data.frame containing the output of its type (as described below), and the overarching attribute `"all_feasible"` (`TRUE` if all the missing taxa and missing clades can be grafted).
 #'
 #'   Columns for missing taxa:
 #'   * `Taxon_name` Character string. Name of the taxon.
@@ -100,7 +106,7 @@
 #'   * `stem_age` Numeric. Age of the rootward end of the stem branch: the upper end of the divergence ages.
 #'   * `enclosing_n_tips`, `enclosing_age` Integer and numeric. Number of tips in the backbone phylogeny, and crown age of the enclosing clade (see Details).
 #'
-#'   Columns for both, with a `simmap`:
+#'   Columns for any type, with a `simmap`:
 #'   * `allowed_states` Character string. The allowed states (resolved among the states of the simmap).
 #'   * `states_available` Character string. The states found in the available branches.
 #'   * `valid_fraction`, `time_coverage` Numeric. Share of the length of the available branches in allowed states, and share of the time window where at least one available branch is in an allowed state.
@@ -155,6 +161,17 @@
 #' # Inspect availability of branches in the allowed states
 #' plan_states[, c("Taxon_name", "states_available", "valid_fraction", "time_coverage", "feasible")]
 #'
+#' # --- Check both types of missing lineages at once --- #
+#'
+#' # With list(taxa, clades), each part is planned on the same backbone: the output is a named list
+#' both_list <- list(
+#'   taxa = missing_taxa_list,
+#'   clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = c("t8", "t22"), M2 = "t5")))
+#' plans <- check_grafting_plan(phy = phy, missing_taxa_list = both_list, verbose = FALSE)
+#' names(plans)
+#' # "all_feasible" is TRUE if both types of missing lineages are feasible
+#' attr(plans, "all_feasible")
+#'
 #'
 
 check_grafting_plan <- function (phy, # Backbone phylogeny
@@ -171,6 +188,27 @@ check_grafting_plan <- function (phy, # Backbone phylogeny
                                  verbose = TRUE) # Print a summary
 {
   ### ---- Check input validity ---- ###
+
+  ## Both types of taxa, as list(taxa, clades): each part is planned on the same backbone
+  typed <- split_typed_list(missing_taxa_list, arg = "missing_taxa_list")
+  if (typed$typed)
+  {
+    if (typed$both)
+    {
+      plans <- lapply(names(typed$lists), function (type)
+      {
+        if (verbose) { print_type_title(type) }
+        check_grafting_plan(phy = phy, missing_taxa_list = typed$lists[[type]], min_tips = min_tips, include_target_clade_stem = include_target_clade_stem,
+                            use_excluded_subclades = use_excluded_subclades, exclude_subclades_stem = exclude_subclades_stem, simmap = simmap,
+                            allowed_states = allowed_states, treat_states_as_ranges = treat_states_as_ranges, min_valid_fraction = min_valid_fraction,
+                            ultrametric_tol = ultrametric_tol, verbose = verbose)
+      })
+      names(plans) <- names(typed$lists)
+      attr(plans, "all_feasible") <- all(vapply(plans, function (x) all(x$feasible), logical(1)))
+      return(plans)
+    }
+    missing_taxa_list <- typed$lists[[1]]
+  }
 
   ## Type of the plan: taxa ('Target_clade', graft_missing_taxa()) or missing clades ('Sister_clade', graft_missing_clades())
   if (!is.list(missing_taxa_list)) { stop("'missing_taxa_list' must be a list") }

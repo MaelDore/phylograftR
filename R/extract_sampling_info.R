@@ -33,6 +33,10 @@
 #'   * `$total_richness`: Vector of positive integers, same length as the clades. Total number of species of each clade,
 #'     i.e., backbone species, grafted species, and unsampled species. Use `NA` if unknown.
 #'
+#'   It can also be **the list of both types of missing lineages** as `list(taxa = ..., clades = ...)`, as returned by [`phylograftR::build_total_richness_per_clades()`][build_total_richness_per_clades]
+#'   and [`phylograftR::import_total_richness_per_clades()`][import_total_richness_per_clades] when both types are provided (e.g., to use with
+#'   [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades]).
+#'
 #' @details
 #' ### Species of a clade
 #'
@@ -64,7 +68,10 @@
 #'  * [`phylograftR::extract_grafting_info()`][extract_grafting_info] to extract a posteriori information on the location of grafted lineages.
 #'  * [`phylograftR::extract_BD_model_summary()`][extract_BD_model_summary] to extract a posteriori information on the birth-death models fitted during grafting.
 #'
-#' @return A data.frame, with one row per clade and phylogeny. The columns are:
+#' @return A data.frame, with one row per clade and phylogeny.
+#'
+#' With a `list(taxa, clades)` covering both types of missing lineages, the output is a named list with the elements `taxa` and `clades`,
+#' each data.frame containing the following columns:
 #'   * `map` Character string. Name of the stochastic map (`NA` if no map was used).
 #'   * `simulation` Integer. Index of the simulation.
 #'   * `seed` Integer. Seed of the simulation (`NA` if unknown).
@@ -77,7 +84,7 @@
 #'   * `nb_unsampled_species` Numeric. Number of species of the clade that are neither in the backbone nor grafted. Negative (conflictual) if the clade has more species than expected.
 #'   * `sampling_fraction` Numeric. Fraction of the clade richness present in the grafted phylogeny, `(nb_backbone_species + nb_grafted_species) / total_richness`.
 #'
-#'   Attributes: `"type"` (`"taxa"` if the clades are `$Target_clade`, `"clades"` if they are `$Sister_clade`).
+#' Attributes: `"type"` (`"taxa"` if the clades are `$Target_clade`, `"clades"` if they are `$Sister_clade`).
 #'
 #' @author Maël Doré
 #'
@@ -128,12 +135,43 @@
 #'        INDEX = list(sampling_info$Clade_name, sampling_info$simulation),
 #'        FUN = mean)
 #'
+#' # --- Both types of missing lineages, grafted in one run --- #
+#'
+#' # With graft_missing_taxa_and_clades(), the totals of both types are provided as list(taxa, clades)
+#' both_list <- list(
+#'   taxa = missing_taxa_list,
+#'   clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = clade_B, M2 = "t5")))
+#' both_richness <- list(
+#'   taxa = total_richness_per_clades,
+#'   clades = list(Sister_clade = list(clade_B, "t5"), total_richness = c(12, 4)))
+#'
+#' grafted_both <- graft_missing_taxa_and_clades(phy = phy, missing_taxa_list = both_list,
+#'                                               total_richness_per_clades = both_richness,
+#'                                               nb_simulations = 3, verbose = FALSE, seed = 1234)
+#'
+#' # Output: a named list with the table of each type
+#' sampling_both <- extract_sampling_info(phy_grafted = grafted_both,
+#'                                        total_richness_per_clades = both_richness)
+#' names(sampling_both)
+#' sampling_both$clades[, c("simulation", "Clade_tips", "nb_grafted_species", "sampling_fraction")]
+#'
 #'
 
 extract_sampling_info <- function (phy_grafted, # Output of the grafting functions: phylo, multiPhylo, or list of maps
                                    total_richness_per_clades) # Same list as used for grafting. Items: Target_clade (or Sister_clade), total_richness
 {
   ### ---- Check input validity ---- ###
+
+  ## Both types, as list(taxa, clades): the counts are taken in the same phylogenies (with all their grafted taxa), for the clades of each type
+  typed <- split_typed_list(total_richness_per_clades, arg = "total_richness_per_clades")
+  if (typed$typed)
+  {
+    if (typed$both)
+    {
+      return(lapply(typed$lists, function (x) extract_sampling_info(phy_grafted = phy_grafted, total_richness_per_clades = x)))
+    }
+    total_richness_per_clades <- typed$lists[[1]]
+  }
 
   if (!is.list(total_richness_per_clades)) { stop("'total_richness_per_clades' must be a list with the items 'Target_clade' (or 'Sister_clade') and 'total_richness'") }
   has_target <- !is.null(total_richness_per_clades[["Target_clade"]])

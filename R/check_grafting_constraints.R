@@ -28,6 +28,11 @@
 #'   [`phylograftR::graft_missing_clades()`][graft_missing_clades]), and optionally `$include_target_clade_stem`, `$Excluded_subclades` and `$exclude_subclades_stem` (taxa only), and `$allowed_states`.
 #'   Exactly one of `$Target_clade` and `$Sister_clade` must be provided: it defines the type of the check.
 #'   Every item provided must be named after `$Taxon_name` (same names, same order), as in the grafting functions, see these functions for details.
+#'
+#'   It can also be **the list of both types of lineages to graft**, `list(taxa = ..., clades = ...)`, as returned by [`phylograftR::build_missing_taxa_list()`][build_missing_taxa_list]
+#'   when both types are provided, to check the output of [`phylograftR::graft_missing_taxa_and_clades()`][graft_missing_taxa_and_clades]. Each part is then checked on the same phylogenies
+#'   and the output is a named list (see 'Value').
+#'   **In a missing clade, tips grafted as missing taxa, during the other grafting step, are tolerated**: when the missing clades are grafted first, taxa can be grafted within them afterwards.
 #' @param include_target_clade_stem Logical. Same as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]: whether grafting on the stem branch of target clades is accepted.
 #'   Taxa with a value in `missing_taxa_list$include_target_clade_stem` use it instead (`NA` or no item: this global value is used). Ignored for missing clades. Default is `TRUE`.
 #' @param use_excluded_subclades Logical. Same as in [`phylograftR::graft_missing_taxa()`][graft_missing_taxa]: whether to check the excluded subclades.
@@ -85,8 +90,6 @@
 #'      This differs from `$states_ok` that checks only the validity of the terminal tip state. Here, the validity of the inherited range is assessed against the range of the backbone lineage it was grafted on.
 #' * **`$ok`**: Logical. Whether the taxon respects its target clade, its excluded subclades, and its allowed states and ranges (if checked).
 #'
-#' (with a `$Sister_clade` list, see 'Missing clades' below)
-#'
 #' **Missing clades.** With a `$Sister_clade` list (for missing clades), the function assumed that [`phylograftR::graft_missing_clades()`][graft_missing_clades] was used for the grafting.
 #' It returns a data.frame with one row per missing clade, i.e., per group of taxa sharing the same sister clade, numbered in the order of their first appearance in `missing_taxa_list`, for each phylogeny checked.
 #'
@@ -106,6 +109,9 @@
 #'      With `treat_states_as_ranges = TRUE`, the single state is the range inherited by the missing clade, which must be one of its allowed ranges (any range if none).
 #' * `$ranges_ok`: Logical. Only checked with `treat_states_as_ranges = TRUE` (or a range trait): whether the range inherited by the missing clade is contained in the state of the lineage at the graft point.
 #' * **`$ok`**: Logical. Whether the missing clade is in the tree, monophyletic, on the stem of its sister clade, and in an allowed state and range (if checked).
+#'
+#' **With a `list(taxa, clades)` covering both types of missing lineages**, the output is a named list with the elements `taxa` and `clades`**,
+#' each element contains the output of its type (as described above), with the overarching attribute `"all_ok"` (`TRUE` if all the constraints are respected for both types of grafted lineages).
 #'
 #' **Multiple maps.** With a list of maps as `phy_grafted`, the function returns a list of such data.frames (one per map, named after the maps, with the attribute `"all_ok"` for all the maps),
 #' since the maps have their own constraints: in each data.frame, the rows of all the simulations of the map are merged.
@@ -316,10 +322,67 @@
 #' check_traits[, c("Taxon_name", "states_ok", "states_ok_biogeo", "states_ok_elevation",
 #'                  "ranges_ok", "ok")]
 #'
+#' # --- Check both types of missing lineages grafted in one run --- #
+#'
+#' # With list(taxa, clades), both parts are checked on the same phylogenies
+#' both_list <- list(
+#'   taxa = missing_taxa_list,
+#'   clades = list(Taxon_name = c("M1", "M2"), Sister_clade = list(M1 = c("t8", "t22"), M2 = "t5")))
+#'
+#' grafted_both <- graft_missing_taxa_and_clades(phy = phy, missing_taxa_list = both_list,
+#'                                               verbose = FALSE, seed = 1234)
+#'
+#' checks_both <- check_grafting_constraints(phy_grafted = grafted_both, phy_backbone = phy,
+#'                                           missing_taxa_list = both_list, verbose = FALSE)
+#' names(checks_both)
+#' attr(checks_both, "all_ok") # "all_ok" is TRUE if both types of missing lineages are ok
+#'
 #'
 
-
 check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
+                                        phy_backbone, # Backbone phylogeny used for the grafting (before grafting)
+                                        missing_taxa_list, # Same list as used for grafting. Items: Taxon_name, Target_clade (or Sister_clade), include_target_clade_stem, Excluded_subclades, exclude_subclades_stem; or list(taxa = , clades = )
+                                        include_target_clade_stem = TRUE, # Same as in graft_missing_taxa(): accept grafting on the stem branch of the target clade?
+                                        use_excluded_subclades = TRUE, # Same as in graft_missing_taxa(): check the excluded subclades?
+                                        exclude_subclades_stem = TRUE, # Same as in graft_missing_taxa(): is the stem of the excluded subclades also excluded?
+                                        allowed_states = NULL, # Same as in graft_missing_taxa(): states where grafting is allowed. Only checked if phy_grafted has a $simmap item
+                                        treat_states_as_ranges = FALSE, # Same as in graft_missing_taxa(): states are biogeographic ranges (allowed ranges inherited, contained in the state of the graft point)
+                                        check_backbone = TRUE, # Check that the backbone topology and branch lengths are preserved after pruning the grafted taxa
+                                        tolerance = 1e-6, # Tolerance for the max deviation in backbone branch lengths, relative to the depth (root age) of the backbone
+                                        stop_on_failure = FALSE, # Stop with an error if any constraint is violated
+                                        verbose = TRUE) # Print a summary
+{
+  ## Both types of taxa, as list(taxa, clades): each part is checked on the same phylogenies, knowing the taxa of the other type
+  typed <- split_typed_list(missing_taxa_list, arg = "missing_taxa_list")
+  if (typed$both)
+  {
+    checks <- lapply(names(typed$lists), function (type)
+    {
+      if (verbose) { print_type_title(type) }
+      other <- setdiff(names(typed$lists), type)
+      check_grafting_constraints_typed(phy_grafted = phy_grafted, phy_backbone = phy_backbone, include_target_clade_stem = include_target_clade_stem, use_excluded_subclades = use_excluded_subclades, exclude_subclades_stem = exclude_subclades_stem, allowed_states = allowed_states, treat_states_as_ranges = treat_states_as_ranges, check_backbone = check_backbone, tolerance = tolerance,
+                                       missing_taxa_list = typed$lists[[type]], stop_on_failure = FALSE, verbose = verbose, other_taxa = typed$lists[[other]]$Taxon_name)
+    })
+    names(checks) <- names(typed$lists)
+    all_ok <- all(vapply(checks, function (x) isTRUE(attr(x, "all_ok")), logical(1)))
+    attr(checks, "all_ok") <- all_ok
+    if (verbose) { cat(paste0("=> Both types: ", if (all_ok) "all constraints respected\n" else "some constraints NOT respected (see the elements of the list)\n")) }
+    if (stop_on_failure && !all_ok)
+    {
+      stop("Some grafting constraints are not respected for the ", paste(names(checks)[!vapply(checks, function (x) isTRUE(attr(x, "all_ok")), logical(1))], collapse = " and "),
+           " (set 'stop_on_failure = FALSE' to inspect the tables).", call. = FALSE)
+    }
+    return(checks)
+  }
+  if (typed$typed) { missing_taxa_list <- typed$lists[[1]] }
+  check_grafting_constraints_typed(phy_grafted = phy_grafted, phy_backbone = phy_backbone, include_target_clade_stem = include_target_clade_stem, use_excluded_subclades = use_excluded_subclades, exclude_subclades_stem = exclude_subclades_stem, allowed_states = allowed_states, treat_states_as_ranges = treat_states_as_ranges, check_backbone = check_backbone, tolerance = tolerance,
+                                   missing_taxa_list = missing_taxa_list, stop_on_failure = stop_on_failure, verbose = verbose)
+}
+
+
+## Check the grafting constraints for one type of taxa (see check_grafting_constraints())
+# 'other_taxa': taxa of the other type grafted on the same phylogenies
+check_grafting_constraints_typed <- function (phy_grafted, # Phylogeny after grafting
                                         phy_backbone, # Backbone phylogeny used for the grafting (before grafting)
                                         missing_taxa_list, # Same list as used for grafting. Items: Taxon_name, Target_clade, include_target_clade_stem, Excluded_subclades, exclude_subclades_stem
                                         include_target_clade_stem = TRUE, # Same as in graft_missing_taxa(): accept grafting on the stem branch of the target clade?
@@ -330,7 +393,8 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
                                         check_backbone = TRUE, # Check that the backbone topology and branch lengths are preserved after pruning the grafted taxa
                                         tolerance = 1e-6, # Tolerance for the max deviation in backbone branch lengths, relative to the depth (root age) of the backbone
                                         stop_on_failure = FALSE, # Stop with an error if any constraint is violated
-                                        verbose = TRUE) # Print a summary
+                                        verbose = TRUE, # Print a summary
+                                              other_taxa = character(0)) # Taxa of the other type grafted on the same phylogenies (tolerated within a missing clade)
 {
   # Missing clades (from graft_missing_clades(), 'Sister_clade' list) or taxa (from graft_missing_taxa(), 'Target_clade' list)
   is_clades_input <- !is.null(missing_taxa_list$Sister_clade)
@@ -350,7 +414,7 @@ check_grafting_constraints <- function (phy_grafted, # Phylogeny after grafting
       phy_grafted = phy, phy_backbone = phy_backbone, missing_taxa_list = missing_taxa_list, include_target_clade_stem = include_target_clade_stem,
       use_excluded_subclades = use_excluded_subclades, exclude_subclades_stem = exclude_subclades_stem, allowed_states = allowed_states,
       treat_states_as_ranges = treat_states_as_ranges, check_backbone = check_backbone, tolerance = tolerance,
-      stop_on_failure = stop_on_failure, verbose = verbose))
+      stop_on_failure = stop_on_failure, verbose = verbose, other_taxa = other_taxa))
   }
   add_columns <- function (res, k) { cbind(map = listed$map[k], simulation = listed$simulation[k], seed = listed$seed[k], res, stringsAsFactors = FALSE) }
   copy_attributes <- function (res, from) { for (a in c("topology_preserved", "max_branch_length_deviation", "max_branch_length_deviation_relative", "backbone_preserved", "all_ok", "trait_names", "range_trait")) { attr(res, a) <- attr(from, a) }; res }
@@ -478,7 +542,8 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
                                         check_backbone = TRUE, # Check that the backbone topology and branch lengths are preserved after pruning the grafted taxa
                                         tolerance = 1e-6, # Tolerance for the max deviation in backbone branch lengths, relative to the depth (root age) of the backbone
                                         stop_on_failure = FALSE, # Stop with an error if any constraint is violated
-                                        verbose = TRUE) # Print a summary
+                                        verbose = TRUE, # Print a summary
+                                        other_taxa = character(0)) # Taxa of the other type grafted on the same phylogeny (tolerated within a missing clade)
 {
   ## 1.1/ Prepare inputs ####
 
@@ -645,6 +710,12 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
   ## 1.2/ Check each missing clade or each taxon ####
   if (is_clades)
   {
+    ## Tips of the other type of taxa, tolerated within a missing clade: the taxa of the other list, and the tips flagged as grafted (but not backbone tips, and not the taxa of this list)
+    tolerated <- other_taxa
+    flagged <- phy_grafted$grafted_tips
+    if (is.logical(flagged) && !is.null(names(flagged))) { tolerated <- union(tolerated, names(flagged)[flagged %in% TRUE]) }
+    tolerated_idx <- which(phy_grafted$tip.label %in% setdiff(tolerated, c(taxa_names, phy_backbone$tip.label)))
+
     ## 1.2.a/ Missing clades: the taxa sharing the same sister clade (same backbone tips) form one missing clade, numbered in order of first appearance
     sister_keys <- vapply(missing_taxa_list$Sister_clade, function (tips) paste(sort(get_backbone_clade_tips(tips)), collapse = "|"), character(1))
     clade_ID <- match(sister_keys, unique(sister_keys))
@@ -700,9 +771,10 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
       taxa_idx <- match(clade_taxa, phy_grafted$tip.label)
 
       ## Monophyly: the MRCA of the taxa has no descendant tip other than the taxa of the clade
+      # (tips of the other type of taxa are tolerated: they can be grafted within the missing clade afterwards, e.g., when the missing clades are grafted first)
       M_node <- if (length(taxa_idx) == 1) taxa_idx else ape::getMRCA(phy = phy_grafted, tip = clade_taxa)
       M_tips_idx <- if (M_node <= n_tips_g) M_node else tips_of_node_g(M_node)
-      res$monophyletic[g] <- setequal(M_tips_idx, taxa_idx)
+      res$monophyletic[g] <- all(M_tips_idx %in% c(taxa_idx, tolerated_idx))
 
       ## Position relative to the sister clade
       # Smallest clade of the grafted tree containing the sister clade and the taxa of the missing clade: it must have no backbone tip outside of the sister clade
