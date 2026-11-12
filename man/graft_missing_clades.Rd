@@ -235,6 +235,11 @@ between the crown age of the sister clade and its stem age (or between the prese
 \item A single missing taxon is grafted as a new tip at this divergence time. For several taxa, a missing clade is grown with \code{TreeSim::sim.bd.taxa.age()}
 under the fitted model, conditioned on the number of taxa and on its stem age (the drawn divergence time), and grafted on the stem branch of the sister clade.
 }
+
+Unlike \code{\link[=graft_missing_taxa]{graft_missing_taxa()}}, this function has no \code{"uniform"} method: \strong{a birth-death model is always required}.
+It is needed to \strong{generate the subtree of the missing clade} under a diversification process. The model is fitted on the sister clade (or its enclosing clade),
+and used to produce the subtree to be grafted, conditioned on the number of taxa and its divergence time.
+Additionally, the fitted model is used to draw the divergence time of the missing clade on the stem branch of its sister clade.
 }
 
 \subsection{Enclosing clades}{

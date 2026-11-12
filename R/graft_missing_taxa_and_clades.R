@@ -35,7 +35,7 @@
 #' @param grafting_order Character vector of length 2. Order of the two steps: `c("taxa", "clades")` (as the default, the missing taxa are grafted first, then the missing clades),
 #'   or `c("clades", "taxa")`. See 'Order of the steps' in the Details section.
 #' @param method Character string. Method used to draw the divergence times of the **missing taxa** (Step carried with `graft_missing_taxa()`):
-#'   `"BD_clades"` or `"uniform"`. Ignored for the missing clades, which always use a birth-death model. See [`graft_missing_taxa()`][graft_missing_taxa]. Default is `"BD_clades"`.
+#'   `"BD_clades"` or `"uniform"`. **Ignored for the missing clades, which always rely on birth-death models** (see 'Method of the two steps' in Details). Default is `"BD_clades"`.
 #' @param min_tips Integer. Minimum number of tips of the clade used to fit the birth-death models. **A single value is used for both steps.**
 #'   If the target clade has fewer tips, the smallest enclosing clade with at least `min_tips` tips is used instead. **Must be at least 3.** Default is `5`.
 #' @param return_BD_model_summary Logical. Whether to report the birth-death models fitted during the grafting, for both steps.
@@ -92,6 +92,14 @@
 #' **The grafted taxa are then treated as backbone species by the second step** (e.g., they count as tips of the sister clades, and can be part of the clade used to fit the birth-death model).
 #' With `grafting_order = c("clades", "taxa")` the missing clades are grafted first, and the taxa can then be grafted within them.
 #' The two orders do not give the same phylogenies, but give the same sampling fractions if `total_richness_per_clades` is the true richness of the clades.
+#'
+#' ### Method of the two steps
+#'
+#' `method` only applies to the **missing taxa**. The **missing clades step always relies on birth-death models**, whatever the `method`: a birth-death model is fitted on the sister clade
+#' (or its enclosing clade), both to draw the divergence time on its stem branch and to **generate the subtree of the missing clade**.
+#' A `"uniform"` method, which does not use any model, would not be able to produce this subtree.
+#' With `method = "uniform"`, the missing taxa are thus grafted uniformly along their target clades, while the missing clades are still grafted with birth-death models.
+#' In this case, `return_BD_model_summary = TRUE` reports the models of the missing clades only.
 #'
 #' ### Inputs
 #'

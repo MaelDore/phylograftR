@@ -52,7 +52,7 @@ If you only have one type of missing lineages (i.e., taxa or clades), use the co
 or \code{c("clades", "taxa")}. See 'Order of the steps' in the Details section.}
 
 \item{method}{Character string. Method used to draw the divergence times of the \strong{missing taxa} (Step carried with \code{graft_missing_taxa()}):
-\code{"BD_clades"} or \code{"uniform"}. Ignored for the missing clades, which always use a birth-death model. See \code{\link[=graft_missing_taxa]{graft_missing_taxa()}}. Default is \code{"BD_clades"}.}
+\code{"BD_clades"} or \code{"uniform"}. \strong{Ignored for the missing clades, which always rely on birth-death models} (see 'Method of the two steps' in Details). Default is \code{"BD_clades"}.}
 
 \item{min_tips}{Integer. Minimum number of tips of the clade used to fit the birth-death models. \strong{A single value is used for both steps.}
 If the target clade has fewer tips, the smallest enclosing clade with at least \code{min_tips} tips is used instead. \strong{Must be at least 3.} Default is \code{5}.}
@@ -153,6 +153,15 @@ With the default \code{grafting_order = c("taxa", "clades")}, the taxa are graft
 \strong{The grafted taxa are then treated as backbone species by the second step} (e.g., they count as tips of the sister clades, and can be part of the clade used to fit the birth-death model).
 With \code{grafting_order = c("clades", "taxa")} the missing clades are grafted first, and the taxa can then be grafted within them.
 The two orders do not give the same phylogenies, but give the same sampling fractions if \code{total_richness_per_clades} is the true richness of the clades.
+}
+
+\subsection{Method of the two steps}{
+
+\code{method} only applies to the \strong{missing taxa}. The \strong{missing clades step always relies on birth-death models}, whatever the \code{method}: a birth-death model is fitted on the sister clade
+(or its enclosing clade), both to draw the divergence time on its stem branch and to \strong{generate the subtree of the missing clade}.
+A \code{"uniform"} method, which does not use any model, would not be able to produce this subtree.
+With \code{method = "uniform"}, the missing taxa are thus grafted uniformly along their target clades, while the missing clades are still grafted with birth-death models.
+In this case, \code{return_BD_model_summary = TRUE} reports the models of the missing clades only.
 }
 
 \subsection{Inputs}{
