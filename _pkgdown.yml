@@ -29,6 +29,10 @@ navbar:
       - text: 2/ Main workflow
       - text: Comprehensive workflow from data to grafted phylogenies
         href: articles/main_workflow.html
+      - text: '-------'
+      - text: 3/ Grafting options
+      - text: Explore options to graft missing taxa
+        href: articles/graft_missing_taxa.html
 reference:
 - title: Graft missing lineages
   desc: |

@@ -29,11 +29,11 @@ For more advanced uses, please refer to the tutorials below.
 
 | I want to... | Tutorial |
 |:---|:---|
-| Format my data into a `missing_taxa_list` (tables, node IDs, MRCA tips) | [`format_inputs`](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")` |
+| Format my data into `missing_taxa_list` and `total_richness_per_clades` | [`format_inputs`](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")` |
 | Build stochastic maps (simmaps) of species attributes from tip data | `prepare_trait_data` *(in preparation)* |
 | See a full analysis, from tip data to checked grafted phylogenies | [`main_workflow`](https://maeldore.github.io/phylograftR/articles/main_workflow.html): `vignette("main_workflow")` |
-| Graft missing taxa within target clades, and tune the options | `graft_taxa` *(in preparation)* |
-| Graft missing clades as sisters of clades of the backbone | `graft_clades` *(in preparation)* |
+| Explore options to graft missing taxa within target clades | [`graft_missing_taxa`](https://maeldore.github.io/phylograftR/articles/graft_missing_taxa.html): `vignette("graft_missing_taxa")` |
+| Explore options to graft missing clades as sisters of clades of the backbone | `graft_missing_clades` *(in preparation)* |
 | Graft both types of missing lineages in one run | `combine_missing_taxa_and_clades` *(in preparation)* |
 | Check the grafting plan before, and the grafted phylogenies after | `check_grafting` *(in preparation)* |
 | Constrain grafting with biogeographic ranges | `biogeographic_data` *(in preparation)* |
@@ -48,23 +48,22 @@ For more advanced uses, please refer to the tutorials below.
 
 The following tutorials present the **usages** of phylograftR in detail.
 They provide explanations on available arguments and interpretations of results across multiple types of data.
-Tutorials *in preparation* become links, with their `vignette()` call, once they are available.
 
 ### **1/ Inputs**
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; [1.1/ Format __inputs__ prior to grafting](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")`.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 1.1/ [Format __inputs__ prior to grafting](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")`.
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 1.2/ Prepare __trait data__ and build stochastic maps with deepSTRAPP: `prepare_trait_data` *(in preparation)*.
 
-### **2/ Classic workflow (from scratch)**
+### **2/ Main workflow**
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; [Full __grafting workflow__](https://maeldore.github.io/phylograftR/articles/main_workflow.html), from a phylogeny and tip data to the checked grafted phylogenies: `vignette("main_workflow")`.
 
 ### **3/ Grafting options**
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.1/ Graft __missing taxa__ within target clades: `graft_taxa` *(in preparation)*.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.1/ [Explore options to graft __missing taxa__](https://maeldore.github.io/phylograftR/articles/graft_missing_taxa.html): `vignette("graft_missing_taxa")`.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.2/ Graft __missing clades__ as sisters of clades of the backbone: `graft_clades` *(in preparation)*.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.2/ Graft __missing clades__ as sisters of clades of the backbone: `graft_missing_clades` *(in preparation)*.
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.3/ Graft __both types__ of missing lineages: `combine_missing_taxa_and_clades` *(in preparation)*.
 

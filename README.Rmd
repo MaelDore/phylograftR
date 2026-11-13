@@ -362,6 +362,7 @@ They are listed below, in the [companion website](https://maeldore.github.io/phy
 
 **3/ Grafting options**
 
+- [Explore options to graft __missing taxa__](https://maeldore.github.io/phylograftR/articles/graft_missing_taxa.html): `vignette("graft_missing_taxa")`.
 - [Graft __both missing taxa and missing clades__ in one run](https://maeldore.github.io/phylograftR/articles/combine_missing_taxa_and_clades.html): `vignette("combine_missing_taxa_and_clades")`.
 
 Alternatively, if you prefer to view the vignettes in R, you can install the package with `build_vignettes = TRUE`. 

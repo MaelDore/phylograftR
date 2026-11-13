@@ -567,8 +567,8 @@ Node IDs are recognized as text made **only of digits**: tip labels of the backb
 
 With a `missing_taxa_list` (and optionally a `total_richness_per_clades`), you are ready to graft:
 
-- the missing taxa: `graft_missing_taxa()`, see `vignette("graft_taxa")`;
-- the missing clades: `graft_missing_clades()`, see `vignette("graft_clades")`;
+- the missing taxa: `graft_missing_taxa()`, see `vignette("graft_missing_taxa")`;
+- the missing clades: `graft_missing_clades()`, see `vignette("graft_missing_clades")`;
 - both types in one run: `graft_missing_taxa_and_clades()`, see `vignette("combine_missing_taxa_and_clades")`.
 
 The grafting plan can be checked beforehand with `check_grafting_plan()`: `vignette("check_grafting")`. 
