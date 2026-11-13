@@ -26,7 +26,7 @@ This vignette explains how to **format the inputs** needed to graft missing line
 
 All the examples use the **toy datasets** shipped with the package: a backbone phylogeny of 30 tips (`toy_backbone`), tables in `.csv` format, and the corresponding R objects.
 
-For a full analysis from scratch, see the main workflow tutorial: `vignette("main_workflow")`. 
+For a full analysis from scratch, see the main workflow tutorial: `vignette("main_workflow")`.<br>
 For the tutorials listed by theme, see: `vignette("phylograftR")`.
 
 <br>
@@ -55,7 +55,7 @@ The `missing_taxa_list` is a list with the following items. Every item is **name
 | `exclude_subclades_stem` | Taxa | (Optional) Is the stem branch of each excluded subclade also excluded? |
 | `allowed_states` | Both | (Optional) States of a stochastic map where the taxon can be grafted. See the tutorials on data types. |
 
-Optionally, the grafting functions also use a **`total_richness_per_clades`**: the total number of species of some clades, which accounts for the species that are neither in the backbone nor in the `missing_taxa_list` (unsampled species) when fitting the birth-death models used to draw divergence times. It is built from a table of clades and their total richness, see section 9.
+### The backbone phylogeny: `phy`
 
 The toy backbone is shown below with its node IDs in blue boxes. We will use them in the following sections.
 
@@ -63,13 +63,18 @@ The toy backbone is shown below with its node IDs in blue boxes. We will use the
 data(toy_backbone)
 
 # Plot the backbone with the node IDs in label boxes
-ape::plot.phylo(toy_backbone, cex = 0.7, no.margin = TRUE)
-ape::nodelabels(cex = 0.7, frame = "rect", bg = "white", col = "blue")
+ape::plot.phylo(toy_backbone, cex = 0.7, no.margin = TRUE, tip.color = "green3")
+ape::nodelabels(cex = 0.7, frame = "rect", bg = "lightblue", col = "darkblue")
 ```
+
+### The `total_richness_per_clades`
+
+Optionally, the grafting functions also use a **`total_richness_per_clades`**: the total number of species of some clades, which accounts for the species that are neither in the backbone nor in the `missing_taxa_list` (unsampled species) when fitting the birth-death models used to draw divergence times. It is built from a table of clades and their total richness, see section 9.
+
 
 ## 2/ Which way to build the list?
 
-The list can be obtained in three ways, and then edited. The three ways all return the **same kind of object**, validated against the backbone. Whatever the way chosen, the list can then be **edited by hand** (see the last row of the table).
+The `missing_taxa_list` can be obtained in three ways all returning the **same kind of object**, validated against the backbone. Whatever the way chosen, the list can then be **edited by hand** afterward for finer level of control.
 
 | You have... | Use | Section |
 |:---|:---|:---|
@@ -84,7 +89,7 @@ The taxonomy is the most convenient way to start, as it only requires the **name
 
 ## 3/ Use a taxonomy: `build_missing_taxa_list_from_taxonomy()`
 
-When the missing taxa are known by their **taxonomic groups** (families, genera, tribes...), there is no need to write the tips of the clades: they can be retrieved from the **taxonomy of the backbone tips**.
+When the missing taxa are known by their **taxonomic groups** (families, genera, tribes...), they can be used to retrieve the defining tips of the clades of interest (i.e., target clades, excluded subclades, sister clades) directly from the **taxonomy of the backbone tips**.
 Two tables are needed, and they can be imported from external files (text or Excel) with `import_taxonomic_table()`:
 
 - the **backbone table**: one row per tip of the backbone, one column per taxonomic level (`type = "backbone"`).
@@ -168,13 +173,13 @@ The groups can only be those of the taxonomy. To use **any clade of the backbone
 
 ## 4/ Build from a data.frame: `build_missing_taxa_list()`
 
-Taxonomic groups are convenient, but they have limits: a clade that is not a taxonomic group cannot be used, and the target clades and excluded subclades are those of the taxonomy.
+Taxonomic groups are convenient, but they have limits: a clade that is not an identified taxonomic group cannot be used.
 `build_missing_taxa_list()` **converts a data.frame** into a `missing_taxa_list`, and gives you **full control** over the constraints: **clades are defined directly on the backbone**, from:
 
 - **tips**: a pair of tips whose MRCA is the clade (`"t26, t18"`), or a single tip;
 - **node IDs**: the ID of the node of the backbone, as shown by `ape::nodelabels()` (e.g., `"34"`).
 
-**Any node of the backbone can therefore be a target, sister, or excluded clade**, whatever the taxonomy, which makes it much easier to **fine-tune** the grafting constraints, for instance to graft a taxon within a clade that is not named in any taxonomy, or to exclude a precise subclade.
+**Any node of the backbone can therefore be a target, sister, or excluded clade**, whatever the taxonomy. This option makes it much easier to **fine-tune** the grafting constraints, for instance to graft a taxon within a clade that is not named in any taxonomy, or to exclude a precise subclade.
 Tips and node IDs can be **mixed** between clades, but a single clade is defined by either tips or one node ID.
 
 The data.frame has **one row per taxon**, and each column fills an item of the list:
@@ -291,16 +296,19 @@ For instance, `allowed_states` gives one or several states for each taxon, separ
 file_path <- system.file("extdata", "toy_missing_taxa_with_allowed_states.csv", package = "phylograftR")
 read.csv(file_path)[, c("Taxon_name", "Target_clade_name", "allowed_states")]
 
+# In this example, the allowed states define color (i.e., "red", "blue", "green") that evolve along the branches of a `simmap`
+# and are used to contraint the grafting of each taxon depending on its allowed states.
+
 missing_taxa_list_states <- import_missing_taxa_list(file = file_path, phy = toy_backbone, verbose = FALSE)
 missing_taxa_list_states$allowed_states
 ```
 
 These constraints are used only when a stochastic map (`simmap`) is provided to the grafting function. 
-The tutorials on the data types explain how to prepare the maps and how to use the ranges and several traits: `vignette("prepare_trait_data")`, `vignette("biogeographic_data")`, and `vignette("multiple_traits")`.
+Please refer to the dedicated tutorials explaining how to prepare the maps (`vignette("prepare_trait_data")`) and how to use the ranges and several traits (`vignette("biogeographic_data")` and `vignette("multiple_traits")`) for more detailed information.
 
 <br>
 
-## 7/ Both types of taxa in one table
+## 7/ Both types of missing lineages in one table
 
 A single table can describe **both types of missing lineages**. With a column `Type` (`"taxa"` or `"clades"`), each row fills the clade item of its type (`Target_clade` or `Sister_clade`). 
 Without `Type`, the clade item filled (`Target_clade` or `Sister_clade`) defines the type of the row.
@@ -338,7 +346,7 @@ The rules to keep in mind are:
 
 - every item must remain **named after `$Taxon_name`** and have **one element per taxon** (in the same order);
 - clades must be defined by **tips**: if you use node IDs, convert them with `convert_nodes_to_tips()` (see section 5);
-- the list of a given type must keep its clade item (`Target_clade` for the taxa, `Sister_clade` for the missing clades).
+- the list of a given type must keep its clade item (`Target_clade` for the missing taxa, `Sister_clade` for the missing clades).
 
 ```{r manual_edit}
 # ------ Step 1: Edit the list ------ #
@@ -371,11 +379,11 @@ The checks stop with an explicit message if the edited list is not valid, for in
 
 ## 9/ The total richness of clades
 
-The backbone is incomplete, and the missing taxa of the list are not necessarily all the missing species: other species may also be **unsampled** (neither in the backbone nor in the list). 
+The backbone is incomplete, and the missing taxa of the list are not necessarily all the missing species: other species may also be **unsampled** (neither in the backbone nor in the `missing_taxa_list`). 
 Their number can be informed with the **total richness** of some clades: the grafting functions then account for them when fitting the birth-death models used to draw divergence times.
-Clades without a total richness provided (`NA`) are handled with the information of the clades nested within them (see `?graft_missing_taxa`).
+Clades without a total richness provided (`NA`) are handled with the information of the clades nested within them: their number of unsampled species is estimated as the sum of unsampled species recorded over the largest clades nested within it (i.e., with a `total_richness` value provided).
 
-A table with the clades and their total richness is converted by `build_total_richness_per_clades()` (data.frame) or `import_total_richness_per_clades()` (file). 
+A table with the clades and their total richness is converted by `build_total_richness_per_clades()` (internal data.frame) or `import_total_richness_per_clades()` (external file). 
 Both need the **`missing_taxa_list`** (or the `list(taxa, clades)`) to check the richness values against the species of the backbone and of the list, and to make sure that the clades are defined by the same tips.
 
 ```{r total_richness}
@@ -400,8 +408,9 @@ str(richness_per_clades, max.level = 2)
 # ------ Step 3: Check the richness before grafting ------ #
 
 # Expected richness and sampling fraction of each clade
-attr(richness_per_clades, "richness_table")[, c("Clade_name", "total_richness", "nb_backbone_species", "nb_missing_species",
-                                                "nb_unsampled_species", "sampling_fraction")]
+attr(richness_per_clades, "richness_table")[, c("Clade_name", "total_richness", "nb_backbone_species",
+                                                "nb_missing_species", "nb_unsampled_species",
+                                                "sampling_fraction")]
 ```
 
 The attribute `"richness_table"` gives the number of species in the backbone, the missing species of the list, and the **unsampled species** deduced from the total richness, and the resulting **sampling fraction** of each clade. 
