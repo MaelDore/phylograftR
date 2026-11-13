@@ -357,8 +357,12 @@ extract_grafting_info_one <- function (phy, taxa, backbone, is_clades, groups, n
       {
         return(list(monophyletic = FALSE))
       }
-      graft_node <- parent[root]
-      clade <- parent_clade(other_child(graft_node, root))
+      # Maximal grafted subtree containing the missing clade (without backbone tips): attached to the backbone at its parent
+      # It is larger than the clade if taxa of the other type were grafted on the stem of the clade (e.g., when taxa are grafted after clades)
+      top <- root
+      while (parent[top] != 0 && n_backbone[parent[top]] == 0) { top <- parent[top] }
+      graft_node <- parent[top]
+      clade <- parent_clade(other_child(graft_node, top))
       list(monophyletic = TRUE, root = as.integer(root), graft_node = as.integer(graft_node), parent_node = clade$node, parent_tips = clade$tips,
            graft_age = age[graft_node], crown_age = if (length(members) == 1) NA_real_ else age[root])
     })

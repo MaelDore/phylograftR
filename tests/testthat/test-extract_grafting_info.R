@@ -216,3 +216,27 @@ test_that("extract_grafting_info() stops or warns on invalid inputs",
   expect_true(is.na(info$graft_age[2]))
   expect_false(is.na(info$graft_age[1]))
 })
+
+
+test_that("extract_grafting_info() locates the missing clade when taxa were grafted on its stem (grafting taxa after clades)",
+{
+  toy <- toy_setup()
+  # Missing clade (C1, C2) grafted by hand on the stem of the clade B
+  g <- graft_tip_on_branch(toy$phy, "C1", toy$node_B, frac = 0.5)
+  g <- graft_tip_on_branch(g, "C2", match("C1", g$tip.label), frac = 0.5)
+  clade_root <- ape::getMRCA(g, c("C1", "C2"))
+  # A taxon of the other type grafted afterwards on the stem of the missing clade
+  g <- graft_tip_on_branch(g, "X1", clade_root, frac = 0.5)
+  g$simmap <- NULL
+  mtl <- list(taxa = info_mtl(list(Taxon_name = "X1", Target_clade = list(toy$B))),
+              clades = info_mtl(list(Taxon_name = c("C1", "C2"), Sister_clade = list(toy$B, toy$B))))
+  expect_no_error(info <- extract_grafting_info(g, mtl, phy_backbone = toy$phy))
+
+  # The missing clade is attached to the stem of the clade B: the graft age is the age of the node where the grafted lineages meet the backbone
+  top <- ape::getMRCA(g, c("C1", "C2", "X1"))
+  ages <- max(ape::node.depth.edgelength(g)) - ape::node.depth.edgelength(g)
+  expect_equal(info$clades$graft_age, ages[g$edge[match(top, g$edge[, 2]), 1]])
+  expect_equal(info$clades$crown_age, ages[ape::getMRCA(g, c("C1", "C2"))])
+  expect_true(info_same_clade(toy$phy, info$clades$parent_tips, toy$node_B))
+  expect_equal(info$clades$n_taxa, 2)
+})
