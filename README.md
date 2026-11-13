@@ -514,6 +514,12 @@ and in this vignette: `vignette("phylograftR")`.
   grafting](https://maeldore.github.io/phylograftR/articles/format_inputs.html):
   `vignette("format_inputs")`.
 
+**2/ Main workflow**
+
+- [Full **grafting workflow**, from the data to the grafted
+  phylogenies](https://maeldore.github.io/phylograftR/articles/main_workflow.html):
+  `vignette("main_workflow")`.
+
 **3/ Grafting options**
 
 - [Graft **both missing taxa and missing clades** in one

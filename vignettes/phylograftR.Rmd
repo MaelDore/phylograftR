@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 
 ### Quick-to-run example
 
-A **simple use-case** that grafts missing taxa on a toy backbone phylogeny is available in the README of the package, and a **full workflow from scratch** is presented in the main workflow tutorial (*in preparation*): `vignette("main_workflow")`.
+A **simple use-case** that grafts missing taxa on a toy backbone phylogeny is available in the README of the package, and a **full workflow from the data to the checked grafted phylogenies** is presented in the [main workflow tutorial](https://maeldore.github.io/phylograftR/articles/main_workflow.html): `vignette("main_workflow")`.
 
 For more advanced uses, please refer to the tutorials below.
 
@@ -31,7 +31,7 @@ For more advanced uses, please refer to the tutorials below.
 |:---|:---|
 | Format my data into a `missing_taxa_list` (tables, node IDs, MRCA tips) | [`format_inputs`](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")` |
 | Build stochastic maps (simmaps) of species attributes from tip data | `prepare_trait_data` *(in preparation)* |
-| See a full analysis from scratch, from tip data to a grafted phylogeny | `main_workflow` *(in preparation)* |
+| See a full analysis, from tip data to checked grafted phylogenies | [`main_workflow`](https://maeldore.github.io/phylograftR/articles/main_workflow.html): `vignette("main_workflow")` |
 | Graft missing taxa within target clades, and tune the options | `graft_taxa` *(in preparation)* |
 | Graft missing clades as sisters of clades of the backbone | `graft_clades` *(in preparation)* |
 | Graft both types of missing lineages in one run | `combine_missing_taxa_and_clades` *(in preparation)* |
@@ -58,7 +58,7 @@ Tutorials *in preparation* become links, with their `vignette()` call, once they
 
 ### **2/ Classic workflow (from scratch)**
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; Full __grafting workflow__, from a phylogeny and tip data to the checked grafted phylogenies: `main_workflow` *(in preparation)*.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; [Full __grafting workflow__](https://maeldore.github.io/phylograftR/articles/main_workflow.html), from a phylogeny and tip data to the checked grafted phylogenies: `vignette("main_workflow")`.
 
 ### **3/ Grafting options**
 

@@ -356,6 +356,10 @@ They are listed below, in the [companion website](https://maeldore.github.io/phy
 
 - [Format __inputs__ prior to grafting](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")`.
 
+**2/ Main workflow**
+
+- [Full __grafting workflow__, from the data to the grafted phylogenies](https://maeldore.github.io/phylograftR/articles/main_workflow.html): `vignette("main_workflow")`.
+
 **3/ Grafting options**
 
 - [Graft __both missing taxa and missing clades__ in one run](https://maeldore.github.io/phylograftR/articles/combine_missing_taxa_and_clades.html): `vignette("combine_missing_taxa_and_clades")`.
