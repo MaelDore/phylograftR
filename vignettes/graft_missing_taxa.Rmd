@@ -444,7 +444,7 @@ For more details, please refer to the tutorials dedicated to the different types
 - for **continuous traits**: `vignette("continuous_data")`.
 
 
-Here, we highlight the use of **species attributes** as constraints by grafting 4 taxa in `Family_A`, allowed **in `"blue"` only**, versus **in every state**:
+Here, we highlight the use of **species attributes** as constraints by grafting 6 taxa in `Family_A`, allowed **in `"blue"` only**, versus **in every state**:
 
 
 ```{r simmap, fig.width = 6, fig.height = 5, out.width = "100%"}
@@ -462,20 +462,20 @@ phytools::plotSimmap(toy_simmap, colors = state_colors, fsize = 0.6, lwd = 2, ft
 # ------ Allowed states: all states vs blue only ------ #
 
 # Create list of taxa to graft
-taxa_A4 <- make_list(n = 4, target_tips = c("t26", "t18"), prefix = "New_sp")
+taxa_A_states <- make_list(n = 6, target_tips = c("t26", "t18"), prefix = "New_sp")
 
 # A simmap with no allowed states only records the states of the grafted lineages: grafting is not restricted
-grafted_all_states <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_A4,
+grafted_all_states <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_A_states,
                                          simmap = toy_simmap, allowed_states = NULL,
-                                         seed = 1234, verbose = FALSE)
+                                         seed = 67, verbose = FALSE)
 # Graft the same taxa, but with only blue as 'allowed_state'
-grafted_blue <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_A4,
+grafted_blue <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_A_states,
                                    simmap = toy_simmap, allowed_states = "blue",
-                                   seed = 1234, verbose = FALSE)
+                                   seed = 67, verbose = FALSE)
 
 # The simmap is updated: the grafted tips have the state of the point where they were grafted
-phytools::getStates(grafted_all_states$simmap, type = "tips")[taxa_A4$Taxon_name]
-phytools::getStates(grafted_blue$simmap, type = "tips")[taxa_A4$Taxon_name]
+phytools::getStates(grafted_all_states$simmap, type = "tips")[taxa_A_states$Taxon_name]
+phytools::getStates(grafted_blue$simmap, type = "tips")[taxa_A_states$Taxon_name]
 
 # Helper: plot the updated simmap of a grafted phylogeny
 # Grafted branches are dashed, and grafted tips are marked with a point in the color of their final state
@@ -512,11 +512,12 @@ When this part is **below `min_valid_fraction`** (default `0.1`) of the availabl
 taxa_restricted <- make_list(n = 4, target_tips = c("t26", "t18"), prefix = "Green_sp")
 grafted_restricted <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_restricted,
                                   simmap = toy_simmap, allowed_states = "green",
-                                  min_valid_fraction = 0.5, seed = 1234, verbose = FALSE)
+                                  min_valid_fraction = 0.5, seed = 67, verbose = FALSE)
 
 # Plot the result
 plot_states(grafted_restricted, main = "C: Green only")
-## All grafted taxa concentrate on the single "green" branch portion in the target clade
+## All grafted taxa concentrate on the "green" branch portion of
+## the backbone tip 't18' in the target clade
 
 ```
 
@@ -531,3 +532,4 @@ Now that you know all the tweaks of **grafting missing taxa**, you may be intere
 - handling **uncertainty** with several simulations and stochastic maps: `vignette("handle_uncertainty")`;
 - speeding up your runs by using **parallel computation**: `vignette("parallel_grafting")`;
 - **resuming** interrupted runs: `vignette("resume_crashed_run")`.
+
