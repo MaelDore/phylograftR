@@ -15,5 +15,6 @@ R/_benchmark_ranges_traits.R
 # Vignettes
 inst/doc
 /Meta/
-/doc/
+# /doc/ Local storage for HTML vignettes when built locally
 docs
+
