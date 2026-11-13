@@ -378,6 +378,7 @@ taxa_A3$Target_clade_name <- setNames(rep("Family_A", 3), taxa_A3$Taxon_name)
 # Total richness of Family_A: 60 species, so 60 - 17 - 3 = 40 unsampled species
 richness_A <- list(Target_clade = list(c("t26", "t18")), Target_clade_name = "Family_A", total_richness = 60)
 
+# Graft with and without accounting for unsampled species
 grafted_no_richness <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_A3,
                                           return_BD_model_summary = TRUE, seed = 1234, verbose = FALSE)
 grafted_richness <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_A3,

@@ -96,37 +96,33 @@ summarize_clades <- function(phy_grafted, missing_taxa_list)
 
 In `missing_taxa_list`, each taxon has a **sister clade**: a clade of the backbone, defined by a **pair of tips** (the clade of their most recent common ancestor), or by a **single tip** (the terminal branch of this tip).
 **Taxa with the same sister clade are grafted together, as one missing clade.**
+
 The missing clade is always grafted **on the stem branch of its sister clade**: it becomes the **sister** of this clade, and is never nested within it.
 This is why, unlike for missing taxa, there is no target clade, no excluded subclade and no `include_target_clade_stem` argument: the only constraint is the sister clade.
 The sister clade cannot be the whole tree, as it would have no stem branch.
 Clades must be **defined by tips**, not by node IDs (see `vignette("format_inputs")` and `convert_nodes_to_tips()`).
 
-We graft **two missing clades**: three taxa as sister of `Subfam_B1` (node `34`, defined by the tips `t8` and `t7`), and two taxa as sister of `Tribe_A2a` (node `38`, defined by the tips `t26` and `t4`).
+Here, we graft **two missing clades**: three taxa as sister of `Subfam_B1` (node `34`, defined by the tips `t8` and `t7`), and two taxa as sister of `Subfam_A2` (node `38`, defined by the tips `t28` and `t26`).
 
 ```{r two_clades, fig.width = 10, fig.height = 5.5, out.width = "100%"}
 # ------ Missing clades: taxa grouped by their sister clade ------ #
 
 # Missing clade 1: three taxa, sister to Subfam_B1 (node 34)
 clade_1 <- make_clade_list(n = 3, sister_tips = c("t8", "t7"))
-# Missing clade 2: two taxa, sister to Tribe_A2a (node 38)
-clade_2 <- make_clade_list(n = 2, sister_tips = c("t26", "t4"), start = 4)
+# Missing clade 2: two taxa, sister to Subfam_A2 (node 38)
+clade_2 <- make_clade_list(n = 2, sister_tips = c("t28", "t26"), start = 4)
 
 # Missing taxa list with both missing clades
 taxa_two_clades <- combine_lists(clade_1, clade_2)
-taxa_two_clades$Sister_clade
 
+# Graft the missing clades
 grafted_two_clades <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_two_clades,
-                                           seed = 1234, verbose = FALSE)
+                                           seed = 2, verbose = FALSE)
 
-# Summarize the missing clades
+# Summarize grafting info on the missing clades
 summarize_clades(grafted_two_clades, taxa_two_clades)
 
-# Are the taxa of each missing clade monophyletic in the grafted phylogeny?
-ape::is.monophyletic(grafted_two_clades, clade_1$Taxon_name)
-ape::is.monophyletic(grafted_two_clades, clade_2$Taxon_name)
-# But not all together: they form two distinct missing clades
-ape::is.monophyletic(grafted_two_clades, taxa_two_clades$Taxon_name)
-
+# Plot the backbone vs the grafted phylogeny
 par(mfrow = c(1, 2), mar = c(0.5, 0.5, 2, 0.5))
 # Left: the backbone with its node IDs, and the sister clades: node 34 in limegreen, node 38 in gold
 ape::plot.phylo(toy_backbone, cex = 0.55, main = "Backbone: sister clades (green, gold)")
@@ -138,11 +134,11 @@ plot_grafted(grafted_two_clades, use_simmap = FALSE, cex = 0.55, main = "Grafted
 par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
-Each missing clade is a **monophyletic group** attached to the stem of its sister clade, at the **graft age** (the divergence time from the sister clade), and with its own **crown age** (the age of the most recent common ancestor of its taxa).
-Missing clades with **nested sister clades** are processed first, so a missing clade can be grafted on a phylogeny that already includes the missing clades grafted within its sister clade.
-A sister clade defined by a **single tip** is the terminal branch of this tip, and a **single missing taxon** is grafted on the stem of its sister clade as a missing clade with no crown age (`NA`).
+Each missing clade is a **monophyletic group** attached to the stem of its sister clade.
+Missing clades **nested within** other sister clades are processed first, so a missing clade can be grafted on a phylogeny that already includes the missing clades grafted within its sister clade.
+A sister clade defined by a **single tip** is the terminal branch of this tip, and a **single missing taxon** is grafted on the stem of its sister clade as a missing clade.
 
-Taxa sharing the same sister clade **must share the same attributes**: for instance, they must have the same `allowed_states` (the function stops otherwise, see section 3).
+Taxa sharing the same sister clade **must share the same attributes**: for instance, they must have the same `allowed_states` (the function stops otherwise, see *Section 3*).
 
 ## 2/ How is the missing clade generated?
 
@@ -159,7 +155,9 @@ The BD models can be reported with `return_BD_model_summary = TRUE`, and extract
 ### Fit the models on enough tips: `min_tips`
 
 If the sister clade has **fewer than `min_tips` tips** (default: `5`, minimum: `3`), the model is fitted on the smallest enclosing clade with at least `min_tips` tips.
-We graft 4 taxa as sister of `Gen_1` (node `50`, tips `t13` and `t27`, with 3 tips in the backbone) with `min_tips = 3` (the sister clade has enough tips) and `min_tips = 5` (it does not):
+
+Here, we graft 4 taxa as sister of `Gen_1` (node `50`, tips `t13` and `t27`, with 3 tips in the backbone) with `min_tips = 3` (the sister clade has enough tips) and `min_tips = 5` (it does not).
+Then, we **compare the fits of the BD models** used to produce the subtrees of the missing clade, and draw the graft age:
 
 ```{r min_tips, fig.width = 10, fig.height = 5.5, out.width = "100%"}
 # ------ min_tips: clade used to fit the birth-death model ------ #
@@ -173,132 +171,146 @@ grafted_min5 <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = tax
                                      min_tips = 5, return_BD_model_summary = TRUE,
                                      seed = 1234, verbose = FALSE)
 
-# Summary of the BD models: clade used to fit the model, sampling fraction, and rates
+# Summary of the BD models: sister clade vs enclosing clade used to fit the diversification model
 cols <- c("n_taxa", "initial_clade_n_tips", "enclosing", "fitted_clade_n_tips", "min_tips",
-          "rho", "b", "d", "net_diversification")
+          "b", "d", "net_diversification", "relative_extinction", "rho")
 rbind(extract_BD_model_summary(grafted_min3)[, cols], extract_BD_model_summary(grafted_min5)[, cols])
 
-plot_two(grafted_min3, "min_tips = 3", grafted_min5, "min_tips = 5")
 ```
 
-With `min_tips = 5`, the model is fitted on an enclosing clade, so the rates describe a larger part of the tree rather than the sister clade only.
-This changes the ages drawn. As the ages are random, we compare **100 simulations** per setting (`nb_simulations = 100`, see `vignette("handle_uncertainty")`):
+With `min_tips = 5`, the model is fitted on a 8-tip enclosing clade: the rates describe the dynamics of a larger part of the tree rather than of the sister clade, and differ from the rates of the 3-tip clade. 
+You can play with the `min_tips` parameter to adjust the way BD models are fitted:
 
-```{r min_tips_ages}
-# Graft 100 simulations with each value of min_tips
-sims_min3 <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_gen1, min_tips = 3,
-                                  nb_simulations = 100, seed = 1234, verbose = FALSE)
-sims_min5 <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_gen1, min_tips = 5,
-                                  nb_simulations = 100, seed = 1234, verbose = FALSE)
+- increase `min_tips` if the rates estimated on small clades are not reliable;
+- decrease `min_tips` (down to `3`) to keep the model close to the sister clade.
 
-# Summarize the graft ages and crown ages of the missing clade across the simulations
-summarize_ages <- function(sims, missing_taxa_list)
-{
-  info <- extract_grafting_info(sims, missing_taxa_list, phy_backbone = toy_backbone)
-  data.frame(mean_graft_age = mean(info$graft_age), median_graft_age = median(info$graft_age),
-             mean_crown_age = mean(info$crown_age), median_crown_age = median(info$crown_age))
-}
-round(rbind("min_tips = 3" = summarize_ages(sims_min3, taxa_gen1),
-            "min_tips = 5" = summarize_ages(sims_min5, taxa_gen1)), 2)
-```
-
-Increase `min_tips` if the rates estimated on small sister clades are not reliable, and decrease it (down to `3`) to keep the model close to the sister clade.
 
 ### Unsampled species: `total_richness_per_clades`
 
-The sampling fraction of the BD model is `rho = n_present / (n_present + n_pending + n_unsampled)`.
-Providing the **total richness** of the sister clade lets the model account for its **unsampled species** (see `vignette("format_inputs")`).
-**Unsampled species are only used to fit the model: they are not grafted.**
+The backbone and the missing clades to graft may not cover all the species of the clades. 
+Providing the **total richness of clades** (see `vignette("format_inputs")`) lets the BD models account for the **unsampled species** with:
+`total_richness = nb_backbone + nb_missing + nb_unsampled`.
+
+Therefore, BD models are fitted with **sampling fraction** defined as `rho = n_present / (n_present + n_pending + n_unsampled)` to account for those unsampled species.
+**Unsampled species are only used to fit the models**: they are not grafted.
+
 As for missing taxa, many unsampled species lower the sampling fraction, and give **higher speciation and extinction rates**: the lineages of the missing clade are expected to diverge **more recently**, so the **crown age of the missing clade is expected to be younger**.
-In contrast, the **graft age** is drawn on the stem of the sister clade, between its crown age and its stem age, so it is little affected.
+The **graft age** is drawn on the stem of the sister clade, between its crown age and its stem age: it is constrained by the backbone, and is expected to be much less affected, yet still younger in average than without accounting for unsampled species.
 
-We graft 4 taxa as sister of `Family_A` (node `32`, 17 tips in the backbone) without total richness, and with a total richness of 60 species (60 - 17 = 43 unsampled species: the missing clade is sister to `Family_A`, so it is not part of it):
+Here, we graft 4 taxa as sister of `Subfam_A1` (node `37`, tips `t19` and `t10`, 8 tips in the backbone) without total richness, and with a total richness of 60 species:
 
-```{r richness, fig.width = 10, fig.height = 5.5, out.width = "100%"}
+```{r richness, fig.width = 10, fig.height = 5.5, out.width = "100%", warning = FALSE}
 # ------ Total richness: no unsampled species vs many unsampled species ------ #
 
-# Missing clade sister to Family_A
-taxa_fam_a <- make_clade_list(n = 4, sister_tips = c("t26", "t18"), sister_name = "Family_A")
+# Create list of taxa to graft as a missing clade sister to Subfam_A1
+taxa_subfam_a1 <- make_clade_list(n = 4, sister_tips = c("t19", "t10"), sister_name = "Subfam_A1")
 
-# Total richness of Family_A: 60 species
-richness_fam_a <- list(Sister_clade = list(c("t26", "t18")), Sister_clade_name = "Family_A",
+
+# Create richness table to account for unsampled species
+# Total richness of Subfam_A1: 60 species, so 60 - 8 = 52 unsampled species
+richness_subfam_a1 <- list(Sister_clade = list(c("t19", "t10")), Sister_clade_name = "Subfam_A1",
                        total_richness = 60)
 
-grafted_no_richness <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_fam_a,
+# Graft with and without accounting for unsampled species
+grafted_no_richness <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_subfam_a1,
                                             return_BD_model_summary = TRUE, seed = 1234, verbose = FALSE)
-grafted_richness <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_fam_a,
-                                         total_richness_per_clades = richness_fam_a,
+grafted_richness <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_subfam_a1,
+                                         total_richness_per_clades = richness_subfam_a1,
                                          return_BD_model_summary = TRUE, seed = 1234, verbose = FALSE)
 
-# The sampling fraction (rho) is lower with many unsampled species
-# As a result, the speciation (b) and extinction (d) rates are higher
+# Inspect the effective sampling fraction and the rates of the BD models
 cols <- c("n_taxa", "n_unsampled", "rho", "b", "d", "net_diversification")
-rbind(extract_BD_model_summary(grafted_no_richness)[, cols], extract_BD_model_summary(grafted_richness)[, cols])
+rbind(extract_BD_model_summary(grafted_no_richness)[, cols],
+      extract_BD_model_summary(grafted_richness)[, cols])
 
-plot_two(grafted_no_richness, "No total richness", grafted_richness, "Total richness = 60")
+##  The sampling fraction (rho) is lower with many unsampled species
+##  As a result, the speciation (b) and extinction (d) rates are higher
+
 ```
 
-We compare the ages across **100 simulations** with each setting:
+We then compare graft ages and crown ages across **100 simulations** with each setting:
 
-```{r richness_ages}
-sims_no_richness <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_fam_a,
+```{r richness_ages, warning = FALSE}
+
+# Graft 100 times with and without accounting for unsampled species
+sims_no_richness <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_subfam_a1,
                                          nb_simulations = 100, seed = 1234, verbose = FALSE)
-sims_richness <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_fam_a,
-                                      total_richness_per_clades = richness_fam_a,
+sims_richness <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_subfam_a1,
+                                      total_richness_per_clades = richness_subfam_a1,
                                       nb_simulations = 100, seed = 1234, verbose = FALSE)
 
-round(rbind("No total richness" = summarize_ages(sims_no_richness, taxa_fam_a),
-            "Total richness = 60" = summarize_ages(sims_richness, taxa_fam_a)), 2)
+# Extract the graft ages and crown ages of the missing clade from the simulations
+info_no_richness <- extract_grafting_info(sims_no_richness, taxa_subfam_a1, phy_backbone = toy_backbone)
+info_richness <- extract_grafting_info(sims_richness, taxa_subfam_a1, phy_backbone = toy_backbone)
+
+# Summarize the ages across the simulations
+ages_summary <- function(info) c(mean_graft_age = mean(info$graft_age),
+                                 median_graft_age = median(info$graft_age),
+                                 mean_crown_age = mean(info$crown_age),
+                                 median_crown_age = median(info$crown_age))
+round(rbind("No total richness" = ages_summary(info_no_richness),
+            "Total richness = 60" = ages_summary(info_richness)), 2)
+
+## As expected, the crown age of the missing clade is much younger with many unsampled species,
+## while the graft age is only slightly younger.
+
 ```
 
-The crown age of the missing clade is younger with many unsampled species, as expected, while the graft age is similar.
-The total richness must be **at least the number of backbone species plus taxa to graft** of the clade, and it must cover all the sister clades of the list (`NA` for the clades without information).
-Since each missing clade is always grafted on the stem of its sister clade, the species richness of the clades is **the same in all the grafted phylogenies**: only the ages vary.
-(Unlike for missing taxa, no `extract_sampling_info()` comparison is needed to know the effective richness, but it can still be used to retrieve it, see `vignette("check_grafting")`.)
 
 ## 3/ Species attributes: `simmap` and allowed states
 
 Grafting can be constrained by a **species attribute**: a stochastic map (`simmap`) gives the state of the attribute along the branches of the backbone.
-The missing clade is grafted on the **portions of the stem branch of its sister clade that are in its allowed states**.
-The **whole missing clade** (its stem branch and all its descendant branches) is then in **the state of the point where it was grafted**: a missing clade has a single state.
-Allowed states are set **for each missing clade** with the `allowed_states` of the list (**all the taxa of a missing clade must have the same value**), or **for all missing clades** with the `allowed_states` argument (the list value takes precedence).
-The maps are built from tip data (see `vignette("prepare_trait_data")`). Here we use the toy map of a **single categorical trait**, with three states (`"blue"`, `"green"`, `"red"`).
+Each missing clade is grafted on the **portions of the stem branch of its sister clade that are in its allowed states**.
 
-> This section presents the **principle** only. The **data-type tutorials** expand on it: `vignette("biogeographic_data")` for **biogeographic ranges** (multi-area states, `treat_states_as_ranges`), `vignette("multiple_traits")` for **combining several traits** (or a trait and ranges) as constraints, and `vignette("continuous_data")` for **continuous traits**.
+The **whole missing clade** is then in **the state of the point where it was grafted**: a missing clade inherits a single state.
+
+Allowed states are set **for each missing clade** with the `allowed_states` of the list (**all the taxa of a missing clade must have the same value**), or **for all missing clades** with the `allowed_states` argument (the list value takes precedence).
+The stochastic maps are built from tip data (see `vignette("prepare_trait_data")`). Here we use the toy map of a **single categorical trait**, with three states (`"blue"`, `"green"`, `"red"`).
+
+This section presents the **general principle** with a simple example. 
+For more details, please refer to the tutorials dedicated to the different types of species attributes:
+
+- for **biogeographic ranges** (multi-area states, `treat_states_as_ranges`): `vignette("biogeographic_data")`;
+- for **combining several traits** (or a trait and ranges) as constraints: `vignette("multiple_traits")`;
+- for **continuous traits**: `vignette("continuous_data")`.
 
 Here, we graft 3 taxa as a missing clade, sister of `Family_B` (node `33`, tips `t8` and `t22`).
-The stem branch of `Family_B` has **two states**: blue (most of the branch) and green (at both ends).
-We compare the grafting with **all states allowed**, **blue only**, and **green only**:
+The stem branch of `Family_B` has **two states**: green (at both ends) and blue (most of the branch), as shown on the backbone simmap:
 
-```{r states, fig.width = 10, fig.height = 11, out.width = "100%"}
-# ------ Allowed states: all states vs blue only vs green only ------ #
+```{r simmap_plot, fig.width = 7, fig.height = 6.5, out.width = "100%"}
+# ------ The backbone simmap ------ #
 
 data(toy_simmap)
 state_colors <- c(blue = "blue", green = "green3", red = "red")
 
+# Plot the simmap, with the sister clade (node 33) in limegreen
+par(mar = c(0.5, 0.5, 2.5, 0.5))
+phytools::plotSimmap(toy_simmap, colors = state_colors, fsize = 0.6, ftype = "i", lwd = 2)
+title("Backbone simmap (sister clade: node 33)", line = -1, cex.main = 1)
+ape::nodelabels(node = 33, cex = 0.6, frame = "rect", bg = "limegreen", col = "black")
+par(mar = c(5.1, 4.1, 4.1, 2.1))
+```
+
+We compare the grafting with **blue only** and **green only** as allowed states:
+
+```{r states, fig.width = 10, fig.height = 6, out.width = "100%"}
+# ------ Allowed states: blue only vs green only ------ #
+
 # Missing clade sister to Family_B
 taxa_fam_b <- make_clade_list(n = 3, sister_tips = c("t8", "t22"))
 
-# A simmap with no allowed states only records the states of the grafted lineages: grafting is not restricted
-grafted_all_states <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_fam_b,
-                                           simmap = toy_simmap, allowed_states = NULL,
-                                           seed = 1, verbose = FALSE)
-# Graft the same missing clade, with only blue as 'allowed_states'
+# Graft the missing clade with only blue as 'allowed_states'
 grafted_blue <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_fam_b,
                                      simmap = toy_simmap, allowed_states = "blue",
-                                     seed = 1, verbose = FALSE)
+                                     seed = 48, verbose = FALSE)
 # Graft the same missing clade, with only green as 'allowed_states'
 grafted_green <- graft_missing_clades(phy = toy_backbone, missing_taxa_list = taxa_fam_b,
                                       simmap = toy_simmap, allowed_states = "green",
-                                      seed = 1, verbose = FALSE)
+                                      seed = 48, verbose = FALSE)
 
 # The simmap is updated: the whole missing clade has the state of the point where it was grafted
-sapply(list("All states" = grafted_all_states, "Blue only" = grafted_blue, "Green only" = grafted_green),
+sapply(list("Blue only" = grafted_blue, "Green only" = grafted_green),
        function(phy_grafted) unique(phytools::getStates(phy_grafted$simmap, type = "tips")[taxa_fam_b$Taxon_name]))
-
-# Graft ages: the portion of the stem used changes with the allowed states
-sapply(list("All states" = grafted_all_states, "Blue only" = grafted_blue, "Green only" = grafted_green),
-       function(phy_grafted) round(summarize_clades(phy_grafted, taxa_fam_b)$graft_age, 1))
 
 # Helper: plot the updated simmap of a grafted phylogeny
 # Grafted branches are dashed, and grafted tips are marked with a point in the color of their final state
@@ -310,34 +322,21 @@ plot_states <- function(phy_grafted, main)
   ape::tiplabels(tip = grafted_tips, pch = 19, cex = 1.5, col = state_colors[tip_states])
 }
 
-par(mfrow = c(2, 2), mar = c(0.5, 0.5, 2, 0.5))
-# Panel A: the backbone with its simmap, and the sister clade (node 33)
-phytools::plotSimmap(toy_simmap, colors = state_colors, fsize = 0.55, ftype = "i", lwd = 2)
-title("A: Backbone simmap (sister clade: node 33)", cex.main = 1)
-ape::nodelabels(node = 33, cex = 0.55, frame = "rect", bg = "limegreen", col = "black")
-# Panel B: all states allowed
-plot_states(grafted_all_states, main = "B: All states allowed")
-# Panel C: blue only
-plot_states(grafted_blue, main = "C: Blue only")
-# Panel D: green only
-plot_states(grafted_green, main = "D: Green only")
+# Plot both updated simmaps
+par(mfrow = c(1, 2), mar = c(0.5, 0.5, 2, 0.5))
+plot_states(grafted_blue, main = "A: Blue only")
+plot_states(grafted_green, main = "B: Green only")
 par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
-In panels C and D, the missing clade is grafted on the **blue or green portion of the stem** of `Family_B`, so all its taxa have this state, and the graft age differs (the blue portion of the stem spans older ages than its younger green end).
-In panel B, it can be grafted on any portion of the stem and takes the state of the point where it was grafted.
+In panel A (resp. B), the missing clade is grafted on the **blue (resp. green) portion of the stem** of `Family_B`, so all its taxa have this state, and the graft age falls in the corresponding range of ages.
+
+Without `allowed_states`, it can be grafted on any portion of the stem and takes the state of the point where it was grafted.
+
 Several states can be allowed (e.g., `c("blue", "green")`), and the states must **match the names of the states of the map exactly**.
 With `return_simmap = FALSE`, the updated map is not added to the output (`$simmap`).
 
-The `allowed_states` of the list are set per taxon, with the same value for all the taxa of a missing clade:
-
-```{r states_list}
-# Allowed states for each taxon of the missing clade (same value for the three taxa)
-taxa_fam_b$allowed_states <- setNames(rep(list("blue"), 3), taxa_fam_b$Taxon_name)
-taxa_fam_b$allowed_states
-```
-
-As for missing taxa, `min_valid_fraction` warns about the missing clades with a narrow window of ages in the allowed states, and `max_age_redraws` limits the redraws of the graft age when it falls where no stem portion is in the allowed states (see `vignette("graft_missing_taxa")` and `vignette("check_grafting")`).
+As for missing taxa, `min_valid_fraction` warns about the missing clades with a **narrow window of ages in the allowed states**, and `max_age_redraws` limits the redraws of the graft age when it falls where no stem portion is in the allowed states (see `vignette("graft_missing_taxa")` and `vignette("check_grafting")`).
 
 ## Next steps
 
