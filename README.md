@@ -525,6 +525,9 @@ and in this vignette: `vignette("phylograftR")`.
 - [Explore options to graft **missing
   taxa**](https://maeldore.github.io/phylograftR/articles/graft_missing_taxa.html):
   `vignette("graft_missing_taxa")`.
+- [Explore options to graft **missing
+  clades**](https://maeldore.github.io/phylograftR/articles/graft_missing_clades.html):
+  `vignette("graft_missing_clades")`.
 - [Graft **both missing taxa and missing clades** in one
   run](https://maeldore.github.io/phylograftR/articles/combine_missing_taxa_and_clades.html):
   `vignette("combine_missing_taxa_and_clades")`.

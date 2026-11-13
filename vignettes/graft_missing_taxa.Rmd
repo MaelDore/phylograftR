@@ -33,14 +33,14 @@ This tutorial instead explores **the arguments of the function** and explain **h
 Each section changes **one group of arguments** and compares the grafted phylogenies **side by side**, with the **same seed**, so that the differences come from the arguments.
 Grafting is stochastic: the grafted phylogenies you obtain with other seeds will differ in the details, but the **effects of the constraints** remain.
 
-**Reproducibility and scaling**
+**Arguments not covered here**
 
-`seed`, `nb_simulations`, `force_simulations`, `parallel` computation, and arguments used to save temporary files and resume interrupted runs are not detailed here. 
-Please refer to their dedicated vignettes:
+Some arguments are explained in **dedicated tutorials**:
 
-- for **handling uncertainty** in producing multiple grafted phylogenies: see `vignette("handle_uncertainty")`;
-- for using **parallel computation** to speed-up the process: see `vignette("parallel_grafting")`;
-- for saving temporary files and **resuming interrupted runs**: see `resume_crashed_run`.
+- `seed`, `nb_simulations`, `force_simulations`, and the use of several stochastic maps, to **handle uncertainty**: see `vignette("handle_uncertainty")`;
+- `parallel` computation to **speed up** the process: see `vignette("parallel_grafting")`;
+- `save_temp`, `resume` and the other arguments used to save temporary files and **resume interrupted runs**: see `vignette("resume_crashed_run")`;
+- `treat_states_as_ranges`, and the stochastic maps of **several traits** used together: see `vignette("biogeographic_data")` and `vignette("multiple_traits")`.
 
 
 ## 0/ Setup

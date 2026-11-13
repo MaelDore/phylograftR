@@ -33,6 +33,8 @@ navbar:
       - text: 3/ Grafting options
       - text: Explore options to graft missing taxa
         href: articles/graft_missing_taxa.html
+      - text: Explore options to graft missing clades
+        href: articles/graft_missing_clades.html
 reference:
 - title: Graft missing lineages
   desc: |

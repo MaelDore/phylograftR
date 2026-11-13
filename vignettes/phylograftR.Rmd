@@ -33,7 +33,7 @@ For more advanced uses, please refer to the tutorials below.
 | Build stochastic maps (simmaps) of species attributes from tip data | `prepare_trait_data` *(in preparation)* |
 | See a full analysis, from tip data to checked grafted phylogenies | [`main_workflow`](https://maeldore.github.io/phylograftR/articles/main_workflow.html): `vignette("main_workflow")` |
 | Explore options to graft missing taxa within target clades | [`graft_missing_taxa`](https://maeldore.github.io/phylograftR/articles/graft_missing_taxa.html): `vignette("graft_missing_taxa")` |
-| Explore options to graft missing clades as sisters of clades of the backbone | `graft_missing_clades` *(in preparation)* |
+| Explore options to graft missing clades as sisters of clades of the backbone | [`graft_missing_clades`](https://maeldore.github.io/phylograftR/articles/graft_missing_clades.html): `vignette("graft_missing_clades")` |
 | Graft both types of missing lineages in one run | `combine_missing_taxa_and_clades` *(in preparation)* |
 | Check the grafting plan before, and the grafted phylogenies after | `check_grafting` *(in preparation)* |
 | Constrain grafting with biogeographic ranges | `biogeographic_data` *(in preparation)* |
@@ -63,7 +63,7 @@ They provide explanations on available arguments and interpretations of results 
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.1/ [Explore options to graft __missing taxa__](https://maeldore.github.io/phylograftR/articles/graft_missing_taxa.html): `vignette("graft_missing_taxa")`.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.2/ Graft __missing clades__ as sisters of clades of the backbone: `graft_missing_clades` *(in preparation)*.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.2/ [Explore options to graft __missing clades__](https://maeldore.github.io/phylograftR/articles/graft_missing_clades.html): `vignette("graft_missing_clades")`.
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.3/ Graft __both types__ of missing lineages: `combine_missing_taxa_and_clades` *(in preparation)*.
 
