@@ -30,7 +30,7 @@ The key is the argument `treat_states_as_ranges`, which tells the grafting funct
 1. **Exact matching** (`treat_states_as_ranges = FALSE`, the default): ranges are unrelated states, like for categorical traits (e.g., colors). A taxon allowed in `"A"` can only be grafted on branch pieces where the map is **exactly** in `"A"`.
 2. **Range matching** (`treat_states_as_ranges = TRUE`): a taxon allowed in `"A"` can be grafted wherever the lineage **includes the area `"A"`**: `"A"`, `"AB"`, `"ABC"`, etc.
 
-We compare the two options **side by side**, with the **same data and seed**, so that the differences shown come from the **matching type** argument (`treat_states_as_ranges`) only.
+We compare the two options **side by side**, with the **same data**, so that the differences shown come from the **matching type** argument (`treat_states_as_ranges`).
 
 **Other types of data**
 
@@ -135,14 +135,14 @@ plan_ranges[, c("Taxon_name", "allowed_states", "states_available", "valid_fract
 
 With exact matching, the plan flags **two problems**:
 
-- `Genus_c_sp1` **cannot be grafted** (`cause = "allowed_states"`): its target clade is only in `"BC"`, which matches neither `"A"` nor `"B"` exactly.
-- `Genus_a_sp1`, allowed in `"A"` only, has a **low valid fraction**: only 8% of the branches of its target clade are in `"A"`, so its grafting positions are concentrated on a few short branch pieces.
+- `New_sp6` **cannot be grafted** (`cause = "allowed_states"`): its target clade is only in `"BC"`, which matches neither `"A"` nor `"B"` exactly.
+- `New_sp1`, allowed in `"A"` only, has a **low valid fraction**: only 8% of the branches of its target clade are in `"A"`, so its grafting positions are concentrated on a few short branch pieces.
 
 With range matching, `"B"` matches `"BC"` and `"A"` matches `"AB"`: all the taxa can be grafted, on a much larger share of the branches of their target clades.
 
 ## 3/ Graft with exact matching
 
-We first graft with exact matching. The grafting stops, as `Genus_c_sp1` has no branch available:
+We first graft with exact matching. The grafting stops, as `New_sp6` has no branch available:
 
 ```{r graft_exact_error}
 # ------ Exact matching: infeasible plan ------ #
@@ -199,24 +199,31 @@ legend("bottomleft", legend = names(range_colors), fill = range_colors, title = 
 par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
-We summarize the **range of the branch where each taxon was grafted** (`parent_state`) and **the range it inherited** (`tip_state`) with `extract_grafting_info()`:
+Since the grafting process is stochastic, placement can vary, and final states of taxa with multiple allowed states may vary too (e.g., `New_sp3` in `"A"` or `"B"`).
+The critical change between the two matching type is the differences or not that are allowed between the range of parental branch and the inherited range of the grafted taxa.
+
+We summarize below the **range of the branch where each taxon was grafted** (`parent_state`) and **the range it inherited** (`tip_state`) with `extract_grafting_info()`:
 
 ```{r info}
 # ------ Ranges at grafting and inherited ranges ------ #
 
+# Extract grafting information for the two matching types
 info_exact <- extract_grafting_info(grafted_exact, missing_taxa_list = taxa_ranges)
 info_ranges <- extract_grafting_info(grafted_ranges, missing_taxa_list = taxa_ranges)
 
+# Summarize information in a data.frame
 compare_ranges <- data.frame(Taxon_name = info_exact$Taxon_name,
                              Exact_parent = info_exact$parent_state, Exact_inherited = info_exact$tip_state,
                              Ranges_parent = info_ranges$parent_state, Ranges_inherited = info_ranges$tip_state)
-# Subset sympatric speciation event: the taxon inherits a range smaller than the range of the branch
+# Identify subset sympatric speciation event: the taxon inherits a range smaller than the range of the branch
 compare_ranges$Ranges_subset_sympatry <- compare_ranges$Ranges_parent != compare_ranges$Ranges_inherited
 compare_ranges
 ```
 
-With exact matching, the range of the branch and the **inherited range are always the same**.
-With range matching, taxa can be grafted on **larger ranges** and inherit a smaller one (subset sympatry), and the diversity of positions is wider.
+With **exact matching**, the range of the branch and the **inherited range are always the same**.
+
+With **range matching**, taxa can be grafted on **larger ranges** and inherit a smaller one (subset sympatry), as for `New_sp2`, `New_sp4`, and `New_sp6`. 
+The diversity of available positions is also wider.
 
 ## 6/ Check the grafted phylogenies
 
@@ -239,6 +246,7 @@ constraints[, c("Taxon_name", "in_tree", "target_ok", "states_ok", "ranges_ok")]
 Now that you know how to use **biogeographic ranges** as constraints, you may be interested in:
 
 - combining **several traits** or a trait and ranges: `vignette("multiple_traits")`;
-- using **continuous traits**: `vignette("continuous_data")`;
+- exploring options to graft **missing taxa**, **missing clades**, or **both types**: `vignette("graft_missing_taxa")`, `vignette("graft_missing_clades")` and `vignette("combine_missing_taxa_and_clades")`;
 - handling **uncertainty** with several simulations and stochastic maps: `vignette("handle_uncertainty")`;
-- **checking** the grafting plan and the grafted phylogenies: `vignette("check_grafting")`.
+- speeding up your runs by using **parallel computation**: `vignette("parallel_grafting")`;
+
