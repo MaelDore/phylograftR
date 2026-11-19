@@ -370,6 +370,10 @@ They are listed below, in the [companion website](https://maeldore.github.io/phy
 
 - [Check the __grafting plan__ and the __grafted phylogenies__](https://maeldore.github.io/phylograftR/articles/check_grafting.html): `vignette("check_grafting")`.
 
+**5/ Data types**
+
+- [Use __biogeographic ranges__ as constraints](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html): `vignette("biogeographic_data")`.
+
 Alternatively, if you prefer to view the vignettes in R, you can install the package with `build_vignettes = TRUE`. 
 
 ```{r access_vignettes, eval = FALSE}

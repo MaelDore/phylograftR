@@ -36,7 +36,7 @@ For more advanced uses, please refer to the tutorials below.
 | Explore options to graft missing clades as sisters of clades of the backbone | [`graft_missing_clades`](https://maeldore.github.io/phylograftR/articles/graft_missing_clades.html): `vignette("graft_missing_clades")` |
 | Graft both types of missing lineages in one run | [`combine_missing_taxa_and_clades`](https://maeldore.github.io/phylograftR/articles/combine_missing_taxa_and_clades.html): `vignette("combine_missing_taxa_and_clades")` |
 | Check the grafting plan before, and the grafted phylogenies after | [`check_grafting`](https://maeldore.github.io/phylograftR/articles/check_grafting.html): `vignette("check_grafting")` |
-| Constrain grafting with biogeographic ranges | `biogeographic_data` *(in preparation)* |
+| Constrain grafting with biogeographic ranges | [`biogeographic_data`](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html): `vignette("biogeographic_data")` |
 | Constrain grafting with several traits | `multiple_traits` *(in preparation)* |
 | Constrain grafting with a continuous trait | `continuous_data` *(in preparation)* |
 | Account for uncertainty: several simulations, several maps | `handle_uncertainty` *(in preparation)* |
@@ -73,7 +73,7 @@ They provide explanations on available arguments and interpretations of results 
 
 ### **5/ Data types**
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.1/ __Biogeographic__ range data: `biogeographic_data` *(in preparation)*.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.1/ [__Biogeographic__ range data](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html): `vignette("biogeographic_data")`.
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.2/ __Multiple traits__: `multiple_traits` *(in preparation)*.
 

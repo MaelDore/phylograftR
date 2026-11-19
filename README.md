@@ -538,6 +538,12 @@ and in this vignette: `vignette("phylograftR")`.
   phylogenies**](https://maeldore.github.io/phylograftR/articles/check_grafting.html):
   `vignette("check_grafting")`.
 
+**5/ Data types**
+
+- [Use **biogeographic ranges** as
+  constraints](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html):
+  `vignette("biogeographic_data")`.
+
 Alternatively, if you prefer to view the vignettes in R, you can install
 the package with `build_vignettes = TRUE`.
 

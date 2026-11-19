@@ -41,6 +41,10 @@ navbar:
       - text: 4/ Checks
       - text: Check the grafting plan and the grafted phylogenies
         href: articles/check_grafting.html
+      - text: '-------'
+      - text: 5/ Data types
+      - text: Use biogeographic ranges as constraints
+        href: articles/biogeographic_data.html
 reference:
 - title: Graft missing lineages
   desc: |
