@@ -1,0 +1,434 @@
+---
+title: "Combine several traits as constraints"
+author: "Maël Doré"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Combine several traits as constraints}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r set_options, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.align = "center"
+)
+```
+
+```{r setup, include = FALSE}
+library(phylograftR)
+```
+
+Grafting can be constrained by **species attributes** described by **stochastic character maps** (`simmap`) of the backbone phylogeny.
+This tutorial explains how to use **several traits at once**, e.g., the color and the elevation of the species, or their biogeographic ranges and their elevation.
+The rule is simple: **a taxon can only be grafted on the parts of the branches that are in one of its allowed states for every trait**.
+The more traits you use, the narrower the **set of eligible branches** is.
+
+We cover:
+
+1. **How to provide the maps and the allowed states** of several traits.
+2. **The joint effect of the constraints**, checked with `check_grafting_plan()`.
+3. **Grafting with two categorical traits**.
+4. **Grafting with one trait treated as biogeographic ranges** and one other trait.
+5. **Several maps per trait**.
+
+**Other types of data**
+
+The principle of species attribute-based constraints is the same for all the types of data.
+For examples addressing different data types, please refer to:
+
+- **categorical traits** (single trait): `vignette("main_workflow")`, and the examples of `vignette("graft_missing_taxa")`, `vignette("graft_missing_clades")` and `vignette("combine_missing_taxa_and_clades")`;
+- **biogeographic ranges** (multi-area states, `treat_states_as_ranges`): `vignette("biogeographic_data")`;
+- **continuous traits**: `vignette("continuous_data")`;
+- **several stochastic maps** to account for the uncertainty in the evolutionary history: `vignette("handle_uncertainty")`.
+
+To build stochastic maps from your own data, see `vignette("prepare_trait_data")`.
+
+## 0/ Data
+
+We use the toy backbone, and the toy stochastic maps of two **categorical traits**: a **color** with three states (`"blue"`, `"green"`, `"red"`) and an **elevation** with two states (`"low"`, `"high"`).
+Both maps have the **same tips, topology and branch lengths** as the backbone, as required.
+
+```{r data, fig.width = 10, fig.height = 5, out.width = "100%"}
+# ------ Toy data ------ #
+
+data(toy_backbone)
+data(toy_simmap)
+data(toy_simmap_elevation)
+data(toy_missing_taxa_list_with_two_traits)
+
+# Group the maps of the traits in a named list: the names are the names of the traits
+maps_color_elevation <- list(color = toy_simmap, elevation = toy_simmap_elevation)
+
+color_colors <- c(blue = "blue", green = "green3", red = "red")
+elevation_colors <- c(low = "steelblue", high = "darkorange")
+
+# Plot the two maps side by side
+par(mfrow = c(1, 2), mar = c(0.5, 0.5, 2, 0.5))
+phytools::plotSimmap(toy_simmap, colors = color_colors, fsize = 0.55, ftype = "i", lwd = 2)
+title("A: Color", cex.main = 1)
+phytools::plotSimmap(toy_simmap_elevation, colors = elevation_colors, fsize = 0.55, ftype = "i", lwd = 2)
+title("B: Elevation", cex.main = 1)
+par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
+```
+
+The maps are provided to the grafting functions in a **list with one map per trait**: `simmap = list(color = toy_simmap, elevation = toy_simmap_elevation)`.
+Naming the elements is optional (the traits are otherwise called `"trait_1"`, `"trait_2"`, ...), but it makes the allowed states and the outputs easier to read.
+Names cannot contain `;`, `,`, `=` or `|`.
+
+## 1/ Allowed states of several traits
+
+The allowed states are set **for each trait**, at two levels, as with a single trait (see `vignette("graft_missing_taxa")`):
+
+- **for all the taxa**, with the **global** argument `allowed_states`, here a **list with one element per trait**, in the order of the maps: `list(c("blue", "green"), NULL)` restricts the color to blue or green and leaves the elevation unrestricted.
+- **for each taxon**, with the item `allowed_states` of the `missing_taxa_list`: it has the same structure, and its values **replace** the global ones, **trait by trait**.
+
+A trait with `NULL` (or an empty vector, or `NA`) has **no taxon-level value**, so the global value of the trait is used. If there is no global value either, **all the states of the trait are allowed**.
+
+We print the taxon-level values of the 7 missing taxa of the toy list, for each trait:
+
+```{r list}
+# ------ Allowed states of two traits for each taxon ------ #
+
+taxa_two_traits <- toy_missing_taxa_list_with_two_traits
+
+# Helper: extract the taxon-level allowed states of one trait
+# Elements of the list are either named after the traits, or in the order of the maps
+get_allowed <- function(taxa, trait_name, trait_index)
+{
+  vapply(taxa$allowed_states, function(x)
+  {
+    values <- if (is.null(names(x))) x[trait_index][[1]] else x[[trait_name]]
+    if (is.null(values)) "NULL (global value)" else paste(values, collapse = ", ")
+  }, character(1))
+}
+
+data.frame(Taxon_name = taxa_two_traits$Taxon_name,
+           Color = get_allowed(taxa_two_traits, "color", 1),
+           Elevation = get_allowed(taxa_two_traits, "elevation", 2),
+           row.names = NULL)
+```
+
+In a `.csv` or `.xlsx` table imported with `import_missing_taxa_list()` (see `vignette("format_inputs")`), the `allowed_states` column uses a compact syntax:
+
+- **the states of the traits are separated by semicolons**, in the order of the maps (the color, then the elevation);
+- **the states of a trait are separated by commas**.
+
+We print the `allowed_states` column of the table used to build the toy list:
+
+```{r csv}
+# The initial table of the toy list
+csv_file <- system.file("extdata", "toy_missing_taxa_with_two_traits.csv", package = "phylograftR")
+csv_table <- read.csv(csv_file)
+csv_table[, c("Taxon_name", "allowed_states")]
+```
+
+The syntaxes illustrated by the toy table are:
+
+| In the table | Meaning |
+|:--|:-----|
+| `red;` | color `"red"`, no taxon-level value for the elevation (global value used) |
+| `blue, green;high` | color `"blue"` or `"green"`, and elevation `"high"` |
+| `;low` | no taxon-level value for the color, elevation `"low"` |
+| `elevation=high` | traits **named**, so the color can be omitted (no taxon-level value) |
+| blank | no taxon-level value for any trait: the global `allowed_states` is used for both |
+
+The **names of the traits** must match the names of the maps in `simmap` to use the syntax with names.
+
+## 2/ Joint effect of the constraints
+
+`check_grafting_plan()` reports, for each taxon, the **share of the branches of its target clade** that are available given **all its constraints** (`valid_fraction`).
+To see the **joint effect** of the two traits, we compare the plan with the constraints on the color only, on the elevation only, and on both.
+
+```{r joint_plan}
+# ------ Valid fraction with the color only, the elevation only, and both ------ #
+
+# Helper: keep the taxon-level allowed states of one trait only
+keep_trait <- function(taxa, trait, traits = c("color", "elevation"))
+{
+  taxa$allowed_states <- lapply(taxa$allowed_states, function(x)
+  {
+    if (is.null(x)) return(NULL)
+    out <- setNames(vector("list", length(traits)), traits)
+    for (i in seq_along(x))
+    {
+      name <- if (is.null(names(x))) traits[i] else names(x)[i]
+      out[name] <- list(x[[i]])
+    }
+    out[setdiff(traits, trait)] <- list(NULL)
+    if (all(vapply(out, is.null, logical(1)))) NULL else out
+  })
+  taxa
+}
+
+# Helper: valid fraction of the plan
+plan_fraction <- function(taxa, global_allowed_states)
+{
+  check_grafting_plan(phy = toy_backbone, missing_taxa_list = taxa, simmap = maps_color_elevation,
+                      allowed_states = global_allowed_states, verbose = FALSE)$valid_fraction
+}
+
+# Global allowed states: blue or green for the color, no restriction for the elevation
+global_states <- list(c("blue", "green"), NULL)
+
+valid_fractions <- data.frame(Taxon_name = taxa_two_traits$Taxon_name,
+  Color_only = plan_fraction(keep_trait(taxa_two_traits, "color"), global_states),
+  Elevation_only = plan_fraction(keep_trait(taxa_two_traits, "elevation"), list(NULL, NULL)),
+  Both = plan_fraction(taxa_two_traits, global_states))
+valid_fractions[, -1] <- round(valid_fractions[, -1], 2)
+valid_fractions
+```
+
+For most taxa, one of the traits is the **limiting constraint**: the fraction with both traits is the one of the most restrictive trait.
+`New_sp4` is the case where **both traits matter**: it is allowed in blue or green **and** in high elevation, so its valid fraction is lower than with either trait alone.
+We map the branch pieces of its target clade (`Family_B`, tips `t8` and `t22`) that are allowed by the color, by the elevation, and by both:
+
+```{r joint_figure, fig.width = 10, fig.height = 4.5, out.width = "100%"}
+# ------ Eligible branches of New_sp4 ------ #
+
+# Helper: build a simmap showing which pieces of the branches of a clade are allowed by a rule on the states of the two traits
+allowed_map <- function(rule, clade_tips)
+{
+  node <- ape::getMRCA(toy_backbone, clade_tips)
+  in_clade <- c(node, phytools::getDescendants(toy_backbone, node))
+  map <- maps_color_elevation$color
+  map$maps <- lapply(seq_len(nrow(toy_backbone$edge)), function(i)
+  {
+    pieces_color <- maps_color_elevation$color$maps[[i]]
+    pieces_elevation <- maps_color_elevation$elevation$maps[[i]]
+    # Cut the branch where one of the two traits changes
+    ends_color <- cumsum(pieces_color)
+    ends_elevation <- cumsum(pieces_elevation)
+    ends <- sort(unique(round(c(ends_color, ends_elevation), 8)))
+    middles <- (c(0, ends[-length(ends)]) + ends) / 2
+    state_color <- names(pieces_color)[sapply(middles, function(x) which(x <= ends_color + 1e-8)[1])]
+    state_elevation <- names(pieces_elevation)[sapply(middles, function(x) which(x <= ends_elevation + 1e-8)[1])]
+    if (toy_backbone$edge[i, 2] %in% in_clade) {
+      label <- ifelse(rule(state_color, state_elevation), "allowed", "not allowed")
+    } else {
+      label <- rep("outside", length(ends))
+    }
+    runs <- rle(label)
+    durations <- tapply(diff(c(0, ends)), rep(seq_along(runs$lengths), runs$lengths), sum)
+    setNames(as.numeric(durations), runs$values)
+  })
+  states <- c("allowed", "not allowed", "outside")
+  map$mapped.edge <- t(sapply(map$maps, function(x) sapply(states, function(s) sum(x[names(x) == s]))))
+  colnames(map$mapped.edge) <- states
+  map
+}
+
+# Rules on the states of the color and of the elevation of New_sp4
+rules <- list("A: Color in blue or green" = function(color, elevation) color %in% c("blue", "green"),
+              "B: Elevation high" = function(color, elevation) elevation == "high",
+              "C: Both" = function(color, elevation) color %in% c("blue", "green") & elevation == "high")
+allowed_colors <- c(allowed = "forestgreen", "not allowed" = "orange", outside = "grey80")
+
+par(mfrow = c(1, 3), mar = c(0.5, 0.5, 2, 0.5))
+for (panel in names(rules))
+{
+  phytools::plotSimmap(allowed_map(rules[[panel]], clade_tips = c("t8", "t22")), colors = allowed_colors,
+                       fsize = 0.5, ftype = "i", lwd = 2, mar = c(0.5, 0.5, 2, 0.5))
+  title(panel, cex.main = 1)
+}
+legend("bottomleft", legend = names(allowed_colors), fill = allowed_colors, title = "Branch pieces", bty = "n", cex = 0.8)
+par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
+```
+
+With both traits, **only the branch pieces that are allowed by every trait remain**: the portion shared by panels A and B.
+The more traits are combined, the more **likely a taxon has no eligible branch**: `check_grafting_plan()` reports it before grafting (`feasible = FALSE`, see `vignette("check_grafting")`).
+
+## 3/ Graft with two categorical traits
+
+We graft the 7 taxa with the global `allowed_states = list(c("blue", "green"), NULL)`:
+
+```{r graft_two_traits}
+# ------ Graft with two categorical traits ------ #
+
+grafted_two_traits <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_two_traits,
+                                         simmap = maps_color_elevation,
+                                         allowed_states = list(c("blue", "green"), NULL),
+                                         verbose = FALSE, seed = 22)
+
+# The output has one updated simmap per trait, named after the traits
+names(grafted_two_traits$simmap)
+```
+
+In each updated simmap, the grafted branches are **entirely in the state of each trait at the point where they were grafted**: each trait is **inherited from the lineage** the taxon was grafted on.
+We plot the two updated maps, with the grafted tips marked with a point in the color of their state:
+
+```{r plot_two_traits, fig.width = 10, fig.height = 5.5, out.width = "100%"}
+# ------ Compare the updated maps of the two traits ------ #
+
+# Helper: plot the updated simmap of one trait of a grafted phylogeny
+plot_trait <- function(phy_grafted, trait, colors, main)
+{
+  plot_grafted(phy_grafted, which = "edges", trait = trait, simmap_colors = colors, fsize = 0.55, main = main)
+  grafted_tips <- which(phy_grafted$grafted_tips)
+  tip_states <- phytools::getStates(phy_grafted$simmap[[trait]], type = "tips")[phy_grafted$tip.label[grafted_tips]]
+  ape::tiplabels(tip = grafted_tips, pch = 19, cex = 1.5, col = colors[tip_states])
+}
+
+par(mfrow = c(1, 2), mar = c(0.5, 0.5, 2, 0.5))
+plot_trait(grafted_two_traits, trait = "color", colors = color_colors, main = "A: Color")
+plot_trait(grafted_two_traits, trait = "elevation", colors = elevation_colors, main = "B: Elevation")
+par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
+```
+
+We summarize the state inherited by each taxon for each trait, next to its allowed states, with `extract_grafting_info()`:
+
+```{r info_two_traits}
+# ------ States of the grafted taxa ------ #
+
+info_two_traits <- extract_grafting_info(grafted_two_traits, missing_taxa_list = taxa_two_traits)
+
+# Helper: allowed states of a trait for each taxon, taxon-level value or else global value
+allowed_of_trait <- function(taxa, trait_name, trait_index, global)
+{
+  values <- get_allowed(taxa, trait_name, trait_index)
+  ifelse(values == "NULL (global value)", if (is.null(global)) "all" else paste(global, collapse = ", "), values)
+}
+
+data.frame(Taxon_name = info_two_traits$Taxon_name,
+           Allowed_color = allowed_of_trait(taxa_two_traits, "color", 1, c("blue", "green")),
+           Color = info_two_traits$tip_state_color,
+           Allowed_elevation = allowed_of_trait(taxa_two_traits, "elevation", 2, NULL),
+           Elevation = info_two_traits$tip_state_elevation,
+           row.names = NULL)
+```
+
+Each taxon has **a state in its allowed states for each trait**. The a posteriori check of `check_grafting_constraints()` reports it **for each trait** (`states_ok_color`, `states_ok_elevation`) and **overall** (`states_ok`):
+
+```{r check_two_traits}
+# ------ A posteriori check ------ #
+
+constraints_two_traits <- check_grafting_constraints(phy_grafted = grafted_two_traits, phy_backbone = toy_backbone,
+                                                     missing_taxa_list = taxa_two_traits,
+                                                     allowed_states = list(c("blue", "green"), NULL),
+                                                     use_excluded_subclades = FALSE, verbose = FALSE)
+constraints_two_traits[, c("Taxon_name", "states_ok_color", "states_ok_elevation", "states_ok")]
+```
+
+## 4/ Graft with one trait treated as ranges
+
+**One of the traits can be treated as biogeographic ranges** (see `vignette("biogeographic_data")`), and combined with any number of other traits.
+We combine the toy biogeographic ranges (`"A"`, `"B"`, `"AB"`, `"BC"`) and the elevation:
+
+```{r data_ranges}
+# ------ Toy data: ranges and elevation ------ #
+
+data(toy_simmap_ranges)
+data(toy_missing_taxa_list_with_ranges_and_elevation)
+
+taxa_ranges_elevation <- toy_missing_taxa_list_with_ranges_and_elevation
+maps_ranges_elevation <- list(biogeo = toy_simmap_ranges, elevation = toy_simmap_elevation)
+
+# Taxon-level allowed states of the two traits
+data.frame(Taxon_name = taxa_ranges_elevation$Taxon_name,
+           Ranges = get_allowed(taxa_ranges_elevation, "biogeo", 1),
+           Elevation = get_allowed(taxa_ranges_elevation, "elevation", 2),
+           row.names = NULL)
+```
+
+The argument `treat_states_as_ranges` is a **logical vector with one value per trait**, with **at most one `TRUE`**: the **range trait**.
+It is either **positional** (`c(TRUE, FALSE)`: the first trait is the range trait) or **named** after the traits, in any order (`c(biogeo = TRUE, elevation = FALSE)`).
+
+- The **range trait** follows the logic of range matching: a taxon allowed in `"A"` can be grafted on branch pieces in `"A"`, `"AB"` or `"ABC"`, and inherits the allowed range.
+- The **other traits are matched exactly**, and are **inherited as they are** at the point where the taxon is grafted.
+
+Only one trait can be treated as ranges, to prevent an inflation of the number of combined states to consider. A single `TRUE`, or several, are refused with an explicit message:
+
+```{r ranges_errors}
+# ------ Only one range trait is allowed ------ #
+
+# Two traits treated as ranges
+tryCatch(
+  graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_ranges_elevation,
+                     simmap = maps_ranges_elevation, allowed_states = list(c("A", "B"), NULL),
+                     treat_states_as_ranges = c(TRUE, TRUE), verbose = FALSE, seed = 1),
+  error = function(e) cat(conditionMessage(e)))
+
+# A single TRUE is ambiguous with several traits
+tryCatch(
+  graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_ranges_elevation,
+                     simmap = maps_ranges_elevation, allowed_states = list(c("A", "B"), NULL),
+                     treat_states_as_ranges = TRUE, verbose = FALSE, seed = 1),
+  error = function(e) cat(conditionMessage(e)))
+```
+
+We graft the taxa, with the global ranges `"A"` or `"B"`, and no restriction on the elevation:
+
+```{r graft_ranges_elevation}
+# ------ Graft with ranges and elevation ------ #
+
+grafted_ranges_elevation <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_ranges_elevation,
+                                               simmap = maps_ranges_elevation,
+                                               allowed_states = list(c("A", "B"), NULL),
+                                               treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE),
+                                               verbose = FALSE, seed = 9)
+```
+
+```{r plot_ranges_elevation, fig.width = 10, fig.height = 5.5, out.width = "100%"}
+# ------ Compare the updated maps of the two traits ------ #
+
+range_colors <- c(A = "gold", B = "dodgerblue", AB = "limegreen", BC = "firebrick2")
+
+par(mfrow = c(1, 2), mar = c(0.5, 0.5, 2, 0.5))
+plot_trait(grafted_ranges_elevation, trait = "biogeo", colors = range_colors, main = "A: Ranges")
+plot_trait(grafted_ranges_elevation, trait = "elevation", colors = elevation_colors, main = "B: Elevation")
+par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
+```
+
+We summarize, for each taxon, the state of each trait at the point where it was grafted (`parent_state_*`) and the state it inherited (`tip_state_*`):
+
+```{r info_ranges_elevation}
+# ------ States at grafting and inherited states ------ #
+
+info_ranges_elevation <- extract_grafting_info(grafted_ranges_elevation, missing_taxa_list = taxa_ranges_elevation)
+info_ranges_elevation[, c("Taxon_name", "parent_state_biogeo", "tip_state_biogeo",
+                          "parent_state_elevation", "tip_state_elevation")]
+```
+
+The **elevation is always inherited as it is**, whereas the **range can be smaller than the range of the branch** (subset sympatry, e.g., `(AB) -> (AB), (A)`).
+The a posteriori check also verifies, for the range trait, that **the inherited range is contained in the range of the branch** (`ranges_ok`):
+
+```{r check_ranges_elevation}
+# ------ A posteriori check ------ #
+
+constraints_ranges_elevation <- check_grafting_constraints(phy_grafted = grafted_ranges_elevation, phy_backbone = toy_backbone,
+                                                           missing_taxa_list = taxa_ranges_elevation,
+                                                           allowed_states = list(c("A", "B"), NULL),
+                                                           treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE),
+                                                           use_excluded_subclades = FALSE, verbose = FALSE)
+constraints_ranges_elevation[, c("Taxon_name", "states_ok_biogeo", "states_ok_elevation", "ranges_ok", "ok")]
+```
+
+## 5/ Several maps per trait
+
+Each trait can be described by **several stochastic maps** (a `"multiSimmap"`), to account for the **uncertainty** in its evolutionary history (see `vignette("handle_uncertainty")`).
+The maps of the traits are **paired**: the grafting is run with the map 1 of every trait, then with the map 2 of every trait, and so on.
+**All the traits must therefore have the same number of maps.**
+
+```{r multisimmap, eval = FALSE}
+# ------ Not run: paired maps of two traits ------ #
+
+# multi_color and multi_elevation: "multiSimmap" objects with the same number of maps (here 10)
+grafted_paired <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_two_traits,
+                                     simmap = list(color = multi_color, elevation = multi_elevation),
+                                     allowed_states = list(c("blue", "green"), NULL),
+                                     nb_simulations = 5, seed = 1)
+# The output is a list with one element per pair of maps, each with 5 grafted phylogenies
+```
+
+Note that pairing the map 1 of a trait with the map 1 of the others is a **choice of the analysis**: the maps of two traits are usually built independently, so any pairing is arbitrary and does not represent a correlated evolution of the traits.
+
+## Next steps
+
+Now that you know how to use **several traits** as constraints, you may be interested in:
+
+- using **biogeographic ranges**: `vignette("biogeographic_data")`;
+- using **continuous traits**: `vignette("continuous_data")`;
+- handling **uncertainty** with several simulations and stochastic maps: `vignette("handle_uncertainty")`;
+- **checking** the grafting plan and the grafted phylogenies: `vignette("check_grafting")`.

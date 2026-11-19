@@ -45,6 +45,8 @@ navbar:
       - text: 5/ Data types
       - text: Use biogeographic ranges as constraints
         href: articles/biogeographic_data.html
+      - text: Combine several traits as constraints
+        href: articles/multiple_traits.html
 reference:
 - title: Graft missing lineages
   desc: |

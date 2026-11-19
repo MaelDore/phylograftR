@@ -373,6 +373,7 @@ They are listed below, in the [companion website](https://maeldore.github.io/phy
 **5/ Data types**
 
 - [Use __biogeographic ranges__ as constraints](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html): `vignette("biogeographic_data")`.
+- [Combine __several traits__ as constraints](https://maeldore.github.io/phylograftR/articles/multiple_traits.html): `vignette("multiple_traits")`.
 
 Alternatively, if you prefer to view the vignettes in R, you can install the package with `build_vignettes = TRUE`. 
 

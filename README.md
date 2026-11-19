@@ -371,27 +371,20 @@ head(toy_backbone_taxonomic_table)
 # The missing taxa are described in a second table, with one row per taxon.
 data(toy_missing_taxa_taxonomic_table)
 head(toy_missing_taxa_taxonomic_table)
-#>          Taxa Type   Family Subfamily    Tribe   Genus Target_clade
-#> 1 Genus_a_sp1 taxa Family_A      <NA>     <NA> Genus_a       Family
-#> 2 Genus_a_sp2 taxa Family_A      <NA>     <NA> Genus_a       Family
-#> 3 Genus_a_sp3 taxa Family_A      <NA>     <NA> Genus_a       Family
-#> 4 Genus_b_sp1 taxa Family_B      <NA>     <NA> Genus_b     Family_B
-#> 5 Genus_b_sp2 taxa Family_B Subfam_B1     <NA> Genus_b    Subfamily
-#> 6 Genus_c_sp1 taxa Family_B Subfam_B2 Tribe_B2 Genus_c        Gen_2
-#>   Sister_clade  Excluded_subclades include_target_clade_stem
-#> 1         <NA> Subfam_A1;Tribe_A2a                      TRUE
-#> 2         <NA>     Tribe_A2a;Gen_3                      TRUE
-#> 3         <NA>                <NA>                     FALSE
-#> 4         <NA>                <NA>                        NA
-#> 5         <NA>               Gen_1                      TRUE
-#> 6         <NA>                <NA>                        NA
-#>   exclude_subclades_stem
-#> 1             TRUE;FALSE
-#> 2             FALSE;TRUE
-#> 3                   <NA>
-#> 4                   <NA>
-#> 5                   <NA>
-#> 6                   <NA>
+#>      Taxa Type   Family Subfamily    Tribe Genus Target_clade Sister_clade
+#> 1 New_sp1 taxa Family_A      <NA>     <NA>  <NA>       Family         <NA>
+#> 2 New_sp2 taxa Family_A      <NA>     <NA>  <NA>       Family         <NA>
+#> 3 New_sp3 taxa Family_A      <NA>     <NA>  <NA>       Family         <NA>
+#> 4 New_sp4 taxa Family_B      <NA>     <NA>  <NA>     Family_B         <NA>
+#> 5 New_sp5 taxa Family_B Subfam_B1     <NA>  <NA>    Subfamily         <NA>
+#> 6 New_sp6 taxa Family_B Subfam_B2 Tribe_B2  <NA>        Gen_2         <NA>
+#>    Excluded_subclades include_target_clade_stem exclude_subclades_stem
+#> 1 Subfam_A1;Tribe_A2a                      TRUE             TRUE;FALSE
+#> 2     Tribe_A2a;Gen_3                      TRUE             FALSE;TRUE
+#> 3                <NA>                     FALSE                   <NA>
+#> 4                <NA>                        NA                   <NA>
+#> 5               Gen_1                      TRUE                   <NA>
+#> 6                <NA>                        NA                   <NA>
 
 # `Type` states how the taxon is grafted: within a target clade (`"taxa"`), or as the sister of a clade (`"clades"`).
 # For the example, keep only the missing taxa to graft within a target clade (`"taxa"`)
@@ -413,13 +406,13 @@ toy_missing_taxa_taxonomic_table$allowed_states <- c("red", NA, NA, "blue, green
 
 | Taxa | Type | Family | Subfamily | Tribe | Genus | Target_clade | Sister_clade | Excluded_subclades | include_target_clade_stem | exclude_subclades_stem | allowed_states |
 |:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|
-| Genus_a_sp1 | taxa | Family_A | NA | NA | Genus_a | Family | NA | Subfam_A1;Tribe_A2a | TRUE | TRUE;FALSE | red |
-| Genus_a_sp2 | taxa | Family_A | NA | NA | Genus_a | Family | NA | Tribe_A2a;Gen_3 | TRUE | FALSE;TRUE | NA |
-| Genus_a_sp3 | taxa | Family_A | NA | NA | Genus_a | Family | NA | NA | FALSE | NA | NA |
-| Genus_b_sp1 | taxa | Family_B | NA | NA | Genus_b | Family_B | NA | NA | NA | NA | blue, green |
-| Genus_b_sp2 | taxa | Family_B | Subfam_B1 | NA | Genus_b | Subfamily | NA | Gen_1 | TRUE | NA | green |
-| Genus_c_sp1 | taxa | Family_B | Subfam_B2 | Tribe_B2 | Genus_c | Gen_2 | NA | NA | NA | NA | NA |
-| Genus_c_sp2 | taxa | Family_B | Subfam_B2 | Tribe_B2 | Genus_c | Tribe | NA | NA | FALSE | NA | blue, red |
+| New_sp1 | taxa | Family_A | NA | NA | NA | Family | NA | Subfam_A1;Tribe_A2a | TRUE | TRUE;FALSE | red |
+| New_sp2 | taxa | Family_A | NA | NA | NA | Family | NA | Tribe_A2a;Gen_3 | TRUE | FALSE;TRUE | NA |
+| New_sp3 | taxa | Family_A | NA | NA | NA | Family | NA | NA | FALSE | NA | NA |
+| New_sp4 | taxa | Family_B | NA | NA | NA | Family_B | NA | NA | NA | NA | blue, green |
+| New_sp5 | taxa | Family_B | Subfam_B1 | NA | NA | Subfamily | NA | Gen_1 | TRUE | NA | green |
+| New_sp6 | taxa | Family_B | Subfam_B2 | Tribe_B2 | NA | Gen_2 | NA | NA | NA | NA | NA |
+| New_sp7 | taxa | Family_B | Subfam_B2 | Tribe_B2 | NA | Tribe | NA | NA | FALSE | NA | blue, red |
 
 ``` r
 ## Build the list of missing taxa from the taxonomic tables
@@ -543,6 +536,9 @@ and in this vignette: `vignette("phylograftR")`.
 - [Use **biogeographic ranges** as
   constraints](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html):
   `vignette("biogeographic_data")`.
+- [Combine **several traits** as
+  constraints](https://maeldore.github.io/phylograftR/articles/multiple_traits.html):
+  `vignette("multiple_traits")`.
 
 Alternatively, if you prefer to view the vignettes in R, you can install
 the package with `build_vignettes = TRUE`.
