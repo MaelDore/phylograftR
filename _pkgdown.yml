@@ -37,6 +37,10 @@ navbar:
         href: articles/graft_missing_clades.html
       - text: Graft both missing taxa and missing clades in one run
         href: articles/combine_missing_taxa_and_clades.html
+      - text: '-------'
+      - text: 4/ Checks
+      - text: Check the grafting plan and the grafted phylogenies
+        href: articles/check_grafting.html
 reference:
 - title: Graft missing lineages
   desc: |

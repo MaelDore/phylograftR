@@ -532,6 +532,12 @@ and in this vignette: `vignette("phylograftR")`.
   run](https://maeldore.github.io/phylograftR/articles/combine_missing_taxa_and_clades.html):
   `vignette("combine_missing_taxa_and_clades")`.
 
+**4/ Checks**
+
+- [Check the **grafting plan** and the **grafted
+  phylogenies**](https://maeldore.github.io/phylograftR/articles/check_grafting.html):
+  `vignette("check_grafting")`.
+
 Alternatively, if you prefer to view the vignettes in R, you can install
 the package with `build_vignettes = TRUE`.
 
