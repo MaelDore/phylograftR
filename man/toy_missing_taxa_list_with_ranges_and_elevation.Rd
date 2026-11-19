@@ -8,8 +8,8 @@
 A named list with the same 7 taxa and items as \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}, and the extra item:
 \itemize{
 \item \verb{$allowed_states} List (one element per taxon, named after the taxa) of lists with the states of each trait (one element per trait, \code{NULL} for a trait without taxon-level value),
-or \code{NULL} to use the global \code{allowed_states} argument for all the traits. \code{"Genus_a_sp1"}: \code{list("A", "high")}; \code{"Genus_b_sp1"}: \code{list(c("B", "BC"), NULL)};
-\code{"Genus_b_sp2"}: \code{list(elevation = "low")}; \code{"Genus_c_sp2"}: \code{list(biogeo = c("A", "BC"), elevation = "high")}; the others: \code{NULL}.
+or \code{NULL} to use the global \code{allowed_states} argument for all the traits. \code{"New_sp1"}: \code{list("A", "high")}; \code{"New_sp4"}: \code{list(c("B", "BC"), NULL)};
+\code{"New_sp5"}: \code{list(elevation = "low")}; \code{"New_sp7"}: \code{list(biogeo = c("A", "BC"), elevation = "high")}; the others: \code{NULL}.
 }
 }
 \usage{

@@ -677,7 +677,7 @@ plot_grafted(grafted_phy_states, use_simmap = FALSE, cex = 0.7)
 plot_grafted(grafted_phy_states, fsize = 0.5, ftype = "i",
              simmap_colors = c("blue" = "dodgerblue", "green" = "limegreen", "red" = "firebrick"))
 
-# States of the grafted taxa: "Genus_a_sp1" and "Genus_c_sp2" can be "red"
+# States of the grafted taxa: "New_sp1" and "New_sp7" can be "red"
 # thanks to their taxon-level states, but the taxa using the global states cannot.
 all_states <- phytools::getStates(grafted_phy_states$simmap, type = "tips")
 all_states[toy_missing_taxa_list_with_allowed_states$Taxon_name]

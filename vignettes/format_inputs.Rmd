@@ -195,7 +195,7 @@ names(missing_taxa_lists)
 str(missing_taxa_lists$taxa, max.level = 1)
 
 # Clades are written as pairs of tips, and named after their taxonomic groups
-missing_taxa_lists$taxa$Target_clade$Genus_a_sp1
+missing_taxa_lists$taxa$Target_clade$New_sp1
 missing_taxa_lists$taxa$Target_clade_name
 
 # Taxa to graft as a clade have the same sister clade: they will be grafted together
@@ -285,9 +285,9 @@ missing_taxa_list <- import_missing_taxa_list(file = file_path, phy = toy_backbo
 str(missing_taxa_list, max.level = 1)
 
 # Example of the clades of one taxon
-missing_taxa_list$Target_clade$Genus_a_sp1
-missing_taxa_list$Excluded_subclades$Genus_a_sp1
-missing_taxa_list$exclude_subclades_stem$Genus_a_sp1
+missing_taxa_list$Target_clade$New_sp1
+missing_taxa_list$Excluded_subclades$New_sp1
+missing_taxa_list$exclude_subclades_stem$New_sp1
 
 # The result is the same as reading the file and building the list from the data.frame
 identical(missing_taxa_list, build_missing_taxa_list(data = read.csv(file_path), phy = toy_backbone))
@@ -403,15 +403,15 @@ The rules to keep in mind are:
 # Start from the list of taxa built from the taxonomy (Section 3)
 taxa_list <- missing_taxa_lists$taxa
 
-# Allow Genus_a_sp3 to be grafted on the stem branch of its target clade
-taxa_list$include_target_clade_stem[["Genus_a_sp3"]] <- TRUE
+# Allow New_sp3 to be grafted on the stem branch of its target clade
+taxa_list$include_target_clade_stem[["New_sp3"]] <- TRUE
 
-# Add an excluded subclade (and exclude its stem) for Genus_b_sp1
-taxa_list$Excluded_subclades[["Genus_b_sp1"]] <- list(Gen_1 = c("t13", "t27"))
-taxa_list$exclude_subclades_stem[["Genus_b_sp1"]] <- c(Gen_1 = TRUE)
+# Add an excluded subclade (and exclude its stem) for New_sp4
+taxa_list$Excluded_subclades[["New_sp4"]] <- list(Gen_1 = c("t13", "t27"))
+taxa_list$exclude_subclades_stem[["New_sp4"]] <- c(Gen_1 = TRUE)
 
 # Remove a taxon: subset all the items with the same selection
-keep <- taxa_list$Taxon_name != "Genus_c_sp2"
+keep <- taxa_list$Taxon_name != "New_sp7"
 taxa_list <- lapply(taxa_list, function (item) item[keep])
 
 # ------ Step 2: Check the edited list ------ #

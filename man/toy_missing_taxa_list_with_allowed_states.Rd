@@ -8,8 +8,8 @@
 A named list with the same 7 taxa and items as \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}, and the extra item:
 \itemize{
 \item \verb{$allowed_states} List (one element per taxon, named after the taxa) of character vectors of states of \code{\link[=toy_simmap]{phylograftR::toy_simmap}}
-in which the taxon can be grafted, or \code{NULL} to use the global \code{allowed_states} argument. \code{"Genus_a_sp1"}: \code{"red"};
-\code{"Genus_b_sp1"}: \code{"blue"} and \code{"green"}; \code{"Genus_b_sp2"}: \code{"green"}; \code{"Genus_c_sp2"}: \code{"blue"} and \code{"red"}; the others: \code{NULL}.
+in which the taxon can be grafted, or \code{NULL} to use the global \code{allowed_states} argument. \code{"New_sp1"}: \code{"red"};
+\code{"New_sp4"}: \code{"blue"} and \code{"green"}; \code{"New_sp5"}: \code{"green"}; \code{"New_sp7"}: \code{"blue"} and \code{"red"}; the others: \code{NULL}.
 }
 }
 \usage{

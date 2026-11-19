@@ -34,7 +34,7 @@ Tables to build a \code{missing_taxa_list} from taxonomic names with
 \code{toy_missing_taxa_taxonomic_table} describes 10 taxa to graft. The first seven (\strong{\code{Type = "taxa"}}) are the taxa of
 \code{\link[=toy_missing_taxa_list]{phylograftR::toy_missing_taxa_list}}, written with taxonomic names: the clades, excluded subclades and stem settings are the same.
 The last three (\strong{\code{Type = "clades"}}) are taxa to graft as sister clades with \code{\link[=graft_missing_clades]{phylograftR::graft_missing_clades()}}:
-\code{Genus_d_sp1} and \code{Genus_d_sp2} belong to a new genus sister to the genus \code{Gen_1}, so they are grafted together as a missing clade, and \code{Genus_e_sp1} is sister to its own tribe.
+\code{Genus_a_sp1} and \code{Genus_a_sp2} belong to a new genus sister to the genus \code{Gen_1}, so they are grafted together as a missing clade, and \code{Genus_b_sp1} is sister to its own tribe.
 The target and sister clades are written with the name of a group (e.g., \code{"Family_B"}) or of a level (e.g., \code{"Family"}, meaning the family of the taxon itself).
 Both tables are also provided as \code{.csv} files in \code{system.file("extdata", package = "phylograftR")}
 (\code{toy_backbone_taxonomic_table.csv} and \code{toy_missing_taxa_taxonomic_table.csv}).
