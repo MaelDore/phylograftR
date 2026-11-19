@@ -102,8 +102,8 @@
 #' @usage data(toy_missing_taxa_list_with_allowed_states)
 #' @format A named list with the same 7 taxa and items as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], and the extra item:
 #'  * `$allowed_states` List (one element per taxon, named after the taxa) of character vectors of states of [`phylograftR::toy_simmap`][toy_simmap]
-#'    in which the taxon can be grafted, or `NULL` to use the global `allowed_states` argument. `"Genus_a_sp1"`: `"red"`;
-#'    `"Genus_b_sp1"`: `"blue"` and `"green"`; `"Genus_b_sp2"`: `"green"`; `"Genus_c_sp2"`: `"blue"` and `"red"`; the others: `NULL`.
+#'    in which the taxon can be grafted, or `NULL` to use the global `allowed_states` argument. `"New_sp1"`: `"red"`;
+#'    `"New_sp4"`: `"blue"` and `"green"`; `"New_sp5"`: `"green"`; `"New_sp7"`: `"blue"` and `"red"`; the others: `NULL`.
 #'
 #' @seealso Other datasets and functions from phylograftR:
 #'  * [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list] for the list of missing taxa to graft on the backbone, without allowed states.
@@ -171,8 +171,8 @@
 #' @usage data(toy_missing_taxa_list_with_allowed_ranges)
 #' @format A named list with the same 7 taxa and items as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], and the extra item:
 #'  * `$allowed_states` List (one element per taxon, named after the taxa) of character vectors of ranges of [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges]
-#'    in which the taxon can be grafted, or `NULL` to use the global `allowed_states` argument. `"Genus_a_sp1"`: `"A"`;
-#'    `"Genus_b_sp1"`: `"B"` and `"BC"`; `"Genus_b_sp2"`: `"B"`; `"Genus_c_sp2"`: `"A"` and `"BC"`; the others: `NULL`.
+#'    in which the taxon can be grafted, or `NULL` to use the global `allowed_states` argument. `"New_sp1"`: `"A"`;
+#'    `"New_sp4"`: `"B"` and `"BC"`; `"New_sp5"`: `"B"`; `"New_sp7"`: `"A"` and `"BC"`; the others: `NULL`.
 #'
 #' @seealso Other datasets and functions from phylograftR:
 #'  * [`phylograftR::toy_missing_taxa_list_with_allowed_states`][toy_missing_taxa_list_with_allowed_states] for the same list, with allowed states of colors.
@@ -267,7 +267,7 @@
 #'   `toy_missing_taxa_taxonomic_table` describes 10 taxa to graft. The first seven (**`Type = "taxa"`**) are the taxa of
 #'   [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], written with taxonomic names: the clades, excluded subclades and stem settings are the same.
 #'   The last three (**`Type = "clades"`**) are taxa to graft as sister clades with [`phylograftR::graft_missing_clades()`][graft_missing_clades]:
-#'   `Genus_d_sp1` and `Genus_d_sp2` belong to a new genus sister to the genus `Gen_1`, so they are grafted together as a missing clade, and `Genus_e_sp1` is sister to its own tribe.
+#'   `Genus_a_sp1` and `Genus_a_sp2` belong to a new genus sister to the genus `Gen_1`, so they are grafted together as a missing clade, and `Genus_b_sp1` is sister to its own tribe.
 #'   The target and sister clades are written with the name of a group (e.g., `"Family_B"`) or of a level (e.g., `"Family"`, meaning the family of the taxon itself).
 #'   Both tables are also provided as `.csv` files in `system.file("extdata", package = "phylograftR")`
 #'   (`toy_backbone_taxonomic_table.csv` and `toy_missing_taxa_taxonomic_table.csv`).
@@ -480,8 +480,8 @@ NULL
 #' @usage data(toy_missing_taxa_list_with_two_traits)
 #' @format A named list with the same 7 taxa and items as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], and the extra item:
 #'  * `$allowed_states` List (one element per taxon, named after the taxa) of lists with the states of each trait (one element per trait, `NULL` for a trait without taxon-level value),
-#'    or `NULL` to use the global `allowed_states` argument for all the traits. `"Genus_a_sp1"`: `list("red", NULL)`; `"Genus_b_sp1"`: `list(c("blue", "green"), "high")`;
-#'    `"Genus_b_sp2"`: `list(NULL, "low")`; `"Genus_c_sp2"`: `list(elevation = "high")`; the others: `NULL`.
+#'    or `NULL` to use the global `allowed_states` argument for all the traits. `"New_sp1"`: `list("red", NULL)`; `"New_sp4"`: `list(c("blue", "green"), "high")`;
+#'    `"New_sp5"`: `list(NULL, "low")`; `"New_sp7"`: `list(elevation = "high")`; the others: `NULL`.
 #'
 #' @seealso Other datasets and functions from phylograftR:
 #'  * [`phylograftR::toy_missing_taxa_list_with_allowed_states`][toy_missing_taxa_list_with_allowed_states] for the same list, with allowed states of colors.
@@ -549,8 +549,8 @@ NULL
 #' @usage data(toy_missing_taxa_list_with_ranges_and_elevation)
 #' @format A named list with the same 7 taxa and items as [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list], and the extra item:
 #'  * `$allowed_states` List (one element per taxon, named after the taxa) of lists with the states of each trait (one element per trait, `NULL` for a trait without taxon-level value),
-#'    or `NULL` to use the global `allowed_states` argument for all the traits. `"Genus_a_sp1"`: `list("A", "high")`; `"Genus_b_sp1"`: `list(c("B", "BC"), NULL)`;
-#'    `"Genus_b_sp2"`: `list(elevation = "low")`; `"Genus_c_sp2"`: `list(biogeo = c("A", "BC"), elevation = "high")`; the others: `NULL`.
+#'    or `NULL` to use the global `allowed_states` argument for all the traits. `"New_sp1"`: `list("A", "high")`; `"New_sp4"`: `list(c("B", "BC"), NULL)`;
+#'    `"New_sp5"`: `list(elevation = "low")`; `"New_sp7"`: `list(biogeo = c("A", "BC"), elevation = "high")`; the others: `NULL`.
 #'
 #' @seealso Other datasets and functions from phylograftR:
 #'  * [`phylograftR::toy_missing_taxa_list_with_allowed_ranges`][toy_missing_taxa_list_with_allowed_ranges] for the same missing taxa list, with allowed biogeographic ranges.

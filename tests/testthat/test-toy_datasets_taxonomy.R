@@ -60,8 +60,8 @@ test_that("the toy taxonomic tables build the toy missing taxa list and a list o
 
   # The two taxa of the new genus are grafted together: same sister clade
   clades <- lists$clades
-  expect_equal(clades$Taxon_name, c("Genus_d_sp1", "Genus_d_sp2", "Genus_e_sp1"))
-  expect_equal(clades$Sister_clade$Genus_d_sp1, clades$Sister_clade$Genus_d_sp2)
+  expect_equal(clades$Taxon_name, c("Genus_a_sp1", "Genus_a_sp2", "Genus_b_sp1"))
+  expect_equal(clades$Sister_clade$Genus_a_sp1, clades$Sister_clade$Genus_a_sp2)
   expect_equal(nodes(clades$Sister_clade), c(50, 50, 40))
   expect_equal(unname(clades$Sister_clade_name), c("Gen_1", "Gen_1", "Tribe_A1b"))
 })

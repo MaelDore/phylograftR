@@ -88,7 +88,7 @@ test_that("toy_missing_taxa_list_with_allowed_ranges is the import of its .csv f
   allowed <- toy_missing_taxa_list_with_allowed_ranges$allowed_states
   expect_identical(names(allowed), toy_missing_taxa_list$Taxon_name)
   expect_identical(allowed[lengths(allowed) > 0],
-                   list(Genus_a_sp1 = "A", Genus_b_sp1 = c("B", "BC"), Genus_b_sp2 = "B", Genus_c_sp2 = c("A", "BC")))
+                   list(New_sp1 = "A", New_sp4 = c("B", "BC"), New_sp5 = "B", New_sp7 = c("A", "BC")))
   # Ranges are states of the simmap, so nothing is ignored and no warning is raised
   expect_true(all(unlist(allowed) %in% colnames(toy_simmap_ranges$mapped.edge)))
   expect_no_warning(resolve_allowed_ranges(allowed_states_taxa = allowed, allowed_states = c("A", "B"), states = colnames(toy_simmap_ranges$mapped.edge),

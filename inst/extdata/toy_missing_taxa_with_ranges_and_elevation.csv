@@ -1,8 +1,8 @@
 "Taxon_name","Target_clade","Target_clade_name","include_target_clade_stem","Excluded_subclades","Excluded_subclades_names","exclude_subclades_stem","allowed_states"
-"Genus_a_sp1","t26,t18","Family_A",TRUE,"t10,t19;t26,t4","Subfam_A1;Tribe_A2a","TRUE;FALSE","A;high"
-"Genus_a_sp2","t26,t18","Family_A",TRUE,"t26,t4;t30","Tribe_A2a;Gen_3","FALSE;TRUE",
-"Genus_a_sp3","t26,t18","Family_A",FALSE,,,,
-"Genus_b_sp1","t8,t22","Family_B",,,,,"B, BC;"
-"Genus_b_sp2","t8,t7","Subfam_B1",TRUE,"t13,t27","Gen_1",,"elevation=low"
-"Genus_c_sp1","t5","Gen_2",,,,,
-"Genus_c_sp2","t5,t12","Tribe_B2",FALSE,,,,"biogeo=A, BC; elevation=high"
+"New_sp1","t26,t18","Family_A",TRUE,"t10,t19;t26,t4","Subfam_A1;Tribe_A2a","TRUE;FALSE","A;high"
+"New_sp2","t26,t18","Family_A",TRUE,"t26,t4;t30","Tribe_A2a;Gen_3","FALSE;TRUE",
+"New_sp3","t26,t18","Family_A",FALSE,,,,
+"New_sp4","t8,t22","Family_B",,,,,"B, BC;"
+"New_sp5","t8,t7","Subfam_B1",TRUE,"t13,t27","Gen_1",,"elevation=low"
+"New_sp6","t5","Gen_2",,,,,
+"New_sp7","t5,t12","Tribe_B2",FALSE,,,,"biogeo=A, BC; elevation=high"

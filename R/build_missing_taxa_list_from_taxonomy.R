@@ -133,28 +133,28 @@
 #' toy_missing_taxa_taxonomic_table
 #'
 #' # The taxa to graft with graft_missing_taxa() (Type = "taxa") use different types of constraints:
-#' # * Genus_a_sp1: grafted in its family (Target_clade = "Family" is the family of the taxon,
+#' # * New_sp1: grafted in its family (Target_clade = "Family" is the family of the taxon,
 #' #   i.e., "Family_A"), but not in the subfamily "Subfam_A1" nor in the tribe "Tribe_A2a"
 #' #   (Excluded_subclades).
 #' #   The stem of the family is available (include_target_clade_stem),
 #' #   the stem of "Subfam_A1" is excluded too,
 #' #   but not the one of "Tribe_A2a" (exclude_subclades_stem).
-#' # * Genus_a_sp2: same target clade, but excluded subclades are a tribe
+#' # * New_sp2: same target clade, but excluded subclades are a tribe
 #' #   and a genus with a single species ("Gen_3"), and the stem is excluded for the genus only.
-#' # * Genus_a_sp3: same target clade, without excluded subclades and
+#' # * New_sp3: same target clade, without excluded subclades and
 #' #   without access to the stem of the family.
-#' # * Genus_b_sp1: grafted in the family "Family_B", written directly with the name of the group.
-#' # * Genus_b_sp2: grafted in its subfamily (Target_clade = "Subfamily", i.e., "Subfam_B1"),
+#' # * New_sp4: grafted in the family "Family_B", written directly with the name of the group.
+#' # * New_sp5: grafted in its subfamily (Target_clade = "Subfamily", i.e., "Subfam_B1"),
 #' #   except in the genus "Gen_1".
-#' # * Genus_c_sp1: grafted on the terminal branch of the only species
+#' # * New_sp6: grafted on the terminal branch of the only species
 #' #   of the genus "Gen_2" (a single tip).
-#' # * Genus_c_sp2: grafted in its tribe (Target_clade = "Tribe", i.e., "Tribe_B2"),
+#' # * New_sp7: grafted in its tribe (Target_clade = "Tribe", i.e., "Tribe_B2"),
 #' #   without access to the stem.
 #'
 #' # The taxa to graft with graft_missing_clades() (Type = "clades") use sister clades:
-#' # * Genus_d_sp1 and Genus_d_sp2: belong to a new genus, and have the same sister clade ("Gen_1"),
+#' # * Genus_a_sp1 and Genus_a_sp2: belong to a new genus, and have the same sister clade ("Gen_1"),
 #' #   so they are grafted together as a missing clade.
-#' # * Genus_e_sp1: grafted as the sister of its own tribe (Sister_clade = "Tribe", i.e., "Tribe_A1b").
+#' # * Genus_b_sp1: grafted as the sister of its own tribe (Sister_clade = "Tribe", i.e., "Tribe_A1b").
 #'
 #' ## Build the missing taxa lists associated to these taxonomic tables
 #' missing_taxa_lists <- build_missing_taxa_list_from_taxonomy(
@@ -170,8 +170,8 @@
 #'
 #' # Clades are written as pairs of tips, and named after their taxonomic groups
 #' missing_taxa_lists$taxa$Target_clade
-#' missing_taxa_lists$taxa$Excluded_subclades$Genus_a_sp1
-#' missing_taxa_lists$taxa$exclude_subclades_stem$Genus_a_sp1
+#' missing_taxa_lists$taxa$Excluded_subclades$New_sp1
+#' missing_taxa_lists$taxa$exclude_subclades_stem$New_sp1
 #' missing_taxa_lists$clades$Sister_clade
 #'
 #' # The taxa to graft as clades share their sister clade, so they will be grafted together

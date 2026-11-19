@@ -38,7 +38,7 @@ test_that("one total_richness_per_clades is returned per type of taxa, with all 
   expect_true(all(is.na(r$taxa$total_richness[5:7])))
   expect_identical(r$taxa$Target_clade_name[1:4], c("Family_A", "Family_B", "Subfam_B1", "Tribe_B2"))
   # The tips are the tips of the lists
-  expect_identical(r$taxa$Target_clade[[1]], lists$taxa$Target_clade$Genus_a_sp1)
+  expect_identical(r$taxa$Target_clade[[1]], lists$taxa$Target_clade$New_sp1)
   expect_true(all(unlist(lapply(lists$taxa$Target_clade, function (x) any(vapply(r$taxa$Target_clade, identical, logical(1), x))))))
   expect_true(all(unlist(lapply(lists$clades$Sister_clade, function (x) any(vapply(r$clades$Sister_clade, identical, logical(1), x))))))
 })

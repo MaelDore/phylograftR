@@ -60,7 +60,7 @@ stopifnot(isTRUE(all.equal(max(ape::node.depth.edgelength(toy_backbone)), 50)),
 ##### 2/ Create table of the missing taxa as .csv #####
 
 toy_missing_taxa_table <- data.frame(
-  Taxon_name = c("Genus_a_sp1", "Genus_a_sp2", "Genus_a_sp3", "Genus_b_sp1", "Genus_b_sp2", "Genus_c_sp1", "Genus_c_sp2"),
+  Taxon_name = c("New_sp1", "New_sp2", "New_sp3", "New_sp4", "New_sp5", "New_sp6", "New_sp7"),
   Target_clade = c("t26,t18", "t26,t18", "t26,t18", "t8,t22", "t8,t7", "t5", "t5,t12"),
   Target_clade_name = c("Family_A", "Family_A", "Family_A", "Family_B", "Subfam_B1", "Gen_2", "Tribe_B2"),
   include_target_clade_stem = c(TRUE, TRUE, FALSE, NA, TRUE, NA, FALSE),
@@ -132,12 +132,12 @@ for (group in taxonomic_groups)
 # Clades are written with names of groups, or with levels (the group of the taxon itself at this level).
 # The genera of the taxa to graft are not in the backbone.
 toy_missing_taxa_taxonomic_table <- data.frame(
-  Taxa = c("Genus_a_sp1", "Genus_a_sp2", "Genus_a_sp3", "Genus_b_sp1", "Genus_b_sp2", "Genus_c_sp1", "Genus_c_sp2", "Genus_d_sp1", "Genus_d_sp2", "Genus_e_sp1"),
+  Taxa = c("New_sp1", "New_sp2", "New_sp3", "New_sp4", "New_sp5", "New_sp6", "New_sp7", "Genus_a_sp1", "Genus_a_sp2", "Genus_b_sp1"),
   Type = c(rep("taxa", 7), rep("clades", 3)),
   Family = c(rep("Family_A", 3), rep("Family_B", 6), "Family_A"),
   Subfamily = c(NA, NA, NA, NA, "Subfam_B1", "Subfam_B2", "Subfam_B2", "Subfam_B1", "Subfam_B1", "Subfam_A1"),
   Tribe = c(NA, NA, NA, NA, NA, "Tribe_B2", "Tribe_B2", NA, NA, "Tribe_A1b"),
-  Genus = c("Genus_a", "Genus_a", "Genus_a", "Genus_b", "Genus_b", "Genus_c", "Genus_c", "Genus_d", "Genus_d", "Genus_e"),
+  Genus = c(rep(NA_character_, 7), "Genus_a", "Genus_a", "Genus_b"), # No genus for the taxa grafted independently, genera of the missing clades
   Target_clade = c("Family", "Family", "Family", "Family_B", "Subfamily", "Gen_2", "Tribe", NA, NA, NA),
   Sister_clade = c(rep(NA, 7), "Gen_1", "Gen_1", "Tribe"),
   Excluded_subclades = c("Subfam_A1;Tribe_A2a", "Tribe_A2a;Gen_3", NA, NA, "Gen_1", rep(NA, 5)),
@@ -224,7 +224,7 @@ table(toy_simmap$states) # States of the tips
 # It is a separate dataset because a list with 'allowed_states' requires a 'simmap' to graft.
 # The states give 4 taxa with a taxon-level value (one or several states) and 3 taxa using the global argument. On 'toy_simmap',
 # the share of the available branch length (and of the time window of the divergence ages) in the states of each taxon is above 10%:
-#   Genus_a_sp1 "red": 57% (63%) ; Genus_b_sp1 "blue, green": 96% (100%) ; Genus_b_sp2 "green": 79% (100%) ; Genus_c_sp2 "blue, red": 100% (100%)
+#   New_sp1 "red": 57% (63%) ; New_sp4 "blue, green": 96% (100%) ; New_sp5 "green": 79% (100%) ; New_sp7 "blue, red": 100% (100%)
 # The other taxa have between 31% and 52% (37% to 100%) of their available branches in the states c("blue", "green"), used as global states in the examples.
 toy_missing_taxa_with_allowed_states_table <- toy_missing_taxa_table
 toy_missing_taxa_with_allowed_states_table$allowed_states <- c("red", NA, NA, "blue, green", "green", NA, "blue, red")
@@ -497,7 +497,7 @@ stopifnot(all(unlist(toy_missing_taxa_list_with_allowed_ranges$allowed_states) %
 # Different syntaxes are used on purpose to showcase them (positional, named, empty trait). Blank cells (NA) use the global 'allowed_states' argument (e.g., list(c("A", "B"), NULL) in the examples).
 # The allowed ranges are matched by containment ("A" is also found in "AB"), the elevation states are matched exactly.
 # The cells were chosen so that the grafting runs without error or warning with both methods ("uniform" and "BD_clades") and the global argument list(c("A", "B"), NULL):
-#   Genus_a_sp1 "A;high" ; Genus_b_sp1 "B, BC;" (any elevation) ; Genus_b_sp2 "elevation=low" (any range) ; Genus_c_sp2 "biogeo=A, BC; elevation=high"
+#   New_sp1 "A;high" ; New_sp4 "B, BC;" (any elevation) ; New_sp5 "elevation=low" (any range) ; New_sp7 "biogeo=A, BC; elevation=high"
 
 toy_missing_taxa_with_ranges_and_elevation_table <- toy_missing_taxa_table
 toy_missing_taxa_with_ranges_and_elevation_table$allowed_states <- c("A;high", NA, NA, "B, BC;", "elevation=low", NA, "biogeo=A, BC; elevation=high")

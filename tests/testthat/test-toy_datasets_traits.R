@@ -48,11 +48,11 @@ test_that("toy_missing_taxa_list_with_two_traits is the import of its .csv, the 
   expect_equal(toy_missing_taxa_list_with_two_traits[other_items], toy_missing_taxa_list[other_items])
   # The documented allowed states
   states <- toy_missing_taxa_list_with_two_traits$allowed_states
-  expect_equal(states$Genus_a_sp1, list("red", NULL))
-  expect_equal(states$Genus_b_sp1, list(c("blue", "green"), "high"))
-  expect_equal(states$Genus_b_sp2, list(NULL, "low"))
-  expect_equal(states$Genus_c_sp2, list(elevation = "high"))
-  expect_null(states$Genus_a_sp2); expect_null(states$Genus_a_sp3); expect_null(states$Genus_c_sp1)
+  expect_equal(states$New_sp1, list("red", NULL))
+  expect_equal(states$New_sp4, list(c("blue", "green"), "high"))
+  expect_equal(states$New_sp5, list(NULL, "low"))
+  expect_equal(states$New_sp7, list(elevation = "high"))
+  expect_null(states$New_sp2); expect_null(states$New_sp3); expect_null(states$New_sp6)
 })
 
 ## Test the use of the datasets together, with both methods and without warnings
@@ -71,12 +71,12 @@ for (method in c("uniform", "BD_clades"))
     taxa <- toy_missing_taxa_list_with_two_traits$Taxon_name
     color <- taxa_states_in(grafted$simmap$color, taxa)
     elevation <- taxa_states_in(grafted$simmap$elevation, taxa)
-    expect_equal(unname(color["Genus_a_sp1"]), "red")
-    expect_true(color["Genus_b_sp1"] %in% c("blue", "green") && elevation["Genus_b_sp1"] == "high")
-    expect_true(elevation["Genus_b_sp2"] == "low" && color["Genus_b_sp2"] %in% c("blue", "green"))
-    expect_equal(unname(elevation["Genus_c_sp2"]), "high")
+    expect_equal(unname(color["New_sp1"]), "red")
+    expect_true(color["New_sp4"] %in% c("blue", "green") && elevation["New_sp4"] == "high")
+    expect_true(elevation["New_sp5"] == "low" && color["New_sp5"] %in% c("blue", "green"))
+    expect_equal(unname(elevation["New_sp7"]), "high")
     # Taxa without taxon-level states: the global value for the color
-    expect_true(all(color[c("Genus_a_sp2", "Genus_a_sp3", "Genus_c_sp1")] %in% c("blue", "green")))
+    expect_true(all(color[c("New_sp2", "New_sp3", "New_sp6")] %in% c("blue", "green")))
   })
 }
 
@@ -98,11 +98,11 @@ test_that("toy_missing_taxa_list_with_ranges_and_elevation is the import of its 
   expect_equal(toy_missing_taxa_list_with_ranges_and_elevation[other_items], toy_missing_taxa_list[other_items])
   # The documented allowed states
   states <- toy_missing_taxa_list_with_ranges_and_elevation$allowed_states
-  expect_equal(states$Genus_a_sp1, list("A", "high"))
-  expect_equal(states$Genus_b_sp1, list(c("B", "BC"), NULL))
-  expect_equal(states$Genus_b_sp2, list(elevation = "low"))
-  expect_equal(states$Genus_c_sp2, list(biogeo = c("A", "BC"), elevation = "high"))
-  expect_null(states$Genus_a_sp2); expect_null(states$Genus_a_sp3); expect_null(states$Genus_c_sp1)
+  expect_equal(states$New_sp1, list("A", "high"))
+  expect_equal(states$New_sp4, list(c("B", "BC"), NULL))
+  expect_equal(states$New_sp5, list(elevation = "low"))
+  expect_equal(states$New_sp7, list(biogeo = c("A", "BC"), elevation = "high"))
+  expect_null(states$New_sp2); expect_null(states$New_sp3); expect_null(states$New_sp6)
 })
 
 ## Test the use of the datasets together, with both methods and without warnings
@@ -125,12 +125,12 @@ for (method in c("uniform", "BD_clades"))
     biogeo <- taxa_states_in(grafted$simmap$biogeo, taxa)
     elevation <- taxa_states_in(grafted$simmap$elevation, taxa)
     # Taxon-level states of the documented list
-    expect_equal(unname(biogeo["Genus_a_sp1"]), "A"); expect_equal(unname(elevation["Genus_a_sp1"]), "high")
-    expect_true(biogeo["Genus_b_sp1"] %in% c("B", "BC"))
-    expect_equal(unname(elevation["Genus_b_sp2"]), "low")
-    expect_true(biogeo["Genus_c_sp2"] %in% c("A", "BC") && elevation["Genus_c_sp2"] == "high")
+    expect_equal(unname(biogeo["New_sp1"]), "A"); expect_equal(unname(elevation["New_sp1"]), "high")
+    expect_true(biogeo["New_sp4"] %in% c("B", "BC"))
+    expect_equal(unname(elevation["New_sp5"]), "low")
+    expect_true(biogeo["New_sp7"] %in% c("A", "BC") && elevation["New_sp7"] == "high")
     # Taxa without taxon-level states: the global range ("A" or "B", possibly within a larger range of the branch)
-    expect_true(all(grepl("A|B", biogeo[c("Genus_a_sp2", "Genus_a_sp3", "Genus_c_sp1")])))
+    expect_true(all(grepl("A|B", biogeo[c("New_sp2", "New_sp3", "New_sp6")])))
     # The check of the constraints agrees, for both traits
     check <- check_grafting_constraints(grafted, toy_backbone, toy_missing_taxa_list_with_ranges_and_elevation,
                                         allowed_states = global_states, treat_states_as_ranges = ranges_flag, verbose = FALSE)

@@ -42,22 +42,22 @@ test_that("import_missing_taxa_list() transforms the .csv of the package into th
 test_that("the dataset toy_missing_taxa_list has the format required by the grafting functions",
 {
   l <- phylograftR::toy_missing_taxa_list
-  taxa <- c("Genus_a_sp1", "Genus_a_sp2", "Genus_a_sp3", "Genus_b_sp1", "Genus_b_sp2", "Genus_c_sp1", "Genus_c_sp2")
+  taxa <- c("New_sp1", "New_sp2", "New_sp3", "New_sp4", "New_sp5", "New_sp6", "New_sp7")
   expect_identical(l$Taxon_name, taxa)
   # Every item is named after the taxa
   for (item in c("Target_clade", "Target_clade_name", "include_target_clade_stem", "Excluded_subclades", "exclude_subclades_stem"))
   {
     expect_identical(names(l[[item]]), taxa, info = item)
   }
-  expect_identical(l$Target_clade$Genus_c_sp1, "t5")
-  expect_identical(l$Target_clade$Genus_b_sp2, c("t8", "t7"))
+  expect_identical(l$Target_clade$New_sp6, "t5")
+  expect_identical(l$Target_clade$New_sp5, c("t8", "t7"))
   # Nested and named excluded subclades
-  expect_identical(l$Excluded_subclades$Genus_a_sp1, list(Subfam_A1 = c("t10", "t19"), Tribe_A2a = c("t26", "t4")))
-  expect_identical(l$Excluded_subclades$Genus_a_sp2, list(Tribe_A2a = c("t26", "t4"), Gen_3 = "t30"))
-  expect_null(l$Excluded_subclades$Genus_a_sp3)
-  expect_identical(l$exclude_subclades_stem$Genus_a_sp1, c(Subfam_A1 = TRUE, Tribe_A2a = FALSE))
-  expect_identical(l$include_target_clade_stem[["Genus_a_sp3"]], FALSE)
-  expect_true(is.na(l$include_target_clade_stem[["Genus_b_sp1"]]))
+  expect_identical(l$Excluded_subclades$New_sp1, list(Subfam_A1 = c("t10", "t19"), Tribe_A2a = c("t26", "t4")))
+  expect_identical(l$Excluded_subclades$New_sp2, list(Tribe_A2a = c("t26", "t4"), Gen_3 = "t30"))
+  expect_null(l$Excluded_subclades$New_sp3)
+  expect_identical(l$exclude_subclades_stem$New_sp1, c(Subfam_A1 = TRUE, Tribe_A2a = FALSE))
+  expect_identical(l$include_target_clade_stem[["New_sp3"]], FALSE)
+  expect_true(is.na(l$include_target_clade_stem[["New_sp4"]]))
   expect_silent(phylograftR:::validate_missing_taxa_list(l, clade_item = "Target_clade"))
 })
 
@@ -117,13 +117,13 @@ test_that("import_missing_taxa_list() transforms the .csv with allowed states in
   expect_identical(l[names(phylograftR::toy_missing_taxa_list)], phylograftR::toy_missing_taxa_list)
   expect_identical(names(l), c(names(phylograftR::toy_missing_taxa_list), "allowed_states"))
   expect_identical(names(l$allowed_states), l$Taxon_name)
-  expect_identical(l$allowed_states$Genus_a_sp1, "red")
-  expect_identical(l$allowed_states$Genus_b_sp1, c("blue", "green"))
-  expect_identical(l$allowed_states$Genus_b_sp2, "green")
-  expect_identical(l$allowed_states$Genus_c_sp2, c("blue", "red"))
-  expect_null(l$allowed_states$Genus_a_sp2)
-  expect_null(l$allowed_states$Genus_a_sp3)
-  expect_null(l$allowed_states$Genus_c_sp1)
+  expect_identical(l$allowed_states$New_sp1, "red")
+  expect_identical(l$allowed_states$New_sp4, c("blue", "green"))
+  expect_identical(l$allowed_states$New_sp5, "green")
+  expect_identical(l$allowed_states$New_sp7, c("blue", "red"))
+  expect_null(l$allowed_states$New_sp2)
+  expect_null(l$allowed_states$New_sp3)
+  expect_null(l$allowed_states$New_sp6)
   expect_silent(phylograftR:::validate_missing_taxa_list(l, clade_item = "Target_clade"))
   # The states are states of the toy simmap
   expect_true(all(unlist(l$allowed_states) %in% colnames(phylograftR::toy_simmap$mapped.edge)))
@@ -148,10 +148,10 @@ test_that("the toy list with allowed states grafts with the toy simmap with both
       expect_true(all(res$states_ok), info = info)
       # The taxa grafted on the backbone have the expected states
       taxon_state <- function (taxon) names(grafted$simmap$maps[[match(match(taxon, grafted$tip.label), grafted$edge[, 2])]])
-      expect_true(taxon_state("Genus_a_sp1") == "red", info = info)
-      expect_true(taxon_state("Genus_b_sp2") == "green", info = info)
-      expect_true(taxon_state("Genus_c_sp2") %in% c("blue", "red"), info = info)
-      expect_true(all(vapply(c("Genus_a_sp2", "Genus_a_sp3", "Genus_c_sp1"), taxon_state, character(1)) %in% c("blue", "green")), info = info)
+      expect_true(taxon_state("New_sp1") == "red", info = info)
+      expect_true(taxon_state("New_sp5") == "green", info = info)
+      expect_true(taxon_state("New_sp7") %in% c("blue", "red"), info = info)
+      expect_true(all(vapply(c("New_sp2", "New_sp3", "New_sp6"), taxon_state, character(1)) %in% c("blue", "green")), info = info)
     }
   }
   # Without global states, the taxa without taxon-level states can be grafted in any state
