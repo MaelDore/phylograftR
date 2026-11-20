@@ -248,5 +248,5 @@ Now that you know how to use **biogeographic ranges** as constraints, you may be
 - combining **several traits** or a trait and ranges: `vignette("multiple_traits")`;
 - exploring options to graft **missing taxa**, **missing clades**, or **both types**: `vignette("graft_missing_taxa")`, `vignette("graft_missing_clades")` and `vignette("combine_missing_taxa_and_clades")`;
 - handling **uncertainty** with several simulations and stochastic maps: `vignette("handle_uncertainty")`;
-- speeding up your runs by using **parallel computation**: `vignette("parallel_grafting")`;
+- speeding up your runs by using **parallel computation**: `vignette("parallel_grafting")`.
 
