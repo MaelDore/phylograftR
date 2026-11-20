@@ -34,7 +34,8 @@
 #'   cut point belong to the first state, and so on. They must be provided in increasing order, be different values, and lie within the range of the trait values (see Details).
 #'   If not, a warning is sent and the cut points are sorted and/or the duplicated values removed.
 #'   Exactly one of `breaks`, `n_bins` and `probs` arguments must be provided.
-#' @param n_bins Integer, at least 2. The number of bins of equal width over the range of the trait values observed at the tips. Exactly one of `breaks`, `n_bins` and `probs` arguments must be provided.
+#' @param n_bins Integer, at least 2. The number of bins of equal width over the range of the trait values at the tips.
+#'   Exactly one of `breaks`, `n_bins` and `probs` arguments must be provided.
 #' @param probs Numeric vector with values strictly between 0 and 1. The quantile levels, computed on the trait values observed at the tips, at which to cut the bins.
 #'   They must be provided in increasing order and be different values, otherwise a warning is sent and they are sorted and/or the duplicated values removed
 #'   (e.g., `c(1/3, 2/3)` for three bins of equal numbers of tips). Exactly one of `breaks`, `n_bins` and `probs` arguments must be provided.
@@ -61,7 +62,9 @@
 #'   * `n_bins`: uses bins of equal width over the range of the tip values.
 #'   * `probs`: uses bins defined by quantiles of the tip values.
 #'
-#' `n_bins` and `probs` are computed on the tip values (averaged across the `contMap`s of a list), which are the observed data.
+#' `n_bins` and `probs` are computed on the tip values (averaged across the `contMap`s of a list).
+#' They are read from the `contMap`s, which store the trait values on a finite scale of colors from 0 to 1000, so they approximate the observed data.
+#'
 #' The values of the internal branches are reconstructed and are expected to shrink towards the intermediate values under a BM process
 #' (or towards one specific direction if a directional model was used to fit the `contMap`s), because ancestral values are averaged over their descendants.
 #' As a consequence, bins defined from the tips will contain a smaller share of the internal branches for the extreme states than for the intermediate states.
@@ -98,6 +101,9 @@
 #'
 #' * Nodes with reconstructed values close to a cut point have uncertain states. Providing a list of `contMap`s
 #'   covering the uncertainty (see below) is the way to account for it, as each grafted phylogeny can then use a different `simmap`.
+#'
+#' * The states depend on the cut points. A taxon whose allowed states are defined by a threshold can have different eligible branches
+#'  if the threshold is moved. Ideally, you would want to compare several sets of cut points before relying on the results (see `vignette("continuous_data")`).
 #'
 #' * As for the use of `simmap` derived from discrete states, constraining the grafting by a trait that will then be analyzed
 #'  (e.g., the association of the trait with diversification) biases the results towards the constraint. Interpret such analyses accordingly.

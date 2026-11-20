@@ -608,3 +608,120 @@ NULL
 #'     treat_states_as_ranges = c(biogeo = TRUE, elevation = FALSE))
 #'
 "toy_missing_taxa_list_with_ranges_and_elevation"
+
+
+##### 7/ Toy datasets for a continuous trait: tip values, contMap and multiSimmap #####
+
+#' @title Toy tip values of a continuous trait
+#'
+#' @description Values of a continuous trait for the 30 tips of [`phylograftR::toy_backbone`][toy_backbone].
+#'   They are the data used to build [`phylograftR::toy_contMap`][toy_contMap] and [`phylograftR::toy_multiSimmap_continuous`][toy_multiSimmap_continuous],
+#'   examples of **continuous traits discretized into states** to constrain the grafting (see [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap]).
+#'
+#'   They were simulated with `phytools::fastBM()` under a Brownian Motion (ancestral value of 0 at the root, evolutionary rate `sig2 = 1`), with seed 37.
+#'   Among the first 150 seeds, this is one of the seeds for which the discretization of the contMap into three states using the terciles of the tip values
+#'   gives states that cover similar shares of the branches (38% `"low"`, 39% `"medium"` and 22% `"high"`), and
+#'   constraints that differ among the 7 toy missing taxa of [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list].
+#'
+#' @usage data(toy_tip_values)
+#' @format A named numeric vector of length 30, named after the tips of [`phylograftR::toy_backbone`][toy_backbone] and in the same order.
+#'   The values range from about -7.5 to 4.2.
+#'
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_contMap`][toy_contMap] for the contMap of this trait (point estimate).
+#'  * [`phylograftR::toy_multiSimmap_continuous`][toy_multiSimmap_continuous] for 100 stochastic histories of this trait, discretized into states.
+#'  * [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap] to discretize a contMap into a simmap, and
+#'    [`phylograftR::convert_values_to_states()`][convert_values_to_states] to convert continuous values into the same states.
+#'
+#' @examples
+#' # Import the data
+#' data(toy_tip_values)
+#'
+#' # Distribution of the values
+#' summary(toy_tip_values)
+#'
+#' # Terciles of the tip values: cut points used to define three states
+#' quantile(toy_tip_values, probs = c(1/3, 2/3))
+#'
+"toy_tip_values"
+
+
+#' @title Toy contMap of a continuous trait
+#'
+#' @description A `contMap` of [`phylograftR::toy_backbone`][toy_backbone] for the continuous trait of [`phylograftR::toy_tip_values`][toy_tip_values],
+#'   built with `phytools::contMap()`. It is a **point estimate**: the ancestral values are estimated by maximum likelihood under a Brownian Motion
+#'   and **linearly interpolated along the branches**, so it does not cover the uncertainty of the reconstruction.
+#'
+#'   It is an example of input of [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap], which discretizes the trait values into states
+#'   (e.g., `"low"`, `"medium"`, `"high"`) to obtain a `simmap` that can **constrain the grafting**. The resulting `simmap` is a **constraint, not a reconstruction of a discrete trait**.
+#'
+#' @usage data(toy_contMap)
+#' @format An object of class `"contMap"` (see `phytools::contMap()`) with the elements `$tree` (the backbone as a `"simmap"`, in which the states are
+#'   the color levels of the trait values), `$cols` (the color palette) and `$lims` (range of the trait values, about -7.5 to 4.2).
+#'
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_tip_values`][toy_tip_values] for the data used to build the contMap.
+#'  * [`phylograftR::toy_multiSimmap_continuous`][toy_multiSimmap_continuous] for 100 stochastic histories of the trait, discretized into states.
+#'  * [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap] to discretize a contMap into a simmap.
+#'
+#' @examples
+#' # Import the data
+#' data(toy_contMap)
+#'
+#' # Plot the contMap
+#' plot(toy_contMap, legend = FALSE, fsize = 0.7)
+#'
+#' # Discretize into a simmap of three states using the terciles of the tip values
+#' my_simmap <- convert_contMap_to_simmap(toy_contMap, probs = c(1/3, 2/3),
+#'                                        states = c("low", "medium", "high"))
+#' attr(my_simmap, "breaks")
+#' plot(my_simmap, colors = c(low = "blue", medium = "grey", high = "red"),
+#'      fsize = 0.7, ftype = "i")
+#'
+"toy_contMap"
+
+
+#' @title Toy multiSimmap of a continuous trait discretized into states
+#'
+#' @description Set of 100 stochastic maps (`"multiSimmap"`) of [`phylograftR::toy_backbone`][toy_backbone], each describing one possible history of the continuous
+#'   trait of [`phylograftR::toy_tip_values`][toy_tip_values], discretized into **three states**: `"low"`, `"medium"` and `"high"`.
+#'   Providing several histories accounts for the **uncertainty** of the reconstruction of the ancestral trait values, unlike [`phylograftR::toy_contMap`][toy_contMap].
+#'
+#'   It is the output of the example of [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap]:
+#'   1. 100 continuous stochastic maps were simulated with `contsimmap::make.contsimmap()`, conditioned on the tip values, the backbone and a Brownian Motion
+#'   with the evolutionary rate estimated by `phytools::anc.ML()`.
+#'   2. They were converted into a list of `contMap`s with `deepSTRAPP::convert_contsimmap_to_contMaps()`.
+#'   3. They were discretized with [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap], using the terciles of the tip values as cut points.
+#'
+#'   **These maps are a discretization of continuous histories to constrain the grafting. They are not stochastic maps of a discrete trait:**
+#'   the number of transitions between states depends on the resolution of the continuous maps and on `min_segment_proportion`,
+#'   and must not be used to compute transition rates or counts.
+#'
+#' @usage data(toy_multiSimmap_continuous)
+#' @format An object of classes `"multiSimmap"` and `"multiPhylo"`: a list of 100 `"simmap"` objects (see `phytools::make.simmap()`), each with the same tips,
+#'   topology and branch lengths as [`phylograftR::toy_backbone`][toy_backbone]. The attribute `"breaks"` stores the cut points (in the units of the trait) and
+#'   the attribute `"states"` the names of the states (`"low"`, `"medium"`, `"high"`), as needed by [`phylograftR::convert_values_to_states()`][convert_values_to_states].
+#'
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_tip_values`][toy_tip_values] and [`phylograftR::toy_contMap`][toy_contMap] for the data used and the point estimate of the trait history.
+#'  * [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap] to discretize contMaps into simmaps.
+#'  * [`phylograftR::convert_values_to_states()`][convert_values_to_states] to convert the continuous values of the missing taxa into the states of these maps.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa with the maps as constraints: each map is used for a different simulation.
+#'
+#' @examples
+#' # Import the data
+#' data(toy_multiSimmap_continuous)
+#' length(toy_multiSimmap_continuous)
+#'
+#' # Cut points and states used for the discretization
+#' attr(toy_multiSimmap_continuous, "breaks")
+#' attr(toy_multiSimmap_continuous, "states")
+#'
+#' # Plot the first two maps: two possible histories of the same trait
+#' par(mfrow = c(1, 2))
+#' state_colors <- c(low = "blue", medium = "grey", high = "red")
+#' plot(toy_multiSimmap_continuous[[1]], colors = state_colors, fsize = 0.6, ftype = "i")
+#' plot(toy_multiSimmap_continuous[[2]], colors = state_colors, fsize = 0.6, ftype = "i")
+#' par(mfrow = c(1, 1))
+#'
+"toy_multiSimmap_continuous"
