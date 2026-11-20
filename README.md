@@ -87,10 +87,11 @@ downstream analyses.
 
 ### When to use phylograftR?
 
-Grafting is most useful when: - the backbone phylogeny is moderately to
-strongly incomplete; - you have reliable taxonomic information to place
-the missing taxa; - your downstream analysis requires them as tips of
-the tree.
+Grafting is most useful when:
+
+- the backbone phylogeny is moderately to strongly incomplete;
+- you have reliable taxonomic information to place the missing taxa;
+- your downstream analysis requires them as tips of the tree.
 
 Analyses that can directly use **sampling fractions**, or that run on a
 well-sampled phylogeny, may not benefit from the additional complexity.
@@ -539,6 +540,9 @@ and in this vignette: `vignette("phylograftR")`.
 - [Combine **several traits** as
   constraints](https://maeldore.github.io/phylograftR/articles/multiple_traits.html):
   `vignette("multiple_traits")`.
+- [Use a **continuous trait** as
+  constraint](https://maeldore.github.io/phylograftR/articles/continuous_data.html):
+  `vignette("continuous_data")`.
 
 Alternatively, if you prefer to view the vignettes in R, you can install
 the package with `build_vignettes = TRUE`.

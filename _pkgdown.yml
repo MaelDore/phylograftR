@@ -47,6 +47,8 @@ navbar:
         href: articles/biogeographic_data.html
       - text: Combine several traits as constraints
         href: articles/multiple_traits.html
+      - text: Use a continuous trait as constraint
+        href: articles/continuous_data.html
 reference:
 - title: Graft missing lineages
   desc: |

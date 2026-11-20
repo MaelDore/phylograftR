@@ -38,7 +38,7 @@ For more advanced uses, please refer to the tutorials below.
 | Check the grafting plan before, and the grafted phylogenies after | [`check_grafting`](https://maeldore.github.io/phylograftR/articles/check_grafting.html): `vignette("check_grafting")` |
 | Constrain grafting with biogeographic ranges | [`biogeographic_data`](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html): `vignette("biogeographic_data")` |
 | Constrain grafting with several traits | [`multiple_traits`](https://maeldore.github.io/phylograftR/articles/multiple_traits.html): `vignette("multiple_traits")` |
-| Constrain grafting with a continuous trait | `continuous_data` *(in preparation)* |
+| Constrain grafting with a continuous trait | [`continuous_data`](https://maeldore.github.io/phylograftR/articles/continuous_data.html) |
 | Account for uncertainty: several simulations, several maps | `handle_uncertainty` *(in preparation)* |
 | Speed up grafting with parallel computation | `parallel_grafting` *(in preparation)* |
 | Resume a crashed or interrupted run | `resume_crashed_run` *(in preparation)* |
@@ -77,7 +77,7 @@ They provide explanations on available arguments and interpretations of results 
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.2/ [__Multiple traits__](https://maeldore.github.io/phylograftR/articles/multiple_traits.html): `vignette("multiple_traits")`.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.3/ __Continuous__ trait data: `continuous_data` *(in preparation)*.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.3/ [__Continuous__ trait data](https://maeldore.github.io/phylograftR/articles/continuous_data.html): `continuous_data`.
 
 ### **6/ Uncertainty and scaling**
 
