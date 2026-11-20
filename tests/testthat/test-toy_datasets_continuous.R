@@ -37,30 +37,40 @@ test_that("toy_contMap is the contMap of toy_tip_values on toy_backbone",
   expect_equal(round(unname(share[c("low", "medium", "high")]), 2), c(0.35, 0.43, 0.22))
 })
 
-## Test that the multiSimmap is a valid set of simmaps of the backbone, with the attributes to convert values
-test_that("toy_multiSimmap_continuous is a multiSimmap of 100 valid simmaps of toy_backbone with three states",
+## Test that the list of contMaps is a set of contMaps of the backbone, that can be discretized into a multiSimmap
+test_that("toy_contMaps is a list of 100 contMaps of toy_backbone that can be discretized into a multiSimmap with three states",
 {
   data(toy_backbone, package = "phylograftR")
   data(toy_tip_values, package = "phylograftR")
-  data(toy_multiSimmap_continuous, package = "phylograftR")
-  expect_s3_class(toy_multiSimmap_continuous, "multiSimmap")
-  expect_length(toy_multiSimmap_continuous, 100)
-  expect_identical(attr(toy_multiSimmap_continuous, "states"), c("low", "medium", "high"))
-  breaks <- attr(toy_multiSimmap_continuous, "breaks")
+  data(toy_contMaps, package = "phylograftR")
+  expect_type(toy_contMaps, "list")
+  expect_length(toy_contMaps, 100)
+  for (i in c(1, 50, 100))
+  {
+    expect_s3_class(toy_contMaps[[i]], "contMap")
+    expect_identical(toy_contMaps[[i]]$tree$tip.label, toy_backbone$tip.label)
+    expect_identical(toy_contMaps[[i]]$tree$edge, toy_backbone$edge)
+    expect_equal(toy_contMaps[[i]]$tree$edge.length, toy_backbone$edge.length)
+    # The observed tip values are within the range of the values of the map
+    expect_true(all(toy_tip_values >= toy_contMaps[[i]]$lims[1] & toy_tip_values <= toy_contMaps[[i]]$lims[2]))
+  }
+  # Discretization: the first step of the use of the list
+  my_multiSimmap <- convert_contMap_to_simmap(toy_contMaps, probs = c(1/3, 2/3), states = c("low", "medium", "high"),
+                                              tip_values = toy_tip_values, verbose = FALSE)
+  expect_s3_class(my_multiSimmap, "multiSimmap")
+  expect_length(my_multiSimmap, 100)
+  expect_identical(attr(my_multiSimmap, "states"), c("low", "medium", "high"))
+  breaks <- attr(my_multiSimmap, "breaks")
   expect_length(breaks, 2)
   expect_true(!is.unsorted(breaks, strictly = TRUE))
-  for (i in c(1, 50, 100))
-  {
-    expect_no_error(validate_simmap(toy_multiSimmap_continuous[[i]], toy_backbone))
-    expect_identical(toy_multiSimmap_continuous[[i]]$tip.label, toy_backbone$tip.label)
-    expect_setequal(colnames(toy_multiSimmap_continuous[[i]]$mapped.edge), c("low", "medium", "high"))
-  }
   # The cut points are the terciles of the observed tip values, and each tip is in the state of its observed value
   expect_equal(unname(breaks), unname(stats::quantile(toy_tip_values, probs = c(1/3, 2/3))))
-  observed_states <- convert_values_to_states(toy_tip_values, simmap = toy_multiSimmap_continuous)
+  observed_states <- convert_values_to_states(toy_tip_values, simmap = my_multiSimmap)
   for (i in c(1, 50, 100))
   {
-    tip_states <- phytools::getStates(toy_multiSimmap_continuous[[i]], type = "tips")
+    expect_no_error(validate_simmap(my_multiSimmap[[i]], toy_backbone))
+    expect_setequal(colnames(my_multiSimmap[[i]]$mapped.edge), c("low", "medium", "high"))
+    tip_states <- phytools::getStates(my_multiSimmap[[i]], type = "tips")
     expect_identical(tip_states[names(observed_states)], observed_states)
   }
 })

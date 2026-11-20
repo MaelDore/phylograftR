@@ -10,7 +10,7 @@
 # Produces:
 #  * data/toy_tip_values.rda: tip values of a continuous trait simulated on 'toy_backbone'
 #  * data/toy_contMap.rda: contMap of this trait (point estimate: ML ancestral values interpolated along the branches)
-#  * data/toy_multiSimmap_continuous.rda: multiSimmap of 100 histories of this trait (continuous stochastic mapping), discretized into three states
+#  * data/toy_contMaps.rda: list of 100 contMaps, i.e., 100 histories of this trait (continuous stochastic mapping). Users discretize them with convert_contMap_to_simmap()
 #
 # The toy missing taxa list is not changed: the values of the continuous trait of the missing taxa are defined in the vignette 'continuous_data'.
 
@@ -44,7 +44,7 @@ print(attr(toy_simmap_check, "breaks"))
 print(round(colSums(toy_simmap_check$mapped.edge) / sum(toy_simmap_check$mapped.edge), 2))
 
 
-##### 3/ Build the multiSimmap: 100 continuous stochastic maps, discretized #####
+##### 3/ Build the list of contMaps: 100 continuous stochastic maps #####
 
 # We use 'contsimmap' directly to credit the authors of the continuous stochastic mapping approach and show the steps.
 # For your own data, deepSTRAPP::prepare_trait_data() is recommended: it fits the evolutionary model(s), runs the continuous stochastic mapping
@@ -74,18 +74,21 @@ toy_contMaps_list <- deepSTRAPP::convert_contsimmap_to_contMaps(contsimmap = toy
 #                                                  run_stochastic_maps = TRUE, nb_simulations = 100, plot_map = FALSE)
 # toy_contMaps_list <- toy_trait_data$contMaps
 
-# Convert the contMaps into simmaps with three states, using the terciles of the observed tip values
-toy_multiSimmap_continuous <- convert_contMap_to_simmap(toy_contMaps_list, probs = c(1/3, 2/3),
-                                                        states = c("low", "medium", "high"),
-                                                        tip_values = toy_tip_values)
+# Check: the list can be discretized into a multiSimmap with three states, using the terciles of the observed tip values.
+# This is the first step of the use of the list of contMaps (see the vignette 'continuous_data'). The multiSimmap itself is not saved.
+toy_multiSimmap_check <- convert_contMap_to_simmap(toy_contMaps_list, probs = c(1/3, 2/3),
+                                                   states = c("low", "medium", "high"),
+                                                   tip_values = toy_tip_values)
+stopifnot(inherits(toy_multiSimmap_check, "multiSimmap"),
+          length(toy_multiSimmap_check) == 100,
+          isTRUE(all.equal(attr(toy_multiSimmap_check, "breaks"), unname(quantile(toy_tip_values, probs = c(1/3, 2/3))))))
+print(attr(toy_multiSimmap_check, "breaks"))
 
-# Checks
-stopifnot(inherits(toy_multiSimmap_continuous, "multiSimmap"),
-          length(toy_multiSimmap_continuous) == 100,
-          identical(attr(toy_multiSimmap_continuous, "states"), c("low", "medium", "high")),
-          isTRUE(all.equal(attr(toy_multiSimmap_continuous, "breaks"), unname(quantile(toy_tip_values, probs = c(1/3, 2/3))))))
-print(attr(toy_multiSimmap_continuous, "breaks"))
-print(object.size(toy_multiSimmap_continuous), units = "Mb") # Keep the data of the package small (CRAN: less than 5 Mb in total)
+# Prepare the object to save: a plain list of 100 contMaps
+toy_contMaps <- toy_contMaps_list
+names(toy_contMaps) <- NULL # Unnamed list
+stopifnot(is.list(toy_contMaps), length(toy_contMaps) == 100, all(vapply(toy_contMaps, inherits, logical(1), what = "contMap")))
+print(object.size(toy_contMaps), units = "Mb") # Keep the data of the package small (CRAN: less than 5 Mb in total)
 
 
 ##### 4/ Save objects #####
@@ -93,6 +96,6 @@ print(object.size(toy_multiSimmap_continuous), units = "Mb") # Keep the data of 
 dir.create("data", showWarnings = FALSE)
 save(toy_tip_values, file = "data/toy_tip_values.rda", compress = "gzip", version = 2)
 save(toy_contMap, file = "data/toy_contMap.rda", compress = "gzip", version = 2)
-save(toy_multiSimmap_continuous, file = "data/toy_multiSimmap_continuous.rda", compress = "xz", version = 2)
-print(file.size(c("data/toy_tip_values.rda", "data/toy_contMap.rda", "data/toy_multiSimmap_continuous.rda")) / 1024) # Sizes in Kb
+save(toy_contMaps, file = "data/toy_contMaps.rda", compress = "xz", version = 2)
+print(file.size(c("data/toy_tip_values.rda", "data/toy_contMap.rda", "data/toy_contMaps.rda")) / 1024) # Sizes in Kb
 

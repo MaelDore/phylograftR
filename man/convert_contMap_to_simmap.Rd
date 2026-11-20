@@ -10,6 +10,7 @@ convert_contMap_to_simmap(
   n_bins = NULL,
   probs = NULL,
   states,
+  tip_values = NULL,
   min_segment_proportion = 0.01,
   verbose = TRUE
 )
@@ -24,7 +25,8 @@ cut point belong to the first state, and so on. They must be provided in increas
 If not, a warning is sent and the cut points are sorted and/or the duplicated values removed.
 Exactly one of \code{breaks}, \code{n_bins} and \code{probs} arguments must be provided.}
 
-\item{n_bins}{Integer, at least 2. The number of bins of equal width over the range of the trait values observed at the tips. Exactly one of \code{breaks}, \code{n_bins} and \code{probs} arguments must be provided.}
+\item{n_bins}{Integer, at least 2. The number of bins of equal width over the range of the trait values at the tips.
+Exactly one of \code{breaks}, \code{n_bins} and \code{probs} arguments must be provided.}
 
 \item{probs}{Numeric vector with values strictly between 0 and 1. The quantile levels, computed on the trait values observed at the tips, at which to cut the bins.
 They must be provided in increasing order and be different values, otherwise a warning is sent and they are sorted and/or the duplicated values removed
@@ -32,6 +34,11 @@ They must be provided in increasing order and be different values, otherwise a w
 
 \item{states}{Character vector. The names of the states, from the bin with the lowest values to the bin with the highest values.
 Its length must match the number of bins: \strong{the number of interior cut points + 1}.}
+
+\item{tip_values}{Numeric vector (optional). The \strong{observed trait values at the tips}, named after the tips of the phylogeny (or provided in the order of the tips if unnamed).
+If provided, they are used instead of the values read from the \code{contMap}(s) to \strong{compute the cut points} (\code{n_bins} and \code{probs}) and to \strong{set the state of each tip}
+(the last segment of each terminal branch), so that the tips are in the state of their observed value. The same values are used for all the \code{contMap}s of a list.
+They must lie within the range of the trait values of the \code{contMap}(s). If \code{NULL}, the tip values are read from the \code{contMap}(s), where they are only approximated (see Details).}
 
 \item{min_segment_proportion}{Numeric between 0 (included) and 1 (excluded). The minimum duration of a segment of a branch, as a proportion of the depth of the tree (root age). Default is \code{0.01}.
 Shorter segments are merged into their longest neighbour on the branch (see Details for why this may matter). Use \code{0} to keep every crossing of a cut point.}
@@ -83,7 +90,25 @@ During discretization, each segment is assigned to the bin its value falls in, a
 \item \code{probs}: uses bins defined by quantiles of the tip values.
 }
 
-\code{n_bins} and \code{probs} are computed on the tip values (averaged across the \code{contMap}s of a list), which are the observed data.
+\code{n_bins} and \code{probs} are computed on the tip values (averaged across the \code{contMap}s of a list).
+By default, they are read from the \code{contMap}s, which store the trait values on a finite scale of colors (from 0 to 1000 in \code{phytools::contMap()}), so they approximate the observed data.
+\strong{Provide the observed values with \code{tip_values} to use them instead} (see below).
+}
+
+\subsection{Tip values}{
+
+A \code{contMap} stores the trait history as a series of short segments along each branch, with the value of each segment interpolated from the estimated values at the nodes.
+The value associated to a segment is a single value for the whole segment, on a finite scale of colors. As a result, the value of the last segment of a terminal branch
+is \strong{nearly, but not identical to the observed value at the tip}. With the default settings, the function extrapolates the tip value from the last segments, which is only an approximate.
+The difference is usually small compared to the range of the trait, but it can move the tip of a taxon with a value close to a cut point into the neighboring state,
+or shift the cut points obtained from \code{n_bins} or \code{probs}.
+
+To avoid this, provide the \strong{observed tip values} with \code{tip_values}: they are then used to compute the cut points, and \strong{each tip is set in the state of its observed value},
+so that the tips of the \code{simmap}s are in the same states as the observed data converted with \code{\link[=convert_values_to_states]{phylograftR::convert_values_to_states()}}.
+This is recommended whenever the tip data used to build the \code{contMap}(s) are available.
+When the observed state of a tip differs from the state of the interpolated segments just before it, the terminal branch ends with a short segment in the state of the observed value
+(the segment at the tip is never merged away, see \code{min_segment_proportion}).
+
 The values of the internal branches are reconstructed and are expected to shrink towards the intermediate values under a BM process
 (or towards one specific direction if a directional model was used to fit the \code{contMap}s), because ancestral values are averaged over their descendants.
 As a consequence, bins defined from the tips will contain a smaller share of the internal branches for the extreme states than for the intermediate states.
@@ -121,6 +146,8 @@ thus cannot cross each cut point multiple times.
 and should not be interpreted as a rate of evolution of discrete states.
 \item Nodes with reconstructed values close to a cut point have uncertain states. Providing a list of \code{contMap}s
 covering the uncertainty (see below) is the way to account for it, as each grafted phylogeny can then use a different \code{simmap}.
+\item The states depend on the cut points. A taxon whose allowed states are defined by a threshold can have different eligible branches
+if the threshold is moved. Ideally, you would want to compare several sets of cut points before relying on the results (see \code{vignette("continuous_data")}).
 \item As for the use of \code{simmap} derived from discrete states, constraining the grafting by a trait that will then be analyzed
 (e.g., the association of the trait with diversification) biases the results towards the constraint. Interpret such analyses accordingly.
 }
@@ -132,6 +159,10 @@ A single \code{contMap} is a point estimate. To cover the uncertainty of the rec
 For example, the \code{contsimmap} R package samples histories of a continuous trait on a phylogeny, and the function \code{\link[deepSTRAPP:convert_contsimmap_to_contMaps]{deepSTRAPP::convert_contsimmap_to_contMaps()}}
 converts them into a list of \code{contMap}s (see Examples). The output of this function is then a \strong{\code{multiSimmap}}, that can be used in the grafting functions like any \code{multiSimmap},
 to account for uncertainty in the ancestral trait reconstructions.
+
+The function \code{deepSTRAPP::prepare_trait_data()} is the \strong{recommended way} to obtain such a list of \code{contMap}s: with \code{run_stochastic_maps = TRUE}, it fits the evolutionary model(s) (selected by AICc),
+runs the continuous stochastic mapping with \code{contsimmap::make.contsimmap()} and converts the maps into \code{contMap}s in a single call, with additional options to fine-tune the process (see Examples).
+The example below uses \code{contsimmap} directly to credit the authors of the continuous stochastic mapping approach and to show the steps usde internally by \code{deepSTRAPP::prepare_trait_data()}.
 }
 }
 \examples{
@@ -158,6 +189,21 @@ attr(my_simmap_1, "breaks")
 # Check the distribution of states across tips
 tip_states <- phytools::getStates(my_simmap_1, type = "tips")
 table(tip_states)
+
+# --- Use the observed tip values --- #
+
+# The contMap only approximates the values at the tips (interpolation within segments).
+# Provide the observed tip values to compute the cut points and to set the state of each tip from the data
+my_simmap_1b <- convert_contMap_to_simmap(my_contMap, probs = c(1/3, 2/3),
+                                          states = c("low", "medium", "high"),
+                                          tip_values = tip_data)
+# Cut points computed from the observed tip values
+attr(my_simmap_1b, "breaks")
+quantile(tip_data, probs = c(1/3, 2/3))
+
+# Tips are in the state of their observed values
+tip_states_b <- phytools::getStates(my_simmap_1b, type = "tips")
+all(tip_states_b == convert_values_to_states(tip_data, simmap = my_simmap_1b)[names(tip_states_b)])
 
 # Plot the resulting simmap
 plot(my_simmap_1, colors = c(low = "blue", medium = "grey", high = "red"),
@@ -214,7 +260,8 @@ if (requireNamespace("deepSTRAPP", quietly = TRUE)
  # Convert multiple contMaps at once into corresponding simmaps
  # using quantiles of the tip values
  my_multiSimmap <- convert_contMap_to_simmap(my_contMaps_list, probs = c(1/3, 2/3),
-                                             states = c("low", "medium", "high"))
+                                             states = c("low", "medium", "high"),
+                                             tip_values = tip_data) # Use the observed tip values
 
  # Plot the resulting simmaps describing different evolutionary histories simulated
  # from the same evolutionary process conditioned to the tip data and phylogeny,
@@ -225,6 +272,35 @@ if (requireNamespace("deepSTRAPP", quietly = TRUE)
       main = "simmap n\u00B02", fsize = 0.7, ftype = "i")
  plot(my_multiSimmap[[3]], colors = c(low = "blue", medium = "grey", high = "red"),
      main = "simmap n\u00B03", fsize = 0.7, ftype = "i")
+
+ # --- Alternative: use deepSTRAPP::prepare_trait_data() (recommended) --- #
+
+ # The steps above (fit of the BM model, simulation of the continuous stochastic maps
+ # with contsimmap::make.contsimmap(), and conversion into a list of contMaps)
+ # can be run at once with deepSTRAPP::prepare_trait_data().
+
+ # The function offers additional options to fine-tune the process, such as the comparison of several
+ # evolutionary models (selected by AICc), the resolution of the contMaps, and the number of simulations.
+ # It can also output directly both the interpolated point estimate as in phytools::contMap(),
+ # and the set of stochastic continuous maps simulated with contsimmap::make.contsimmap().
+
+ # Not to run: it replaces the steps above and returns the same type of output (a list of contMaps).
+ # my_trait_data <- deepSTRAPP::prepare_trait_data(
+ #     tip_data = tip_data,
+ #     trait_data_type = "continuous",
+ #     phylo = toy_backbone,
+ #     seed = 1234, # Set seed for reproducibility
+ #     evolutionary_models = "BM", # Evolutionary model(s) to fit
+ #     run_stochastic_maps = TRUE, # Run continuous stochastic mapping to account for uncertainty
+ #     nb_simulations = 100, # Number of stochastic maps
+ #     plot_map = FALSE)
+ #
+ # my_contMap <- my_trait_data$contMap # Point estimate: a single contMap
+ # my_contMaps_list <- my_trait_data$contMaps # List of contMaps from the stochastic maps
+ #
+ # my_multiSimmap <- convert_contMap_to_simmap(my_contMaps_list, probs = c(1/3, 2/3),
+ #                                             states = c("low", "medium", "high"),
+ #                                             tip_values = tip_data)
 }
 }
 
