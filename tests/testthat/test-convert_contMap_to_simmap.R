@@ -362,3 +362,75 @@ test_that("Identical quantiles (tied tip values) are removed with a warning", {
   expect_warning(b <- resolve_contMap_breaks(probs = c(0.25, 0.5), tip_values = tied, range_values = c(0, 4)), "different values.*share the same value")
   expect_equal(b, 1)
 })
+
+
+# --- Observed tip values (tip_values) ---
+
+# Local helper: the trait simulated by make_toy_contMap() with the same seed (the RNG of the session is restored)
+make_toy_trait <- function (phy, seed = 1)
+{
+  had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+  if (had_seed) old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
+  on.exit({
+    if (had_seed) assign(".Random.seed", old_seed, envir = globalenv())
+    else if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) rm(".Random.seed", envir = globalenv())
+  })
+  set.seed(seed)
+  phytools::fastBM(phy)
+}
+
+test_that("tip_values give cut points computed on the observed values and tips in the state of their observed value", {
+  toy <- toy_cm_setup()
+  x <- make_toy_trait(toy$phy, seed = 1)
+  sm <- convert_contMap_to_simmap(toy$cms[[1]], probs = c(1/3, 2/3), states = states3, tip_values = x, verbose = FALSE)
+  # Cut points: quantiles of the observed values, not of the values read from the contMap
+  expect_equal(attr(sm, "breaks"), unname(stats::quantile(x, probs = c(1/3, 2/3))))
+  # Every tip is in the state of its observed value
+  expected <- convert_values_to_states(x, breaks = attr(sm, "breaks"), states = states3)
+  expect_identical(phytools::getStates(sm, type = "tips")[names(x)], expected[names(x)])
+  expect_no_error(validate_simmap(sm, toy$phy))
+  # Bins of equal width on the observed range
+  sm_n <- convert_contMap_to_simmap(toy$cms[[1]], n_bins = 3, states = states3, tip_values = x, verbose = FALSE)
+  expect_equal(attr(sm_n, "breaks"), seq(min(x), max(x), length.out = 4)[2:3])
+  # User cut points: the tips are in the state of their observed value too
+  sm_b <- convert_contMap_to_simmap(toy$cms[[1]], breaks = c(-1, 1), states = states3, tip_values = x, verbose = FALSE)
+  expect_identical(phytools::getStates(sm_b, type = "tips")[names(x)], convert_values_to_states(x, breaks = c(-1, 1), states = states3)[names(x)])
+})
+
+test_that("tip_values can be unnamed (in the order of the tips) or named in another order", {
+  toy <- toy_cm_setup()
+  x <- make_toy_trait(toy$phy, seed = 1)
+  ref <- convert_contMap_to_simmap(toy$cms[[1]], probs = c(1/3, 2/3), states = states3, tip_values = x, verbose = FALSE)
+  expect_equal(convert_contMap_to_simmap(toy$cms[[1]], probs = c(1/3, 2/3), states = states3, tip_values = unname(x), verbose = FALSE), ref)
+  expect_equal(convert_contMap_to_simmap(toy$cms[[1]], probs = c(1/3, 2/3), states = states3, tip_values = rev(x), verbose = FALSE), ref)
+})
+
+test_that("tip_values are shared by all the contMaps of a list", {
+  toy <- toy_cm_setup(n_maps = 3)
+  x <- make_toy_trait(toy$phy, seed = 1)
+  ms <- convert_contMap_to_simmap(toy$cms, probs = c(1/3, 2/3), states = states3, tip_values = x, verbose = FALSE)
+  expect_s3_class(ms, "multiSimmap")
+  expect_equal(attr(ms, "breaks"), unname(stats::quantile(x, probs = c(1/3, 2/3))))
+  expected <- convert_values_to_states(x, simmap = ms)
+  for (i in seq_along(ms)) { expect_identical(phytools::getStates(ms[[i]], type = "tips")[names(x)], expected[names(x)]) }
+})
+
+test_that("Without tip_values, the tip values are read from the contMap (default behavior unchanged)", {
+  toy <- toy_cm_setup()
+  expect_equal(convert_contMap_to_simmap(toy$cms[[1]], probs = c(1/3, 2/3), states = states3, tip_values = NULL, verbose = FALSE),
+               convert_contMap_to_simmap(toy$cms[[1]], probs = c(1/3, 2/3), states = states3, verbose = FALSE))
+})
+
+test_that("tip_values are checked", {
+  toy <- toy_cm_setup()
+  x <- make_toy_trait(toy$phy, seed = 1)
+  cm <- toy$cms[[1]]
+  convert <- function (values) convert_contMap_to_simmap(cm, probs = c(1/3, 2/3), states = states3, tip_values = values, verbose = FALSE)
+  expect_error(convert(as.character(x)), "numeric vector of finite values")
+  expect_error(convert(replace(x, 1, NA)), "numeric vector of finite values")
+  expect_error(convert(replace(x, 1, Inf)), "numeric vector of finite values")
+  expect_error(convert(x[-1]), "one value per tip")
+  expect_error(convert(setNames(x, c(names(x)[-1], "unknown_tip"))), "must be the tip labels")
+  expect_error(convert(setNames(x, c(names(x)[-1], names(x)[2]))), "must be the tip labels") # Duplicated name
+  expect_error(convert(x + 1000), "outside the range")
+})

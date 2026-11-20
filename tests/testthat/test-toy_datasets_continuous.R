@@ -30,11 +30,11 @@ test_that("toy_contMap is the contMap of toy_tip_values on toy_backbone",
   expect_equal(toy_contMap$tree$edge.length, toy_backbone$edge.length)
   expect_equal(toy_contMap$lims, range(toy_tip_values))
   # The discretization is a valid simmap: three states of similar shares of branch length (documented numbers of toy_tip_values)
-  my_simmap <- convert_contMap_to_simmap(toy_contMap, probs = c(1/3, 2/3), states = c("low", "medium", "high"), verbose = FALSE)
+  my_simmap <- convert_contMap_to_simmap(toy_contMap, probs = c(1/3, 2/3), states = c("low", "medium", "high"), tip_values = toy_tip_values, verbose = FALSE)
   expect_s3_class(my_simmap, "simmap")
   expect_no_error(validate_simmap(my_simmap, toy_backbone))
   share <- colSums(my_simmap$mapped.edge) / sum(my_simmap$mapped.edge)
-  expect_equal(round(unname(share[c("low", "medium", "high")]), 2), c(0.38, 0.39, 0.22))
+  expect_equal(round(unname(share[c("low", "medium", "high")]), 2), c(0.35, 0.43, 0.22))
 })
 
 ## Test that the multiSimmap is a valid set of simmaps of the backbone, with the attributes to convert values
@@ -55,9 +55,12 @@ test_that("toy_multiSimmap_continuous is a multiSimmap of 100 valid simmaps of t
     expect_identical(toy_multiSimmap_continuous[[i]]$tip.label, toy_backbone$tip.label)
     expect_setequal(colnames(toy_multiSimmap_continuous[[i]]$mapped.edge), c("low", "medium", "high"))
   }
-  # The state of the tips matches the state of their observed value for most tips. The maps only store an approximation of the tip values (resolution of the contMaps),
-  # so a few tips with a value close to a cut point can differ (5 of 30 with the contMap built from the same data).
+  # The cut points are the terciles of the observed tip values, and each tip is in the state of its observed value
+  expect_equal(unname(breaks), unname(stats::quantile(toy_tip_values, probs = c(1/3, 2/3))))
   observed_states <- convert_values_to_states(toy_tip_values, simmap = toy_multiSimmap_continuous)
-  tip_states <- phytools::getStates(toy_multiSimmap_continuous[[1]], type = "tips")
-  expect_gte(mean(tip_states[names(observed_states)] == observed_states), 0.75)
+  for (i in c(1, 50, 100))
+  {
+    tip_states <- phytools::getStates(toy_multiSimmap_continuous[[i]], type = "tips")
+    expect_identical(tip_states[names(observed_states)], observed_states)
+  }
 })

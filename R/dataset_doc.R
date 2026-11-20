@@ -620,7 +620,7 @@ NULL
 #'
 #'   They were simulated with `phytools::fastBM()` under a Brownian Motion (ancestral value of 0 at the root, evolutionary rate `sig2 = 1`), with seed 37.
 #'   Among the first 150 seeds, this is one of the seeds for which the discretization of the contMap into three states using the terciles of the tip values
-#'   gives states that cover similar shares of the branches (38% `"low"`, 39% `"medium"` and 22% `"high"`), and
+#'   gives states that cover similar shares of the branches (35% `"low"`, 43% `"medium"` and 22% `"high"`), and
 #'   constraints that differ among the 7 toy missing taxa of [`phylograftR::toy_missing_taxa_list`][toy_missing_taxa_list].
 #'
 #' @usage data(toy_tip_values)
@@ -667,13 +667,16 @@ NULL
 #' @examples
 #' # Import the data
 #' data(toy_contMap)
+#' data(toy_tip_values)
 #'
 #' # Plot the contMap
 #' plot(toy_contMap, legend = FALSE, fsize = 0.7)
 #'
-#' # Discretize into a simmap of three states using the terciles of the tip values
+#' # Discretize into a simmap of three states using the terciles of the tip values.
+#' # Provide the observed tip values: the contMap only approximates them (interpolation within segments)
 #' my_simmap <- convert_contMap_to_simmap(toy_contMap, probs = c(1/3, 2/3),
-#'                                        states = c("low", "medium", "high"))
+#'                                        states = c("low", "medium", "high"),
+#'                                        tip_values = toy_tip_values)
 #' attr(my_simmap, "breaks")
 #' plot(my_simmap, colors = c(low = "blue", medium = "grey", high = "red"),
 #'      fsize = 0.7, ftype = "i")
@@ -691,7 +694,14 @@ NULL
 #'   1. 100 continuous stochastic maps were simulated with `contsimmap::make.contsimmap()`, conditioned on the tip values, the backbone and a Brownian Motion
 #'   with the evolutionary rate estimated by `phytools::anc.ML()`.
 #'   2. They were converted into a list of `contMap`s with `deepSTRAPP::convert_contsimmap_to_contMaps()`.
-#'   3. They were discretized with [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap], using the terciles of the tip values as cut points.
+#'   3. They were discretized with [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap], using the terciles of the observed tip values as cut points
+#'   (argument `tip_values`, so that the cut points and the states of the tips are based on the observed data, not on the approximate values stored in the contMaps).
+#'
+#'   The script uses `contsimmap` directly, to credit the authors of the continuous stochastic mapping approach.
+#'   For your own data, `deepSTRAPP::prepare_trait_data()` is **recommended**: with `run_stochastic_maps = TRUE`, it fits the evolutionary model(s), runs the continuous stochastic mapping
+#'   and converts the maps into a list of `contMap`s in a single call, with additional options to fine-tune the process.
+#'   It can also output directly both the interpolated point estimate as in phytools::contMap(),
+#'   and the set of stochastic continuous maps simulated with contsimmap::make.contsimmap().
 #'
 #'   **These maps are a discretization of continuous histories to constrain the grafting. They are not stochastic maps of a discrete trait:**
 #'   the number of transitions between states depends on the resolution of the continuous maps and on `min_segment_proportion`,

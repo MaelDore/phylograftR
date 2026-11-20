@@ -41,6 +41,10 @@
 #'   (e.g., `c(1/3, 2/3)` for three bins of equal numbers of tips). Exactly one of `breaks`, `n_bins` and `probs` arguments must be provided.
 #' @param states Character vector. The names of the states, from the bin with the lowest values to the bin with the highest values.
 #'   Its length must match the number of bins: **the number of interior cut points + 1**.
+#' @param tip_values Numeric vector (optional). The **observed trait values at the tips**, named after the tips of the phylogeny (or provided in the order of the tips if unnamed).
+#'   If provided, they are used instead of the values read from the `contMap`(s) to **compute the cut points** (`n_bins` and `probs`) and to **set the state of each tip**
+#'   (the last segment of each terminal branch), so that the tips are in the state of their observed value. The same values are used for all the `contMap`s of a list.
+#'   They must lie within the range of the trait values of the `contMap`(s). If `NULL`, the tip values are read from the `contMap`(s), where they are only approximated (see Details).
 #' @param min_segment_proportion Numeric between 0 (included) and 1 (excluded). The minimum duration of a segment of a branch, as a proportion of the depth of the tree (root age). Default is `0.01`.
 #'   Shorter segments are merged into their longest neighbour on the branch (see Details for why this may matter). Use `0` to keep every crossing of a cut point.
 #' @param verbose Logical. Whether to print the progress of the conversion (every 10% of the `contMap`s) when a list of several `contMap`s is provided. Default is `TRUE`.
@@ -63,7 +67,22 @@
 #'   * `probs`: uses bins defined by quantiles of the tip values.
 #'
 #' `n_bins` and `probs` are computed on the tip values (averaged across the `contMap`s of a list).
-#' They are read from the `contMap`s, which store the trait values on a finite scale of colors from 0 to 1000, so they approximate the observed data.
+#' By default, they are read from the `contMap`s, which store the trait values on a finite scale of colors (from 0 to 1000 in `phytools::contMap()`), so they approximate the observed data.
+#' **Provide the observed values with `tip_values` to use them instead** (see below).
+#'
+#' ### Tip values
+#'
+#' A `contMap` stores the trait history as a series of short segments along each branch, with the value of each segment interpolated from the estimated values at the nodes.
+#' The value associated to a segment is a single value for the whole segment, on a finite scale of colors. As a result, the value of the last segment of a terminal branch
+#' is **nearly, but not identical to the observed value at the tip**. With the default settings, the function extrapolates the tip value from the last segments, which is only an approximate.
+#' The difference is usually small compared to the range of the trait, but it can move the tip of a taxon with a value close to a cut point into the neighboring state,
+#' or shift the cut points obtained from `n_bins` or `probs`.
+#'
+#' To avoid this, provide the **observed tip values** with `tip_values`: they are then used to compute the cut points, and **each tip is set in the state of its observed value**,
+#' so that the tips of the `simmap`s are in the same states as the observed data converted with [`phylograftR::convert_values_to_states()`][convert_values_to_states].
+#' This is recommended whenever the tip data used to build the `contMap`(s) are available.
+#' When the observed state of a tip differs from the state of the interpolated segments just before it, the terminal branch ends with a short segment in the state of the observed value
+#' (the segment at the tip is never merged away, see `min_segment_proportion`).
 #'
 #' The values of the internal branches are reconstructed and are expected to shrink towards the intermediate values under a BM process
 #' (or towards one specific direction if a directional model was used to fit the `contMap`s), because ancestral values are averaged over their descendants.
@@ -115,6 +134,10 @@
 #' converts them into a list of `contMap`s (see Examples). The output of this function is then a **`multiSimmap`**, that can be used in the grafting functions like any `multiSimmap`,
 #' to account for uncertainty in the ancestral trait reconstructions.
 #'
+#' The function `deepSTRAPP::prepare_trait_data()` is the **recommended way** to obtain such a list of `contMap`s: with `run_stochastic_maps = TRUE`, it fits the evolutionary model(s) (selected by AICc),
+#' runs the continuous stochastic mapping with `contsimmap::make.contsimmap()` and converts the maps into `contMap`s in a single call, with additional options to fine-tune the process (see Examples).
+#' The example below uses `contsimmap` directly to credit the authors of the continuous stochastic mapping approach and to show the steps usde internally by `deepSTRAPP::prepare_trait_data()`.
+#'
 #'
 #' @return Depending on the nature of the input:
 #' * If `contMap` is a single `contMap`: an object of class `"simmap"`.
@@ -161,6 +184,21 @@
 #' # Check the distribution of states across tips
 #' tip_states <- phytools::getStates(my_simmap_1, type = "tips")
 #' table(tip_states)
+#'
+#' # --- Use the observed tip values --- #
+#'
+#' # The contMap only approximates the values at the tips (interpolation within segments).
+#' # Provide the observed tip values to compute the cut points and to set the state of each tip from the data
+#' my_simmap_1b <- convert_contMap_to_simmap(my_contMap, probs = c(1/3, 2/3),
+#'                                           states = c("low", "medium", "high"),
+#'                                           tip_values = tip_data)
+#' # Cut points computed from the observed tip values
+#' attr(my_simmap_1b, "breaks")
+#' quantile(tip_data, probs = c(1/3, 2/3))
+#'
+#' # Tips are in the state of their observed values
+#' tip_states_b <- phytools::getStates(my_simmap_1b, type = "tips")
+#' all(tip_states_b == convert_values_to_states(tip_data, simmap = my_simmap_1b)[names(tip_states_b)])
 #'
 #' # Plot the resulting simmap
 #' plot(my_simmap_1, colors = c(low = "blue", medium = "grey", high = "red"),
@@ -217,7 +255,8 @@
 #'  # Convert multiple contMaps at once into corresponding simmaps
 #'  # using quantiles of the tip values
 #'  my_multiSimmap <- convert_contMap_to_simmap(my_contMaps_list, probs = c(1/3, 2/3),
-#'                                              states = c("low", "medium", "high"))
+#'                                              states = c("low", "medium", "high"),
+#'                                              tip_values = tip_data) # Use the observed tip values
 #'
 #'  # Plot the resulting simmaps describing different evolutionary histories simulated
 #'  # from the same evolutionary process conditioned to the tip data and phylogeny,
@@ -228,6 +267,35 @@
 #'       main = "simmap n\u00B02", fsize = 0.7, ftype = "i")
 #'  plot(my_multiSimmap[[3]], colors = c(low = "blue", medium = "grey", high = "red"),
 #'      main = "simmap n\u00B03", fsize = 0.7, ftype = "i")
+#'
+#'  # --- Alternative: use deepSTRAPP::prepare_trait_data() (recommended) --- #
+#'
+#'  # The steps above (fit of the BM model, simulation of the continuous stochastic maps
+#'  # with contsimmap::make.contsimmap(), and conversion into a list of contMaps)
+#'  # can be run at once with deepSTRAPP::prepare_trait_data().
+#'
+#'  # The function offers additional options to fine-tune the process, such as the comparison of several
+#'  # evolutionary models (selected by AICc), the resolution of the contMaps, and the number of simulations.
+#'  # It can also output directly both the interpolated point estimate as in phytools::contMap(),
+#'  # and the set of stochastic continuous maps simulated with contsimmap::make.contsimmap().
+#'
+#'  # Not to run: it replaces the steps above and returns the same type of output (a list of contMaps).
+#'  # my_trait_data <- deepSTRAPP::prepare_trait_data(
+#'  #     tip_data = tip_data,
+#'  #     trait_data_type = "continuous",
+#'  #     phylo = toy_backbone,
+#'  #     seed = 1234, # Set seed for reproducibility
+#'  #     evolutionary_models = "BM", # Evolutionary model(s) to fit
+#'  #     run_stochastic_maps = TRUE, # Run continuous stochastic mapping to account for uncertainty
+#'  #     nb_simulations = 100, # Number of stochastic maps
+#'  #     plot_map = FALSE)
+#'  #
+#'  # my_contMap <- my_trait_data$contMap # Point estimate: a single contMap
+#'  # my_contMaps_list <- my_trait_data$contMaps # List of contMaps from the stochastic maps
+#'  #
+#'  # my_multiSimmap <- convert_contMap_to_simmap(my_contMaps_list, probs = c(1/3, 2/3),
+#'  #                                             states = c("low", "medium", "high"),
+#'  #                                             tip_values = tip_data)
 #' }
 #' }
 #'
@@ -237,6 +305,7 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
                                        n_bins = NULL, # Number of bins of equal width over the range of the tip values
                                        probs = NULL, # Quantile levels of the tip values
                                        states, # Names of the states, from the lowest to the highest values
+                                       tip_values = NULL, # Observed trait values at the tips (optional)
                                        min_segment_proportion = 0.01, # Minimum duration of a segment, as a proportion of the root age
                                        verbose = TRUE) # Print the progress across the contMaps
 {
@@ -278,6 +347,39 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
     stop("'states' must be a character vector of at least two unique non-empty names, from the lowest to the highest trait values.")
   }
 
+  # tip_values: observed values at the tips, reordered to match the tips of the phylogeny
+  tip_labels <- contMaps[[1]]$tree$tip.label
+  if (!is.null(tip_values))
+  {
+    if (!is.numeric(tip_values) || anyNA(tip_values) || !all(is.finite(tip_values)))
+    {
+      stop("'tip_values' must be a numeric vector of finite values (no NA).")
+    }
+    if (length(tip_values) != length(tip_labels))
+    {
+      stop("'tip_values' must have one value per tip of the phylogeny (", length(tip_labels), "), but ", length(tip_values), " value(s) were provided.")
+    }
+    if (is.null(names(tip_values)))
+    {
+      # Unnamed: assumed to be in the order of the tips of the phylogeny
+      names(tip_values) <- tip_labels
+    } else {
+      if (anyDuplicated(names(tip_values)) > 0 || !setequal(names(tip_values), tip_labels))
+      {
+        stop("The names of 'tip_values' must be the tip labels of the contMap(s), each used once.")
+      }
+      tip_values <- tip_values[tip_labels]
+    }
+    # The observed values must lie within the range of the values of the contMap(s) (small tolerance for rounding)
+    lims_all <- range(unlist(lapply(contMaps, function (x) x$lims)))
+    tol_lims <- 1e-6 * diff(lims_all)
+    if (any(tip_values < lims_all[1] - tol_lims | tip_values > lims_all[2] + tol_lims))
+    {
+      stop("Some 'tip_values' are outside the range of the trait values of the contMap(s) (", format(lims_all[1]), " to ", format(lims_all[2]), ").\n",
+           "'tip_values' must be the observed data used to build the contMap(s).")
+    }
+  }
+
   # min_segment_proportion
   if (!is.numeric(min_segment_proportion) || length(min_segment_proportion) != 1 || is.na(min_segment_proportion) || min_segment_proportion < 0 || min_segment_proportion >= 1)
   {
@@ -296,14 +398,14 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
   n_maps <- length(contMaps)
   # Extract all values along all branches of all maps (requires back-conversion into the trait scale)
   all_values <- lapply(contMaps, extract_contMap_values)
-  # Extract tip values, averaged across maps
-  tip_values <- rowMeans(do.call(cbind, lapply(all_values, function (x) x$tips)))
+  # Tip values used to compute the cut points: the observed values if provided, or else the values read from the contMaps (averaged across maps), which are only approximate
+  tip_values_cutpoints <- if (!is.null(tip_values)) tip_values else rowMeans(do.call(cbind, lapply(all_values, function (x) x$tips)))
   # Extract the max range of the trait values across all maps based on '$lims'
   range_values <- range(unlist(lapply(contMaps, function (x) x$lims)))
 
   # Interior cut points: from 'breaks', or computed from the tip values ('n_bins', 'probs').
   # Always sorted, distinct, and strictly within 'range_values' (warnings or errors otherwise)
-  breaks <- resolve_contMap_breaks(breaks = breaks, n_bins = n_bins, probs = probs, tip_values = tip_values, range_values = range_values)
+  breaks <- resolve_contMap_breaks(breaks = breaks, n_bins = n_bins, probs = probs, tip_values = tip_values_cutpoints, range_values = range_values)
 
   # Check that one state per bin is provided: k interior cut points define k + 1 bins.
   # This is checked after the cut points are resolved, as some may have been removed (duplicates, boundaries)
@@ -327,6 +429,8 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
   tip_edges <- tree$edge[, 2] <= ape::Ntip(tree)
   n_edges <- nrow(tree$edge)
   n_states <- length(states)
+  # State (bin index) of the observed value of each tip, if provided. In the order of the tips, i.e., indexed by the tipward node of the terminal edges
+  tip_bins <- if (!is.null(tip_values)) findInterval(tip_values, breaks) + 1L else NULL
 
   # Initiate the list of simmaps
   simmaps <- vector("list", n_maps)
@@ -353,8 +457,12 @@ convert_contMap_to_simmap <- function (contMap, # One contMap or a list of contM
       # 1. Assign each segment to a bin: findInterval() counts the cut points <= value, so values below the first cut point give 0,
       #    between the first and second give 1, ..., above the last give k. The + 1L turns it into a bin index from 1 to k + 1
       #    (a value equal to a cut point goes to the bin above it).
-      # 2. discretise_edge() merges the neighbour segments of the same bin and removes the segments shorter than 'min_len'
-      seg <- discretise_edge(lens = as.numeric(maps_i[[e]]), idx = findInterval(values_i[[e]], breaks) + 1L, min_len = min_len, terminal = tip_edges[e])
+      idx_e <- findInterval(values_i[[e]], breaks) + 1L
+      # 2. With observed tip values, the last segment of a terminal edge (at the tip) is set to the state of the observed value of the tip,
+      #    as the value of this segment only approximates it (this segment is kept as it is by discretise_edge())
+      if (!is.null(tip_bins) && tip_edges[e]) { idx_e[length(idx_e)] <- tip_bins[tree$edge[e, 2]] }
+      # 3. discretise_edge() merges the neighbour segments of the same bin and removes the segments shorter than 'min_len'
+      seg <- discretise_edge(lens = as.numeric(maps_i[[e]]), idx = idx_e, min_len = min_len, terminal = tip_edges[e])
 
       # New map of the edge: named vector of durations, named after the states (as in a simmap)
       new_map <- seg$lens
