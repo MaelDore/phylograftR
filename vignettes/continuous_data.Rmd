@@ -272,7 +272,7 @@ par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
 We graft the taxa with each of these `simmap`s, using the same seed, and plot the **updated `simmap`s of the grafted phylogenies** with `plot_grafted()`.
-The grafted taxa are labelled in dark green and their branches are dashed. They take the state of the branch where they are grafted.
+The grafted taxa are labelled in "purple" and their branches are dashed. They take the state of the branch where they are grafted.
 The grafting positions differ between the sets, because the allowed states of the taxa, and the places where these states are found, are not the same.
 
 ```{r thresholds_graft, fig.width = 10, fig.height = 10, out.width = "100%"}
@@ -292,7 +292,7 @@ for (set_name in names(threshold_results))
 {
   grafted_set <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = set_allowed_states(threshold_results[[set_name]]$states),
                                     simmap = threshold_results[[set_name]]$simmap, verbose = FALSE, seed = 1)
-  plot_grafted(grafted_set, simmap_colors = state_colors, color = "darkgreen",
+  plot_grafted(grafted_set, simmap_colors = state_colors, color = "purple",
                fsize = 0.55, lwd = 2, main = gsub("_", " ", set_name))
 }
 par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
@@ -347,7 +347,7 @@ data.frame(Taxon_name = plan_single$Taxon_name,
 ```
 
 The valid fraction of `New_sp3` increases from 0.42 to 0.94, and that of `New_sp7` from 0.43 to 0.85: their position is less sensitive to the exact threshold.
-The cost is a weaker constraint that allow the taxa to be grafted on branches with a large range of trait values. In the end, the trade-off between a lesser sensitivity to thresholds, but looser constraints on grafting, is for you to evaluate.
+The cost is a weaker constraint that allow the taxa to be grafted on branches with a large range of trait values. In the end, the relevance of the **trade-off** between a lesser sensitivity to thresholds, but looser constraints on grafting, is for you to evaluate.
 
 
 ## 3/ Account for uncertainty: continuous stochastic maps
@@ -650,7 +650,7 @@ An alternative that **truly relies on continuous trait data** already exists: **
 | Information on the missing taxa | Values of **many continuous traits** of the taxon | **Taxonomy** (target and excluded clades) and **one continuous trait** |
 | Placement | Maximum likelihood placement of one taxon from its trait values | Stochastic placement within the target clade, constrained by attributes (discretized values into states), with divergence times drawn from clade-specific diversification models |
 | Number of taxa | One taxon at a time | Many taxa and clades in one run |
-| Uncertainty | One tree per taxon, with the taxon placed at the maximum likelihood position (the likelihood profile across branches can be plotted with `plot = TRUE`) | Many grafted phylogenies |
+| Uncertainty | One tree per taxon | Many grafted phylogenies in one run |
 | Requires | Good sampling of the traits (many traits) for the missing taxa | Target clades for the missing taxa (although, the whole tree can be the target) |
 
 **When to use which?**
