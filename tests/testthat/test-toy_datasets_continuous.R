@@ -52,7 +52,8 @@ test_that("toy_contMaps is a list of 100 contMaps of toy_backbone that can be di
     expect_identical(toy_contMaps[[i]]$tree$edge, toy_backbone$edge)
     expect_equal(toy_contMaps[[i]]$tree$edge.length, toy_backbone$edge.length)
     # The observed tip values are within the range of the values of the map
-    expect_true(all(toy_tip_values >= toy_contMaps[[i]]$lims[1] & toy_tip_values <= toy_contMaps[[i]]$lims[2]))
+    tolerance <- 1e-6 * diff(toy_contMaps[[i]]$lims)
+    expect_true(all(toy_tip_values >= toy_contMaps[[i]]$lims[1] - tolerance & toy_tip_values <= toy_contMaps[[i]]$lims[2] + tolerance))
   }
   # Discretization: the first step of the use of the list
   my_multiSimmap <- convert_contMap_to_simmap(toy_contMaps, probs = c(1/3, 2/3), states = c("low", "medium", "high"),

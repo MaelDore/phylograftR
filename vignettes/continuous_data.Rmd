@@ -38,7 +38,7 @@ In this tutorial, we cover:
 1. **A single `contMap`** (point estimate of the trait history) converted into a `simmap`.
 2. The robustness to the **choice of the thresholds**.
 3. **Continuous stochastic maps** (`contsimmap`) converted into a `multiSimmap`, to account for the uncertainty in the trait history.
-4. Why you should **not discretize the tip data first** and build the `simmap` with `phytools::make.simmap()` (not recommended).
+4. Why you should **NOT** discretize the tip data first and build the `simmap` with `phytools::make.simmap()`.
 5. **A complementary tool, `phytools::locate.yeti()`**, that places a taxon from its continuous trait values.
 
 **Is phylograftR the right tool for my continuous data?**
@@ -86,31 +86,37 @@ missing_values <- c(New_sp1 = 0.5, New_sp2 = 2.5, New_sp3 = 1.4, New_sp4 = -3,
 
 In this tutorial, the trait is discretized into three states, with a color for each of them.
 To ease the comparison between the continuous and the discrete maps, we also use a **continuous color scale built from the three colors of the states** to plot the `contMap`s.
-The small helper below defines this scale: its middle color (grey) is placed at the middle of the two cut points used in *Section 1* (the terciles of the tip values), and the two other colors at the typical values of the lowest and highest states.
 
-```{r colors, fig.width = 6, fig.height = 5.5, out.width = "70%"}
+```{r colors}
 # ------ Names and colors of the states ------ #
 
 state_names <- c("low", "medium", "high") # From the lowest to the highest values
 state_colors <- c(low = "steelblue", medium = "grey75", high = "firebrick")
 
-# ------ Helper: continuous color scale matching the colors of the states ------ #
+# ------ Build a continuous color scale matching the colors of the states ------ #
 
-color_contMap <- function (contMap, breaks, tip_values)
-{
-  # Values of each color of the contMap
-  values <- seq(contMap$lims[1], contMap$lims[2], length.out = length(contMap$cols))
-  # Anchors of the scale: typical value of the lowest state, middle of the cut points, typical value of the highest state
-  anchors <- c(median(tip_values[tip_values < breaks[1]]), mean(breaks), median(tip_values[tip_values >= breaks[2]]))
-  position <- pmin(pmax(approx(anchors, c(0, 0.5, 1), xout = values, rule = 2)$y, 0), 1)
-  contMap$cols[] <- rgb(colorRamp(state_colors, space = "Lab")(position), maxColorValue = 255)
-  contMap
-}
+terciles <- quantile(toy_tip_values, probs = c(1/3, 2/3)) # Cut points used in Section 1 below
+scale_colors <- colorRampPalette(state_colors)(101) # Continuous scale from blue to grey to red
 
-# Plot the contMap with this color scale
-terciles <- quantile(toy_tip_values, probs = c(1/3, 2/3)) # Cut points used in Section 1
-toy_contMap_colored <- color_contMap(toy_contMap, breaks = terciles, tip_values = toy_tip_values)
-plot(toy_contMap_colored, legend = FALSE, fsize = c(0.6, 0.8), lwd = 3, outline = FALSE)
+# To match the discrete scale, we want each color to match with the median values of each group
+# such as it partly adjusts to the distribution of trait values inside their range
+#  - "grey" is placed at the median of the "medium" state
+#  - "steelblue" is placed in the median of the "low" state
+#  - "firebrick" is placed in the median of the "high" state
+
+# Build a regular sequence of trait values within their range
+trait_values <- seq(toy_contMap$lims[1], toy_contMap$lims[2], length.out = length(toy_contMap$cols))
+# Extract the median trait values for each group
+anchors <- c(median(toy_tip_values[toy_tip_values < terciles[1]]),
+             median(toy_tip_values[toy_tip_values >= terciles[1] & toy_tip_values < terciles[2]]),
+             median(toy_tip_values[toy_tip_values >= terciles[2]]))
+# Map the index of the color scale to fit the distribution of trait values
+mapped_indices <- round(approx(x = anchors, y = c(1, 51, 101), xout = trait_values, rule = 2)$y)
+
+# Update color scheme in the contMap
+toy_contMap_colored <- toy_contMap
+toy_contMap_colored$cols[] <- scale_colors[mapped_indices]
+
 ```
 
 ## 1/ From a single contMap to a simmap
@@ -149,22 +155,24 @@ We plot the resulting `simmap` next to the `contMap` it comes from:
 # ------ Compare the contMap and the simmap ------ #
 
 par(mfrow = c(1, 2), mar = c(0.5, 0.5, 2, 0.5))
-plot(toy_contMap_colored, legend = FALSE, fsize = c(0.55, 0.8), lwd = 2, outline = FALSE, mar = c(0.5, 0.5, 2, 0.5))
+# plot(toy_contMap_colored, legend = FALSE, fsize = c(0.55, 0.8), lwd = 2, outline = FALSE, mar = c(0.5, 0.5, 2, 0.5))
+plot(toy_contMap_colored, legend = FALSE, fsize = c(0.55, 0.8), lwd = 3, outline = FALSE)
 title("A: contMap", line = -1, cex.main = 1)
-phytools::plotSimmap(simmap_terciles, colors = state_colors, fsize = 0.55, ftype = "i", lwd = 2)
+phytools::plotSimmap(simmap_terciles, colors = state_colors, fsize = 0.55, ftype = "i", lwd = 3)
 title("B: simmap with three states", line = -1, cex.main = 1)
 par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
-The **continuous values of the missing taxa** are converted into the same states with `convert_values_to_states()`, using the attributes of the `simmap` (cut points and names of the states).
-The states are then used as the **allowed states** of each taxon in the `missing_taxa_list`. See *Section 4* in `vignette("prepare_trait_data")` if you are not sure what are **allowed states**.
+The **continuous values of the missing taxa** are converted into the same states with `convert_values_to_states()`, using the attributes of the `simmap` (cut points and names of the states), to ensure that they fully coincide.
+The states are then used as the **allowed states** of each taxon in the `missing_taxa_list` to constrain the grafting to branch parts in the same states. See *Section 4* in `vignette("prepare_trait_data")` if you are not sure what are **allowed states**.
 
 ```{r allowed_states}
 # ------ Convert the values of the missing taxa into allowed states ------ #
 
+# Use the same cut points as for the simmap
 taxon_states <- convert_values_to_states(values = missing_values, simmap = simmap_terciles)
 
-# Use the states as the allowed states of each taxon
+# Use the states as the allowed states of each taxon in the missing_taxa_list
 taxa_continuous <- toy_missing_taxa_list
 taxa_continuous$allowed_states <- setNames(as.list(taxon_states), taxa_continuous$Taxon_name)
 
@@ -189,21 +197,26 @@ data.frame(info_single[, c("Taxon_name", "parent_state", "tip_state")], Allowed_
 Each taxon is grafted on a branch piece in its allowed state, and inherits this state.
 This is a **constraint**: a taxon with a high value can only be grafted where the reconstructed trait is high.
 It assumes that the taxon has evolved from an ancestor with a high value.
+The result is then dependent on the cut points used to discretize the continuous trait data into states.
 
-This `contMap` is a point estimate. The grafting uses a **single trait history**, so it does not account for the uncertainty in the reconstruction of the ancestral values (*Section 3*).
+See *Section 2* for an exploration of the **robustness of analyses to the choice of thresholds**.
+
+This `contMap` is a point estimate: the grafting uses a **single trait history** typically based on the interpolation of ML estimates (see `phytools::contMap()`). It does not account for the uncertainty in the reconstruction of the ancestral values. 
+
+See *Section 3* for how to handle uncertainty using **continuous stochastic mapping**.
 
 ## 2/ Robustness to the choice of the thresholds
 
-The states, and thus the **set of eligible branches of each taxon, depend on the cut points**.
+The states, and thus the set of eligible branches of each taxon, **depend on the cut points**.
 A taxon with a value close to a cut point can be allowed in a different state if the cut point moves, and the extent of the states on the tree changes with the cut points.
-It is therefore **essential to examine how the states allocated to the missing taxa, and the distribution of the states on the tree, change with the thresholds** before running the grafting.
+It is therefore useful to examine how the states allocated to the missing taxa, and the distribution of the states on the tree, **change with the thresholds** before running the grafting.
 
-We compare four sets of thresholds, for the same `contMap` and the same continuous values of the missing taxa:
+We compare four sets of thresholds defining three states, for the same `contMap` and the same continuous values of the missing taxa:
 
-- the **terciles** of the tip values (the reference above);
-- the **quartiles**, with three states cut at the 25% and 75% quantiles of the tip values;
-- **bins of equal width** over the range of the tip values;
-- the terciles **shifted up** by 0.5 unit of the trait.
+- the **terciles** of the tip values (1/3 and 2/3, as in the reference above);
+- the **quartiles**, with three states cut at the 25% and 75% quantiles of the tip values (i.e., medium states comprise 50% of the tips);
+- **bins of equal width** over the range of the tip values (i.e., states cover the same range of trait values, but may include different number of tips as data is not distributed uniformly across tips);
+- the terciles **shifted up** by 0.5 unit of the trait (i.e., tips and branches that previously lied just above a cut off threshold now belongs to the lower state).
 
 For each set, we discretize the `contMap`, and convert the values of the missing taxa with the same cut points.
 
@@ -217,7 +230,8 @@ threshold_sets <- list(
   Equal_width = list(n_bins = 3),
   Terciles_up = list(breaks = attr(simmap_terciles, "breaks") + 0.5))
 
-# Helper: discretize the contMap with one set of thresholds, and convert the values of the missing taxa into allowed states
+# Helper: discretize the contMap with one set of thresholds,
+# and convert the values of the missing taxa into allowed states
 convert_with_thresholds <- function (threshold_args)
 {
   simmap <- do.call(convert_contMap_to_simmap,
@@ -226,7 +240,7 @@ convert_with_thresholds <- function (threshold_args)
 }
 threshold_results <- lapply(threshold_sets, convert_with_thresholds)
 
-# Cut points of each set
+# Extract the cut points of each set
 sapply(threshold_results, function(x) round(attr(x$simmap, "breaks"), 2))
 ```
 
@@ -251,20 +265,20 @@ We plot the `simmap` obtained with each set to see how the states change on the 
 par(mfrow = c(2, 2), mar = c(0.5, 0.5, 2, 0.5))
 for (set_name in names(threshold_results))
 {
-  phytools::plotSimmap(threshold_results[[set_name]]$simmap, colors = state_colors, fsize = 0.55, ftype = "i", lwd = 2)
+  phytools::plotSimmap(threshold_results[[set_name]]$simmap, colors = state_colors, fsize = 0.55, ftype = "i", lwd = 3)
   title(gsub("_", " ", set_name), line = -1, cex.main = 1)
 }
 par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
-We graft the taxa with each of these `simmap`s, using the same seed, and plot the **updated `simmap`s of the grafted phylogenies**.
-The grafted taxa are in bold, and take the state of the branch where they are grafted.
+We graft the taxa with each of these `simmap`s, using the same seed, and plot the **updated `simmap`s of the grafted phylogenies** with `plot_grafted()`.
+The grafted taxa are labelled in dark green and their branches are dashed. They take the state of the branch where they are grafted.
 The grafting positions differ between the sets, because the allowed states of the taxa, and the places where these states are found, are not the same.
 
 ```{r thresholds_graft, fig.width = 10, fig.height = 10, out.width = "100%"}
 # ------ Graft with each set of thresholds ------ #
 
-# Helper: list of missing taxa with allowed states
+# Helper: set allowed states in a list of missing taxa
 set_allowed_states <- function (states)
 {
   taxa <- toy_missing_taxa_list
@@ -272,29 +286,14 @@ set_allowed_states <- function (states)
   taxa
 }
 
-# Helper: plot the updated simmap of a grafted phylogeny, with the grafted tips in bold, and optionally one taxon highlighted
-plot_grafted_simmap <- function (phy_grafted, main = "", highlight = NULL)
-{
-  tips <- phy_grafted$tip.label
-  grafted <- phy_grafted$grafted_tips[tips]
-  phytools::plotSimmap(phy_grafted$simmap, colors = state_colors, ftype = "off", lwd = 2,
-                       xlim = c(0, 1.4 * max(ape::node.depth.edgelength(phy_grafted))))
-  ape::tiplabels(text = tips[!grafted], tip = which(!grafted), frame = "none", adj = c(-0.1, 0.5), cex = 0.5, col = "grey40")
-  ape::tiplabels(text = tips[grafted], tip = which(grafted), frame = "none", adj = c(-0.1, 0.5), cex = 0.6, font = 2, col = "black")
-  if (!is.null(highlight))
-  {
-    ape::tiplabels(text = highlight, tip = which(tips == highlight), frame = "rect", bg = "gold", adj = c(-0.1, 0.5), cex = 0.6, font = 2)
-  }
-  title(main, line = -1, cex.main = 1)
-}
-
-# Graft and plot
+# Graft and plot the updated simmap of the grafted phylogeny
 par(mfrow = c(2, 2), mar = c(0.5, 0.5, 2, 0.5))
 for (set_name in names(threshold_results))
 {
   grafted_set <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = set_allowed_states(threshold_results[[set_name]]$states),
                                     simmap = threshold_results[[set_name]]$simmap, verbose = FALSE, seed = 1)
-  plot_grafted_simmap(grafted_set, main = gsub("_", " ", set_name))
+  plot_grafted(grafted_set, simmap_colors = state_colors, color = "darkgreen",
+               fsize = 0.55, lwd = 2, main = gsub("_", " ", set_name))
 }
 par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
@@ -303,63 +302,64 @@ par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 
 There are multiple solutions available to handle the sensitivity of the results to the choice of thresholds:
 
+- **Choose meaningful thresholds** when possible (e.g., biological categories, such as size classes; thresholds that match with gaps in the continuous trait distribution), instead of default quantiles.
 - **Run the grafting with several sets of thresholds**, and compare the results. If the conclusions of your analysis depend on the thresholds, consider that they are not robust.
-- **Choose meaningful thresholds** when possible (e.g., biological categories, such as size classes), instead of default quantiles.
 - **Allow several states for the taxa with values close to a cut point**, to account for the uncertainty of their measure or of the thresholds. A taxon can have several allowed states.
 
-To illustrate the last option, we need to introduce the **valid fraction** of a taxon.
-Before grafting, `check_grafting_plan()` identifies the branches available for each taxon (within its target clade, and in the time window of its grafting), and computes the **`valid_fraction`: the share of the length of these available branches that is in the allowed states** of the taxon.
+Here, we illustrate the last option by applying a **tolerance** on the **allowed states** attributed to the missing taxa to graft based on their trait values.
+
+We evaluate the effects using the `check_grafting_plan()` function, to identify **before grafting** the branches available for each taxon (within its target clade, and in the time window of its grafting), and compute the **`valid_fraction`: the share of the length of these available branches that is in the allowed states** of each missing taxon.
 A valid fraction of 1 means that the allowed states do not restrict the grafting at all, whereas a small valid fraction means that the grafting is restricted to a small share of the available branches (a warning is raised when it is below `min_valid_fraction`, 10% by default), and a valid fraction of 0 makes the grafting impossible.
 The valid fraction is thus a measure of **how strong the constraint is for a taxon**.
 
 ```{r plan_single}
 # ------ Check the grafting plan ------ #
 
+# Check the initial grafting plan, without tolerance in the allowed states
 plan_single <- check_grafting_plan(phy = toy_backbone, missing_taxa_list = taxa_continuous,
                                    simmap = simmap_terciles, verbose = FALSE)
 plan_single[, c("Taxon_name", "allowed_states", "valid_fraction", "feasible")]
 ```
 
-Now, we allow each taxon in **all the states covered by its value ± 0.3**, with the terciles as thresholds.
+Now, we use the argument `tolerance` of `convert_values_to_states()` to allow each taxon in **all the states covered by its value ± 0.3** (in the units of the trait), with the terciles as thresholds.
 Only the taxa with a value within 0.3 of a cut point get two states: here, `New_sp3` and `New_sp7`.
+With a tolerance, the function returns a **list of the allowed states of each taxon**, which can be used directly as `allowed_states`.
 
 ```{r tolerance}
 # ------ Allowed states with a tolerance around the value ------ #
 
-tolerance <- 0.3
-breaks_terciles <- attr(simmap_terciles, "breaks")
+# Convert the values into all the states covered by [value - 0.3, value + 0.3]
+allowed_with_tolerance <- convert_values_to_states(values = missing_values, simmap = simmap_terciles, tolerance = 0.3)
+allowed_with_tolerance
 
-# All the states between the states of (value - tolerance) and (value + tolerance)
-# findInterval() gives the same bins as convert_values_to_states(): a value equal to a cut point is in the bin above
-allowed_with_tolerance <- lapply(missing_values, function(value)
-{
-  state_ids <- findInterval(c(value - tolerance, value + tolerance), breaks_terciles) + 1
-  state_names[state_ids[1]:state_ids[2]]
-})
-
+# Update the missing_taxa_list with allowed states based on tolerance
 taxa_tolerance <- toy_missing_taxa_list
 taxa_tolerance$allowed_states <- allowed_with_tolerance
+
+# Check the new grafting plan
 plan_tolerance <- check_grafting_plan(phy = toy_backbone, missing_taxa_list = taxa_tolerance,
                                       simmap = simmap_terciles, verbose = FALSE)
 
+# Compare valid fractions between the two grafting plans
 data.frame(Taxon_name = plan_single$Taxon_name,
            Allowed_state = plan_single$allowed_states, Valid_fraction = round(plan_single$valid_fraction, 2),
            Allowed_with_tolerance = plan_tolerance$allowed_states, Valid_fraction_with_tolerance = round(plan_tolerance$valid_fraction, 2))
 ```
 
 The valid fraction of `New_sp3` increases from 0.42 to 0.94, and that of `New_sp7` from 0.43 to 0.85: their position is less sensitive to the exact threshold.
-The cost is a weaker constraint.
+The cost is a weaker constraint that allow the taxa to be grafted on branches with a large range of trait values. In the end, the trade-off between a lesser sensitivity to thresholds, but looser constraints on grafting, is for you to evaluate.
+
 
 ## 3/ Account for uncertainty: continuous stochastic maps
 
-A single `contMap` is a point estimate of the history of the trait.
+A single `contMap` is a point estimate of the history of the trait: it represents a **single trait history** typically based on the interpolation of ML estimates (if built with `phytools::contMap()`). It does not account for the uncertainty in the reconstruction of the ancestral values.
+
 To account for the **uncertainty in the trait history**, we can use **several continuous stochastic maps**: each map is one possible history of the trait on the phylogeny, simulated conditionally on the tip data and an evolutionary model.
-Each map is then discretized, and gives a `multiSimmap` with one `simmap` per history. Each map is used for a different grafted phylogeny.
+Each map is then discretized, and gives a `multiSimmap` with one `simmap` per history. Each map is then used as **attribute-based constraint** for a different grafted phylogeny.
 
 The continuous stochastic mapping approach is implemented in the R package `contsimmap`.
-The function **`deepSTRAPP::prepare_trait_data()` is the recommended way** to get the maps: with `run_stochastic_maps = TRUE`, it **fits the evolutionary model(s)** (selected by AICc), **runs the continuous stochastic mapping** with `contsimmap::make.contsimmap()`, and **converts the maps into a list of `contMap`s**, all in one call, with additional options to fine-tune the process (e.g., comparison of several models, resolution of the `contMap`s, number of simulations).
+The function **`deepSTRAPP::prepare_trait_data()` is the recommended way** to get the maps: with `run_stochastic_maps = TRUE`, it **fits the evolutionary model(s)** (selected by AICc), **runs the continuous stochastic mapping** with `contsimmap::make.contsimmap()`, and **converts the maps into a list of `contMap`s**, all in one call, with additional options to fine-tune the process (e.g., comparison of several models, resolution of the `contMap`s, number of simulations, etc.).
 It also returns the point-estimate `contMap` of *Section 1*.
-See `vignette("prepare_trait_data")` for more details.
 
 The code below shows the **steps with `contsimmap`**, which are run internally by `deepSTRAPP::prepare_trait_data()`, for a more didactic explanation.
 It requires packages that may not be installed (`contsimmap` is not on CRAN), so it is **not run here**.
@@ -380,20 +380,29 @@ my_contsimmap <- contsimmap::make.contsimmap(tree = toy_backbone, trait.data = t
 my_contMaps_list <- deepSTRAPP::convert_contsimmap_to_contMaps(contsimmap = my_contsimmap)
 
 # Alternative (recommended): all the steps above in one call with deepSTRAPP
-my_trait_data <- deepSTRAPP::prepare_trait_data(tip_data = toy_tip_values, trait_data_type = "continuous",
-                                                phylo = toy_backbone, seed = 1234, evolutionary_models = "BM",
-                                                run_stochastic_maps = TRUE, nb_simulations = 100, plot_map = FALSE)
-my_contMap <- my_trait_data$contMap # Point estimate
+my_trait_data <- deepSTRAPP::prepare_trait_data(tip_data = toy_tip_values,
+                                                trait_data_type = "continuous",
+                                                phylo = toy_backbone, seed = 1234,
+                                                evolutionary_models = "BM",
+                                                run_stochastic_maps = TRUE,
+                                                nb_simulations = 100, plot_map = FALSE)
+
+my_contMap <- my_trait_data$contMap # Point estimate of the interpolated ML estimates
 my_contMaps_list <- my_trait_data$contMaps # List of contMaps from the stochastic maps
 ```
 
-The **list of `contMap`s is the input** you need to constrain the grafting with a continuous trait.
-The **first step is to discretize all the `contMap`s at once** into a `multiSimmap`, with `convert_contMap_to_simmap()`.
+The **list of `contMap`s** is the input you need to constrain the grafting with a continuous trait.
+The first step is to **discretize all the `contMap`s at once** into a `multiSimmap`, with `convert_contMap_to_simmap()`.
 Here, we use the shipped list `toy_contMaps`, with the same thresholds as in *Section 1*.
 
 ```{r multisimmap_convert}
 # ------ Discretize the list of contMaps into a multiSimmap ------ #
 
+# Load directly the list of continuous stochastic maps obtained with the script above
+# as shipped in the phylograftR package
+data(toy_contMaps)
+
+# Discretize all contMaps at once using the same cut points
 multiSimmap_continuous <- convert_contMap_to_simmap(contMap = toy_contMaps,
                                                     probs = c(1/3, 2/3), # Terciles of the tip values
                                                     states = state_names,
@@ -447,15 +456,14 @@ We silence the warnings about the low valid fractions, which are summarized abov
 
 grafted_multi <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_continuous,
                                     simmap = multiSimmap_continuous,
-                                    min_valid_fraction = 0, nb_simulations = 1, seed = 1, verbose = FALSE)
+                                    min_valid_fraction = 0, nb_simulations = 1,
+                                    seed = 1, verbose = FALSE)
 
 # One element per map
 length(grafted_multi)
 ```
 
-To see how the uncertainty in the trait history is propagated to the grafted phylogenies, we extract the grafting information of each taxon in each map.
-**The backbone phylogeny must be provided with `phy_backbone`** to identify the branch of the backbone where each taxon was grafted (`parent_node`).
-We use the same seed for all the maps, so the differences between the grafted phylogenies come from the differences between the maps, i.e., from the places where the allowed states are found on the backbone.
+To see how the uncertainty in the trait history is propagated to the grafted phylogenies, we extract **a posteriori** the grafting information of each taxon in each map using `extract_grafting_info()`, and summarize their **graft age** (i.e., when the lineage branched from the backbone).
 
 ```{r multisimmap_info}
 # ------ Position of the grafts across the maps ------ #
@@ -480,38 +488,17 @@ legend("topright", legend = state_names, fill = state_colors[state_names], title
 par(mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
-The grafting age of a taxon varies among the maps: this is how the uncertainty in the trait history is propagated to the grafted phylogenies.
-The taxa with a restrictive constraint, or with a state found in a few places only, are less variable.
-To see how it works, we pick the taxon grafted on the largest number of different backbone branches, and two maps where it is grafted on different branches.
-The two plots show the **updated `simmap`s of the grafted phylogenies**: the states along the branches of the backbone differ between the two maps, and so do the branches where the taxon can be grafted.
+The grafting age of a taxon varies among the maps: this is how the uncertainty in the trait history is **propagated to the grafted phylogenies**.
+The taxa with a restrictive constraint, or with a state found in a few places only, are less variable. Conversely, taxa restricted to states found in many branches that may vary between inferred evolutionary histories are much more variable in their placement and graft age.
 
-```{r multisimmap_two_maps, fig.width = 10, fig.height = 6, out.width = "100%"}
-# ------ Compare the grafting of one taxon with two maps ------ #
-
-# Taxon grafted on the largest number of different branches
-n_parent_branches <- tapply(info_multi$parent_node, info_multi$Taxon_name, function(x) length(unique(x)))
-focus_taxon <- names(which.max(n_parent_branches))
-
-# Two maps where this taxon is grafted on different branches
-info_focus <- info_multi[info_multi$Taxon_name == focus_taxon, ]
-two_maps <- info_focus$map[match(unique(info_focus$parent_node)[1:2], info_focus$parent_node)]
-info_focus[info_focus$map %in% two_maps, c("map", "Taxon_name", "parent_node", "graft_age", "parent_state")]
-
-par(mfrow = c(1, 2), mar = c(0.5, 0.5, 2, 0.5))
-for (map_name in two_maps)
-{
-  plot_grafted_simmap(grafted_multi[[map_name]], main = paste0(map_name, ": ", focus_taxon, " (highlighted)"), highlight = focus_taxon)
-}
-par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
-```
-
-The taxon `r focus_taxon` is allowed in the state `"`r taxon_states[focus_taxon]`"`, and is grafted on `r n_parent_branches[focus_taxon]` different backbone branches across the 100 maps.
-See `vignette("handle_uncertainty")` for the use of several maps and several simulations.
+See `vignette("handle_uncertainty")` for the use of several maps combined with several simulations to fully handle all sources of uncertainty.
 
 ### Do not interpret the number of transitions
 
-The maps derived from continuous stochastic maps **cross the cut points many times along the branches**, because the continuous trait wanders around the thresholds.
-This produces many short segments that alternate between states, which are **not transitions of a discrete trait**:
+The maps derived from continuous stochastic maps **cross the cut points many times along the branches**, because the continuous trait wanders according to a Brownian motion, and thus can cross thresholds many times in a short time span.
+This produces many short segments that alternate between states, which **should not be interpreted as transitions of a discrete trait**.
+
+To illustrate this issue, we compare the number of "transitions" recorded in the simmap based on the discretization of the **point-estimate** contMap (i.e., `simmap_terciles`) vs. "transitions" recorded in simmaps based on the **continuous stochastic maps** (i.e., `multiSimmap_continuous`).
 
 ```{r transitions}
 # ------ Number of changes of state per map ------ #
@@ -520,74 +507,31 @@ This produces many short segments that alternate between states, which are **not
 n_changes <- sapply(multiSimmap_continuous, function(x) sum(lengths(x$maps) - 1))
 summary(n_changes)
 
-# Compare with the contMap (monotonic interpolation of the values along each branch)
+# Compare with the contMap (based on a monotonic interpolation of the values along each branch)
 sum(lengths(simmap_terciles$maps) - 1)
 ```
 
-The argument **`min_segment_proportion`** of `convert_contMap_to_simmap()` limits this effect: segments shorter than this proportion of the depth of the tree (1% by default, i.e., 0.5 for a tree of root age 50) are merged into their longest neighbor on the branch.
-The segments at the tip are kept, to preserve the observed tip states.
+The **point-estimate** contMap based on a monotonic interpolation of the ML estimates along each branch record 14 "transitions", while the **continuous stochastic maps** produced on average ca. 32 "transitions", up to 55. 
+
+The argument **`min_segment_proportion`** of `convert_contMap_to_simmap()` limits this effect: segments shorter than this proportion of the depth of the tree (1% by default, i.e., 0.5 for a tree of root age 50) are merged into their longest neighbor on the branch to prevent recording **fast transient transitions around the thresholds**.
 Setting `min_segment_proportion = 0` keeps **every crossing** of a cut point: the maps then have more segments and more changes of state.
-A larger value merges more segments and gives smoother maps.
-We compare three values: the number of changes of state per map, the duration of the shortest segment that is not at a tip, and the mean valid fraction of the missing taxa across the maps.
+A larger value merges more segments and gives **smoother maps**.
 
-```{r min_segment}
-# ------ Effect of min_segment_proportion ------ #
+Either way, the discrepancy between maps highlights that **the changes of state remain an artifact of the discretization** and depend on the choice of thresholds, the resolution of the continuous maps, and the `min_segment_proportion` argument. Therefore, you should **not use these maps to estimate transition rates or counts of transitions.**
+They are only a tool to describe where the trait is in each range of values, to constrain the grafting based on a continuous trait in an informative way.
 
-proportions <- c(0, 0.01, 0.05)
-internal_edges <- toy_backbone$edge[, 2] > ape::Ntip(toy_backbone) # Edges that do not end at a tip
 
-segment_effect <- lapply(proportions, function(proportion)
-{
-  maps <- convert_contMap_to_simmap(contMap = toy_contMaps, probs = c(1/3, 2/3), states = state_names,
-                                    tip_values = toy_tip_values, min_segment_proportion = proportion, verbose = FALSE)
-  plan <- check_grafting_plan(phy = toy_backbone, missing_taxa_list = taxa_continuous, simmap = maps, verbose = FALSE)
-  list(changes = sapply(maps, function(x) sum(lengths(x$maps) - 1)),
-       min_duration = min(unlist(lapply(maps, function(x) unlist(x$maps[internal_edges])))),
-       valid_fraction = plan$valid_fraction_mean)
-})
+## 4/ Why you should **NOT** discretize the tip data to build stochastic maps
 
-# Changes of state and shortest internal segment
-data.frame(min_segment_proportion = proportions,
-           min_changes = sapply(segment_effect, function(x) min(x$changes)),
-           median_changes = sapply(segment_effect, function(x) median(x$changes)),
-           max_changes = sapply(segment_effect, function(x) max(x$changes)),
-           shortest_internal_segment = round(sapply(segment_effect, function(x) x$min_duration), 2))
-
-# Mean valid fraction of each missing taxon across the maps
-valid_fraction_table <- sapply(segment_effect, function(x) round(x$valid_fraction, 3))
-dimnames(valid_fraction_table) <- list(names(missing_values), paste0("min_segment_proportion = ", proportions))
-valid_fraction_table
-```
-
-```{r min_segment_numbers, include = FALSE}
-# Numbers used in the text
-median_changes <- sapply(segment_effect, function(x) median(x$changes))
-max_shift_default <- max(abs(valid_fraction_table[, 2] - valid_fraction_table[, 1])) # Between 0 and the default
-max_shift_large <- max(abs(valid_fraction_table[, 3] - valid_fraction_table[, 1])) # Between 0 and 0.05
-```
-
-The median number of changes of state per map is `r median_changes[1]` when every crossing is kept, `r median_changes[2]` with the default and `r median_changes[3]` with `min_segment_proportion = 0.05`.
-The valid fractions of the missing taxa, which are what matters for the grafting, are barely affected by the default value: they shift by at most `r round(max_shift_default, 3)` compared with no merging.
-With the larger value of 0.05, the shortest segments of the maps are `r round(0.05 * max(ape::node.depth.edgelength(toy_backbone)), 1)` time units long and the boundaries between states start to move: the valid fractions shift by up to `r round(max_shift_large, 2)`.
-It is therefore better to keep `min_segment_proportion` small, so that it only removes the shortest alternations between states without changing where the states are on the branches.
-Either way, **the changes of state remain an artifact of the discretization** and depend on this argument and on the resolution of the continuous maps.
-The grafting relies on **which parts of the branches are in each state**, not on the number of changes of state.
-
-**Do not use these maps to estimate transition rates or counts of transitions.**
-They only describe where the trait is in each range of values, to constrain the grafting.
-
-## 4/ Not recommended: discretize the tip data first
-
-Another approach may seem tempting: **discretize the tip values first**, and then **build the `simmap` as for any categorical trait** with `phytools::make.simmap()`.
+Another approach to convert continuous trait histories into character maps may seem tempting: **discretize the tip values first**, and then build the `simmap` as for any categorical trait with `phytools::make.simmap()`.
 **We do not recommend it.**
 The discrete trait is then **modeled as a discrete trait** that evolves by transitions between states, and the continuous values of the tips are not used anymore.
 As a result:
 
-- **The information within each state is lost before the reconstruction**: two tips with very different values in the same state are treated as identical, and two tips with close values on each side of a cut point are treated as different.
-- **The reconstruction does not use the continuous trait nor its phylogenetic signal**: the history of the trait is modeled as a Markov process between three states, with rates estimated from 30 tips, instead of a continuous process (here, a Brownian Motion) that reconstructs the ancestral values with the tip values and the branch lengths.
+- **The information within each state is lost before the reconstruction**: two tips with very different values in the same state are treated as identical, and two tips with close values on each side of a cut point are treated as different. This loss of information means a loss of phylogenetic signal useful for inferring the ancestral trait values.
 - **The ancestral states may be incompatible with the ancestral values** that the continuous reconstruction suggests, which are the information you want to use to constrain the grafting.
 
-We illustrate it with the data of the previous sections.
+We illustrate this issue with the data of the previous sections.
 We discretize the tip values into the states of *Section 1*, and build 100 stochastic maps with an ordered model, where the changes are only allowed between neighboring states (`"low"` <-> `"medium"` <-> `"high"`), with an equal rate in both directions.
 
 ```{r make_simmap}
@@ -610,7 +554,8 @@ simmaps_discrete <- phytools::make.simmap(toy_backbone, tip_states, model = orde
 summary(sapply(simmaps_discrete, function(x) sum(lengths(x$maps) - 1)))
 ```
 
-The maps have many more changes of state than the continuous stochastic maps (*Section 3*), as the **transition rates estimated by the discrete model are high** (between `r round(min(simmaps_discrete[[1]]$Q[simmaps_discrete[[1]]$Q > 0]), 2)` and `r round(max(simmaps_discrete[[1]]$Q), 2)` per time unit, for a tree of depth `r max(ape::node.depth.edgelength(toy_backbone))`): the states along the branches are weakly structured by the phylogeny.
+The maps have many more changes of state than the continuous stochastic maps (*Section 3*), as the **transition rates estimated by the discrete model are high** (between 0.7 and 0.92 per time unit, for a tree of depth 50): the states along the branches are weakly structured by the phylogeny.
+
 We compare a map obtained with each approach.
 The tip states are the same, but the internal branches are not:
 
@@ -626,7 +571,7 @@ par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
 The key problem is the states reconstructed at the **internal nodes**.
-We compare the **probability of each state at each node**, computed over the 100 maps of each approach, and plot them as pies.
+We compare the **posterior probability of each state at each node**, computed over the 100 maps of each approach, and plot them as pies.
 For the continuous approach, it is based on the maps of *Section 3*.
 For the tip-based approach, it is based on the maps of `make.simmap()`.
 
@@ -647,9 +592,10 @@ for (panel in 1:2)
 par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
-As a reference, we use the **maximum likelihood estimates of the ancestral values** of the continuous trait, i.e., the values of the `contMap`, discretized with the same cut points.
-We compute for each node the probability of the state of this value in each approach.
-The continuous stochastic maps are random histories around this estimate, so their probability is not 1, but it is higher than for the maps built from the discrete tips.
+The posterior probabilities of ancestral states based on the discretized tips (facet B) appear much more random, even for shallow nodes, because **much of the phylogenetic information has been lost** when the tip values were discretized.
+
+We further compare the predicted ancestral states in both reconstructions. As a reference, we use the **maximum likelihood estimates of the ancestral values** of the continuous trait, i.e., the values of the `contMap`, discretized with the same cut points.
+We compute for each node the probability to retrieve the state of the reference value in each approach.
 We also report how often the state of a node is **two states away** from the state of the reference value (i.e., `"low"` instead of `"high"`, or the opposite).
 
 ```{r make_simmap_compare}
@@ -659,40 +605,35 @@ We also report how often the state of a node is **two states away** from the sta
 node_values <- phytools::fastAnc(toy_backbone, toy_tip_values)[as.character(nodes)]
 node_states <- convert_values_to_states(values = node_values, simmap = simmap_terciles)
 
-# Probability of the state of the reference value at each node
+# Probability of the state of the reference value at each node: 
+# how compatible is the reconstruction with the ML estimates of the continuous values?
 prob_reference_continuous <- node_probs_continuous[cbind(seq_along(nodes), match(node_states, state_names))]
 prob_reference_discrete <- node_probs_discrete[cbind(seq_along(nodes), match(node_states, state_names))]
 
-# Probability of being two states away from the reference state (low vs high)
+# Probability of being two states away from the reference state (low vs high):
+# how often the reconstruction strongly disagree with the reference?
 prob_opposite <- function (node_probs)
 {
   opposite <- c(low = "high", medium = NA, high = "low")[node_states]
   sum(node_probs[cbind(seq_along(nodes), match(opposite, state_names))], na.rm = TRUE) / length(nodes)
 }
 
-data.frame(Approach = c("Continuous stochastic maps, discretized", "make.simmap on discretized tips"),
-           Mean_prob_reference_state = round(c(mean(prob_reference_continuous), mean(prob_reference_discrete)), 2),
-           Mean_prob_two_states_away = round(c(prob_opposite(node_probs_continuous), prob_opposite(node_probs_discrete)), 2))
+# Summarize comparison in a data.frame
+data.frame(Approach = c("Cont. stochastic maps, discretized", "make.simmap on discretized tips"),
+           Mean_prob_reference_state = round(c(mean(prob_reference_continuous),
+                                               mean(prob_reference_discrete)), 2),
+           Mean_prob_two_states_away = round(c(prob_opposite(node_probs_continuous),
+                                               prob_opposite(node_probs_discrete)), 2))
 
-# Probability of the most probable state at each node: how informative is the reconstruction?
-c(Continuous_maps = median(apply(node_probs_continuous, 1, max)), make_simmap = median(apply(node_probs_discrete, 1, max)))
-
-# The nodes with the lowest probability of the state of the reference value with make.simmap
-worst_nodes <- order(prob_reference_discrete)[1:5]
-data.frame(Node = nodes[worst_nodes], Value_contMap = round(node_values[worst_nodes], 2), State_contMap = node_states[worst_nodes],
-           Prob_continuous_maps = round(prob_reference_continuous[worst_nodes], 2),
-           Prob_make_simmap = round(prob_reference_discrete[worst_nodes], 2), row.names = NULL)
 ```
 
-The reconstruction from the discretized tips is also **much less informative**: the most probable state of a node has a median probability of `r round(median(apply(node_probs_discrete, 1, max)), 2)`, against `r round(median(apply(node_probs_continuous, 1, max)), 2)` for the continuous maps (the minimum is 0.33, for three equally probable states).
-The maps built from the discretized tips **assign to the nodes states that are less compatible with the continuous ancestral values**, and sometimes the opposite state.
-The continuous approach keeps the information of the values and of the branch lengths, and thus **gives ancestral states, and eligible branches for the grafting, that follow the continuous trait**.
+The probability to reconstruct the reference state from the continuous stochastic maps is 0.66. It is not (and should not) be 1 because they are random histories designed to account for the uncertainty around this estimate. Crucially, it is higher than for the maps built from the discrete tips, which reconstruct the reference state only with a probability of 0.46. This is not that far from randomness (0.33 for a three states reconstruction) and highlight the **loss of information** due to the discretization applied on tips rather than reconstructed ancestral values. In general, the maps built from the discretized tips **assign to the nodes states that are less compatible with the continuous ancestral values**, and sometimes the opposite state (in 12% of cases in our example).
 
-**Discretize the `contMap`(s) of the continuous trait, as in *Sections 1 to 3*, rather than the tip data.**
+Conclusion: to use continuous traits as constraints for grafting with phylograftR, **discretize the `contMap`(s) of the continuous trait, as in *Sections 1 to 3*, rather than the tip data.**
 
 ## 5/ A complementary tool: `phytools::locate.yeti()`
 
-phylograftR is not designed to graft taxa from continuous trait values: it uses the continuous trait only through a discretization, with the limitations above.
+phylograftR is not designed to graft taxa from continuous trait values: it uses the continuous trait only through a discretization, with the limitations extensively described above.
 An alternative that **truly relies on continuous trait data** already exists: **`phytools::locate.yeti()`** (Revell et al., 2015).
 
 **What does `locate.yeti()` do?**
@@ -709,13 +650,13 @@ An alternative that **truly relies on continuous trait data** already exists: **
 | Information on the missing taxa | Values of **many continuous traits** of the taxon | **Taxonomy** (target and excluded clades) and **one continuous trait** |
 | Placement | Maximum likelihood placement of one taxon from its trait values | Stochastic placement within the target clade, constrained by attributes (discretized values into states), with divergence times drawn from clade-specific diversification models |
 | Number of taxa | One taxon at a time | Many taxa and clades in one run |
-| Uncertainty | One tree per taxon (point estimate) | Many grafted phylogenies |
+| Uncertainty | One tree per taxon, with the taxon placed at the maximum likelihood position (the likelihood profile across branches can be plotted with `plot = TRUE`) | Many grafted phylogenies |
 | Requires | Good sampling of the traits (many traits) for the missing taxa | Target clades for the missing taxa (although, the whole tree can be the target) |
 
 **When to use which?**
 
 - If you have **many continuous traits for a few missing taxa** (e.g., from morphology), `locate.yeti()` may be a better choice to place them.
-- If you have **many missing taxa with only a taxonomy and a few attributes**, phylograftR is more suitable.
+- If you have **many missing taxa with only a taxonomy and a few species attributes**, phylograftR is more suitable.
 - They are **complementary**: phylograftR can graft the bulk of the missing taxa, and `locate.yeti()` can be used in a second step to **fine-tune the placement of a few taxa** with rich trait data.
 
 **Reference**: Revell LJ et al. (2015). *Evolution* 69: 1027-1035. See `?phytools::locate.yeti`.

@@ -15,6 +15,9 @@
 #'   This is typically used to convert the continuous trait values of the missing taxa as states of the `simmap` used to constrain the grafting,
 #'   e.g., to fill the `allowed_states` of the taxa.
 #'
+#'   **A `tolerance` can be applied to the values to account for their uncertainty, or for the uncertainty of the cut points**:
+#'   each value is then assigned to all the states covered by the interval `[value - tolerance, value + tolerance]`.
+#'
 #' @param values Numeric vector. The trait values to convert, in the same units as the trait used to build the `simmap`. If named, the names are kept in the output (e.g., the names of the missing taxa).
 #'   `NA` values give `NA` states.
 #' @param simmap A `"simmap"` or `"multiSimmap"` produced by [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap],
@@ -23,14 +26,31 @@
 #' @param breaks Numeric vector. Only used if `simmap = NULL`. The interior cut points between the states, in increasing order and different from each other.
 #' @param states Character vector. Only used if `simmap = NULL`. The names of the states, from the lowest to the highest values.
 #'   **Must have one more element than `breaks`**, because N interior cuts (`breaks`) produce N+1 groups.
+#' @param tolerance Numeric, zero or positive. Default is `0`: each value is assigned to a single state.
+#'   With a tolerance, each value is assigned to **all the states covered by the interval `[value - tolerance, value + tolerance]`**,
+#'   in the units of the trait. Values that are farther than `tolerance` from every cut point are still assigned to a single state.
+#'   It can be a single number used for all the values, or a vector with one tolerance per value (e.g., the measurement error of each missing taxon).
+#'   See 'Details' for the output.
 #'
 #' @details Each state covers the values from its lower cut point (included) up to its upper cut point (excluded): **a value equal to a cut point belongs to the state above it.**
 #'   The first and last states are open-ended, so values below the first cut point or above the last one are assigned to the lowest and highest states.
 #'
-#'   **Each value is assigned to a unique state.** If you wish to include uncertainty by assigning multiple states to values close to cut points (as possible for `allowed_states`),
-#'   you must edit the output after the conversion.
+#'   ### Tolerance
 #'
-#' @return A character vector with the state of each value, named as in `values`.
+#'   **By default (`tolerance = 0`), each value is assigned to a unique state.**
+#'   To include uncertainty, `tolerance` assigns **several states** to the values that are close to a cut point, as accepted by `allowed_states` in the grafting functions:
+#'   a value gets the state of `value - tolerance`, the state of `value + tolerance`, and all the states in between.
+#'   The same rule applies at the edges of the interval as for the values: if `value + tolerance` is equal to a cut point, the state above this cut point is included
+#'   (and if `value - tolerance` is equal to a cut point, the state above it is the first state of the value).
+#'   A tolerance makes the constraint of the grafting weaker: the taxa can be grafted on a wider set of branches (see [`phylograftR::check_grafting_plan()`][check_grafting_plan]
+#'   to evaluate how much, with the `valid_fraction`).
+#'
+#' @return
+#' * With the default `tolerance = 0` (or a tolerance of 0 for all the values): a character vector with the state of each value, named as in `values`.
+#' * With a positive tolerance (for at least one value): **a list of character vectors**, named as in `values`, with the states allowed for each value, ordered from the lowest to the highest.
+#'   It can be used directly as the `allowed_states` item of a list of missing taxa, if `values` is named after the taxa.
+#'
+#' In both cases, the state of a `NA` value is `NA`.
 #'
 #' @seealso Other functions from phylograftR:
 #'  * [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap] to obtain the `simmap` and its cut points from a continuous trait map (`contMap`).
@@ -64,16 +84,44 @@
 #' convert_values_to_states(missing_values, breaks = attr(my_simmap, "breaks"),
 #'                          states = c("low", "medium", "high"))
 #'
+#' # --- Account for the uncertainty of the values with a tolerance --- #
+#'
+#' # Taxon_2 has a value just above the second cut point, between the states "medium" and "high"
+#' close_values <- c(Taxon_1 = -2, Taxon_2 = attr(my_simmap, "breaks")[2] + 0.1, Taxon_3 = 3)
+#' convert_values_to_states(close_values, simmap = my_simmap)
+#'
+#' # With a tolerance of 0.3 trait units, values close to a cut point get several states:
+#' # the output is a list of the allowed states of each taxon
+#' allowed_states <- convert_values_to_states(close_values, simmap = my_simmap, tolerance = 0.3)
+#' allowed_states
+#'
+#' # One tolerance per taxon, e.g., the measurement error of each value (no tolerance for Taxon_1 and Taxon_3)
+#' convert_values_to_states(close_values, simmap = my_simmap, tolerance = c(0, 0.3, 0))
+#'
+#' # Use the list as the 'allowed_states' of a list of missing taxa
+#' missing_taxa_list <- list(Taxon_name = names(close_values),
+#'                           Target_clade = list(Taxon_1 = "t1", Taxon_2 = c("t1", "t2"), Taxon_3 = "t1"))
+#' missing_taxa_list$allowed_states <- allowed_states
+#'
 
 convert_values_to_states <- function (values, # Numeric trait values to convert, named after the taxa if wanted
                                       simmap = NULL, # simmap or multiSimmap from convert_contMap_to_simmap(), with attributes "breaks" and "states"
                                       breaks = NULL, # Interior cut points, if simmap = NULL
-                                      states = NULL) # Names of the states from the lowest to the highest values, if simmap = NULL
+                                      states = NULL, # Names of the states from the lowest to the highest values, if simmap = NULL
+                                      tolerance = 0) # Tolerance around the values: all the states covered by [value - tolerance, value + tolerance] are returned
 {
   ### ---- Checks ---- ###
 
   if (!is.numeric(values)) { stop("'values' must be a numeric vector of trait values.") }
   if (any(is.infinite(values))) { stop("'values' must not contain infinite values.") }
+  if (!is.numeric(tolerance) || length(tolerance) < 1 || anyNA(tolerance) || any(!is.finite(tolerance)) || any(tolerance < 0))
+  {
+    stop("'tolerance' must be a numeric vector of finite values that are zero or positive.")
+  }
+  if (length(tolerance) != 1 && length(tolerance) != length(values))
+  {
+    stop("'tolerance' must have a single value, or one value per element of 'values' (", length(values), "), but it has ", length(tolerance), " values.")
+  }
 
   if (!is.null(simmap))
   {
@@ -103,7 +151,23 @@ convert_values_to_states <- function (values, # Numeric trait values to convert,
 
   # findInterval() counts the cut points lower than or equal to each value: 0 below the first cut point, up to length(breaks) above the last one
   # (so a value equal to a cut point goes to the state above it). The state is the (count + 1)th, from the lowest values; NA values stay NA
-  output <- states[findInterval(values, breaks) + 1L]
+  if (all(tolerance == 0))
+  {
+    output <- states[findInterval(values, breaks) + 1L]
+    names(output) <- names(values)
+    return(output)
+  }
+
+  # With a tolerance: all the states from the state of (value - tolerance) to the state of (value + tolerance), ordered from the lowest to the highest values.
+  # The states are in the order of the cut points, so the states between the two are the consecutive ones. NA values give NA
+  tolerance <- rep_len(tolerance, length(values))
+  first_state <- findInterval(values - tolerance, breaks) + 1L
+  last_state <- findInterval(values + tolerance, breaks) + 1L
+  output <- lapply(seq_along(values), function (i)
+  {
+    if (is.na(values[i])) { return(NA_character_) }
+    states[first_state[i]:last_state[i]]
+  })
   names(output) <- names(values)
 
   return(output)

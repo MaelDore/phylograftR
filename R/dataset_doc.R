@@ -711,10 +711,10 @@ NULL
 #'
 #' @usage data(toy_contMaps)
 #' @format A list of 100 objects of class `"contMap"` (see `phytools::contMap()`), each with the elements:
-#'  * `$tree` the backbone as a `"simmap"`, in which the states are the color levels of the trait values.
-#'  * `$cols` the color palette across values discretized from 0 to 1000.
-#'  *`$lims` range of the trait values, common to all the maps.
-#'  The topology and branch lengths of the trees are the same as [`phylograftR::toy_backbone`][toy_backbone].
+#'   * `$tree`: the backbone as a `"simmap"`, in which the states are the color levels of the trait values from 0 to 1000.
+#'   * `$cols`: the color palette across values discretized from 0 to 1000.
+#'   * `$lims`: the range of the trait values of the map, which differs among the maps.
+#' The topology and branch lengths of the trees are the same as [`phylograftR::toy_backbone`][toy_backbone].
 #'
 #' @seealso Other datasets and functions from phylograftR:
 #'  * [`phylograftR::toy_tip_values`][toy_tip_values] and [`phylograftR::toy_contMap`][toy_contMap] for the data used and the point estimate of the trait history.
