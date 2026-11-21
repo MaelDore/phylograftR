@@ -65,7 +65,7 @@ We use the toy backbone and three toy datasets of **one continuous trait**:
 
 - `toy_tip_values`: the **tip values** of the trait, simulated under a Brownian Motion.
 - `toy_contMap`: the **`contMap`** of this trait: the ancestral values are estimated by maximum likelihood under a Brownian Motion and interpolated along the branches (see `phytools::contMap()`).
-- `toy_contMaps`: a **list of 100 `contMap`s**, i.e., 100 stochastic histories of this trait that account for the uncertainty in its evolutionary history (see *Section 3*).
+- `toy_contMaps`: a **list of 100 `contMap`s**, i.e., 100 stochastic histories of this trait that account for the uncertainty in its evolutionary history (see *Section 3*). For speed, we only use the first 10 of them here: this is enough for illustration, but all the maps (100 or more) should typically be used in actual analyses.
 
 We also define the **continuous values of the trait for the 7 toy missing taxa**, as if they were measured.
 Two of them (`New_sp3` and `New_sp7`) have values close to the cut point between the states `"medium"` and `"high"` used below, to illustrate the effect of the thresholds.
@@ -78,6 +78,10 @@ data(toy_tip_values)
 data(toy_contMap)
 data(toy_contMaps)
 data(toy_missing_taxa_list)
+
+# Keep only the first 10 contMaps (of the 100 shipped) to keep the rendering of this vignette fast.
+# 10 maps are enough for illustration, but use all your maps (100 or more) for actual analyses.
+toy_contMaps <- toy_contMaps[1:10]
 
 # Provide the continuous trait values of the 7 missing taxa
 missing_values <- c(New_sp1 = 0.5, New_sp2 = 2.5, New_sp3 = 1.4, New_sp4 = -3,
@@ -397,9 +401,7 @@ Here, we use the shipped list `toy_contMaps`, with the same thresholds as in *Se
 ```{r multisimmap_convert}
 # ------ Discretize the list of contMaps into a multiSimmap ------ #
 
-# Load directly the list of continuous stochastic maps obtained with the script above
-# as shipped in the phylograftR package
-data(toy_contMaps)
+# Use the list of continuous stochastic maps loaded at the beginning (first 10 maps of the list obtained with the script above)
 
 # Discretize all contMaps at once using the same cut points
 multiSimmap_continuous <- convert_contMap_to_simmap(contMap = toy_contMaps,
@@ -427,7 +429,7 @@ par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
 The cut points are the terciles of the observed tip values, as in *Section 1*, so the **allowed states of the missing taxa are the same**.
-The grafting plan summarizes the valid fraction of each taxon (see *Section 2*) **across the 100 maps**, and the number of maps with no eligible branch (`n_maps_infeasible`), which would stop the grafting:
+The grafting plan summarizes the valid fraction of each taxon (see *Section 2*) **across the 10 maps**, and the number of maps with no eligible branch (`n_maps_infeasible`), which would stop the grafting:
 
 ```{r multisimmap_plan}
 # ------ Grafting plan across the maps ------ #
@@ -447,15 +449,14 @@ plan_per_map <- attr(plan_multi, "per_map") # Plan of each map
 tapply(plan_per_map$valid_fraction < 0.1, plan_per_map$Taxon_name, sum)
 ```
 
-Here, to save time, we graft the taxa with the **first 10 maps only** (with one simulation per map). In practice, use all your maps.
+We graft the taxa with each of the 10 maps (with one simulation per map).
 We silence the warnings about the low valid fractions, which are summarized above, using `min_valid_fraction = 0` (i.e., warnings are sent only if no branch piece is available for grafting).
 
 ```{r multisimmap_graft}
 # ------ Graft with the multiSimmap ------ #
 
 grafted_multi <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_continuous,
-                                    # Use only the first 10 maps
-                                    simmap = multiSimmap_continuous[1:10],
+                                    simmap = multiSimmap_continuous,
                                     min_valid_fraction = 0, nb_simulations = 1,
                                     seed = 1, verbose = FALSE)
 
@@ -546,7 +547,7 @@ ordered_model <- matrix(c(0, 1, 0,
                           1, 0, 2,
                           0, 2, 0), nrow = 3, byrow = TRUE, dimnames = list(state_names, state_names))
 
-# Simulate 10 stochastic maps (enough for the illustration, use more for an actual analysis)
+# Simulate 10 stochastic maps (enough for illustration, but use more for actual analyses)
 set.seed(1)
 simmaps_discrete <- phytools::make.simmap(toy_backbone, tip_states, model = ordered_model, nsim = 10, message = FALSE)
 
@@ -571,7 +572,7 @@ par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
 The key problem is the states reconstructed at the **internal nodes**.
-We compare the **posterior probability of each state at each node**, computed over the 100 continuous maps and the 10 discrete maps, and plot them as pies.
+We compare the **posterior probability of each state at each node**, computed over the 10 maps of each approach, and plot them as pies.
 For the continuous approach, it is based on the maps of *Section 3*.
 For the tip-based approach, it is based on the maps of `make.simmap()`.
 
