@@ -7,9 +7,9 @@
 \format{
 A list of 100 objects of class \code{"contMap"} (see \code{phytools::contMap()}), each with the elements:
 \itemize{
-\item \verb{$tree} the backbone as a \code{"simmap"}, in which the states are the color levels of the trait values.
-\item \verb{$cols} the color palette across values discretized from 0 to 1000.
-*\verb{$lims} range of the trait values, common to all the maps.
+\item \verb{$tree}: the backbone as a \code{"simmap"}, in which the states are the color levels of the trait values from 0 to 1000.
+\item \verb{$cols}: the color palette across values discretized from 0 to 1000.
+\item \verb{$lims}: the range of the trait values of the map, which differs among the maps.
 The topology and branch lengths of the trees are the same as \code{\link[=toy_backbone]{phylograftR::toy_backbone}}.
 }
 }
