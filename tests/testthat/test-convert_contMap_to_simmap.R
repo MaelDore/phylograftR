@@ -386,7 +386,7 @@ test_that("tip_values give cut points computed on the observed values and tips i
   # Cut points: quantiles of the observed values, not of the values read from the contMap
   expect_equal(attr(sm, "breaks"), unname(stats::quantile(x, probs = c(1/3, 2/3))))
   # Every tip is in the state of its observed value
-  expected <- convert_values_to_states(x, breaks = attr(sm, "breaks"), states = states3)
+  expected <- unlist(convert_values_to_states(x, breaks = attr(sm, "breaks"), states = states3))
   expect_identical(phytools::getStates(sm, type = "tips")[names(x)], expected[names(x)])
   expect_no_error(validate_simmap(sm, toy$phy))
   # Bins of equal width on the observed range
@@ -394,7 +394,7 @@ test_that("tip_values give cut points computed on the observed values and tips i
   expect_equal(attr(sm_n, "breaks"), seq(min(x), max(x), length.out = 4)[2:3])
   # User cut points: the tips are in the state of their observed value too
   sm_b <- convert_contMap_to_simmap(toy$cms[[1]], breaks = c(-1, 1), states = states3, tip_values = x, verbose = FALSE)
-  expect_identical(phytools::getStates(sm_b, type = "tips")[names(x)], convert_values_to_states(x, breaks = c(-1, 1), states = states3)[names(x)])
+  expect_identical(phytools::getStates(sm_b, type = "tips")[names(x)], unlist(convert_values_to_states(x, breaks = c(-1, 1), states = states3))[names(x)])
 })
 
 test_that("tip_values can be unnamed (in the order of the tips) or named in another order", {
@@ -411,7 +411,7 @@ test_that("tip_values are shared by all the contMaps of a list", {
   ms <- convert_contMap_to_simmap(toy$cms, probs = c(1/3, 2/3), states = states3, tip_values = x, verbose = FALSE)
   expect_s3_class(ms, "multiSimmap")
   expect_equal(attr(ms, "breaks"), unname(stats::quantile(x, probs = c(1/3, 2/3))))
-  expected <- convert_values_to_states(x, simmap = ms)
+  expected <- unlist(convert_values_to_states(x, simmap = ms))
   for (i in seq_along(ms)) { expect_identical(phytools::getStates(ms[[i]], type = "tips")[names(x)], expected[names(x)]) }
 })
 

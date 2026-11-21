@@ -30,7 +30,7 @@
 #'   With a tolerance, each value is assigned to **all the states covered by the interval `[value - tolerance, value + tolerance]`**,
 #'   in the units of the trait. Values that are farther than `tolerance` from every cut point are still assigned to a single state.
 #'   It can be a single number used for all the values, or a vector with one tolerance per value (e.g., the measurement error of each missing taxon).
-#'   See 'Details' for the output.
+#'   See 'Details' for more information.
 #'
 #' @details Each state covers the values from its lower cut point (included) up to its upper cut point (excluded): **a value equal to a cut point belongs to the state above it.**
 #'   The first and last states are open-ended, so values below the first cut point or above the last one are assigned to the lowest and highest states.
@@ -45,12 +45,13 @@
 #'   A tolerance makes the constraint of the grafting weaker: the taxa can be grafted on a wider set of branches (see [`phylograftR::check_grafting_plan()`][check_grafting_plan]
 #'   to evaluate how much, with the `valid_fraction`).
 #'
-#' @return
-#' * With the default `tolerance = 0` (or a tolerance of 0 for all the values): a character vector with the state of each value, named as in `values`.
-#' * With a positive tolerance (for at least one value): **a list of character vectors**, named as in `values`, with the states allowed for each value, ordered from the lowest to the highest.
-#'   It can be used directly as the `allowed_states` item of a list of missing taxa, if `values` is named after the taxa.
+#' @return **A list of character vectors, with one element per value**, named as in `values` (unnamed if `values` is not named).
+#'   Each element contains the states of the value, ordered from the lowest to the highest values: a single state by default,
+#'   and several states for the values close to a cut point if a `tolerance` is used. The state of a `NA` value is `NA`.
 #'
-#' In both cases, the state of a `NA` value is `NA`.
+#'   The output can be used directly as the `allowed_states` item of a list of missing taxa, if `values` is named after the taxa.
+#'   To get a simple character vector with a single state per value, e.g., to compare the states of tips or nodes, use `unlist()`
+#'   (**only when `tolerance = 0`**, as the elements have then one state each. With a tolerance, the elements can have several states).
 #'
 #' @seealso Other functions from phylograftR:
 #'  * [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap] to obtain the `simmap` and its cut points from a continuous trait map (`contMap`).
@@ -78,7 +79,12 @@
 #' # Define continuous trait values of three missing taxa
 #' missing_values <- c(Taxon_1 = -2, Taxon_2 = 0.1, Taxon_3 = 3)
 #' # Convert continuous values into the same states used in the converted simmap
-#' convert_values_to_states(missing_values, simmap = my_simmap)
+#' # The output is a list with the states of each value
+#' my_states <- convert_values_to_states(missing_values, simmap = my_simmap)
+#' my_states
+#'
+#' # To get a character vector with a single state per value, use unlist() (if tolerance = 0)
+#' unlist(my_states)
 #'
 #' # Same conversion with the cut points and states given directly
 #' convert_values_to_states(missing_values, breaks = attr(my_simmap, "breaks"),
@@ -90,15 +96,14 @@
 #' close_values <- c(Taxon_1 = -2, Taxon_2 = attr(my_simmap, "breaks")[2] + 0.1, Taxon_3 = 3)
 #' convert_values_to_states(close_values, simmap = my_simmap)
 #'
-#' # With a tolerance of 0.3 trait units, values close to a cut point get several states:
-#' # the output is a list of the allowed states of each taxon
+#' # With a tolerance of 0.3 trait units, values close to a cut point get several states
 #' allowed_states <- convert_values_to_states(close_values, simmap = my_simmap, tolerance = 0.3)
 #' allowed_states
 #'
 #' # One tolerance per taxon, e.g., the measurement error of each value (no tolerance for Taxon_1 and Taxon_3)
 #' convert_values_to_states(close_values, simmap = my_simmap, tolerance = c(0, 0.3, 0))
 #'
-#' # Use the list as the 'allowed_states' of a list of missing taxa
+#' # The output can be used directly as the 'allowed_states' of a list of missing taxa
 #' missing_taxa_list <- list(Taxon_name = names(close_values),
 #'                           Target_clade = list(Taxon_1 = "t1", Taxon_2 = c("t1", "t2"), Taxon_3 = "t1"))
 #' missing_taxa_list$allowed_states <- allowed_states
@@ -150,16 +155,10 @@ convert_values_to_states <- function (values, # Numeric trait values to convert,
   ### ---- Conversion ---- ###
 
   # findInterval() counts the cut points lower than or equal to each value: 0 below the first cut point, up to length(breaks) above the last one
-  # (so a value equal to a cut point goes to the state above it). The state is the (count + 1)th, from the lowest values; NA values stay NA
-  if (all(tolerance == 0))
-  {
-    output <- states[findInterval(values, breaks) + 1L]
-    names(output) <- names(values)
-    return(output)
-  }
-
+  # (so a value equal to a cut point goes to the state above it). The state is the (count + 1)th, from the lowest values.
   # With a tolerance: all the states from the state of (value - tolerance) to the state of (value + tolerance), ordered from the lowest to the highest values.
-  # The states are in the order of the cut points, so the states between the two are the consecutive ones. NA values give NA
+  # The states are in the order of the cut points, so the states between the two are the consecutive ones. Without tolerance, both are the same state.
+  # NA values give NA. The output is always a list with one element per value
   tolerance <- rep_len(tolerance, length(values))
   first_state <- findInterval(values - tolerance, breaks) + 1L
   last_state <- findInterval(values + tolerance, breaks) + 1L

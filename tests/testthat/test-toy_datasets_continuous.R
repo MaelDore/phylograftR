@@ -66,7 +66,7 @@ test_that("toy_contMaps is a list of 100 contMaps of toy_backbone that can be di
   expect_true(!is.unsorted(breaks, strictly = TRUE))
   # The cut points are the terciles of the observed tip values, and each tip is in the state of its observed value
   expect_equal(unname(breaks), unname(stats::quantile(toy_tip_values, probs = c(1/3, 2/3))))
-  observed_states <- convert_values_to_states(toy_tip_values, simmap = my_multiSimmap)
+  observed_states <- unlist(convert_values_to_states(toy_tip_values, simmap = my_multiSimmap))
   for (i in c(1, 50, 100))
   {
     expect_no_error(validate_simmap(my_multiSimmap[[i]], toy_backbone))
