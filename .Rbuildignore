@@ -23,4 +23,4 @@ R/_benchmark_parallel.R
 ^\.github$
 
 # Archived packages needed by BioGeoBEARS
-sources/MultinomialCI_1.2.tar.gz
+sources/*

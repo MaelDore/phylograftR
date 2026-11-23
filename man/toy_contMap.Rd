@@ -41,7 +41,7 @@ plot(my_simmap, colors = c(low = "blue", medium = "grey", high = "red"),
 Other datasets and functions from phylograftR:
 \itemize{
 \item \code{\link[=toy_tip_values]{phylograftR::toy_tip_values}} for the data used to build the contMap.
-\item \code{\link[=toy_contMaps]{phylograftR::toy_contMaps}} for 100 stochastic histories of the trait (list of contMaps).
+\item \code{\link[=toy_contMaps]{phylograftR::toy_contMaps}} for 10 stochastic histories of the trait (list of contMaps).
 \item \code{\link[=convert_contMap_to_simmap]{phylograftR::convert_contMap_to_simmap()}} to discretize a contMap into a simmap.
 }
 }

@@ -36,7 +36,7 @@ quantile(toy_tip_values, probs = c(1/3, 2/3))
 Other datasets and functions from phylograftR:
 \itemize{
 \item \code{\link[=toy_contMap]{phylograftR::toy_contMap}} for the contMap of this trait (point estimate).
-\item \code{\link[=toy_contMaps]{phylograftR::toy_contMaps}} for 100 stochastic histories of this trait (list of contMaps).
+\item \code{\link[=toy_contMaps]{phylograftR::toy_contMaps}} for 10 stochastic histories of this trait (list of contMaps).
 \item \code{\link[=convert_contMap_to_simmap]{phylograftR::convert_contMap_to_simmap()}} to discretize a contMap into a simmap, and
 \code{\link[=convert_values_to_states]{phylograftR::convert_values_to_states()}} to convert continuous values into the same states.
 }

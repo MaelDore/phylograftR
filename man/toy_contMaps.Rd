@@ -5,7 +5,7 @@
 \alias{toy_contMaps}
 \title{Toy list of contMaps: stochastic histories of a continuous trait}
 \format{
-A list of 100 objects of class \code{"contMap"} (see \code{phytools::contMap()}), each with the elements:
+A list of 10 objects of class \code{"contMap"} (see \code{phytools::contMap()}), each with the elements:
 \itemize{
 \item \verb{$tree}: the backbone as a \code{"simmap"}, in which the states are the color levels of the trait values from 0 to 1000.
 \item \verb{$cols}: the color palette across values discretized from 0 to 1000.
@@ -17,7 +17,7 @@ The topology and branch lengths of the trees are the same as \code{\link[=toy_ba
 data(toy_contMaps)
 }
 \description{
-List of 100 \code{contMap}s of \code{\link[=toy_backbone]{phylograftR::toy_backbone}}, each describing \strong{one possible history of the continuous
+List of 10 \code{contMap}s of \code{\link[=toy_backbone]{phylograftR::toy_backbone}}, each describing \strong{one possible history of the continuous
 trait} of \code{\link[=toy_tip_values]{phylograftR::toy_tip_values}} (continuous stochastic maps).
 Providing several histories accounts for the \strong{uncertainty} of the reconstruction of the ancestral trait values, unlike \code{\link[=toy_contMap]{phylograftR::toy_contMap}}.
 
@@ -30,6 +30,7 @@ It was built with the script of the example of \code{\link[=convert_contMap_to_s
 \item 100 continuous stochastic maps were simulated with \code{contsimmap::make.contsimmap()}, conditioned on the tip values, the backbone and a Brownian Motion
 with the evolutionary rate estimated by \code{phytools::anc.ML()} (seed 1234).
 \item They were converted into a list of \code{contMap}s with \code{deepSTRAPP::convert_contsimmap_to_contMaps()}.
+\item Only the \strong{first 10 maps} were kept, to keep the package light. 10 maps are enough for illustration, but \strong{actual analyses should use more maps (100 or more)}.
 }
 
 The script uses \code{contsimmap} directly, to credit the authors of the continuous stochastic mapping approach.

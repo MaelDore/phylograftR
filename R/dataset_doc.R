@@ -13,6 +13,8 @@
 #  - A table of total richness per clades to inform sampling fractions with unsampled species
 #  - A stochastic character map (simmap) of the backbone phylogeny, mapping a trait with three states
 #  - A stochastic character map (simmap) of the backbone phylogeny, mapping biogeographic ranges with four states
+#  - Tip data associated to all the simmaps: colors, elevation, ranges.
+#  - Tip values fo a continuous trait associated with the contMap(s).
 
 
 ##### 1/ Toy backbone phylogeny #####

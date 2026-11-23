@@ -22,36 +22,51 @@ library(phylograftR)
 ```
 
 Grafting can be constrained by **species attributes** (e.g., a trait, a biogeographic range) described by **stochastic character maps** of the backbone phylogeny, called `simmap` in `phytools`.
-This tutorial explains how to **prepare these maps from your own tip data**, and which object to provide to the grafting functions in each case:
+Each missing taxon and/or clade is only grafted on branches where the trait was in one of its `allowed_states`. For instance, you can use biogeographic ranges to perform Geographically-Informed Grafting (GIG) in a way that limit the grafting of missing taxa/clades on branches that are inferred within the ranges allowed for each of them (See *Section 5*).
+For more details on how **species attributes** are used as constraints for grafting, please refer to *Section 4* in `vignette("graft_missing_taxa")`, and each vignette dedicated to handling a specific type of attributes (`vignette("biogeographic_data")`; `vignette("continuous_data")`; `vignette("multiple_traits")`).
 
-1. **A single `simmap`**: one history of the attribute along the branches of the backbone.
-2. **A `multiSimmap`**: a set of histories of the **same** attribute (e.g., 100 maps), which accounts for the **uncertainty** in the reconstruction of the ancestral states.
-3. **A list of `multiSimmap`s**: one set of maps **per attribute**, to combine several traits (or a trait and biogeographic ranges).
+This tutorial explains how to **prepare stochastic character maps from your own tip data**:
 
-We use the R package [`deepSTRAPP`](https://github.com/MaelDore/deepSTRAPP), which fits the **evolutionary models** on the tip data, selects the best one, and simulates the stochastic maps in a **single call**: `deepSTRAPP::prepare_trait_data()`.
-It handles **categorical traits**, **biogeographic ranges** (through `BioGeoBEARS`) and **continuous traits**.
+1. Infer maps of a **categorical trait** with deepSTRAPP
 
-**Why `deepSTRAPP` rather than `phytools::make.simmap()` alone?**
+It advises on which object to provide to the grafting functions in each case:
 
-- **Model comparison and selection are automatic.** `phytools::make.simmap()` fits the single model you ask for (e.g., `"ARD"`) and simulates the maps under it: choosing the model is up to you. `prepare_trait_data()` **fits all the candidate models, compares them with their AICc, selects the best one** and simulates the maps under it, and returns the table of the comparison.
-- **One call for all the types of attributes**: categorical traits, biogeographic ranges and continuous traits follow the same logic, with the same arguments.
-- **For biogeographic ranges, it embeds the whole machinery of `BioGeoBEARS`**: preparation of the input files, fit and comparison of the models (`DEC`, `DIVALIKE`, `BAYAREALIKE`, with or without `+J`), **biogeographic stochastic mapping**, and the **conversion of the outputs of `BioGeoBEARS` (tables of cladogenetic and anagenetic events) into `simmap`s**, which `BioGeoBEARS` does not provide.
-- It also returns the posterior probabilities of the states at the nodes, and the maps are reproducible with a `seed`.
+2. **A single `simmap`**: one history of the attribute evolving along the branches of the backbone.
+3. **A `multiSimmap`**: a set of histories of the **same** attribute (e.g., 100 maps), which accounts for the **uncertainty** in the reconstruction of the ancestral states.
+4. **A list of `multiSimmap`s**: one set of maps **per attribute**, to combine several traits (or a trait and biogeographic ranges).
 
-Using `deepSTRAPP` is a recommendation, not a requirement: any `simmap` or `multiSimmap` of the backbone can be used, for instance maps built directly with `phytools::make.simmap()` when you have already chosen your model.
+The tutorial covers the specific types of attributes handled by phylograftR:
 
-**The code that runs `deepSTRAPP` and `BioGeoBEARS` is shown but not run here** (these packages are only suggested, and the runs can be long).
-The **results** are loaded from datasets shipped with `phylograftR`: they were produced with this code (see `data-raw/toy_prepare_trait_data.R` in the source of the package).
+5. Infer maps of **biogeographic ranges** using `BioGeoBEARS`.
+6. Produce **continuous stochastic maps** using `contsimmap`, and discretize them.
 
-| Attribute | `trait_data_type` | Models available (default) | Output of `prepare_trait_data()` to use | Provide to the grafting functions |
+Finally, it covers:
+
+7. **Common pitfalls** in dealing with stochastic maps as inputs for phylograftR.
+
+
+## **Why `deepSTRAPP` rather than `phytools::make.simmap()` alone?**
+
+To produce the stochastic maps, we use the R package [`deepSTRAPP`](https://github.com/MaelDore/deepSTRAPP) and its dedicated all-inclusive function: `deepSTRAPP::prepare_trait_data()`.
+
+- **Model comparison and selection are automatic.** `phytools::make.simmap()` fits the single model you ask for (e.g., `"ARD"`) and simulates the maps under it: choosing the model is up to you. `prepare_trait_data()` **fits all the candidate models, compares them with their AICc, selects the best one** and simulates the maps under it, and returns the table of model comparison, **all in one single call**.
+- **One function for all the types of attributes**: `deepSTRAPP::prepare_trait_data()` can handle **categorical traits** (through `geiger` and `phytools`), **biogeographic ranges** (through `BioGeoBEARS`), and **continuous traits** (through `contsimmap`), with the same logic and suite of arguments.
+- **For biogeographic ranges, it embeds the whole machinery of `BioGeoBEARS`**: preparation of the input files, fit and comparison of the models (`DEC`, `DIVALIKE`, `BAYAREALIKE`, with or without `+J`), best model selection, biogeographic stochastic mapping, and the conversion of the outputs of `BioGeoBEARS` (tables of cladogenetic and anagenetic events) into `simmap`s **ready-to-use for as constraints for grafting**.
+
+Using `deepSTRAPP` is a recommendation, not a requirement: any `simmap` or `multiSimmap` of the backbone can be used. For instance, you can provide maps built directly with `phytools::make.simmap()` when you have already chosen your model.
+
+**The code that runs `deepSTRAPP` and `BioGeoBEARS` is shown but not run here** (the runs can be long).
+The **results** are loaded from datasets shipped with `phylograftR`: they were produced with this code.
+
+| Attribute | `trait_data_type` | Models available | Output of `prepare_trait_data()` to use | Provide to the grafting functions |
 |:---|:---|:---|:---|:---|
-| Categorical trait | `"categorical"` | `"ER"`, `"SYM"`, `"ARD"`, `"meristic"`, `"matrix"` (`"ARD"`) | `$simmaps` | `simmap` / `multiSimmap` |
-| Biogeographic ranges | `"biogeographic"` | `"DEC"`, `"DEC+J"`, `"DIVALIKE"`, `"DIVALIKE+J"`, `"BAYAREALIKE"`, `"BAYAREALIKE+J"` (`"DEC"`) | `$simmaps` | `simmap` / `multiSimmap` |
-| Continuous trait | `"continuous"` | `"BM"`, `"OU"`, `"EB"`, ... (`"BM"`) | `$contMaps` | **discretize first**: see `vignette("continuous_data")` |
+| Categorical trait | `"categorical"` | `"ER"`, `"SYM"`, `"ARD"` (default), `"meristic"`, `"matrix"` (custom) | `$simmaps` | `simmap` / `multiSimmap` |
+| Biogeographic ranges | `"biogeographic"` | `"DEC"` (default), `"DEC+J"`, `"DIVALIKE"`, `"DIVALIKE+J"`, `"BAYAREALIKE"`, `"BAYAREALIKE+J"` | `$simmaps` | `simmap` / `multiSimmap` |
+| Continuous trait | `"continuous"` | `"BM"` (default), `"OU"`, `"EB"`, `"rate_trend"`, `"lambda"`, `"kappa"`, `"delta"` | `$contMaps` | **discretize first**: see `vignette("continuous_data")` |
 
 ## 0/ Toy data
 
-We use the toy backbone and the **tip data of three attributes**: a color (three states), an elevation (two states) and a biogeographic range.
+We use the toy backbone and the **tip data of three attributes**: a color (three states), an elevation (two states) and a biogeographic range (three areas that can be combined in multi-area ranges).
 The tip data are held in a `data.frame` with one row per tip.
 
 ```{r data}
@@ -65,6 +80,8 @@ data(toy_multiSimmap_ranges)
 
 # Tip data of the three attributes
 head(toy_tip_data)
+
+# Inspect distribution of data across tips
 lapply(toy_tip_data, table)
 ```
 
@@ -73,6 +90,7 @@ lapply(toy_tip_data, table)
 ```{r tip_vectors}
 # ------ Named vectors of tip data ------ #
 
+# Prepare tip data as named vectors
 tip_colors <- setNames(toy_tip_data$color, row.names(toy_tip_data))
 tip_elevations <- setNames(toy_tip_data$elevation, row.names(toy_tip_data))
 tip_ranges <- setNames(toy_tip_data$range, row.names(toy_tip_data))
@@ -84,13 +102,13 @@ all(names(tip_colors) == toy_backbone$tip.label)
 ```{r colors}
 # ------ Colors of the states ------ #
 
+# Set colors for the simmaps
 color_states <- c(blue = "dodgerblue", green = "limegreen", red = "firebrick")
 ```
 
 ## 1/ Infer maps of a categorical trait with deepSTRAPP
 
 The call below **fits three models of evolution of the color, compares them, selects automatically the one with the lowest AICc**, and simulates stochastic maps conditioned on the tip data and on the best model.
-With `phytools::make.simmap()`, you would have to fit each model, compare them and choose the best one yourself before simulating the maps.
 
 ```{r deepSTRAPP_color, eval = FALSE}
 # ------ Not run: build the maps of the color with deepSTRAPP ------ #
@@ -120,12 +138,12 @@ The main arguments are:
 - `seed`: to reproduce the maps.
 
 The maps are **conditioned on the tip data**: the tips are always in the states you provided, and the maps only differ in the internal branches.
-The maps shipped with `phylograftR` are the **first 10 of 100 maps** simulated with this code. 10 maps are enough for illustration, but **actual analyses should use more (100 or more)**.
+The maps shipped with `phylograftR` are the **first 10 of 100 maps** simulated with this script. 10 maps are enough for illustration, but **actual analyses should use more (100 or more)**.
 
 ## 2/ Use a single map: `simmap`
 
 A **single `simmap`** is one possible history of the trait: take **one map** of the output.
-It is the simplest input of `simmap` for the grafting functions, and it is enough to explore the grafting with constraints.
+It is the simplest input to provide under the argument `simmap` for the grafting functions, and it is enough to explore the grafting with constraints.
 
 ```{r single_simmap, fig.width = 6, fig.height = 6, out.width = "60%"}
 # ------ One simmap ------ #
@@ -146,6 +164,7 @@ phytools::plotSimmap(my_simmap, colors = color_states, fsize = 0.7, ftype = "i",
 
 A single map is **one hypothesis among many** about where the states changed along the branches.
 Grafting with it treats this history as known, so the **uncertainty on the ancestral states is ignored**.
+It is suitable if there is limited uncertainty in the inference, but in most biological cases, you would like to account for this uncertainty in ancestral states by using a several maps (See *Section 3* below)
 
 ## 3/ Use several maps: `multiSimmap`
 
