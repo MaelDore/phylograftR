@@ -1,0 +1,421 @@
+---
+title: "Prepare stochastic maps from tip data"
+author: "Maël Doré"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Prepare stochastic maps from tip data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r set_options, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.align = "center"
+)
+```
+
+```{r setup, include = FALSE}
+library(phylograftR)
+```
+
+Grafting can be constrained by **species attributes** (e.g., a trait, a biogeographic range) described by **stochastic character maps** of the backbone phylogeny, called `simmap` in `phytools`.
+This tutorial explains how to **prepare these maps from your own tip data**, and which object to provide to the grafting functions in each case:
+
+1. **A single `simmap`**: one history of the attribute along the branches of the backbone.
+2. **A `multiSimmap`**: a set of histories of the **same** attribute (e.g., 100 maps), which accounts for the **uncertainty** in the reconstruction of the ancestral states.
+3. **A list of `multiSimmap`s**: one set of maps **per attribute**, to combine several traits (or a trait and biogeographic ranges).
+
+We use the R package [`deepSTRAPP`](https://github.com/MaelDore/deepSTRAPP), which fits the **evolutionary models** on the tip data, selects the best one, and simulates the stochastic maps in a **single call**: `deepSTRAPP::prepare_trait_data()`.
+It handles **categorical traits**, **biogeographic ranges** (through `BioGeoBEARS`) and **continuous traits**.
+
+**Why `deepSTRAPP` rather than `phytools::make.simmap()` alone?**
+
+- **Model comparison and selection are automatic.** `phytools::make.simmap()` fits the single model you ask for (e.g., `"ARD"`) and simulates the maps under it: choosing the model is up to you. `prepare_trait_data()` **fits all the candidate models, compares them with their AICc, selects the best one** and simulates the maps under it, and returns the table of the comparison.
+- **One call for all the types of attributes**: categorical traits, biogeographic ranges and continuous traits follow the same logic, with the same arguments.
+- **For biogeographic ranges, it embeds the whole machinery of `BioGeoBEARS`**: preparation of the input files, fit and comparison of the models (`DEC`, `DIVALIKE`, `BAYAREALIKE`, with or without `+J`), **biogeographic stochastic mapping**, and the **conversion of the outputs of `BioGeoBEARS` (tables of cladogenetic and anagenetic events) into `simmap`s**, which `BioGeoBEARS` does not provide.
+- It also returns the posterior probabilities of the states at the nodes, and the maps are reproducible with a `seed`.
+
+Using `deepSTRAPP` is a recommendation, not a requirement: any `simmap` or `multiSimmap` of the backbone can be used, for instance maps built directly with `phytools::make.simmap()` when you have already chosen your model.
+
+**The code that runs `deepSTRAPP` and `BioGeoBEARS` is shown but not run here** (these packages are only suggested, and the runs can be long).
+The **results** are loaded from datasets shipped with `phylograftR`: they were produced with this code (see `data-raw/toy_prepare_trait_data.R` in the source of the package).
+
+| Attribute | `trait_data_type` | Models available (default) | Output of `prepare_trait_data()` to use | Provide to the grafting functions |
+|:---|:---|:---|:---|:---|
+| Categorical trait | `"categorical"` | `"ER"`, `"SYM"`, `"ARD"`, `"meristic"`, `"matrix"` (`"ARD"`) | `$simmaps` | `simmap` / `multiSimmap` |
+| Biogeographic ranges | `"biogeographic"` | `"DEC"`, `"DEC+J"`, `"DIVALIKE"`, `"DIVALIKE+J"`, `"BAYAREALIKE"`, `"BAYAREALIKE+J"` (`"DEC"`) | `$simmaps` | `simmap` / `multiSimmap` |
+| Continuous trait | `"continuous"` | `"BM"`, `"OU"`, `"EB"`, ... (`"BM"`) | `$contMaps` | **discretize first**: see `vignette("continuous_data")` |
+
+## 0/ Toy data
+
+We use the toy backbone and the **tip data of three attributes**: a color (three states), an elevation (two states) and a biogeographic range.
+The tip data are held in a `data.frame` with one row per tip.
+
+```{r data}
+# ------ Toy data ------ #
+
+data(toy_backbone)
+data(toy_tip_data)
+data(toy_multiSimmap)
+data(toy_multiSimmap_elevation)
+data(toy_multiSimmap_ranges)
+
+# Tip data of the three attributes
+head(toy_tip_data)
+lapply(toy_tip_data, table)
+```
+
+`deepSTRAPP::prepare_trait_data()` needs the tip data of one attribute as a **named vector**, with names that match the tip labels of the phylogeny (`phylo$tip.label`):
+
+```{r tip_vectors}
+# ------ Named vectors of tip data ------ #
+
+tip_colors <- setNames(toy_tip_data$color, row.names(toy_tip_data))
+tip_elevations <- setNames(toy_tip_data$elevation, row.names(toy_tip_data))
+tip_ranges <- setNames(toy_tip_data$range, row.names(toy_tip_data))
+
+# The names are the tip labels of the backbone
+all(names(tip_colors) == toy_backbone$tip.label)
+```
+
+```{r colors}
+# ------ Colors of the states ------ #
+
+color_states <- c(blue = "dodgerblue", green = "limegreen", red = "firebrick")
+```
+
+## 1/ Infer maps of a categorical trait with deepSTRAPP
+
+The call below **fits three models of evolution of the color, compares them, selects automatically the one with the lowest AICc**, and simulates stochastic maps conditioned on the tip data and on the best model.
+With `phytools::make.simmap()`, you would have to fit each model, compare them and choose the best one yourself before simulating the maps.
+
+```{r deepSTRAPP_color, eval = FALSE}
+# ------ Not run: build the maps of the color with deepSTRAPP ------ #
+
+color_data <- deepSTRAPP::prepare_trait_data(tip_data = tip_colors, # Named vector of tip states
+                                             trait_data_type = "categorical",
+                                             phylo = toy_backbone, # Time-calibrated phylogeny
+                                             evolutionary_models = c("ER", "SYM", "ARD"), # Models to compare. Default is "ARD"
+                                             seed = 1234, # For reproducibility
+                                             nb_simulations = 100, # Number of stochastic maps
+                                             return_simmaps = TRUE, # Needed to get the maps
+                                             return_model_selection_df = TRUE, # Needed to get the comparison of models
+                                             plot_map = FALSE, plot_overlay = FALSE)
+
+# Comparison of the models
+color_data$model_selection_df
+
+# The stochastic maps: a multiSimmap of 100 maps
+my_multiSimmap <- color_data$simmaps
+```
+
+The main arguments are:
+
+- `evolutionary_models`: the models to compare (see the table above). The model with the lowest AICc is used to simulate the maps. A **custom matrix of transitions** (`Q_matrix`) can be used with the model `"matrix"`, for instance to forbid some transitions between states (e.g., an ordered trait).
+- `nb_simulations`: the **number of maps**. `deepSTRAPP` recommends at least 100 maps, and warns if fewer are requested.
+- `return_simmaps = TRUE`: **the maps are only returned in `$simmaps` if you ask for them**. By default, `prepare_trait_data()` only returns the summaries that `deepSTRAPP` needs for its own workflow (e.g., `$densityMaps`).
+- `seed`: to reproduce the maps.
+
+The maps are **conditioned on the tip data**: the tips are always in the states you provided, and the maps only differ in the internal branches.
+The maps shipped with `phylograftR` are the **first 10 of 100 maps** simulated with this code. 10 maps are enough for illustration, but **actual analyses should use more (100 or more)**.
+
+## 2/ Use a single map: `simmap`
+
+A **single `simmap`** is one possible history of the trait: take **one map** of the output.
+It is the simplest input of `simmap` for the grafting functions, and it is enough to explore the grafting with constraints.
+
+```{r single_simmap, fig.width = 6, fig.height = 6, out.width = "60%"}
+# ------ One simmap ------ #
+
+# Extract one map (with [[ ]]): an object of class "simmap"
+my_simmap <- toy_multiSimmap[[1]]
+class(my_simmap)
+
+# Time spent in each state (sum on all branches)
+round(colSums(my_simmap$mapped.edge) / sum(my_simmap$mapped.edge), 2)
+
+# The tips are in the states of the tip data
+all(phytools::getStates(my_simmap, type = "tips")[names(tip_colors)] == tip_colors)
+
+# Plot the map
+phytools::plotSimmap(my_simmap, colors = color_states, fsize = 0.7, ftype = "i", lwd = 2)
+```
+
+A single map is **one hypothesis among many** about where the states changed along the branches.
+Grafting with it treats this history as known, so the **uncertainty on the ancestral states is ignored**.
+
+## 3/ Use several maps: `multiSimmap`
+
+The **full output** `$simmaps` is a `multiSimmap`: a set of maps of the same trait, used as **alternative hypotheses** about its evolution.
+Provide it as `simmap` to the grafting functions: each map is then used for the grafting, and the uncertainty on the history of the trait is **propagated to the grafted phylogenies**.
+
+```{r multiSimmap}
+# ------ A multiSimmap ------ #
+
+class(toy_multiSimmap)
+length(toy_multiSimmap)
+
+# All the maps are in the same states
+unique(unlist(lapply(toy_multiSimmap, function (x) colnames(x$mapped.edge))))
+```
+
+The maps share the same tip states, but differ in the **internal branches**:
+
+```{r multiSimmap_plot, fig.width = 10, fig.height = 4.5, out.width = "100%"}
+# ------ Compare three maps ------ #
+
+par(mfrow = c(1, 3), mar = c(0.5, 0.5, 2, 0.5))
+for (i in 1:3)
+{
+  phytools::plotSimmap(toy_multiSimmap[[i]], colors = color_states, fsize = 0.5, ftype = "i", lwd = 2)
+  title(paste("Map", i), line = -1, cex.main = 1)
+}
+par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
+```
+
+The **posterior probabilities of each state at the internal nodes**, computed over the maps, summarize this uncertainty:
+
+```{r multiSimmap_pies, fig.width = 6, fig.height = 6, out.width = "60%"}
+# ------ Posterior probability of the states at the nodes ------ #
+
+node_probs <- phytools::describe.simmap(toy_multiSimmap, plot = FALSE)$ace
+
+phytools::plotTree(toy_backbone, ftype = "i", fsize = 0.6, lwd = 1)
+ape::nodelabels(pie = node_probs, piecol = color_states[colnames(node_probs)], cex = 0.5)
+```
+
+The more maps, the more precise the probabilities.
+Note that the **number of maps and the number of simulations multiply**: with `P` maps and `N` simulations per map, `P x N` grafted phylogenies are produced (see `vignette("graft_missing_taxa")`).
+
+## 4/ Combine several traits: list of `multiSimmap`s
+
+To use **several attributes at once** as constraints, prepare the maps of **each attribute separately** (the attributes are modelled independently), and combine them in a **list with one element per attribute**.
+We prepare the maps of the elevation as for the color:
+
+```{r deepSTRAPP_elevation, eval = FALSE}
+# ------ Not run: build the maps of the elevation with deepSTRAPP ------ #
+
+elevation_data <- deepSTRAPP::prepare_trait_data(tip_data = tip_elevations,
+                                                 trait_data_type = "categorical",
+                                                 phylo = toy_backbone,
+                                                 evolutionary_models = c("ER", "ARD"),
+                                                 seed = 2345,
+                                                 nb_simulations = 100, # The same number of maps as for the color
+                                                 return_simmaps = TRUE,
+                                                 plot_map = FALSE, plot_overlay = FALSE)
+
+my_multiSimmap_elevation <- elevation_data$simmaps
+```
+
+The list is named after the traits, and **all the traits must have the same number of maps**: the maps are **paired** (map 1 of each trait is used together, then map 2 of each trait, and so on).
+
+```{r two_traits}
+# ------ List of multiSimmaps: one element per trait ------ #
+
+maps_two_traits <- list(color = toy_multiSimmap, elevation = toy_multiSimmap_elevation)
+
+# Number of maps per trait: must be the same
+sapply(maps_two_traits, length)
+
+# States of each trait
+lapply(maps_two_traits, function (x) colnames(x[[1]]$mapped.edge))
+```
+
+```{r two_traits_plot, fig.width = 10, fig.height = 5.5, out.width = "100%"}
+# ------ Map 1 of each trait ------ #
+
+elevation_states <- c(high = "darkorange", low = "steelblue")
+
+par(mfrow = c(1, 2), mar = c(0.5, 0.5, 2, 0.5))
+phytools::plotSimmap(toy_multiSimmap[[1]], colors = color_states, fsize = 0.55, ftype = "i", lwd = 2)
+title("Color: map 1", line = -1, cex.main = 1)
+phytools::plotSimmap(toy_multiSimmap_elevation[[1]], colors = elevation_states, fsize = 0.55, ftype = "i", lwd = 2)
+title("Elevation: map 1", line = -1, cex.main = 1)
+par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
+```
+
+The list is provided as `simmap`, and the **allowed states** are then given as a list with one element per trait.
+The grafting with several traits is detailed in `vignette("multiple_traits")`.
+A list of single `simmap`s (one map per trait) works in the same way. The two cannot be mixed: **a trait with a single `simmap` and another with a `multiSimmap` is refused**.
+
+## 5/ Infer maps of biogeographic ranges with BioGeoBEARS
+
+For **biogeographic ranges**, `deepSTRAPP::prepare_trait_data()` embeds **the whole machinery of the [`BioGeoBEARS`](https://github.com/nmatzke/BioGeoBEARS) framework** in a single call:
+
+1. it prepares the **input files** of `BioGeoBEARS` from your phylogeny and your tip ranges;
+2. it **fits the models** you ask for, and **selects the best one** by AICc (the models with a `+J` parameter are fit starting from the estimates of the corresponding model without `J`);
+3. it runs the **biogeographic stochastic mapping** (BSM) under the best model, which simulates histories of the ranges as **tables of cladogenetic events** (at the nodes) and **anagenetic events** (along the branches);
+4. it **converts these tables of events into `simmap`s**, the format used by `phylograftR`. This step is not provided by `BioGeoBEARS`, and is tedious to do by hand.
+
+`BioGeoBEARS` is not on CRAN and must be installed manually (`remotes::install_github("nmatzke/BioGeoBEARS")`).
+
+The tip data are the ranges of the tips, **coded as in `BioGeoBEARS`**: one capital letter per area, and the letters of a multi-area range in alphabetical order (e.g., `"A"`, `"AB"`).
+Alternatively, they can be provided as a `matrix` or `data.frame` of presence (1) / absence (0), with one column per area and one row per taxon.
+
+```{r deepSTRAPP_ranges, eval = FALSE}
+# ------ Not run: build the maps of the ranges with deepSTRAPP and BioGeoBEARS ------ #
+
+range_data <- deepSTRAPP::prepare_trait_data(tip_data = tip_ranges, # Named vector of ranges (or binary matrix)
+                                             trait_data_type = "biogeographic",
+                                             phylo = toy_backbone,
+                                             evolutionary_models = "DEC", # Models to compare, e.g., c("DEC", "DEC+J", "DIVALIKE", "DIVALIKE+J")
+                                             max_range_size = 2, # Maximum number of areas in a range
+                                             BioGeoBEARS_directory_path = "./BioGeoBEARS_files/", # Directory for input/output files
+                                             keep_BioGeoBEARS_files = FALSE,
+                                             nb_cores = 1,
+                                             seed = 3456,
+                                             nb_simulations = 100,
+                                             return_simmaps = TRUE,
+                                             return_model_selection_df = TRUE,
+                                             return_BSM = FALSE, # TRUE to also get the tables of events
+                                             plot_map = FALSE, plot_overlay = FALSE)
+
+# Comparison of the models
+range_data$model_selection_df
+
+# The stochastic maps of ranges, converted from the BSM events: a multiSimmap of 100 maps
+my_multiSimmap_ranges <- range_data$simmaps
+```
+
+The main arguments specific to ranges are:
+
+- `evolutionary_models`: the `BioGeoBEARS` models to compare, **fit and selected automatically**. The `+J` models add jump dispersal (founder-event speciation).
+- `return_BSM = TRUE`: also returns the **tables of cladogenetic and anagenetic events** of each simulation, from which the maps are built (`$BSM_output`).
+- `max_range_size`: the **maximum number of areas** in a range. It limits the number of ranges considered, so the computation time.
+- `BioGeoBEARS_directory_path`: the directory where the input and output files of `BioGeoBEARS` are written (and kept if `keep_BioGeoBEARS_files = TRUE`).
+- `nb_cores`: the number of cores used for the runs of `BioGeoBEARS`.
+
+The output `$simmaps` is a `multiSimmap`, as for a categorical trait, in which the **states are the ranges**.
+
+```{r ranges_check}
+# ------ Maps of ranges ------ #
+
+class(toy_multiSimmap_ranges)
+length(toy_multiSimmap_ranges)
+
+# Ranges found in the maps
+all_ranges <- sort(unique(unlist(lapply(toy_multiSimmap_ranges, function (x) colnames(x$mapped.edge)))))
+all_ranges
+
+# Ranges of the tips
+sort(unique(tip_ranges))
+```
+
+The ranges of the maps include the ranges of the tips, and may include **ranges that are only found along internal branches**, as ancestors can have ranges that no tip has.
+Keep it in mind when you choose the **allowed ranges** of the missing taxa: they must be ranges found in the maps, unless `treat_states_as_ranges = TRUE` is used to match areas (see `vignette("biogeographic_data")`).
+
+```{r ranges_plot, fig.width = 10, fig.height = 5.5, out.width = "100%"}
+# ------ Compare two maps of ranges ------ #
+
+# One color per range
+range_colors <- setNames(grDevices::hcl.colors(length(all_ranges), palette = "Dynamic"), all_ranges)
+
+par(mfrow = c(1, 2), mar = c(0.5, 0.5, 2, 0.5))
+for (i in 1:2)
+{
+  phytools::plotSimmap(toy_multiSimmap_ranges[[i]], colors = range_colors, fsize = 0.55, ftype = "i", lwd = 2)
+  title(paste("Map", i), line = -1, cex.main = 1)
+}
+par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
+```
+
+```{r ranges_legend, fig.width = 8, fig.height = 1.2, out.width = "70%"}
+# ------ Legend ------ #
+
+par(mar = c(0, 0, 0, 0))
+plot.new()
+legend("center", legend = names(range_colors), fill = range_colors, horiz = TRUE, bty = "n", title = "Range")
+par(mar = c(5.1, 4.1, 4.1, 2.1))
+```
+
+In the maps, the **changes of range happen along the branches** (anagenetic changes: dispersal or local extinction) and **at the nodes** (cladogenetic events, e.g., vicariance), where a descendant branch starts in a range different from the one of its parent.
+
+## 6/ Continuous traits
+
+For a **continuous trait**, `deepSTRAPP::prepare_trait_data(trait_data_type = "continuous")` returns a `contMap` (`$contMap`) and, with `run_stochastic_maps = TRUE`, a **list of `contMap`s** (`$contMaps`), which are **not** stochastic character maps.
+They must be **discretized into states** with `phylograftR::convert_contMap_to_simmap()` before they can constrain the grafting.
+Do **not** discretize the tip values before the reconstruction: the discretization is applied on the continuous reconstruction.
+The full procedure, and the reasons for it, are detailed in `vignette("continuous_data")`.
+
+## 7/ Common pitfalls
+
+**Only an object of class `multiSimmap` is read as a set of maps of one trait.**
+A plain `list` of `simmap`s is read as **one map per trait**.
+Several R operations return a plain `list` and drop the class `multiSimmap`, such as `lapply()` or `unclass()`, whereas `[` (subset), `c()` and `rev()` keep it.
+The extraction of one map with `[[` returns a `simmap`, as expected.
+
+```{r pitfall_class}
+# ------ Which operations keep the class multiSimmap? ------ #
+
+data.frame(Operation = c("Original", "Subset: x[1:3]", "One map: x[[1]]", "Concatenate: c(x, x)", "lapply(x, identity)", "unclass(x)"),
+           Class = sapply(list(toy_multiSimmap, toy_multiSimmap[1:3], toy_multiSimmap[[1]], c(toy_multiSimmap, toy_multiSimmap),
+                               lapply(toy_multiSimmap, identity), unclass(toy_multiSimmap)),
+                          function (x) paste(class(x), collapse = ", ")))
+```
+
+If the class is lost, the maps are read as the maps of **as many traits as maps**.
+Without any constraint, **no error is raised**: the plan shows a **single map**, whereas the `multiSimmap` has 10:
+
+```{r pitfall_plan}
+# ------ A plain list is read as the maps of 10 traits ------ #
+
+data(toy_missing_taxa_list)
+
+# Plain list: class lost
+plain_list <- lapply(toy_multiSimmap, identity)
+
+# Grafting plan with the multiSimmap: 10 maps
+plan_multi <- check_grafting_plan(phy = toy_backbone, missing_taxa_list = toy_missing_taxa_list,
+                                  simmap = toy_multiSimmap, verbose = FALSE)
+attr(plan_multi, "n_maps")
+
+# Grafting plan with the plain list: 1 map of 10 traits
+plan_plain <- check_grafting_plan(phy = toy_backbone, missing_taxa_list = toy_missing_taxa_list,
+                                  simmap = plain_list, verbose = FALSE)
+attr(plan_plain, "n_maps")
+```
+
+As soon as allowed states are provided as a single vector, the function **stops** and tells you that the maps of 10 traits are used:
+
+```{r pitfall_error, error = TRUE}
+# ------ Error with allowed states ------ #
+
+check_grafting_plan(phy = toy_backbone, missing_taxa_list = toy_missing_taxa_list,
+                    simmap = plain_list, allowed_states = c("blue", "green"), verbose = FALSE)
+```
+
+To restore the class, set it back, and check the number of maps with `check_grafting_plan()`:
+
+```{r pitfall_fix}
+# ------ Restore the class ------ #
+
+class(plain_list) <- c("multiSimmap", "multiPhylo")
+plan_fixed <- check_grafting_plan(phy = toy_backbone, missing_taxa_list = toy_missing_taxa_list,
+                                  simmap = plain_list, verbose = FALSE)
+attr(plan_fixed, "n_maps")
+```
+
+**All the traits must have the same number of maps** (maps are paired across traits), and a `simmap` cannot be mixed with a `multiSimmap`:
+
+```{r pitfall_n_maps, error = TRUE}
+# ------ Different numbers of maps among traits ------ #
+
+check_grafting_plan(phy = toy_backbone, missing_taxa_list = toy_missing_taxa_list,
+                    simmap = list(color = toy_multiSimmap, elevation = toy_multiSimmap_elevation[1:5]),
+                    verbose = FALSE)
+```
+
+Other points to keep in mind:
+
+- **All the maps must have the same tips, topology and branch lengths as the backbone** used for grafting. If you prune or rescale the phylogeny after building the maps, **rebuild the maps** on the final phylogeny.
+- The **allowed states** of the missing taxa must be states found in the maps (or areas contained in the ranges of the maps, with `treat_states_as_ranges = TRUE`). See *Section 6* in `vignette("format_inputs")` for the allowed states.
+- The maps are **hypotheses conditioned on the tip data you provide**: the quality of the grafting constraint depends on the quality of the tip data and on the fit of the evolutionary model.
+
+## Next steps
+
+- Use the maps to constrain the grafting: see `vignette("main_workflow")` for a full example with one trait, `vignette("multiple_traits")` for several traits, and `vignette("biogeographic_data")` for ranges.
+- Use a continuous trait: see `vignette("continuous_data")`.
+- For a thorough presentation of the models and of the options of `prepare_trait_data()`, see the vignettes of the `deepSTRAPP` package.
