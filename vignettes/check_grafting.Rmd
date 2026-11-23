@@ -36,7 +36,7 @@ This tutorial explains how to perform **a priori** and **a posterior** checks of
 
 ## 0/ Setup
 
-We use the toy backbone with its toy stochastic map (**one map**), and **5 stochastic maps** sampled from the tip data to illustrate the checks with **many maps** (see `vignette("main_workflow")` and `vignette("prepare_trait_data")`).
+We use the toy backbone with its toy stochastic map (**one map**), and **5 stochastic maps** sampled from the tip data to illustrate the checks with **many maps** (see `vignette("main_workflow")` and `vignette("prepare_stochastic_maps")`).
 
 **Helper functions** build the lists of missing taxa to graft.
 

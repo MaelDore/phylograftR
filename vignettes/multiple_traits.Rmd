@@ -44,7 +44,7 @@ For examples addressing different data types, please refer to:
 - **continuous traits**: `vignette("continuous_data")`;
 - **several stochastic maps** to account for the uncertainty in the evolutionary history: `vignette("handle_uncertainty")`.
 
-To build stochastic maps from your own data, see `vignette("prepare_trait_data")`.
+To build stochastic maps from your own data, see `vignette("prepare_stochastic_maps")`.
 
 ## 0/ Data
 
@@ -397,7 +397,7 @@ The maps of the traits are **paired**: the grafting is run with the map 1 of eve
 **All the traits must therefore have the same number of maps.**
 
 We quickly generate **10 stochastic maps** for each trait with `phytools::make.simmap()`, from the states of the tips of the toy maps (equal-rates model).
-Of course, in a real analysis, the maps would be built from your own data (see `vignette("prepare_trait_data")`).
+Of course, in a real analysis, the maps would be built from your own data (see `vignette("prepare_stochastic_maps")`).
 
 ```{r multisimmap_maps}
 # ------ 10 stochastic maps for the color and for the elevation ------ #

@@ -57,7 +57,7 @@ For examples addressing different data types, please refer to:
 - **several traits** at once: `vignette("multiple_traits")`;
 - **several stochastic maps** to account for the uncertainty in the evolutionary history: `vignette("handle_uncertainty")`.
 
-To build stochastic maps from your own data, see `vignette("prepare_trait_data")`.
+To build stochastic maps from your own data, see `vignette("prepare_stochastic_maps")`.
 
 ## 0/ Data
 
@@ -65,7 +65,7 @@ We use the toy backbone and three toy datasets of **one continuous trait**:
 
 - `toy_tip_values`: the **tip values** of the trait, simulated under a Brownian Motion.
 - `toy_contMap`: the **`contMap`** of this trait: the ancestral values are estimated by maximum likelihood under a Brownian Motion and interpolated along the branches (see `phytools::contMap()`).
-- `toy_contMaps`: a **list of 100 `contMap`s**, i.e., 100 stochastic histories of this trait that account for the uncertainty in its evolutionary history (see *Section 3*). For speed, we only use the first 10 of them here: this is enough for illustration, but all the maps (100 or more) should typically be used in actual analyses.
+- `toy_contMaps`: a **list of 10 `contMap`s**, i.e., 10 stochastic histories of this trait that account for the uncertainty in its evolutionary history (see *Section 3*). 10 maps are enough for illustration, but all the maps (100 or more) should typically be used in actual analyses.
 
 We also define the **continuous values of the trait for the 7 toy missing taxa**, as if they were measured.
 Two of them (`New_sp3` and `New_sp7`) have values close to the cut point between the states `"medium"` and `"high"` used below, to illustrate the effect of the thresholds.
@@ -78,10 +78,6 @@ data(toy_tip_values)
 data(toy_contMap)
 data(toy_contMaps)
 data(toy_missing_taxa_list)
-
-# Keep only the first 10 contMaps (of the 100 shipped) to keep the rendering of this vignette fast.
-# 10 maps are enough for illustration, but use all your maps (100 or more) for actual analyses.
-toy_contMaps <- toy_contMaps[1:10]
 
 # Provide the continuous trait values of the 7 missing taxa
 missing_values <- c(New_sp1 = 0.5, New_sp2 = 2.5, New_sp3 = 1.4, New_sp4 = -3,
@@ -168,7 +164,7 @@ par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
 The **continuous values of the missing taxa** are converted into the same states with `convert_values_to_states()`, using the attributes of the `simmap` (cut points and names of the states), to ensure that they fully coincide.
-The states are then used as the **allowed states** of each taxon in the `missing_taxa_list` to constrain the grafting to branch parts in the same states. See *Section 4* in `vignette("prepare_trait_data")` if you are not sure what are **allowed states**.
+The states are then used as the **allowed states** of each taxon in the `missing_taxa_list` to constrain the grafting to branch parts in the same states. See *Section 4* in `vignette("graft_missing_taxa")` if you are not sure what are **allowed states**.
 
 ```{r allowed_states}
 # ------ Convert the values of the missing taxa into allowed states ------ #
@@ -382,6 +378,10 @@ my_contsimmap <- contsimmap::make.contsimmap(tree = toy_backbone, trait.data = t
 # Convert into a list of contMaps
 my_contMaps_list <- deepSTRAPP::convert_contsimmap_to_contMaps(contsimmap = my_contsimmap)
 
+# Keep only the first 10 maps in the shipped dataset `toy_contMaps`, to keep the package light:
+# 10 maps are enough for illustration, but use all your maps (100 or more) in actual analyses
+my_contMaps_list <- my_contMaps_list[1:10]
+
 # Alternative (recommended): all the steps above in one call with deepSTRAPP
 my_trait_data <- deepSTRAPP::prepare_trait_data(tip_data = toy_tip_values,
                                                 trait_data_type = "continuous",
@@ -396,12 +396,12 @@ my_contMaps_list <- my_trait_data$contMaps # List of contMaps from the stochasti
 
 The **list of `contMap`s** is the input you need to constrain the grafting with a continuous trait.
 The first step is to **discretize all the `contMap`s at once** into a `multiSimmap`, with `convert_contMap_to_simmap()`.
-Here, we use the shipped list `toy_contMaps`, with the same thresholds as in *Section 1*.
+Here, we use the shipped list `toy_contMaps` (10 maps), with the same thresholds as in *Section 1*.
 
 ```{r multisimmap_convert}
 # ------ Discretize the list of contMaps into a multiSimmap ------ #
 
-# Use the list of continuous stochastic maps loaded at the beginning (first 10 maps of the list obtained with the script above)
+# Use the shipped list of continuous stochastic maps loaded in Section 0 (10 maps)
 
 # Discretize all contMaps at once using the same cut points
 multiSimmap_continuous <- convert_contMap_to_simmap(contMap = toy_contMaps,

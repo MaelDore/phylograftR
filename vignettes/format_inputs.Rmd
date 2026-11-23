@@ -110,7 +110,7 @@ This combines with the other constraints:
 - For **missing taxa**, the available branches are those of the target clade, minus the excluded subclades, restricted to pieces in the allowed states.
 - For **missing clades**, the available branch is the stem branch of the sister clade, restricted to pieces in the allowed states. 
 
-Preparing these maps is thoroughly explained in a dedicated tutorial: `vignette("prepare_trait_data")`. The use of **allowed states** is only briefly introduced in *Section 6* of this vignette.
+Preparing these maps is thoroughly explained in a dedicated tutorial: `vignette("prepare_stochastic_maps")`. The use of **allowed states** is only briefly introduced in *Section 6* of this vignette.
 
 
 ## 2/ Which way to build the list?
@@ -353,7 +353,7 @@ missing_taxa_list_states$allowed_states
 ```
 
 These constraints are used only when a stochastic map (`simmap`) is provided to the grafting function. 
-Please refer to the dedicated tutorials explaining how to prepare the maps (`vignette("prepare_trait_data")`) and how to use the ranges and several traits (`vignette("biogeographic_data")` and `vignette("multiple_traits")`) for more detailed information.
+Please refer to the dedicated tutorials explaining how to prepare the maps (`vignette("prepare_stochastic_maps")`) and how to use the ranges and several traits (`vignette("biogeographic_data")` and `vignette("multiple_traits")`) for more detailed information.
 
 <br>
 
@@ -577,7 +577,7 @@ If you wish to use **species attributes** to further constraint grafting based o
 you will need to provide **stochastic character maps** under the `simmap` argument to grafting functions.
 Please refer to the dedicated tutorials explaining how to:
 
-- prepare the stochastic maps: see `vignette("prepare_trait_data")`;
+- prepare the stochastic maps: see `vignette("prepare_stochastic_maps")`;
 - use biogeographic ranges as constraints (i.e., GIG = **geographically-informed grafting**): see `vignette("biogeographic_data")`;
 - use several traits as constraints: see `vignette("multiple_traits")`.
 

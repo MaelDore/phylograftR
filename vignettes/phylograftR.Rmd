@@ -30,7 +30,7 @@ For more advanced uses, please refer to the tutorials below.
 | I want to... | Tutorial |
 |:---|:---|
 | Format my data into `missing_taxa_list` and `total_richness_per_clades` | [`format_inputs`](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")` |
-| Build stochastic maps (simmaps) of species attributes from tip data | `prepare_trait_data` *(in preparation)* |
+| Build stochastic maps (simmaps) of species attributes from tip data | [`prepare_stochastic_maps`](https://maeldore.github.io/phylograftR/articles/prepare_stochastic_maps.html): `vignette("prepare_stochastic_maps")` |
 | See a full analysis, from tip data to checked grafted phylogenies | [`main_workflow`](https://maeldore.github.io/phylograftR/articles/main_workflow.html): `vignette("main_workflow")` |
 | Explore options to graft missing taxa within target clades | [`graft_missing_taxa`](https://maeldore.github.io/phylograftR/articles/graft_missing_taxa.html): `vignette("graft_missing_taxa")` |
 | Explore options to graft missing clades as sisters of clades of the backbone | [`graft_missing_clades`](https://maeldore.github.io/phylograftR/articles/graft_missing_clades.html): `vignette("graft_missing_clades")` |
@@ -53,7 +53,7 @@ They provide explanations on available arguments and interpretations of results 
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 1.1/ [Format __inputs__ prior to grafting](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")`.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 1.2/ Prepare __trait data__ and build stochastic maps with deepSTRAPP: `prepare_trait_data` *(in preparation)*.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 1.2/ [Prepare __trait data__ and build __stochastic maps__ with deepSTRAPP](https://maeldore.github.io/phylograftR/articles/prepare_stochastic_maps.html): `vignette("prepare_stochastic_maps")`.
 
 ### **2/ Main workflow**
 

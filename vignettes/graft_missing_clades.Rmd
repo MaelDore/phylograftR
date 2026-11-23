@@ -265,7 +265,7 @@ Each missing clade is grafted on the **portions of the stem branch of its sister
 The **whole missing clade** is then in **the state of the point where it was grafted**: a missing clade inherits a single state.
 
 Allowed states are set **for each missing clade** with the `allowed_states` of the list (**all the taxa of a missing clade must have the same value**), or **for all missing clades** with the `allowed_states` argument (the list value takes precedence).
-The stochastic maps are built from tip data (see `vignette("prepare_trait_data")`). Here we use the toy map of a **single categorical trait**, with three states (`"blue"`, `"green"`, `"red"`).
+The stochastic maps are built from tip data (see `vignette("prepare_stochastic_maps")`). Here we use the toy map of a **single categorical trait**, with three states (`"blue"`, `"green"`, `"red"`).
 
 This section presents the **general principle** with a simple example. 
 For more details, please refer to the tutorials dedicated to the different types of species attributes:

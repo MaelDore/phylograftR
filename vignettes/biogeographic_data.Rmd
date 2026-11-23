@@ -42,7 +42,7 @@ For examples addressing different data types, please refer to:
 - **continuous traits**: `vignette("continuous_data")`;
 - **several stochastic maps** to account for the uncertainty in the evolutionary history: `vignette("handle_uncertainty")`.
 
-To build stochastic maps of ranges from your own data, see `vignette("prepare_trait_data")`.
+To build stochastic maps of ranges from your own data, see `vignette("prepare_stochastic_maps")`.
 
 ## 0/ Data
 

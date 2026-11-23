@@ -32,7 +32,7 @@ This tutorial presents the **full workflow** to graft missing lineages on a time
 7. **Plot** a grafted phylogeny (`plot_grafted()`), **flatten** the outputs (`flatten_grafted_phylogenies()`), and use them in a **downstream analysis**.
 
 All the examples use the **toy datasets** shipped with the package.
-The inputs are only briefly presented here: see `vignette("format_inputs")` for all the different ways to build and adjust them, and `vignette("prepare_trait_data")` for the handling of stochastic maps.
+The inputs are only briefly presented here: see `vignette("format_inputs")` for all the different ways to build and adjust them, and `vignette("prepare_stochastic_maps")` for the handling of stochastic maps.
 
 ## 1/ Data: backbone, taxonomy and tip data
 
@@ -85,7 +85,7 @@ class(simmaps)
 length(simmaps)
 ```
 
-*Alternatives:* The `deepSTRAPP` R package provides tools to prepare the trait data and build the stochastic maps (including for biogeographic ranges and continuous traits), with possibilities to tune transition parameters, compare inference models, and select the best fitted one, all in one call: see `vignette("prepare_trait_data")`.
+*Alternatives:* The `deepSTRAPP` R package provides tools to prepare the trait data and build the stochastic maps (including for biogeographic ranges and continuous traits), with possibilities to tune transition parameters, compare inference models, and select the best fitted one, all in one call: see `vignette("prepare_stochastic_maps")`.
 
 ## 3/ Missing lineages: build the `missing_taxa_list` from the taxonomy
 

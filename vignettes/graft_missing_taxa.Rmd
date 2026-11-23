@@ -435,7 +435,7 @@ Grafting can be constrained by a **species attribute**: a stochastic map (`simma
 The grafted lineage then inherits the state of the point where it was grafted.
 
 Allowed states are set **for each taxon** with the `allowed_states` of the list, or **for all taxa** with the global `allowed_states` argument (the taxon value takes precedence). 
-The stochastic maps are built from tip data (see `vignette("prepare_trait_data")`). Here we use the toy map of a **single categorical trait**, with three states (`"blue"`, `"green"`, `"red"`).
+The stochastic maps are built from tip data (see `vignette("prepare_stochastic_maps")`). Here we use the toy map of a **single categorical trait**, with three states (`"blue"`, `"green"`, `"red"`).
 
 This section presents the **general principle** with a simple example. 
 For more details, please refer to the tutorials dedicated to the different types of species attributes:
