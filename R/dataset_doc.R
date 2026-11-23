@@ -629,7 +629,7 @@ NULL
 #'
 #' @seealso Other datasets and functions from phylograftR:
 #'  * [`phylograftR::toy_contMap`][toy_contMap] for the contMap of this trait (point estimate).
-#'  * [`phylograftR::toy_contMaps`][toy_contMaps] for 100 stochastic histories of this trait (list of contMaps).
+#'  * [`phylograftR::toy_contMaps`][toy_contMaps] for 10 stochastic histories of this trait (list of contMaps).
 #'  * [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap] to discretize a contMap into a simmap, and
 #'    [`phylograftR::convert_values_to_states()`][convert_values_to_states] to convert continuous values into the same states.
 #'
@@ -661,7 +661,7 @@ NULL
 #'
 #' @seealso Other datasets and functions from phylograftR:
 #'  * [`phylograftR::toy_tip_values`][toy_tip_values] for the data used to build the contMap.
-#'  * [`phylograftR::toy_contMaps`][toy_contMaps] for 100 stochastic histories of the trait (list of contMaps).
+#'  * [`phylograftR::toy_contMaps`][toy_contMaps] for 10 stochastic histories of the trait (list of contMaps).
 #'  * [`phylograftR::convert_contMap_to_simmap()`][convert_contMap_to_simmap] to discretize a contMap into a simmap.
 #'
 #' @examples
@@ -686,7 +686,7 @@ NULL
 
 #' @title Toy list of contMaps: stochastic histories of a continuous trait
 #'
-#' @description List of 100 `contMap`s of [`phylograftR::toy_backbone`][toy_backbone], each describing **one possible history of the continuous
+#' @description List of 10 `contMap`s of [`phylograftR::toy_backbone`][toy_backbone], each describing **one possible history of the continuous
 #'   trait** of [`phylograftR::toy_tip_values`][toy_tip_values] (continuous stochastic maps).
 #'   Providing several histories accounts for the **uncertainty** of the reconstruction of the ancestral trait values, unlike [`phylograftR::toy_contMap`][toy_contMap].
 #'
@@ -698,6 +698,7 @@ NULL
 #'   1. 100 continuous stochastic maps were simulated with `contsimmap::make.contsimmap()`, conditioned on the tip values, the backbone and a Brownian Motion
 #'   with the evolutionary rate estimated by `phytools::anc.ML()` (seed 1234).
 #'   2. They were converted into a list of `contMap`s with `deepSTRAPP::convert_contsimmap_to_contMaps()`.
+#'   3. Only the **first 10 maps** were kept, to keep the package light. 10 maps are enough for illustration, but **actual analyses should use more maps (100 or more)**.
 #'
 #'   The script uses `contsimmap` directly, to credit the authors of the continuous stochastic mapping approach.
 #'   For your own data, `deepSTRAPP::prepare_trait_data()` is **recommended**: with `run_stochastic_maps = TRUE`, it fits the evolutionary model(s), runs the continuous stochastic mapping
@@ -710,7 +711,7 @@ NULL
 #'   and must not be used to compute transition rates or counts.
 #'
 #' @usage data(toy_contMaps)
-#' @format A list of 100 objects of class `"contMap"` (see `phytools::contMap()`), each with the elements:
+#' @format A list of 10 objects of class `"contMap"` (see `phytools::contMap()`), each with the elements:
 #'   * `$tree`: the backbone as a `"simmap"`, in which the states are the color levels of the trait values from 0 to 1000.
 #'   * `$cols`: the color palette across values discretized from 0 to 1000.
 #'   * `$lims`: the range of the trait values of the map, which differs among the maps.
@@ -745,3 +746,137 @@ NULL
 #' par(mfrow = c(1, 1))
 #'
 "toy_contMaps"
+
+##### 8/ Toy tip data and stochastic maps inferred from them #####
+
+#' @title Toy tip data of three species attributes
+#'
+#' @description States of three **species attributes** for the 30 tips of [`phylograftR::toy_backbone`][toy_backbone]: a color, an elevation and a biogeographic range.
+#'   They are the **tip data** from which stochastic maps are inferred in `vignette("prepare_stochastic_maps")`
+#'   (see [`phylograftR::toy_multiSimmap`][toy_multiSimmap], [`phylograftR::toy_multiSimmap_elevation`][toy_multiSimmap_elevation] and
+#'   [`phylograftR::toy_multiSimmap_ranges`][toy_multiSimmap_ranges]).
+#'
+#'   They are the states found at the tips of [`phylograftR::toy_simmap`][toy_simmap], [`phylograftR::toy_simmap_elevation`][toy_simmap_elevation]
+#'   and [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges], so the datasets are consistent with all the other toy datasets.
+#'
+#' @usage data(toy_tip_data)
+#' @format A data.frame with 30 rows (the tips of [`phylograftR::toy_backbone`][toy_backbone], as row names and in the same order) and three character columns:
+#'   * `$color`: `"blue"`, `"green"` or `"red"`.
+#'   * `$elevation`: `"high"` or `"low"`.
+#'   * `$range`: biogeographic ranges coded as in `BioGeoBEARS`, i.e., `"A"`, `"B"`, `"AB"` or `"BC"`.
+#'
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_multiSimmap`][toy_multiSimmap], [`phylograftR::toy_multiSimmap_elevation`][toy_multiSimmap_elevation] and
+#'    [`phylograftR::toy_multiSimmap_ranges`][toy_multiSimmap_ranges] for the stochastic maps inferred from these data.
+#'  * [`phylograftR::toy_backbone`][toy_backbone] for the backbone phylogeny.
+#'
+#' @examples
+#' # Import the data
+#' data(toy_tip_data)
+#' head(toy_tip_data)
+#'
+#' # Named vector of tip states of one attribute, as required by deepSTRAPP::prepare_trait_data()
+#' tip_colors <- setNames(toy_tip_data$color, row.names(toy_tip_data))
+#' table(tip_colors)
+#'
+"toy_tip_data"
+
+#' @title Toy multiSimmap of a categorical trait: stochastic maps of the colors
+#'
+#' @description Set of 10 stochastic character maps (`multiSimmap`) of [`phylograftR::toy_backbone`][toy_backbone] for the **colors** of
+#'   [`phylograftR::toy_tip_data`][toy_tip_data] (`"blue"`, `"green"` and `"red"`). Each map is **one possible history** of the color along the branches,
+#'   so that together they account for the **uncertainty** in the reconstruction of the ancestral states, unlike a single `simmap`.
+#'   All the maps have the **same states at the tips** (the observed ones) and differ in the internal branches.
+#'
+#'   They were inferred from the tip data with `deepSTRAPP::prepare_trait_data()` (see `vignette("prepare_stochastic_maps")`):
+#'   the models of equal rates (`"ER"`), symmetrical rates (`"SYM"`) and all rates different (`"ARD"`) were compared with their AICc.
+#'   The **best model** was the equal-rates model (`"ER"`), under which the maps were simulated with `phytools::make.simmap()` (seed 1234).
+#'   100 maps were simulated, and only the first 10 are kept to keep the package light. 10 maps are enough for illustration,
+#'   but **actual analyses should use more maps (100 or more)**.
+#'
+#' @usage data(toy_multiSimmap)
+#' @format An object of classes `"multiSimmap"` and `"multiPhylo"`: a list of 10 objects of class `"simmap"` (see [`phylograftR::toy_simmap`][toy_simmap] for their structure),
+#'   with the same tips, topology and branch lengths as [`phylograftR::toy_backbone`][toy_backbone].
+#'   The class `"multiSimmap"` is **what tells the grafting functions that the maps are alternative histories of the same trait** (see `vignette("prepare_stochastic_maps")`).
+#'
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_tip_data`][toy_tip_data] for the tip data used to build the maps.
+#'  * [`phylograftR::toy_simmap`][toy_simmap] for a single map of the same states.
+#'  * [`phylograftR::toy_multiSimmap_elevation`][toy_multiSimmap_elevation] to combine with these maps as the maps of two traits.
+#'  * [`phylograftR::graft_missing_taxa()`][graft_missing_taxa] to graft taxa with the maps as constraints: each map is used for a different simulation.
+#'
+#' @examples
+#' # Import the data
+#' data(toy_multiSimmap)
+#' class(toy_multiSimmap)
+#' length(toy_multiSimmap)
+#'
+#' # Plot the first two maps: two possible histories of the same trait
+#' state_colors <- c(blue = "dodgerblue", green = "limegreen", red = "firebrick")
+#' par(mfrow = c(1, 2))
+#' phytools::plotSimmap(toy_multiSimmap[[1]], colors = state_colors, fsize = 0.6, ftype = "i")
+#' phytools::plotSimmap(toy_multiSimmap[[2]], colors = state_colors, fsize = 0.6, ftype = "i")
+#' par(mfrow = c(1, 1))
+#'
+"toy_multiSimmap"
+
+#' @title Toy multiSimmap of a binary trait: stochastic maps of the elevation
+#'
+#' @description Set of 10 stochastic character maps (`multiSimmap`) of [`phylograftR::toy_backbone`][toy_backbone] for the **elevation** of
+#'   [`phylograftR::toy_tip_data`][toy_tip_data] (`"high"` and `"low"`), inferred like [`phylograftR::toy_multiSimmap`][toy_multiSimmap]
+#'   (models `"ER"` and `"ARD"` compared with their AICc; the **best model** was the equal-rates model `"ER"`; seed 2345; 100 maps simulated, the first 10 kept).
+#'
+#'   It has the same number of maps as [`phylograftR::toy_multiSimmap`][toy_multiSimmap], so that the two can be **combined as the maps of two traits**:
+#'   the maps of the traits are paired (map 1 of each trait, then map 2 of each trait, and so on).
+#'
+#' @usage data(toy_multiSimmap_elevation)
+#' @format An object of classes `"multiSimmap"` and `"multiPhylo"`: a list of 10 objects of class `"simmap"`,
+#'   with the same tips, topology and branch lengths as [`phylograftR::toy_backbone`][toy_backbone].
+#'
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_tip_data`][toy_tip_data] for the tip data used to build the maps.
+#'  * [`phylograftR::toy_simmap_elevation`][toy_simmap_elevation] for a single map of the same states.
+#'  * [`phylograftR::toy_multiSimmap`][toy_multiSimmap] for the maps of the colors.
+#'
+#' @examples
+#' # Import the data
+#' data(toy_multiSimmap)
+#' data(toy_multiSimmap_elevation)
+#'
+#' # Maps of two traits: a list with one element per trait, each a multiSimmap with the same number of maps
+#' maps_two_traits <- list(color = toy_multiSimmap, elevation = toy_multiSimmap_elevation)
+#' sapply(maps_two_traits, length)
+#'
+"toy_multiSimmap_elevation"
+
+#' @title Toy multiSimmap of biogeographic ranges
+#'
+#' @description Set of 10 stochastic character maps (`multiSimmap`) of [`phylograftR::toy_backbone`][toy_backbone] for the **biogeographic ranges** of
+#'   [`phylograftR::toy_tip_data`][toy_tip_data], coded as in `BioGeoBEARS` (areas `"A"`, `"B"` and `"C"`; ranges of at most two areas).
+#'   Each map is one possible biogeographic history, with anagenetic changes of range along the branches and cladogenetic events at the nodes.
+#'
+#'   They were inferred from the tip data with the **DEC** model of `BioGeoBEARS` (the only model fit), through `deepSTRAPP::prepare_trait_data()` (see `vignette("prepare_stochastic_maps")`):
+#'   biogeographic stochastic mapping (BSM) was run, and its output converted into stochastic maps (seed 3456).
+#'   100 maps were simulated, and only the first 10 are kept to keep the package light. 10 maps are enough for illustration,
+#'   but **actual analyses should use more maps (100 or more)**.
+#'
+#'   The ranges of the maps include the ranges of the tips and may include **other ranges only found at the internal nodes** (e.g., `"C"` or `"AC"`).
+#'   Use `treat_states_as_ranges = TRUE` to use the areas as allowed states in the grafting functions (see `vignette("biogeographic_data")`).
+#'
+#' @usage data(toy_multiSimmap_ranges)
+#' @format An object of classes `"multiSimmap"` and `"multiPhylo"`: a list of 10 objects of class `"simmap"`,
+#'   with the same tips, topology and branch lengths as [`phylograftR::toy_backbone`][toy_backbone].
+#'
+#' @seealso Other datasets and functions from phylograftR:
+#'  * [`phylograftR::toy_tip_data`][toy_tip_data] for the tip data used to build the maps.
+#'  * [`phylograftR::toy_simmap_ranges`][toy_simmap_ranges] for a single map of ranges.
+#'  * [`phylograftR::toy_missing_taxa_list_with_allowed_ranges`][toy_missing_taxa_list_with_allowed_ranges] for missing taxa with allowed ranges.
+#'
+#' @examples
+#' # Import the data
+#' data(toy_multiSimmap_ranges)
+#'
+#' # Ranges found in the first map
+#' colnames(toy_multiSimmap_ranges[[1]]$mapped.edge)
+#'
+"toy_multiSimmap_ranges"

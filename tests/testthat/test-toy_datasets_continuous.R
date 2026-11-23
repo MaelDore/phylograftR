@@ -38,14 +38,14 @@ test_that("toy_contMap is the contMap of toy_tip_values on toy_backbone",
 })
 
 ## Test that the list of contMaps is a set of contMaps of the backbone, that can be discretized into a multiSimmap
-test_that("toy_contMaps is a list of 100 contMaps of toy_backbone that can be discretized into a multiSimmap with three states",
+test_that("toy_contMaps is a list of 10 contMaps of toy_backbone that can be discretized into a multiSimmap with three states",
 {
   data(toy_backbone, package = "phylograftR")
   data(toy_tip_values, package = "phylograftR")
   data(toy_contMaps, package = "phylograftR")
   expect_type(toy_contMaps, "list")
-  expect_length(toy_contMaps, 100)
-  for (i in c(1, 50, 100))
+  expect_length(toy_contMaps, 10)
+  for (i in c(1, 5, 10))
   {
     expect_s3_class(toy_contMaps[[i]], "contMap")
     expect_identical(toy_contMaps[[i]]$tree$tip.label, toy_backbone$tip.label)
@@ -59,7 +59,7 @@ test_that("toy_contMaps is a list of 100 contMaps of toy_backbone that can be di
   my_multiSimmap <- convert_contMap_to_simmap(toy_contMaps, probs = c(1/3, 2/3), states = c("low", "medium", "high"),
                                               tip_values = toy_tip_values, verbose = FALSE)
   expect_s3_class(my_multiSimmap, "multiSimmap")
-  expect_length(my_multiSimmap, 100)
+  expect_length(my_multiSimmap, 10)
   expect_identical(attr(my_multiSimmap, "states"), c("low", "medium", "high"))
   breaks <- attr(my_multiSimmap, "breaks")
   expect_length(breaks, 2)
@@ -67,7 +67,7 @@ test_that("toy_contMaps is a list of 100 contMaps of toy_backbone that can be di
   # The cut points are the terciles of the observed tip values, and each tip is in the state of its observed value
   expect_equal(unname(breaks), unname(stats::quantile(toy_tip_values, probs = c(1/3, 2/3))))
   observed_states <- unlist(convert_values_to_states(toy_tip_values, simmap = my_multiSimmap))
-  for (i in c(1, 50, 100))
+  for (i in c(1, 5, 10))
   {
     expect_no_error(validate_simmap(my_multiSimmap[[i]], toy_backbone))
     expect_setequal(colnames(my_multiSimmap[[i]]$mapped.edge), c("low", "medium", "high"))

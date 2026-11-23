@@ -10,7 +10,8 @@
 # Produces:
 #  * data/toy_tip_values.rda: tip values of a continuous trait simulated on 'toy_backbone'
 #  * data/toy_contMap.rda: contMap of this trait (point estimate: ML ancestral values interpolated along the branches)
-#  * data/toy_contMaps.rda: list of 100 contMaps, i.e., 100 histories of this trait (continuous stochastic mapping). Users discretize them with convert_contMap_to_simmap()
+#  * data/toy_contMaps.rda: list of 10 contMaps, i.e., 10 histories of this trait (continuous stochastic mapping): the first 10 of 100 maps simulated, to keep the package light.
+#    Users discretize them with convert_contMap_to_simmap(). Use more maps (100 or more) in actual analyses.
 #
 # The toy missing taxa list is not changed: the values of the continuous trait of the missing taxa are defined in the vignette 'continuous_data'.
 
@@ -44,7 +45,7 @@ print(attr(toy_simmap_check, "breaks"))
 print(round(colSums(toy_simmap_check$mapped.edge) / sum(toy_simmap_check$mapped.edge), 2))
 
 
-##### 3/ Build the list of contMaps: 100 continuous stochastic maps #####
+##### 3/ Build the list of contMaps: 100 continuous stochastic maps, of which the first 10 are kept #####
 
 # We use 'contsimmap' directly to credit the authors of the continuous stochastic mapping approach and show the steps.
 # For your own data, deepSTRAPP::prepare_trait_data() is recommended: it fits the evolutionary model(s), runs the continuous stochastic mapping
@@ -84,10 +85,11 @@ stopifnot(inherits(toy_multiSimmap_check, "multiSimmap"),
           isTRUE(all.equal(attr(toy_multiSimmap_check, "breaks"), unname(quantile(toy_tip_values, probs = c(1/3, 2/3))))))
 print(attr(toy_multiSimmap_check, "breaks"))
 
-# Prepare the object to save: a plain list of 100 contMaps
-toy_contMaps <- toy_contMaps_list
+# Prepare the object to save: a plain list of the first 10 contMaps (of the 100 simulated), to keep the package light.
+# 10 maps are enough for illustration. Use more (100 or more) in actual analyses.
+toy_contMaps <- toy_contMaps_list[1:10]
 names(toy_contMaps) <- NULL # Unnamed list
-stopifnot(is.list(toy_contMaps), length(toy_contMaps) == 100, all(vapply(toy_contMaps, inherits, logical(1), what = "contMap")))
+stopifnot(is.list(toy_contMaps), length(toy_contMaps) == 10, all(vapply(toy_contMaps, inherits, logical(1), what = "contMap")))
 print(object.size(toy_contMaps), units = "Mb") # Keep the data of the package small (CRAN: less than 5 Mb in total)
 
 
