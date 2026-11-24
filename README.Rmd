@@ -356,6 +356,7 @@ They are listed below, in the [companion website](https://maeldore.github.io/phy
 **1/ Inputs**
 
 - [Format __inputs__ prior to grafting](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")`.
+- [Prepare __trait data__ and build __stochastic maps__ with deepSTRAPP](https://maeldore.github.io/phylograftR/articles/prepare_stochastic_maps.html): `vignette("prepare_stochastic_maps")`.
 
 **2/ Main workflow**
 
@@ -376,6 +377,10 @@ They are listed below, in the [companion website](https://maeldore.github.io/phy
 - [Use __biogeographic ranges__ as constraints](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html): `vignette("biogeographic_data")`.
 - [Combine __several traits__ as constraints](https://maeldore.github.io/phylograftR/articles/multiple_traits.html): `vignette("multiple_traits")`.
 - [Use a __continuous trait__ as constraint](https://maeldore.github.io/phylograftR/articles/continuous_data.html): `vignette("continuous_data")`.
+
+**6/ Uncertainty, reproducibility, and scaling**
+
+- [Handle __uncertainty__ and ensure __reproducibility__](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html): `vignette("handle_uncertainty")`.
 
 Alternatively, if you prefer to view the vignettes in R, you can install the package with `build_vignettes = TRUE`. 
 

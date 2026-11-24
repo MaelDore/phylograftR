@@ -507,6 +507,9 @@ and in this vignette: `vignette("phylograftR")`.
 - [Format **inputs** prior to
   grafting](https://maeldore.github.io/phylograftR/articles/format_inputs.html):
   `vignette("format_inputs")`.
+- [Prepare **trait data** and build **stochastic maps** with
+  deepSTRAPP](https://maeldore.github.io/phylograftR/articles/prepare_stochastic_maps.html):
+  `vignette("prepare_stochastic_maps")`.
 
 **2/ Main workflow**
 
@@ -543,6 +546,12 @@ and in this vignette: `vignette("phylograftR")`.
 - [Use a **continuous trait** as
   constraint](https://maeldore.github.io/phylograftR/articles/continuous_data.html):
   `vignette("continuous_data")`.
+
+**6/ Uncertainty, reproducibility, and scaling**
+
+- [Handle **uncertainty** and ensure
+  **reproducibility**](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html):
+  `vignette("handle_uncertainty")`.
 
 Alternatively, if you prefer to view the vignettes in R, you can install
 the package with `build_vignettes = TRUE`.

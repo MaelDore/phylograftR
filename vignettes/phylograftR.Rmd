@@ -38,8 +38,8 @@ For more advanced uses, please refer to the tutorials below.
 | Check the grafting plan before, and the grafted phylogenies after | [`check_grafting`](https://maeldore.github.io/phylograftR/articles/check_grafting.html): `vignette("check_grafting")` |
 | Constrain grafting with biogeographic ranges | [`biogeographic_data`](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html): `vignette("biogeographic_data")` |
 | Constrain grafting with several traits | [`multiple_traits`](https://maeldore.github.io/phylograftR/articles/multiple_traits.html): `vignette("multiple_traits")` |
-| Constrain grafting with a continuous trait | [`continuous_data`](https://maeldore.github.io/phylograftR/articles/continuous_data.html) |
-| Account for uncertainty: several simulations, several maps | `handle_uncertainty` *(in preparation)* |
+| Constrain grafting with a continuous trait | [`continuous_data`](https://maeldore.github.io/phylograftR/articles/continuous_data.html): `vignette("continuous_data")` |
+| Account for uncertainty (simulations, stochastic maps, backbones), and make runs reproducible with seeds | [`handle_uncertainty`](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html): `vignette("handle_uncertainty")` |
 | Speed up grafting with parallel computation | `parallel_grafting` *(in preparation)* |
 | Resume a crashed or interrupted run | `resume_crashed_run` *(in preparation)* |
 
@@ -57,7 +57,7 @@ They provide explanations on available arguments and interpretations of results 
 
 ### **2/ Main workflow**
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; [Full __grafting workflow__](https://maeldore.github.io/phylograftR/articles/main_workflow.html), from a phylogeny and tip data to the checked grafted phylogenies: `vignette("main_workflow")`.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; [Full __grafting workflow__, from a phylogeny and tip data to the checked grafted phylogenies](https://maeldore.github.io/phylograftR/articles/main_workflow.html): `vignette("main_workflow")`.
 
 ### **3/ Grafting options**
 
@@ -69,7 +69,7 @@ They provide explanations on available arguments and interpretations of results 
 
 ### **4/ Checks**
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; [Check the __grafting plan__ and the __grafted phylogenies__](https://maeldore.github.io/phylograftR/articles/check_grafting.html), and extract information: `vignette("check_grafting")`.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; [Check the __grafting plan__ and the __grafted phylogenies__, and extract information](https://maeldore.github.io/phylograftR/articles/check_grafting.html): `vignette("check_grafting")`.
 
 ### **5/ Data types**
 
@@ -77,11 +77,11 @@ They provide explanations on available arguments and interpretations of results 
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.2/ [__Multiple traits__](https://maeldore.github.io/phylograftR/articles/multiple_traits.html): `vignette("multiple_traits")`.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.3/ [__Continuous__ trait data](https://maeldore.github.io/phylograftR/articles/continuous_data.html): `continuous_data`.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.3/ [__Continuous__ trait data](https://maeldore.github.io/phylograftR/articles/continuous_data.html): `vignette("continuous_data")`.
 
 ### **6/ Uncertainty and scaling**
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.1/ Handle __uncertainty__ with several simulations and stochastic maps: `handle_uncertainty` *(in preparation)*.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.1/ [Handle __uncertainty__ and ensure __reproducibility__](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html): `vignette("handle_uncertainty")`.
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.2/ Run grafting in __parallel__: `parallel_grafting` *(in preparation)*.
 

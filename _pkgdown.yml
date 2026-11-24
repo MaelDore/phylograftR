@@ -51,6 +51,10 @@ navbar:
         href: articles/multiple_traits.html
       - text: Use a continuous trait as constraint
         href: articles/continuous_data.html
+      - text: '-------'
+      - text: 6/ Uncertainty, reproducibility, and scaling
+      - text: Handle uncertainty and ensure reproducibility
+        href: articles/handle_uncertainty.html
 reference:
 - title: Graft missing lineages
   desc: |

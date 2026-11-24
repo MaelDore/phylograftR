@@ -36,6 +36,9 @@ Here, we cover:
 The principle is the same **whatever the type of attribute** used as constraint: categorical traits, biogeographic ranges, and continuous traits (once discretized into states).
 To learn how to build the stochastic maps from your own tip data, see `vignette("prepare_stochastic_maps")`.
 
+This tutorial is also about **reproducibility**. The grafting is stochastic, so phylograftR relies on a **seed system**: a single `seed` makes a whole run reproducible (all the simulations and all the maps), and **each grafted phylogeny can be reproduced alone** from its own seed (and its map).
+We explain how the seeds work in *Section 1* (simulations), *Section 3* (maps and simulations crossed), and *Section 6* (several backbones), and what it implies for the analyses.
+
 ## 0/ Data
 
 We use the toy backbone, the toy list of **7 missing taxa**, and the toy **`multiSimmap`** of 10 stochastic maps of a color with three states.
@@ -49,10 +52,12 @@ data(toy_missing_taxa_list) # Taxonomic constraints only (target clades and excl
 data(toy_missing_taxa_list_with_allowed_states) # Same, with colors allowed for some taxa
 data(toy_multiSimmap) # 10 stochastic maps of the color
 
-# New_sp1 is only allowed in "red" in the shipped list. We also allow "green", so that a branch
-# is available for it in each of the 10 maps (see vignette("check_grafting"))
+# Missing taxa list with the colors allowed for some taxa
 taxa_colors <- toy_missing_taxa_list_with_allowed_states
-taxa_colors$allowed_states[[1]] <- c("red", "green")
+
+# New_sp1 is only allowed in "red" in the shipped list. We also allow "green", so that a branch
+# is available for it in each of the 10 maps (see the end of Section 2 for what happens otherwise)
+taxa_colors$allowed_states[["New_sp1"]] <- c("red", "green")
 ```
 
 To show the variability among grafted phylogenies, we use `extract_grafting_info()`.
@@ -111,7 +116,7 @@ Downstream analyses performed over the 100 grafted phylogenies are **more robust
 
 ### Ensure reproducibility across simulations
 
-phylograftR is design to ensure **full reproducibility of analyses** based on the use of `seed` controlling the random number generation.
+**phylograftR** is design to ensure **full reproducibility of analyses** based on the use of `seed` controlling the random number generation.
 The **first simulation in a grafting run uses the value in `seed`**, and the seeds of the other simulations of the run are all derived from it.
 Each simulation can therefore be **reproduced alone** with its own seed, and the whole set of simulations can be reproduced with the unique `seed` too:
 
@@ -129,7 +134,7 @@ all.equal(sim_3_alone$edge.length, grafted_sims[["sim_3"]]$edge.length)
 ```
 
 If some simulations fail because of the random draws (e.g., no usable age after many redraws), they are skipped with a warning, and listed in the attribute `"failed"`.
-Use `force_simulations = TRUE` (the default) to try new seeds until `nb_simulations` phylogenies are obtained (see `?graft_missing_taxa`).
+Use `force_simulations = TRUE` (the default is `FALSE`) to try new seeds until `nb_simulations` phylogenies are obtained (see `?graft_missing_taxa`).
 
 
 ## 2/ P maps: uncertainty in the trait evolution
@@ -152,9 +157,9 @@ names(grafted_maps)
 class(grafted_maps$map_1)
 ```
 
-The maps differ in the **branches in the allowed states**, so the constrains applied when grafting differ, and a taxon is not grafted in the same location from one map to the next:
+The maps differ in the **branches in the allowed states**, so the constraints applied when grafting differ, and a taxon is not grafted in the same location from one map to the next:
 
-```{r maps_info, fig.width = 8, fig.height = 4.5, out.width = "80%"}
+```{r maps_info}
 # ------ Variability of the grafting among maps ------ #
 
 info_maps <- extract_grafting_info(grafted_maps, missing_taxa_list = taxa_colors,
@@ -162,7 +167,6 @@ info_maps <- extract_grafting_info(grafted_maps, missing_taxa_list = taxa_colors
 
 # Number of different branches used for each taxon across the 10 maps
 tapply(info_maps$parent_node, info_maps$Taxon_name, function (x) length(unique(x)))
-
 ```
 
 The variability depends on the taxon: it is higher for the taxa whose allowed states, and thus the available branches, change more among the maps.
@@ -173,8 +177,69 @@ Each grafted phylogeny then has one updated simmap per trait.
 
 **This works for all the types of attributes.** Biogeographic stochastic maps (`multiSimmap` of ranges, see `vignette("biogeographic_data")`) and the maps discretized from continuous stochastic maps (`vignette("continuous_data")`) are `multiSimmap`s too, and are used in the same way.
 
-A map for which **no simulation** could be obtained is **dropped from the output with a warning** (attribute `"failed_maps"`).
-Before a long run, use `check_grafting_plan()` to check that the constraints are feasible **across all the maps** (see `vignette("check_grafting")`).
+### What happens when a map cannot be used?
+
+A map can fail for two reasons, which are handled differently:
+
+**1/ Random failure**
+
+A taxon can be grafted in a map, but the draws of its divergence age did not give a usable age after `max_age_redraws` attempts (see `vignette("graft_missing_taxa")`). In this case, the map is **dropped from the output with a warning**, while the other maps are returned, and the dropped map is listed in the attribute `"failed_maps"`.
+
+We illustrate it by allowing very few redraws:
+
+```{r maps_dropped}
+# ------ A map dropped at random ------ #
+
+# Only 3 attempts to draw a usable divergence age
+grafted_dropped <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_colors,
+                                      simmap = toy_multiSimmap, max_age_redraws = 3,
+                                      verbose = FALSE, seed = 1)
+
+# An output is produced, without the map(s) that failed
+names(grafted_dropped)
+attr(grafted_dropped, "failed_maps")$map
+```
+
+With more maps or simulations, `force_simulations = TRUE` tries new seeds until the requested number of phylogenies is obtained, so that fewer maps are dropped.
+With the default `max_age_redraws = 1000`, such random failures are rare, except for very narrow windows of grafting.
+
+**2/ Hard constraints that cannot be met**
+
+A taxon cannot be grafted in a map because its constraints (i.e., target clade, excluded subclades, allowed states) leaves no available branch pieces for grafting. In this case, the run **stops with an error**.
+
+To illustrate this, we now use the original list, where `New_sp1` is only allowed in `"red"`:
+
+```{r maps_error, error = TRUE}
+# ------ A map where the constraints cannot be met ------ #
+
+# Colors allowed for New_sp1 in the shipped list
+toy_missing_taxa_list_with_allowed_states$allowed_states[["New_sp1"]]
+
+# Graft with each of the 10 maps
+graft_missing_taxa(phy = toy_backbone, missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
+                   simmap = toy_multiSimmap, verbose = FALSE, seed = 1)
+```
+
+The grafting **stops with an error** that names the map: in the map 3, **no branch of the target clade of `New_sp1` has a piece in red**.
+Since the problem is in the inputs, the whole run is stopped instead of silently skipping the map.
+`check_grafting_plan()` finds such maps **before** the run (see `vignette("check_grafting")`):
+
+```{r maps_plan}
+# ------ Check the grafting plan across the maps ------ #
+
+plan_maps <- check_grafting_plan(phy = toy_backbone,
+                                 missing_taxa_list = toy_missing_taxa_list_with_allowed_states,
+                                 simmap = toy_multiSimmap, verbose = FALSE)
+
+# Number of maps where each taxon cannot be grafted
+plan_maps[, c("Taxon_name", "allowed_states", "n_maps_infeasible")]
+
+# Which maps?
+per_map <- attr(plan_maps, "per_map")
+per_map[!per_map$feasible, c("map", "Taxon_name", "cause")]
+```
+
+To solve it, **relax the constraints of the taxon** (as we did in *Section 0*), remove the maps that cannot be used, or change the other constraints of the taxon (e.g., its target clade or its excluded subclades).
 
 
 ## 3/ P x N: crossing maps and simulations
@@ -201,7 +266,26 @@ sum(sapply(grafted_crossed, length))
 names(grafted_crossed$map_1)
 ```
 
-The seeds of the simulations are the **same in each map** (the simulation 1 of each map uses `seed`), which makes each phylogeny reproducible alone from its map (as a single `simmap`) and its seed.
+The seeds of the simulations are the **same in each map** (the simulation 1 of each map uses `seed`, the simulation 2 of each map uses the second seed, etc.).
+Each phylogeny can be **reproduced alone** from its map (as a single `simmap`) and its seed, which is stored in the attribute `"seeds"` of the map:
+
+```{r crossed_reproduce}
+# ------ Reproduce one phylogeny of the crossed output ------ #
+
+# Seed of the simulation 2 of the map 3
+seed_map_3_sim_2 <- attr(grafted_crossed$map_3, "seeds")["map_3_sim_2"]
+seed_map_3_sim_2
+
+# Graft again with the map 3 alone (a single simmap) and this seed
+map_3_sim_2_alone <- graft_missing_taxa(phy = toy_backbone, missing_taxa_list = taxa_colors,
+                                        simmap = toy_multiSimmap[[3]], nb_simulations = 1,
+                                        verbose = FALSE, seed = seed_map_3_sim_2)
+
+# Same grafted phylogeny
+all.equal(map_3_sim_2_alone$edge, grafted_crossed$map_3[["map_3_sim_2"]]$edge)
+all.equal(map_3_sim_2_alone$edge.length, grafted_crossed$map_3[["map_3_sim_2"]]$edge.length)
+```
+
 
 We can compare how much of the variation among grafted phylogenies is **due to the maps** or **due to the simulations**, with the grafting ages:
 
@@ -223,7 +307,15 @@ sd_between <- tapply(info_crossed$graft_age, list(info_crossed$Taxon_name, info_
 data.frame(SD_within_maps = round(sd_within, 2), SD_between_maps = round(apply(sd_between, 1, sd), 2))
 ```
 
-Both sources contribute. Here, the variation among the simulations of a map is larger than the variation among the mean ages of the maps, but this depends on the taxon and on how much the constraint changes from one map to the next. The maps also change the **branches** that can be used, not only the ages.
+**How are these values computed?** For each taxon, the 50 grafting ages are arranged by map (10 maps) and by simulation (5 simulations per map):
+
+- `SD_within_maps` is the variation **among the 5 simulations of the same map**. We compute the variance of the 5 ages in each map, average these 10 variances, and take the square root.
+- `SD_between_maps` is the variation **among the maps**. We compute the mean age of the 5 simulations of each map, and take the standard deviation of these 10 means.
+
+In most cases, **both sources of uncertainty contribute**. Here, the variation among the simulations of a map is larger than the variation among the mean ages of the maps, but this depends on the taxon and on how much the constraint changes from one map to the next. The maps also change the **branches** that can be used, not only the ages.
+
+A `SD_between_maps` of `0.00` means that all the maps have the same mean age. This is the case for `New_sp6`.
+It is a particular case: `New_sp6` has a target clade made of a single tip and **all colors allowed**, so its constraints are **the same in all the maps**.
 
 ### Beware of the inflation
 
@@ -279,16 +371,19 @@ For instance, we plot the **lineages through time** of the 50 grafted phylogenie
 ```{r flatten_ltt, fig.width = 8, fig.height = 5, out.width = "80%"}
 # ------ Use the multiPhylo: lineages through time ------ #
 
+# phytools::ltt() takes the flattened multiPhylo as such
 ltt_grafted <- phytools::ltt(flat_phylos, plot = FALSE, gamma = FALSE)
 ltt_backbone <- phytools::ltt(toy_backbone, plot = FALSE, gamma = FALSE)
 
-plot(ltt_grafted, col = "grey70", xlab = "Time", ylab = "Number of lineages", log.lineages = FALSE)
-lines(ltt_backbone$times, ltt_backbone$ltt, col = "firebrick", lwd = 2)
+# Plot the 50 grafted phylogenies, then add the backbone
+plot(ltt_grafted, col = "grey70", log.lineages = FALSE,
+     xlab = "Time since the root", ylab = "Number of lineages")
+plot(ltt_backbone, add = TRUE, col = "firebrick", lwd = 2, log.lineages = FALSE)
 legend("topleft", legend = c("Grafted phylogenies", "Backbone"),
        col = c("grey70", "firebrick"), lwd = 2, bty = "n")
 ```
 
-The function can also **subset** the phylogenies, and **remove the updated simmaps** to save memory when they are not needed:
+The function `flatten_grafted_phylogenies()` can also **subset** the phylogenies, and **remove the updated simmaps** to save memory when they are not needed:
 
 ```{r flatten_subset}
 # ------ Subset and remove the simmaps ------ #
@@ -344,9 +439,9 @@ backbone_2 <- toy_backbone
 swapped <- match(c("t16", "t3"), backbone_2$tip.label)
 backbone_2$tip.label[swapped] <- backbone_2$tip.label[rev(swapped)]
 
-# Backbone 3: same topology, older ages (all the branches are 15% longer)
+# Backbone 3: same topology, older ages (all the branches are 30% longer)
 backbone_3 <- toy_backbone
-backbone_3$edge.length <- backbone_3$edge.length * 1.15
+backbone_3$edge.length <- backbone_3$edge.length * 1.30
 
 backbones <- list(backbone_1 = toy_backbone, backbone_2 = backbone_2, backbone_3 = backbone_3)
 ```
@@ -373,7 +468,7 @@ tribe_A2a <- toy_backbone_taxonomic_table$Taxa[which(toy_backbone_taxonomic_tabl
 sapply(clade_tips, function (x) all(x %in% tribe_A2a))
 ```
 
-The safest way is to **build one missing_taxa_list per backbone from the taxonomy**, which retrieves the clades from the names of the taxonomic groups in each topology (see `vignette("format_inputs")`).
+The safest way is to **build one `missing_taxa_list` per backbone from the taxonomy**, which retrieves the clades from the names of the taxonomic groups in each topology (see `vignette("format_inputs")`).
 The function **reports the groups that are not monophyletic** in a backbone, which tells you that the constraints should be reconsidered for this backbone:
 
 ```{r backbones_lists}
@@ -392,11 +487,13 @@ taxa_lists <- lapply(backbones, function (phy)
 sapply(taxa_lists, function (x) paste(x$Excluded_subclades$New_sp1$Tribe_A2a, collapse = ", "))
 ```
 
-When the maps are used, they also need to be **built for each backbone** (a map is only valid for the tips, the topology and the branch lengths of the backbone it was built on): you need to prepare **one `simmap` object per backbone** (see `vignette("prepare_stochastic_maps")`).
+When the maps are used, they also need to be **built for each backbone** (a map is only valid for the tips, the topology and the branch lengths of the backbone it was built on): you need to prepare **one `simmap` (or `multiSimmap`) per backbone** (see `vignette("prepare_stochastic_maps")`).
 
 ### Loop over the backbones
 
-We graft the taxa on each backbone, with 10 simulations each. We use a **different seed for each backbone**:
+We graft the taxa on each backbone, with 10 simulations each. We use a **different seed for each backbone**, so that the taxa that are not affected by the changes of backbone do not get the same random draws (and thus the same ages) in each backbone, which would create **pseudo-replicates** in the pooled set of phylogenies. Although, you may want to use the same seed so that changes recorded are due to changes in the backbone only.
+
+Each run remains **fully reproducible** with its own seed.
 
 ```{r backbones_graft}
 # ------ Graft on each backbone ------ #
@@ -420,11 +517,13 @@ With stochastic maps to constrain the grafting, loop over the backbones **with t
 ```{r backbones_maps, eval = FALSE}
 # ------ Not run: loop over backbones, with one multiSimmap per backbone ------ #
 
-grafted_backbones_maps <- Map(function (phy, maps, taxa_list, seed)
+grafted_backbones_maps <- lapply(seq_along(backbones), function (i)
 {
-  graft_missing_taxa(phy = phy, missing_taxa_list = taxa_list, simmap = maps,
-                     nb_simulations = 5, verbose = FALSE, seed = seed)
-}, backbones, multiSimmaps_per_backbone, taxa_lists, seed = seq_along(backbones))
+  graft_missing_taxa(phy = backbones[[i]], missing_taxa_list = taxa_lists[[i]],
+                     simmap = multiSimmaps_per_backbone[[i]],
+                     nb_simulations = 5, verbose = FALSE, seed = i)
+})
+names(grafted_backbones_maps) <- names(backbones)
 ```
 
 The grafted phylogenies are on **different backbones**. If you want to summarize the results of the grafting process, you need to apply the check functions over **each of the backbone and the list that were used**.
@@ -453,8 +552,10 @@ for (taxon in c("New_sp1", "New_sp2"))
 par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
-Here, we see that the grafting age of `New_sp1` is much more sensitive to our tip swapping (Backbone 2) and divergence age extension (Backbone 3) than `New_sp1`.
-This is because...
+Here, we see that the grafting age of `New_sp1` is much more sensitive to the tip swapping (Backbone 2) than the one of `New_sp2`.
+This is because of differences in their **constraints**: the number of **branches available** for the grafting changes a lot for `New_sp1`, not for `New_sp2`.
+Between backbone 1 and backbone 2, the available branches for `New_sp1` are much more restricted (and older) due to the change in the definition of its excluded subclade `Tribe_A2a` due to the tip swapping. Meanwhile, `New_sp2` is less affected, with most branches of its target clade remainng available.
+Overall, the backbone 3 has older grafting ages: it retaints the **same topology** as the backbone 1, with the same branches available, but with all ages **stretched by 30%**.
 
 To use all the grafted phylogenies in a downstream analysis, **flatten each backbone** and pool them in a **single `multiPhylo`**, with names that keep the backbone:
 
@@ -475,6 +576,40 @@ class(all_phylos)
 length(all_phylos)
 head(names(all_phylos))
 table(sub("_sim_[0-9]+$", "", names(all_phylos)))
+```
+
+The pooled `multiPhylo` can be used as any set of phylogenies.
+For instance, we plot the **lineages through time** of the three backbones, and of all the grafted phylogenies obtained on each of them :
+
+```{r backbones_ltt, fig.width = 8, fig.height = 5, out.width = "80%"}
+# ------ Lineages through time of the backbones and of the grafted phylogenies ------ #
+
+backbone_colors <- c(backbone_1 = "black", backbone_2 = "dodgerblue", backbone_3 = "firebrick")
+backbone_of_phylo <- sub("_sim_[0-9]+$", "", names(all_phylos))
+
+# phytools::ltt() takes the pooled multiPhylo: we split it by backbone to color the curves
+ltt_pooled <- lapply(names(backbones), function (name)
+{
+  phytools::ltt(all_phylos[backbone_of_phylo == name], plot = FALSE, gamma = FALSE)
+})
+names(ltt_pooled) <- names(backbones)
+ltt_backbones <- lapply(backbones, phytools::ltt, plot = FALSE, gamma = FALSE)
+
+# The backbone 3 is the oldest: start the plot with it, and zoom on the recent part of the time axis
+plot(ltt_pooled$backbone_3, col = adjustcolor(backbone_colors["backbone_3"], alpha.f = 0.25),
+     log.lineages = FALSE, xlim = c(30, 65),
+     xlab = "Time since the root", ylab = "Number of lineages")
+for (name in c("backbone_2", "backbone_1"))
+{
+  plot(ltt_pooled[[name]], add = TRUE, col = adjustcolor(backbone_colors[name], alpha.f = 0.25), log.lineages = FALSE)
+}
+
+# Backbones: thick lines
+for (name in names(backbones))
+{
+  plot(ltt_backbones[[name]], add = TRUE, col = backbone_colors[name], lwd = 2.5, log.lineages = FALSE)
+}
+legend("topleft", legend = names(backbones), col = backbone_colors, lwd = 2.5, bty = "n")
 ```
 
 ## Next steps
