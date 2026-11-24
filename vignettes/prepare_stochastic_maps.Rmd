@@ -689,7 +689,7 @@ Other points to keep in mind:
 
 ## Next steps
 
-- Use the maps to constrain the grafting: see `vignette("main_workflow")` for a full example with one trait, and `vignette("multiple_traits")` for several traits.
-- Explore all the options for grafting with biogeographic ranges, including the matching of the ranges (exact vs. `treat_states_as_ranges = TRUE`) and the combination with another trait: see `vignette("biogeographic_data")`.
-- Explore the discretization of a continuous trait, its robustness, and the other tools available: see `vignette("continuous_data")`.
+- Use the maps to constrain the grafting: see `vignette("main_workflow")` for a full example with **one trait**, and `vignette("multiple_traits")` for **several traits**.
+- Explore all the options for grafting with **biogeographic ranges**, including the matching of the ranges (exact vs. `treat_states_as_ranges = TRUE`) and the combination with another trait: see `vignette("biogeographic_data")`.
+- Explore the discretization of a **continuous trait**, its robustness, and the other tools available: see `vignette("continuous_data")`.
 - For a thorough presentation of the models and of the options of `prepare_trait_data()`, see the vignettes of the `deepSTRAPP` package (https://maeldore.github.io/deepSTRAPP/).

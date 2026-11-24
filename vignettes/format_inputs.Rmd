@@ -567,17 +567,17 @@ Node IDs are recognized as text made **only of digits**: tip labels of the backb
 
 With a `missing_taxa_list` (and optionally a `total_richness_per_clades`), you are ready to graft:
 
-- the missing taxa: `graft_missing_taxa()`, see `vignette("graft_missing_taxa")`;
-- the missing clades: `graft_missing_clades()`, see `vignette("graft_missing_clades")`;
-- both types in one run: `graft_missing_taxa_and_clades()`, see `vignette("combine_missing_taxa_and_clades")`.
+- the **missing taxa**: `graft_missing_taxa()`, see `vignette("graft_missing_taxa")`;
+- the **missing clades**: `graft_missing_clades()`, see `vignette("graft_missing_clades")`;
+- **both types** in one run: `graft_missing_taxa_and_clades()`, see `vignette("combine_missing_taxa_and_clades")`.
 
-The grafting plan can be checked beforehand with `check_grafting_plan()`: `vignette("check_grafting")`. 
+The **grafting plan** can be checked beforehand with `check_grafting_plan()`: `vignette("check_grafting")`. 
 
 If you wish to use **species attributes** to further constraint grafting based on the evolutionary history of traits and/or biogeographic ranges,
 you will need to provide **stochastic character maps** under the `simmap` argument to grafting functions.
 Please refer to the dedicated tutorials explaining how to:
 
-- prepare the stochastic maps: see `vignette("prepare_stochastic_maps")`;
-- use biogeographic ranges as constraints (i.e., GIG = **geographically-informed grafting**): see `vignette("biogeographic_data")`;
-- use several traits as constraints: see `vignette("multiple_traits")`.
+- prepare the **stochastic maps**: see `vignette("prepare_stochastic_maps")`;
+- use **biogeographic ranges** as constraints (i.e., GIG = **geographically-informed grafting**): see `vignette("biogeographic_data")`;
+- use **several traits** as constraints: see `vignette("multiple_traits")`.
 
