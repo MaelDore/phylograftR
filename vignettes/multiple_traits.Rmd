@@ -396,6 +396,9 @@ Each trait can be described by **several stochastic maps** (a `"multiSimmap"`), 
 The maps of the traits are **paired**: the grafting is run with the map 1 of every trait, then with the map 2 of every trait, and so on.
 **All the traits must therefore have the same number of maps.**
 
+This also applies to a trait described by a **single `simmap`**: it **cannot be mixed** with a trait described by a `multiSimmap`, and such a list is refused.
+You can always **duplicate the single `simmap`** in the list, so that it pairs with all the maps of the `multiSimmap` of the other trait. For instance, `toy_multiSimmap_elevation[rep(1, 10)]` repeats the map 1 of a `multiSimmap` 10 times and keeps the class `"multiSimmap"`, which is essential to tell phylograftR that this set of maps are inferred for a unique trait (a list of `simmap`s, without the `multiSimmap` class, would be read as 10 unique maps for 10 different traits).
+
 We quickly generate **10 stochastic maps** for each trait with `phytools::make.simmap()`, from the states of the tips of the toy maps (equal-rates model).
 Of course, in a real analysis, the maps would be built from your own data (see `vignette("prepare_stochastic_maps")`).
 
