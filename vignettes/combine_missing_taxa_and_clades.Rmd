@@ -40,7 +40,7 @@ The parameters of the grafting functions (`method`, `min_tips`, `include_target_
 
 Other arguments are explained in **dedicated tutorials**:
 
-- `seed`, `nb_simulations`, `force_simulations`, and the use of several stochastic maps, to **handle uncertainty**: see `vignette("handle_uncertainty")`;
+- `seed`, `nb_simulations`, `force_simulations`, and the use of several stochastic maps, to **handle uncertainty** and ensure the **reproducibility** of the runs with the **seed system**: see `vignette("handle_uncertainty")`;
 - `parallel` computation to **speed up** the process: see `vignette("parallel_grafting")`;
 - `save_temp`, `resume` and the other arguments used to save temporary files and **resume interrupted runs**: see `vignette("resume_crashed_run")`;
 - `treat_states_as_ranges`, and the stochastic maps of **several traits** used together: see `vignette("biogeographic_data")` and `vignette("multiple_traits")`.
@@ -134,7 +134,7 @@ Similarly, if provided to account for unsampled species, the `total_richness_per
 The `grafting_order` argument sets which type is grafted first: `c("taxa", "clades")` (the default), or `c("clades", "taxa")`.
 Here, the missing clade is sister of `Subfam_B2`, which is nested within `Family_B`, the target clade of the missing taxa: **missing taxa can potentially be grafted anywhere within the missing clade**, if the missing clade is already in the phylogeny when they are grafted.
 
-Here, we graft the same lists with the two grafting step orders, with the same seed, to compare results:
+Here, we graft the same lists with the two grafting step orders, with the **same seed**, to compare results (see `vignette("handle_uncertainty")` for the seed system, which makes the runs reproducible):
 
 ```{r order, fig.width = 10, fig.height = 6, out.width = "100%"}
 # ------ Order of the steps: taxa first vs clades first ------ #
@@ -244,6 +244,6 @@ Now that you know how to proceed with **successive graftings**, you may be inter
 
 - grafting only **missing taxa** within target clades: `vignette("graft_missing_taxa")`;
 - grafting only **missing clades** as sisters of clades of the backbone: `vignette("graft_missing_clades")`;
-- handling **uncertainty** with several simulations and stochastic maps: `vignette("handle_uncertainty")`;
+- handling **uncertainty** with several simulations and stochastic maps, and ensuring the **reproducibility** of the runs with the seed system: `vignette("handle_uncertainty")`;
 - speeding up your runs by using **parallel computation**: `vignette("parallel_grafting")`;
 - **resuming** interrupted runs: `vignette("resume_crashed_run")`.

@@ -668,5 +668,5 @@ Now that you know how to use a **continuous trait** as a constraint, you may be 
 
 - exploring options to graft **missing taxa**, **missing clades**, or **both types**: `vignette("graft_missing_taxa")`, `vignette("graft_missing_clades")` and `vignette("combine_missing_taxa_and_clades")`;
 - combining it with **other traits**: `vignette("multiple_traits")`;
-- handling **uncertainty** with several simulations and stochastic maps: `vignette("handle_uncertainty")`;
+- handling **uncertainty** with several simulations and stochastic maps, and ensuring the **reproducibility** of the runs with the seed system: `vignette("handle_uncertainty")`;
 - speeding up your runs by using **parallel computation**: `vignette("parallel_grafting")`.

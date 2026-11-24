@@ -286,4 +286,5 @@ The grafted phylogenies reach 40 lineages instead of 30, mostly through recent d
 
 - `vignette("graft_missing_taxa")`, `vignette("graft_missing_clades")` and `vignette("combine_missing_taxa_and_clades")` detail the **grafting options**.
 - `vignette("check_grafting")` details the **checks** before and after grafting.
-- `vignette("handle_uncertainty")` and `vignette("parallel_grafting")` explain how to **scale** to many maps and simulations.
+- `vignette("handle_uncertainty")` explains how to account for **uncertainty** and how the **seed system** makes the analyses **reproducible**
+- `vignette("parallel_grafting")` explains how to **scale** to many maps and simulations using **parallel computing** and **temporary saves**.

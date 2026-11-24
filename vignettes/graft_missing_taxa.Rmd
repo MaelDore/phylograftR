@@ -37,7 +37,7 @@ Grafting is stochastic: the grafted phylogenies you obtain with other seeds will
 
 Some arguments are explained in **dedicated tutorials**:
 
-- `seed`, `nb_simulations`, `force_simulations`, and the use of several stochastic maps, to **handle uncertainty**: see `vignette("handle_uncertainty")`;
+- `seed`, `nb_simulations`, `force_simulations`, and the use of several stochastic maps, to **handle uncertainty** and ensure the **reproducibility** of the runs with the **seed system**: see `vignette("handle_uncertainty")`;
 - `parallel` computation to **speed up** the process: see `vignette("parallel_grafting")`;
 - `save_temp`, `resume` and the other arguments used to save temporary files and **resume interrupted runs**: see `vignette("resume_crashed_run")`;
 - `treat_states_as_ranges`, and the stochastic maps of **several traits** used together: see `vignette("biogeographic_data")` and `vignette("multiple_traits")`.
@@ -530,7 +530,7 @@ Now that you know all the tweaks of **grafting missing taxa**, you may be intere
 - grafting **missing clades**: `graft_missing_clades()`, see `vignette("graft_missing_clades")`;
 - grafting **both types** in one run: `graft_missing_taxa_and_clades()`, see `vignette("combine_missing_taxa_and_clades")`;
 - **checking** the grafting plan and the resulting grafted phylogenies: see `vignette("check_grafting")`;
-- handling **uncertainty** with several simulations and stochastic maps: `vignette("handle_uncertainty")`;
+- handling **uncertainty** with several simulations and stochastic maps, and ensuring the **reproducibility** of the runs with the seed system: `vignette("handle_uncertainty")`;
 - speeding up your runs by using **parallel computation**: `vignette("parallel_grafting")`;
 - **resuming** interrupted runs: `vignette("resume_crashed_run")`.
 

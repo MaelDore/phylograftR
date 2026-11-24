@@ -308,7 +308,7 @@ It reports:
 - the **divergence age** (when it branched from its closest relative, which can be another grafted taxon);
 - and the **state** of the lineage, when a stochastic map is available.
 
-It returns **one row per taxon and per phylogeny**, with the `map`, `simulation` and `seed` that produced it, so the outputs of **many simulations and maps** can be summarized with `aggregate()`.
+It returns **one row per taxon and per phylogeny**, with the `map`, `simulation` and `seed` that produced it, so the outputs of **many simulations and maps** can be summarized with `aggregate()`, and each phylogeny can be **reproduced alone** with its seed (see `vignette("handle_uncertainty")`).
 
 ```{r info_one}
 # ------ Grafting information with one stochastic map ------ #
@@ -491,6 +491,6 @@ How to read the table:
 Now that you know how to **check your grafting plan and results**, you may be interested in:
 
 - exploring options to graft **missing taxa**, **missing clades**, or **both types**: `vignette("graft_missing_taxa")`, `vignette("graft_missing_clades")` and `vignette("combine_missing_taxa_and_clades")`;
-- handling **uncertainty** with several simulations and stochastic maps: `vignette("handle_uncertainty")`;
+- handling **uncertainty** with several simulations and stochastic maps, and ensuring the **reproducibility** of the runs with the seed system: `vignette("handle_uncertainty")`;
 - speeding up your runs by using **parallel computation**: `vignette("parallel_grafting")`;
 - **resuming** interrupted runs: `vignette("resume_crashed_run")`.
