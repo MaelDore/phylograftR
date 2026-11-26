@@ -42,7 +42,7 @@ Other arguments are explained in **dedicated tutorials**:
 
 - `seed`, `nb_simulations`, `force_simulations`, and the use of several stochastic maps, to **handle uncertainty** and ensure the **reproducibility** of the runs with the **seed system**: see `vignette("handle_uncertainty")`;
 - `parallel` computation to **speed up** the process: see `vignette("parallel_grafting")`;
-- `save_temp`, `resume` and the other arguments used to save temporary files and **resume interrupted runs**: see `vignette("resume_crashed_run")`;
+- `save_temp`, `resume` and the other arguments used to save temporary files and **resume interrupted runs**: see `vignette("resume_run")`;
 - `treat_states_as_ranges`, and the stochastic maps of **several traits** used together: see `vignette("biogeographic_data")` and `vignette("multiple_traits")`.
 
 ## 0/ Setup
@@ -246,4 +246,4 @@ Now that you know how to proceed with **successive graftings**, you may be inter
 - grafting only **missing clades** as sisters of clades of the backbone: `vignette("graft_missing_clades")`;
 - handling **uncertainty** with several simulations and stochastic maps, and ensuring the **reproducibility** of the runs with the seed system: `vignette("handle_uncertainty")`;
 - speeding up your runs by using **parallel computation**: `vignette("parallel_grafting")`;
-- **resuming** interrupted runs: `vignette("resume_crashed_run")`.
+- **resuming** interrupted runs: `vignette("resume_run")`.

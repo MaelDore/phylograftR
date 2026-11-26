@@ -337,7 +337,7 @@ Some ways to keep the size of the problem manageable:
 
 - Use **a few simulations per map** (even one) when you have many maps: the maps already provide a variety of constraints, and within each map, the graft age is still **drawn at random** among all the valid branch pieces in the respective allowed states of each missing taxon/clade.
 - Use `return_simmap = FALSE` if you do not need the **updated simmaps** (`$simmap`) of the grafted phylogenies. They are stored in each phylogeny, **once per trait**, so they can take more space than the phylogeny itself. They can also be removed afterwards with `flatten_grafted_phylogenies(keep_simmap = FALSE)` (see *Section 4*).
-- Use **parallel computation** for large problems (see `vignette("parallel_grafting")`), and **temporary saves** to resume a crashed run (see `vignette("resume_crashed_run")`).
+- Use **parallel computation** for large problems (see `vignette("parallel_grafting")`), and **temporary saves** to resume a crashed run (see `vignette("resume_run")`).
 
 
 ## 4/ Flatten the outputs for downstream analyses
@@ -618,5 +618,5 @@ legend("topleft", legend = names(backbones), col = backbone_colors, lwd = 2.5, b
 - Choose the method and the **options of the grafting**: see `vignette("graft_missing_taxa")` and `vignette("graft_missing_clades")`.
 - Prepare the **stochastic maps** from your own data: see `vignette("prepare_stochastic_maps")`.
 - **Check** the feasibility of the plan across the maps, and the result of the grafting: see `vignette("check_grafting")`.
-- Run large sets of grafted phylogenies in **parallel**: see `vignette("parallel_grafting")`, and resume a crashed run: see `vignette("resume_crashed_run")`.
+- Run large sets of grafted phylogenies in **parallel**: see `vignette("parallel_grafting")`, and resume a crashed run: see `vignette("resume_run")`.
 

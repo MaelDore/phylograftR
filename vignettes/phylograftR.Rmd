@@ -41,7 +41,7 @@ For more advanced uses, please refer to the tutorials below.
 | Constrain grafting with a continuous trait | [`continuous_data`](https://maeldore.github.io/phylograftR/articles/continuous_data.html): `vignette("continuous_data")` |
 | Account for uncertainty (simulations, stochastic maps, backbones), and make runs reproducible with seeds | [`handle_uncertainty`](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html): `vignette("handle_uncertainty")` |
 | Speed up grafting with parallel computation | [`parallel_grafting`](https://maeldore.github.io/phylograftR/articles/parallel_grafting.html): `vignette("parallel_grafting")` |
-| Resume a crashed or interrupted run | [`resume_crashed_run`](https://maeldore.github.io/phylograftR/articles/resume_crashed_run.html): `vignette("resume_crashed_run")` |
+| Resume a crashed or interrupted run | [`resume_run`](https://maeldore.github.io/phylograftR/articles/resume_run.html): `vignette("resume_run")` |
 
 
 ## Advanced uses / tutorials
@@ -85,5 +85,5 @@ They provide explanations on available arguments and interpretations of results 
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.2/ [Run grafting in __parallel__](https://maeldore.github.io/phylograftR/articles/parallel_grafting.html): `vignette("parallel_grafting")`.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.3/ [__Resume__ a crashed or interrupted run](https://maeldore.github.io/phylograftR/articles/resume_crashed_run.html): `vignette("resume_crashed_run")`.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.3/ [__Resume__ a crashed or interrupted run](https://maeldore.github.io/phylograftR/articles/resume_run.html): `vignette("resume_run")`.
 <br>

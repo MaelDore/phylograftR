@@ -140,6 +140,14 @@ test_that("The path is made absolute and the default is in the working directory
   expect_equal(resolve_temp_file_path(absolute), absolute)
 })
 
+test_that("temp_map_tags() keeps distinct the maps that give the same file name once the prefix 'map_' is not repeated", {
+  tags <- temp_map_tags(c("map_1", "1", "x"))
+  expect_equal(temp_file_path_simulation("d/t.rds", 1, multiple = FALSE, map_name = "x", map_tag = tags[["x"]]), "d/t_map_x.rds")
+  paths <- vapply(c("map_1", "1"), function (m) temp_file_path_simulation("d/t.rds", 1, multiple = FALSE, map_name = m, map_tag = tags[[m]]), character(1))
+  expect_false(anyDuplicated(paths) > 0)
+  expect_equal(unname(temp_file_path_simulation("d/t.rds", 1, multiple = FALSE, map_name = "map_2", map_tag = temp_map_tags("map_2")[["map_2"]])), "d/t_map_2.rds")
+})
+
 test_that("temp_map_tags() sanitises the names of the maps and keeps them distinct", {
   expect_null(temp_map_tags(NULL))
   expect_equal(unname(temp_map_tags(c("a", "hyp A/1"))), c("a", "hyp_A_1"))
@@ -390,11 +398,18 @@ test_that("Resuming with different inputs stops with an informative message, and
   try(crash_after(3, graft(mtl_main)), silent = TRUE)
 
   expect_error(graft(mtl_main, seed = 9, resume = TRUE), "different inputs \\(other arguments")
+  expect_error(graft(mtl_main, seed = 9, resume = TRUE), "Seed of the simulation.*previous = [0-9]+, new = [0-9]+")
   expect_error(graft(mtl_main, method = "BD_clades", resume = TRUE), "different inputs \\(other arguments")
+  expect_error(graft(mtl_main, method = "BD_clades", resume = TRUE), "Argument 'method': previous = uniform, new = BD_clades")
   mtl_other <- mtl_main
   mtl_other$Taxon_name[1] <- "Z1"
   names(mtl_other$Target_clade)[1] <- "Z1"; names(mtl_other$Excluded_subclades)[1] <- "Z1"
   expect_error(graft(mtl_other, resume = TRUE), "different inputs \\(the list of missing taxa")
+  expect_error(graft(mtl_other, resume = TRUE), "only in the interrupted run \\(1\\): 'X1'")
+  expect_error(graft(mtl_other, resume = TRUE), "only in the current call \\(1\\): 'Z1'")
+  mtl_constraint <- mtl_main
+  mtl_constraint$include_target_clade_stem <- stats::setNames(rep(FALSE, length(mtl_main$Taxon_name)), mtl_main$Taxon_name)
+  expect_error(graft(mtl_constraint, resume = TRUE), "items of the list that differ: include_target_clade_stem")
   other_phy <- toy$phy
   other_phy$edge.length[1] <- other_phy$edge.length[1] * 0.5
   expect_error(suppressWarnings(graft_missing_taxa(other_phy, mtl_main, method = "uniform", seed = 8, verbose = FALSE, save_temp = TRUE, clean_temp_files = FALSE, save_temp_every = 1, temp_file_path = path, resume = TRUE)),
@@ -406,6 +421,29 @@ test_that("Resuming with different inputs stops with an informative message, and
   expect_no_error(graft(mtl_main, seed = 9, resume = FALSE))
   expect_equal(attr(readRDS(path), "phylograftR_temp")$status, "complete")
   unlink(dirname(path), recursive = TRUE)
+})
+
+test_that("check_temp_signature() describes what differs, with the previous and the new values", {
+  toy <- toy_setup()
+  mtl <- ts_taxa(toy)
+  sig <- function (phy = toy$phy, mtl = mtl, tracker = NULL, options = list(method = "uniform", min_tips = 5, sim_seed = 1, richness = NULL))
+    temp_signature(phy = phy, missing_taxa_list = mtl, tracker = tracker, options = options)
+  expect_true(check_temp_signature(sig(mtl = mtl), sig(mtl = mtl), "f.rds"))
+  # Backbone: tips and branch lengths
+  smaller <- ape::drop.tip(toy$phy, toy$phy$tip.label[1])
+  expect_error(check_temp_signature(sig(mtl = mtl), sig(phy = smaller, mtl = mtl), "f.rds"), "Backbone: number of tips, previous = [0-9]+, new = [0-9]+")
+  longer <- toy$phy; longer$edge.length <- longer$edge.length * 2
+  expect_error(check_temp_signature(sig(mtl = mtl), sig(phy = longer, mtl = mtl), "f.rds"), "Backbone: different branch lengths")
+  expect_error(check_temp_signature(sig(mtl = mtl), sig(phy = longer, mtl = mtl), "f.rds"), "age of the root, previous")
+  # Taxa: different constraints for one taxon
+  mtl2 <- mtl; mtl2$Target_clade$X3 <- toy$A
+  expect_error(check_temp_signature(sig(mtl = mtl), sig(mtl = mtl2), "f.rds"), "different constraints for 1 taxa: 'X3'")
+  # Arguments, with their previous and new values
+  expect_error(check_temp_signature(sig(mtl = mtl), sig(mtl = mtl, options = list(method = "BD_clades", min_tips = 8, sim_seed = 1, richness = NULL)), "f.rds"),
+               "Argument 'method': previous = uniform, new = BD_clades.*Argument 'min_tips': previous = 5, new = 8")
+  # A file saved without summary (older format) still stops, with the generic message
+  old <- sig(mtl = mtl); old$details <- NULL
+  expect_error(check_temp_signature(old, sig(mtl = mtl, options = list(method = "BD_clades", min_tips = 5, sim_seed = 1, richness = NULL)), "f.rds"), "different inputs \\(other arguments")
 })
 
 test_that("A file that was not saved by this version, or is corrupted, is ignored with a warning", {

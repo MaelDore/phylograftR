@@ -493,4 +493,4 @@ Now that you know how to **check your grafting plan and results**, you may be in
 - exploring options to graft **missing taxa**, **missing clades**, or **both types**: `vignette("graft_missing_taxa")`, `vignette("graft_missing_clades")` and `vignette("combine_missing_taxa_and_clades")`;
 - handling **uncertainty** with several simulations and stochastic maps, and ensuring the **reproducibility** of the runs with the seed system: `vignette("handle_uncertainty")`;
 - speeding up your runs by using **parallel computation**: `vignette("parallel_grafting")`;
-- **resuming** interrupted runs: `vignette("resume_crashed_run")`.
+- **resuming** interrupted runs: `vignette("resume_run")`.

@@ -77,6 +77,9 @@ test_that("temp_file_path_simulation() adds the map and the simulation suffixes"
   expect_equal(temp_file_path_simulation("a/b.rds", 2, multiple = TRUE, map_name = "hyp A/1"), "a/b_map_hyp_A_1_sim_2.rds")
   expect_equal(temp_file_path_simulation(NULL, 1, multiple = FALSE, map_name = "m1"), "./temp_phy_from_grafting_map_m1.rds")
   expect_equal(temp_file_path_simulation("a/b.rds", 2, multiple = TRUE), "a/b_sim_2.rds")
+  # The prefix "map_" is not repeated in the name of the maps that start with it
+  expect_equal(temp_file_path_simulation("a/b.rds", 2, multiple = TRUE, map_name = "map_1"), "a/b_map_1_sim_2.rds")
+  expect_equal(temp_file_path_simulation("a/b.rds", 2, multiple = FALSE, map_name = "map_A"), "a/b_map_A.rds")
 })
 
 ## Simulation function for run_maps(): fails for the maps named in 'failing_maps'

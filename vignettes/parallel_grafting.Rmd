@@ -301,5 +301,5 @@ Memory is thus **not a limiting factor on a recent computer**. If you are short 
 ## Next steps
 
 - Understand how to **account for the uncertainty** with N simulations and P maps, and to handle the outputs: see `vignette("handle_uncertainty")`.
-- **Resume** a crashed or interrupted run: see `vignette("resume_crashed_run")`.
+- **Resume** a crashed or interrupted run: see `vignette("resume_run")`.
 - Choose the **method and the options of the grafting**: see `vignette("graft_missing_taxa")` and `vignette("graft_missing_clades")`.
