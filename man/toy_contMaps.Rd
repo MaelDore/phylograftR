@@ -49,7 +49,8 @@ data(toy_contMaps)
 data(toy_tip_values)
 length(toy_contMaps)
 
-# Discretize the list of contMaps into a multiSimmap of three states, using the terciles of the observed tip values as cut points
+# Discretize the list of contMaps into a multiSimmap of three states,
+# using the terciles of the observed tip values as cut points
 my_multiSimmap <- convert_contMap_to_simmap(toy_contMaps, probs = c(1/3, 2/3),
                                             states = c("low", "medium", "high"),
                                             tip_values = toy_tip_values, verbose = FALSE)

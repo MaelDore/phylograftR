@@ -24,7 +24,8 @@ the maps of the traits are paired (map 1 of each trait, then map 2 of each trait
 data(toy_multiSimmap)
 data(toy_multiSimmap_elevation)
 
-# Maps of two traits: a list with one element per trait, each a multiSimmap with the same number of maps
+# Maps of two traits: a list with one element per trait,
+# each a multiSimmap with the same number of maps
 maps_two_traits <- list(color = toy_multiSimmap, elevation = toy_multiSimmap_elevation)
 sapply(maps_two_traits, length)
 

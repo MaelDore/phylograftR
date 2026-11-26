@@ -193,7 +193,8 @@ table(tip_states)
 # --- Use the observed tip values --- #
 
 # The contMap only approximates the values at the tips (interpolation within segments).
-# Provide the observed tip values to compute the cut points and to set the state of each tip from the data
+# Provide the observed tip values to compute the cut points
+# and to set the state of each tip from the data
 my_simmap_1b <- convert_contMap_to_simmap(my_contMap, probs = c(1/3, 2/3),
                                           states = c("low", "medium", "high"),
                                           tip_values = tip_data)
@@ -203,7 +204,8 @@ quantile(tip_data, probs = c(1/3, 2/3))
 
 # Tips are in the state of their observed values
 tip_states_b <- phytools::getStates(my_simmap_1b, type = "tips")
-all(tip_states_b == unlist(convert_values_to_states(tip_data, simmap = my_simmap_1b))[names(tip_states_b)])
+converted_tips_b <- unlist(convert_values_to_states(tip_data, simmap = my_simmap_1b)
+all(tip_states_b == converted_tips_b)[names(tip_states_b)])
 
 # Plot the resulting simmap
 plot(my_simmap_1, colors = c(low = "blue", medium = "grey", high = "red"),
@@ -279,8 +281,9 @@ if (requireNamespace("deepSTRAPP", quietly = TRUE)
  # with contsimmap::make.contsimmap(), and conversion into a list of contMaps)
  # can be run at once with deepSTRAPP::prepare_trait_data().
 
- # The function offers additional options to fine-tune the process, such as the comparison of several
- # evolutionary models (selected by AICc), the resolution of the contMaps, and the number of simulations.
+ # The function offers additional options to fine-tune the process,
+ # such as the comparison of several evolutionary models (selected by AICc),
+ # the resolution of the contMaps, and the number of simulations.
  # It can also output directly both the interpolated point estimate as in phytools::contMap(),
  # and the set of stochastic continuous maps simulated with contsimmap::make.contsimmap().
 

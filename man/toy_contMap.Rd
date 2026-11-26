@@ -28,7 +28,8 @@ data(toy_tip_values)
 plot(toy_contMap, legend = FALSE, fsize = 0.7)
 
 # Discretize into a simmap of three states using the terciles of the tip values.
-# Provide the observed tip values: the contMap only approximates them (interpolation within segments)
+# Provide the observed tip values: the contMap only approximates them
+# (interpolation within segments)
 my_simmap <- convert_contMap_to_simmap(toy_contMap, probs = c(1/3, 2/3),
                                        states = c("low", "medium", "high"),
                                        tip_values = toy_tip_values)
