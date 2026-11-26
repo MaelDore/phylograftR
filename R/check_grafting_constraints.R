@@ -692,7 +692,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
   is_backbone_tip_g <- phy_grafted$tip.label %in% phy_backbone$tip.label
 
   # Cache for the tips of the backbone clades
-  clade_cache <- new.env()
+  clade_cache <- new_cache()
   # Function to retrieve tips of a given node in the backbone trees, but using a cache system
   # to not have to recompute it for each taxa if it was already done for its associated clade
   get_backbone_clade_tips <- function (tips)
@@ -700,11 +700,7 @@ check_grafting_constraints_one <- function (phy_grafted, # Phylogeny after graft
     tips <- unique(tips)
     if (length(tips) == 1) { return(tips) }
     key <- paste(sort(tips), collapse = "|")
-    if (is.null(clade_cache[[key]]))
-    {
-      clade_cache[[key]] <- tips_of_node_bb(ape::getMRCA(phy = phy_backbone, tip = tips))
-    }
-    return(clade_cache[[key]])
+    return(cache_fetch(clade_cache, key, tips_of_node_bb(ape::getMRCA(phy = phy_backbone, tip = tips))))
   }
 
   ## 1.2/ Check each missing clade or each taxon ####
