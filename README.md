@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# phylograftR
+# phylograftR <img src="man/figures/logo.png" align="right" width="250" alt="phylograftR logo" />
 
 <!-- badges: start -->
 

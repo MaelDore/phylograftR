@@ -14,6 +14,9 @@ R/_benchmark_parallel.R
 ^R_temp/*
 ^data-raw$
 
+# Renv
+^\.renvignore$
+
 # Vignettes and pkgdown website
 ^doc$
 ^Meta$

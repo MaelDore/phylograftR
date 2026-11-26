@@ -1,0 +1,19 @@
+# Folders that renv should not scan for package dependencies
+# (patterns follow the .gitignore syntax; a leading / anchors to the project root)
+
+# Deliveries and working copies (many duplicated R, Rmd and test files)
+/R_temp/
+/Claude_outputs/
+
+# Built websites and vignette outputs
+/docs/
+/doc/
+/Meta/
+
+# Benchmarks, archived sources and raw data
+/benchmark/
+/sources/
+/data-raw/
+
+# History and IDE files
+/.Rproj.user/
