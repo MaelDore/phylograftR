@@ -60,13 +60,6 @@ navbar:
       - text: Resume a crashed or interrupted run
         href: articles/resume_run.html
 reference:
-- title: Graft missing lineages
-  desc: |
-    Graft missing taxa and/or missing clades on a backbone phylogeny.
-  contents:
-  - graft_missing_taxa_and_clades
-  - graft_missing_taxa
-  - graft_missing_clades
 - title: Format inputs
   desc: |
     Build or import the list of missing taxa and the total richness of clades.
@@ -84,6 +77,13 @@ reference:
   contents:
   - convert_contMap_to_simmap
   - convert_values_to_states
+- title: Graft missing lineages
+  desc: |
+    Graft missing taxa and/or missing clades on a backbone phylogeny.
+  contents:
+  - graft_missing_taxa
+  - graft_missing_clades
+  - graft_missing_taxa_and_clades
 - title: Check grafting and extract information
   desc: |
     Check the grafting plan before grafting and the constraints after grafting, and extract information on the grafted phylogenies.

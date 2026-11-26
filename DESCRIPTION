@@ -12,7 +12,7 @@ License: MIT + file LICENSE
 Config/roxygen2/version: 8.1.1
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-URL: https://github.com/MaelDore/phylograftR
+URL: https://maeldore.github.io/phylograftR/, https://github.com/MaelDore/phylograftR
 BugReports: https://github.com/MaelDore/phylograftR/issues
 Imports: 
     ape (>= 5.8.0),

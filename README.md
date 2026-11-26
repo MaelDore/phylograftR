@@ -20,6 +20,30 @@ use_github_actions()  reports the R CMD check status of your development package
 
 <!-- badges: end -->
 
+<!-- toc: start -->
+
+## :scroll: Contents
+
+- [Summary](#summary)
+  - [Why use phylograftR?](#why-use)
+  - [What novelties does phylograftR bring?](#novelties)
+  - [When to use phylograftR?](#when-to-use)
+- [The phylograftR workflow](#workflow)
+- [Applications](#applications)
+- [Limits and cautions for interpretation](#limits)
+  - [Perspectives](#perspectives)
+  - [References](#references)
+- [Installation](#installation)
+- [Website](#website)
+- [Quick-to-run example](#quick-example)
+- [Advanced uses / tutorials](#tutorials)
+- [Found a bug?](#bug)
+- [How to cite phylograftR](#cite)
+
+<!-- toc: end -->
+
+<a id="summary"></a>
+
 ## :dart: Summary
 
 The goal of **phylograftR** is to graft missing lineages on
@@ -32,6 +56,8 @@ also use species attributes, such as categorical traits, discretized
 continuous traits, or biogeographic ranges, to further refine the
 sections of the backbone phylogeny where each missing lineage can be
 grafted.
+
+<a id="why-use"></a>
 
 ### Why use phylograftR?
 
@@ -48,6 +74,8 @@ their traits or ranges. The task is thus to **graft the missing
 lineages** at plausible positions on the tree, using all information
 available, while accounting for the fact that these positions are
 uncertain.
+
+<a id="novelties"></a>
 
 ### What novelties does phylograftR bring?
 
@@ -85,6 +113,8 @@ stochastic maps of the species attributes used as constraints), so that
 the uncertainty in the position of imputed taxa can be propagated to
 downstream analyses.
 
+<a id="when-to-use"></a>
+
 ### When to use phylograftR?
 
 Grafting is most useful when:
@@ -103,6 +133,8 @@ molecular data are available for the missing taxa, it is recommended to
 use **phylogenetic inference** methods designed for this purpose, rather
 than impute the missing taxa without accounting for the available
 phylogenetic information.
+
+<a id="workflow"></a>
 
 ## :gear: The phylograftR workflow
 
@@ -197,6 +229,8 @@ Please consult the
 for guidance on how to prepare the input data, choose among the
 available grafting options, and produce visual outputs.
 
+<a id="applications"></a>
+
 ## :factory: Applications
 
 **phylograftR** is meant to build sets of comprehensive phylogenies, for
@@ -218,6 +252,8 @@ Ideally, a set of grafted phylogenies should be used to **account for
 uncertainty** in the position of imputed taxa: each downstream analysis
 is run on the whole set, and the results are summarized across
 phylogenies.
+
+<a id="limits"></a>
 
 ## :rotating_light: Limits and cautions for interpretation
 
@@ -263,6 +299,8 @@ et al. 2015*). However, such method typically requires multiple trait
 data sampled comprehensively across the clade of interest to perform
 optimally, and it can only graft one missing taxa at a time.
 
+<a id="perspectives"></a>
+
 ### :crystal_ball: Perspectives
 
 **Temporal variation of diversification rates.** The current
@@ -277,6 +315,8 @@ birth-death models as a possible extension.
 so fossils cannot be grafted at the moment. The backbone must also be
 rooted and binary: polytomies must be resolved beforehand (e.g., with
 `ape::multi2di()`).
+
+<a id="references"></a>
 
 ### :link: References
 
@@ -302,6 +342,8 @@ Alternative grafting method based on continuous traits:
 > phylogeny using continuous character data: A case study with the
 > lizard Anolis roosevelti. Evolution (N. Y). 69, 1027–1035 (2015).
 > <https://doi.org/10.1111/evo.12628>
+
+<a id="installation"></a>
 
 ## :envelope_with_arrow: Installation
 
@@ -330,6 +372,8 @@ options(pkg.build_vignettes = TRUE)
 pak::pak("MaelDore/phylograftR")
 ```
 
+<a id="website"></a>
+
 ## :desktop_computer: Website
 
 A companion website is available to browse interactively the different
@@ -339,6 +383,8 @@ tutorials and functions of **phylograftR** at this URL:
 An overview of all functions and datasets is available
 [here](https://maeldore.github.io/phylograftR/reference/index.html).
 <br>
+
+<a id="quick-example"></a>
 
 ## :joystick: Quick-to-run example
 
@@ -494,7 +540,9 @@ par(mfrow = c(1, 1))
 
 <img src="man/figures/README-quick-plot-multi_eval-1.png" alt="" width="100%" />
 
-## :scroll: Advanced uses / tutorials
+<a id="tutorials"></a>
+
+## :man_student: Advanced uses / tutorials
 
 Tutorials are available to explore **all usages** of phylograftR.
 
@@ -575,6 +623,8 @@ vignette("phylograftR")
 utils::browseVignettes(package = "phylograftR")
 ```
 
+<a id="bug"></a>
+
 ## :bug: Found a bug?
 
 Thank you for finding it! Head over to the [GitHub Issues
@@ -582,15 +632,26 @@ tab](https://github.com/MaelDore/phylograftR/issues) and let me know
 about it. <br> You can also [send me an
 e-mail](mailto:mael.dore@gmail.com). <br>
 
+<a id="cite"></a>
+
 ## :black_nib: How to cite phylograftR
 
 For any use of **phylograftR**:
 
-> Doré, M. phylograftR: Grafting missing taxa on time-calibrated
-> phylogenies combining diversification modeling, taxonomic assignments,
-> and species attributes. (DOI TBA)
+Currently, cite the R package on **CRAN**:
 
-**phylograftR** extends the **TACT framework** to enable the
+> Doré, M. (2026). phylograftR: Grafting missing taxa on time-calibrated
+> phylogenies combining diversification modeling, taxonomic assignments,
+> and species attributes. CRAN.r-project.org (v1.0.0).
+> <https://cran.r-project.org/package=phylograftR>
+
+Once published, cite the **associated paper** directly:
+
+> Doré, M., Blaimer, B. B., & Economo, E. (2026). phylograftR: Grafting
+> missing taxa on time-calibrated phylogenies combining diversification
+> modeling, taxonomic assignments, and species attributes. (DOI TBA)
+
+<br> **phylograftR** extends the **TACT framework** to enable the
 identification of exclusive subclades where NOT to graft missing species
 based on taxonomic assignments and/or species attributes. Please cite
 the TACT paper as a foundation work for the development of
@@ -604,7 +665,7 @@ the TACT paper as a foundation work for the development of
 **TACT** is available as Python-based software at:
 <https://tact.jonathanchang.org/>
 
-As **phylograftR** relies strongly on functions designed for the
+<br> As **phylograftR** relies strongly on functions designed for the
 [phytools R package](https://blog.phytools.org/) and the [TreeSim R
 package](https://CRAN.R-project.org/package=TreeSim), it is good
 practice to also cite these packages:

@@ -16,6 +16,8 @@ R/_benchmark_ranges_traits.R
 inst/doc
 /Meta/
 # /doc/ Local storage for HTML vignettes when built locally
+
+# Pkgdown website
 docs
 
 # Archived packages needed by BioGeoBEARS

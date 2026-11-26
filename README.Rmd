@@ -43,11 +43,37 @@ use_github_actions()  reports the R CMD check status of your development package
 
 <!-- badges: end -->
 
+<!-- toc: start -->
+
+## :scroll: Contents
+
+- [Summary](#summary)
+    - [Why use phylograftR?](#why-use)
+    - [What novelties does phylograftR bring?](#novelties)
+    - [When to use phylograftR?](#when-to-use)
+- [The phylograftR workflow](#workflow)
+- [Applications](#applications)
+- [Limits and cautions for interpretation](#limits)
+    - [Perspectives](#perspectives)
+    - [References](#references)
+- [Installation](#installation)
+- [Website](#website)
+- [Quick-to-run example](#quick-example)
+- [Advanced uses / tutorials](#tutorials)
+- [Found a bug?](#bug)
+- [How to cite phylograftR](#cite)
+
+<!-- toc: end -->
+
+<a id="summary"></a>
+
 ## :dart: Summary
 
 The goal of **phylograftR** is to graft missing lineages on time-calibrated phylogenies using available taxonomic, evolutionary, and biological information. 
 It combines taxonomic assignments, which define the target clades where each missing taxon must be grafted and the excluded subclades where it must not, with diversification modeling to infer the divergence times of the imputed branches.
 Critically, it can also use species attributes, such as categorical traits, discretized continuous traits, or biogeographic ranges, to further refine the sections of the backbone phylogeny where each missing lineage can be grafted.
+
+<a id="why-use"></a>
 
 ### Why use phylograftR?
 
@@ -55,6 +81,8 @@ Most time-calibrated phylogenies are incomplete: genetic data are missing for ma
 Yet many analyses need every taxon to be a tip of the tree, or are sensitive to the missing ones such as maps of phylogenetic diversity, inferences of rates of trait evolution, state- and range-dependent diversification models, or historical biogeographic reconstructions.
 The taxa missing from the tree are not unknown, though: they usually belong to named groups (genera, families, or other clades) that are in the tree, and often come with informative attributes on their traits or ranges.
 The task is thus to **graft the missing lineages** at plausible positions on the tree, using all information available, while accounting for the fact that these positions are uncertain.
+
+<a id="novelties"></a>
 
 ### What novelties does phylograftR bring?
 
@@ -68,6 +96,8 @@ The task is thus to **graft the missing lineages** at plausible positions on the
 
 Grafting is stochastic, so **phylograftR** is designed to produce *sets* of grafted phylogenies (several simulations, and optionally several stochastic maps of the species attributes used as constraints), so that the uncertainty in the position of imputed taxa can be propagated to downstream analyses.
 
+<a id="when-to-use"></a>
+
 ### When to use phylograftR?
 
 Grafting is most useful when:
@@ -80,6 +110,8 @@ Analyses that can directly use **sampling fractions**, or that run on a well-sam
 
 When the phylogeny is extremely sparse, or when the taxonomy is the main information available, methods based on higher clades (i.e., family-level) may be more appropriate to limit uncertainty.
 When molecular data are available for the missing taxa, it is recommended to use **phylogenetic inference** methods designed for this purpose, rather than impute the missing taxa without accounting for the available phylogenetic information.
+
+<a id="workflow"></a>
 
 ## :gear: The phylograftR workflow
 
@@ -126,6 +158,8 @@ See the [reference page](https://maeldore.github.io/phylograftR/reference/index.
 
 Please consult the [vignettes](https://maeldore.github.io/phylograftR/articles/phylograftR.html) for guidance on how to prepare the input data, choose among the available grafting options, and produce visual outputs.
 
+<a id="applications"></a>
+
 ## :factory: Applications
 
 **phylograftR** is meant to build sets of comprehensive phylogenies, for macroevolutionary and biogeographic analyses that require all the known species, or that are sensitive to incomplete taxon sampling.
@@ -138,6 +172,8 @@ Here is a non-exhaustive list of the most common applications:
   - Reconstructing **ancestral states and ranges**, and accounting for transition/biogeographic events across all branches.
 
 Ideally, a set of grafted phylogenies should be used to **account for uncertainty** in the position of imputed taxa: each downstream analysis is run on the whole set, and the results are summarized across phylogenies.
+
+<a id="limits"></a>
 
 ## :rotating_light: Limits and cautions for interpretation
 
@@ -153,11 +189,15 @@ When analyzing phylogenetic signal and/or state-dependent diversity-dynamics, co
 
 **Alternative approach for continuous trait**. For continuous traits, an alternative method exists to identify the optimal placement of missing taxa based on ML inference of the grafted tree conditioned to the backbone tree and trait values (e.g., `phytools::locate.yeti()`, *Revell et al. 2015*). However, such method typically requires multiple trait data sampled comprehensively across the clade of interest to perform optimally, and it can only graft one missing taxa at a time.
 
+<a id="perspectives"></a>
+
 ### :crystal_ball: Perspectives
 
 **Temporal variation of diversification rates.** The current implementation of **phylograftR** accounts for variation in diversification dynamics among clades, but it does not allow to account for temporal variation of diversification rates within target clades. A potential future implementation may consider fitting time-varying birth-death models as a possible extension.  
 
 **Fossil and extinct taxa.** The phylogeny backbone used as input for **phylograftR** must be ultrametric, with all the tips at the present, so fossils cannot be grafted at the moment. The backbone must also be rooted and binary: polytomies must be resolved beforehand (e.g., with `ape::multi2di()`).
+
+<a id="references"></a>
 
 ### :link: References
 
@@ -173,6 +213,8 @@ Alternative grafting method based on continuous traits:
 
 > Revell, L. J., Mahler, D. L., Reynolds, R. G. , Slater, G. J. Placing cryptic, recently extinct, or hypothesized taxa into an ultrametric phylogeny using continuous character data: A case study with the lizard Anolis roosevelti. Evolution (N. Y). 69, 1027–1035 (2015). https://doi.org/10.1111/evo.12628
 
+
+<a id="installation"></a>
 
 ## :envelope_with_arrow: Installation
 
@@ -203,6 +245,8 @@ pak::pak("MaelDore/phylograftR")
 
 ```
 
+<a id="website"></a>
+
 ## :desktop_computer: Website
 
 A companion website is available to browse interactively the different tutorials and functions of __phylograftR__ at this URL: https://maeldore.github.io/phylograftR/.
@@ -210,6 +254,8 @@ A companion website is available to browse interactively the different tutorials
 An overview of all functions and datasets is available [here](https://maeldore.github.io/phylograftR/reference/index.html).
 <br>
 
+
+<a id="quick-example"></a>
 
 ## :joystick: Quick-to-run example
 
@@ -347,7 +393,9 @@ for (i in 1:4)
 par(mfrow = c(1, 1))
 ```
 
-## :scroll: Advanced uses / tutorials
+<a id="tutorials"></a>
+
+## :man_student: Advanced uses / tutorials
 
 Tutorials are available to explore __all usages__ of phylograftR.
  
@@ -399,18 +447,29 @@ vignette("phylograftR")
 utils::browseVignettes(package = "phylograftR")
 ```
 
+<a id="bug"></a>
+
 ## :bug: Found a bug?
 
 Thank you for finding it! Head over to the [GitHub Issues tab](https://github.com/MaelDore/phylograftR/issues) and let me know about it. <br> 
 You can also [send me an e-mail](mailto:mael.dore@gmail.com).
 <br>
 
+<a id="cite"></a>
+
 ## :black_nib: How to cite phylograftR
 
 For any use of **phylograftR**:
 
-> Doré, M. phylograftR: Grafting missing taxa on time-calibrated phylogenies combining diversification modeling, taxonomic assignments, and species attributes. (DOI TBA)
+Currently, cite the R package on **CRAN**:
 
+> Doré, M. (2026). phylograftR: Grafting missing taxa on time-calibrated phylogenies combining diversification modeling, taxonomic assignments, and species attributes. CRAN.r-project.org (v1.0.0). https://cran.r-project.org/package=phylograftR
+
+Once published, cite the **associated paper** directly:
+
+> Doré, M., Blaimer, B. B., & Economo, E. (2026). phylograftR: Grafting missing taxa on time-calibrated phylogenies combining diversification modeling, taxonomic assignments, and species attributes. (DOI TBA)
+
+<br>
 **phylograftR** extends the **TACT framework** to enable the identification of exclusive subclades where NOT to graft missing species based on taxonomic assignments and/or species attributes. 
 Please cite the TACT paper as a foundation work for the development of **phylograftR**:
 
@@ -418,6 +477,7 @@ Please cite the TACT paper as a foundation work for the development of **phylogr
 
 **TACT** is available as Python-based software at: <https://tact.jonathanchang.org/>
 
+<br>
 As **phylograftR** relies strongly on functions designed for the [phytools R package](https://blog.phytools.org/) and the [TreeSim R package](https://CRAN.R-project.org/package=TreeSim), it is good practice to also cite these packages:
 
 > Revell, L. J. (2024) phytools 2.0: an updated R ecosystem for phylogenetic comparative methods (and other things). *PeerJ*, 12, e16505. https://doi.org/10.7717/peerj.16505.
