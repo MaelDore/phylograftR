@@ -138,8 +138,8 @@ We benchmarked the computation time of the grafting, sequential and parallel, to
 
 **Configurations**:
 
-- **Backbones**: random coalescent trees of **100, 500, 1000, 2,000, 5,000 and 10,000 tips**.
-- **Taxa to graft**: **as many as tips** for 100, 500 and 1000 tips (e.g., 1000 taxa on a backbone of 1000 tips), which is a **demanding case**, as the time of a grafting depends mostly on the number of taxa to graft. For larger phylogenies, we used a more realistic scenario with **20% of the tips** to graft for 2,000, 5,000 and 10,000 tips (400, 1,000 and 2,000 taxa).
+- **Backbones**: random coalescent trees of **100, 500, 1000, 5,000 and 10,000 tips**.
+- **Taxa to graft**: **as many as tips** for 100, 500 and 1000 tips (e.g., 1000 taxa on a backbone of 1000 tips), which is a **demanding case**, as the time of a grafting depends mostly on the number of taxa to graft. For larger phylogenies, we used a more realistic scenario with **20% of the tips** to graft for 5,000 and 10,000 tips (1,000 and 2,000 taxa).
 - **Taxa distribution**: taxa spread over a few target clades, with a **broken stick distribution** of the number of taxa per clade (a few large groups of taxa, and many small ones, as in a taxonomy).
 - **Number of simulations**: 10, 100 and 1000 simulations, without stochastic maps: the final number of grafted phylogenies equals the number of simulations.
 - **Number of workers for parallelization**: 2, 4 and 10 workers, with the plan `future::multisession`. The times include the set-up of the workers, as when you set the plan just before the grafting.
@@ -166,7 +166,6 @@ The time of one task, i.e., **one grafted phylogeny**, grows with the size of th
 | 100 tips | 100 | 0.5 s |
 | 500 tips | 500 | 11 s |
 | 1000 tips | 1000 | 41 s |
-| 2,000 tips | 400 | 24 s |
 | 5,000 tips | 1,000 | 3 min |
 | 10,000 tips | 2,000 | 13 min |
 
@@ -174,27 +173,37 @@ The time of one task, i.e., **one grafted phylogeny**, grows with the size of th
 
 ### Benchmark results
 
-The table gives the time of the runs (sequential, 2 workers, 4 workers) with the **speed-up** in brackets (sequential time / parallel time).
+The table gives the time of the runs for all combinations of backbone and number of simulations (`N`), sequential and with 2, 4 and 10 workers, with the **speed-up** in brackets (sequential time / parallel time).
 A speed-up below 1 means that the parallel run is **slower**.
 
-| Backbone | Simulations (N) | Sequential | 2 workers | 4 workers |
-|:---|---:|:---|:---|:---|
-| 100 tips | 10 | 5 s | 19 s (x0.3) | 23 s (x0.2) |
-| 100 tips | 100 | 49 s | 41 s (x1.2) | 32 s (x1.5) |
-| 100 tips | 1000 | 8.7 min | 4.5 min (x1.9) | 2.9 min (x3.0) |
-| 500 tips | 10 | 1.8 min | 1.1 min (x1.6) | 53 s (x2.0) |
-| 1000 tips | 10 | 6.8 min | 3.4 min (x2.0) | 2.4 min (x2.9) |
+| Backbone | Taxa to graft | Simulations (N) | Sequential | 2 workers | 4 workers | 10 workers |
+|:---|---:|---:|:---|:---|:---|:---|
+| 100 tips | 100 | 10 | 5 s | 19 s (x0.3) | 23 s (x0.2) | 33 s (x0.1) |
+| 100 tips | 100 | 100 | 49 s | 41 s (x1.2) | 32 s (x1.5) | 38 s (x1.3) |
+| 100 tips | 100 | 1000 | 8.7 min | 4.5 min (x1.9) | 2.9 min (x3.0) | 90 s (x5.5) |
+| 500 tips | 500 | 10 | 1.8 min | 1.1 min (x1.6) | 53 s (x2.0) | 44 s (x2.5) |
+| 500 tips | 500 | 100 | 18 min | 9 min (x2.0) | 5 min (x3.5) | 3 min (x7.2) |
+| 500 tips | 500 | 1000 | 3.0 h | 1.5 h (x2.0) | 50 min (x3.6) | 20 min (x8.9) |
+| 1,000 tips | 1,000 | 10 | 6.8 min | 3.4 min (x2.0) | 2.4 min (x2.9) | 73 s (x5.5) |
+| 1,000 tips | 1,000 | 100 | 1.1 h | 34 min (x2.0) | 17 min (x3.9) | 7 min (x9.2) |
+| 1,000 tips | 1,000 | 1000 | 11.3 h | 5.6 h (x2.0) | 2.9 h (x4.0) | 1.1 h (x9.8) |
+| 5,000 tips | 1,000 | 10 | 33 min | 17 min (x2.0) | 10 min (x3.2) | 4 min (x8.5) |
+| 5,000 tips | 1,000 | 100 | 5.6 h | 2.8 h (x2.0) | 1.4 h (x3.9) | 34 min (x9.7) |
+| 5,000 tips | 1,000 | 1000 | 2 days | 27.8 h (x2.0) | 14.0 h (x4.0) | 5.6 h (x9.9) |
+| 10,000 tips | 2,000 | 10 | 2.2 h | 1.1 h (x2.0) | 40 min (x3.3) | 14 min (x9.5) |
+| 10,000 tips | 2,000 | 100 | 21.9 h | 11.0 h (x2.0) | 5.5 h (x4.0) | 2.2 h (x9.9) |
+| 10,000 tips | 2,000 | 1000 | 9 days | 5 days (x2.0) | 2 days (x4.0) | 22.2 h (x9.9) |
 
 Three things stand out:
 
 1. On a **small backbone (100 tips) with few simulations**, the parallel run is **slower**: the set-up of the workers takes more time than the sequential run.
 2. From **500 tips**, the gain is clear even with 10 simulations: about **x2 with 2 workers and x2 to x3 with 4 workers**.
-3. When each grafted phylogeny takes **10 seconds or more**, the gain is **close to the number of workers**. With 10 simulations on 1000 tips, we get x2.0 with 2 workers and x2.9 with 4 workers: the maximum with 4 workers is x3.3 here, as some workers handle 3 of the 10 tasks.
+3. When each grafted phylogeny takes **10 seconds or more**, the gain is **close to the number of workers**.
 
 ### Expected gain
 
 We model the expected gain from the results of the benchmark, accounting for the **fixed cost of setting up the workers**, which increases with the number of workers, and the **time of one task**.
-The figure shows the expected speed-up as a function of the number of grafted phylogenies (`P x N`), for 2, 4 and 10 workers, with the speed-ups measured with 2 and 4 workers.
+The figure shows the expected speed-up as a function of the number of grafted phylogenies (`P x N`), for 2, 4 and 10 workers. The plain red line stands at X1 (even time cost for sequential and parallel computing), thus all cases above this line are cases when **parallel computation offers a gain**.
 
 ```{r model_plot, echo = FALSE, fig.width = 7, fig.height = 5}
 # Parameters estimated on the benchmark machine
@@ -211,12 +220,12 @@ speed_up <- function (N, time_one, workers, overhead)
 }
 
 N_grid <- exp(seq(log(4), log(1000), length.out = 150))
-cols <- c("100" = "#1B9E77", "500" = "#D95F02", "1000" = "#7570B3")
+cols <- c("100" = "#1B9E77", "500" = "#D95F02", "1000" = "dodgerblue")
 ltys <- c("2" = 3, "4" = 2, "10" = 1)
 
 plot(NA, xlim = c(4, 1000), ylim = c(0, 10.5), log = "x",
      xlab = "Number of grafted phylogenies (P x N)", ylab = "Speed-up (sequential time / parallel time)")
-abline(h = 1, lty = 3, col = "grey50")
+abline(h = 1, lty = 1, lwd = 2, col = "red")
 for (i in seq_len(nrow(backbones)))
 {
   b <- backbones[i, ]
@@ -227,36 +236,17 @@ for (i in seq_len(nrow(backbones)))
   }
 }
 
-# Measured speed-ups
-measured <- data.frame(tips = c(100, 100, 100, 500, 1000, 100, 100, 100, 500, 1000),
-                       N = c(10, 100, 1000, 10, 10, 10, 100, 1000, 10, 10),
-                       workers = rep(c(2, 4), each = 5),
-                       speed_up = c(0.27, 1.21, 1.94, 1.58, 1.97, 0.23, 1.52, 2.96, 2.04, 2.88))
-points(measured$N, measured$speed_up, pch = ifelse(measured$workers == 2, 1, 19), col = cols[as.character(measured$tips)], cex = 1.2)
-legend("topleft", legend = c("100 tips", "500 tips", "1000 tips", "2 workers", "4 workers", "10 workers", "Measured, 2 workers", "Measured, 4 workers"),
-       col = c(cols, rep("grey30", 5)), lty = c(1, 1, 1, 3, 2, 1, NA, NA), pch = c(NA, NA, NA, NA, NA, NA, 1, 19), lwd = 2, bty = "n", cex = 0.8)
+legend("topleft", legend = c("100 tips", "500 tips", "1000 tips", "2 workers", "4 workers", "10 workers"),
+       col = c(cols, rep("grey30", 3)), lty = c(1, 1, 1, 3, 2, 1), lwd = 2, bty = "n", cex = 0.8)
 ```
 
 ### From which number of grafted phylogenies is it worth it?
-
-The table gives the **minimum number of grafted phylogenies (`P x N`)** from which parallel computation is:
-
-- **faster** than the sequential run (*break-even*);
-- **clearly worth it**: a speed-up of at least x1.5 and at least one minute saved.
-
-| Backbone | One grafted phylogeny | Break-even (2 / 4 / 10 workers) | Worth it (2 / 4 / 10 workers) |
-|:---|:---|:---|:---|
-| 100 tips | 0.5 s | 56 / 54 / 75 | 300 / 226 / 213 |
-| 500 tips | 11 s | 4 / 3 / 5 | 14 / 11 / 10 |
-| 1000 tips | 41 s | 2 / 2 / 2 | 4 / 3 / 4 |
-| 5,000 tips (20% taxa) | 3 min | 2 / 2 / 2 | 2 / 2 / 2 |
-| 10,000 tips (20% taxa) | 13 min | 2 / 2 / 2 | 2 / 2 / 2 |
 
 The take-home messages are:
 
 - **Small backbones (about 100 tips or less, or few taxa to graft)**: a grafted phylogeny is fast, so the parallelization only pays off for **hundreds of grafted phylogenies**. Under 50 grafted phylogenies, **do not bother**.
 - **Backbones of 500 tips or more**: it pays off from **about 10 grafted phylogenies**. Use it by default.
-- **The expected gain is about the number of workers** (x2 with 2 workers, x3.5 to x4 with 4 workers, up to x9 or x10 with 10 workers) once the run lasts several minutes. Below that, the fixed cost of setting up the workers limits the gain.
+- When the backbone phylogeny and/or the numebr of tips to graft are large, and the run lasts several minutes or more, **the expected gain is about the number of workers** (x2 with 2 workers, x3.5 to x4 with 4 workers, up to x9 or x10 with 10 workers). Below that, the fixed cost of setting up the workers limits the gain.
 
 As a **rule of thumb**: use parallel computation when the **sequential run would last more than a minute or two**.
 You can get an estimate by timing one grafted phylogeny:
@@ -273,18 +263,6 @@ time_one <- system.time(graft_missing_taxa(phy = my_backbone,
 time_one * P * N / 60
 ```
 
-### Predicted times and speed-ups
-
-The table gives the times and the speed-ups for larger sets of grafted phylogenies.
-
-| Backbone | N | Sequential | 2 workers | 4 workers | 10 workers |
-|:---|---:|:---|:---|:---|:---|
-| 100 tips | 1000 | 8.2 min | 4.3 min (x1.9) | 2.7 min (x3.0) | 1.5 min (x5.5) |
-| 500 tips | 100 | 18 min | 9.3 min (x2.0) | 5.2 min (x3.5) | 2.5 min (x7.2) |
-| 500 tips | 1000 | 3.0 h | 1.5 h (x2.0) | 50 min (x3.6) | 20 min (x8.9) |
-| 1000 tips | 100 | 1.1 h | 34 min (x2.0) | 17 min (x3.9) | 7.4 min (x9.2) |
-| 1000 tips | 1000 | 11 h | 5.6 h (x2.0) | 2.9 h (x4.0) | 1.1 h (x9.8) |
-
 ### With stochastic maps
 
 The benchmark above grafts the taxa **without stochastic maps**. With a simmap, each grafted phylogeny takes **roughly 10% to 30% longer**, as the states of the branches must be tracked and matched with the allowed states of each taxon.
@@ -298,16 +276,7 @@ You can inspect if such issue, and for which maps, is likely to arrive beforehan
 Backbones of **thousands of tips** are realistic for phylograftR, but then it is unlikely that the number of taxa to graft equals the number of tips. The **cost of a grafting depends much more on the number of taxa to graft than on the number of tips**:
 on a backbone of 1000 tips, grafting 100, 250, 500 and 1000 taxa takes about 7%, 19%, 40% and 100% of the time needed for 1000 taxa, so the time grows **slightly faster than linearly** with the number of taxa.
 
-We therefore benchmarked backbones of 2,000, 5,000 and 10,000 tips with **20% of missing taxa** (400, 1,000 and 2,000 taxa):
-
-| Backbone | Taxa to graft | One grafted phylogeny | N | Sequential | 2 workers | 4 workers | 10 workers |
-|:---|---:|:---|---:|:---|:---|:---|:---|
-| 2,000 tips | 400 | 24 s | 10 | 4 min | 2 min (x1.8) | 92 s (x2.6) | 57 s (x4.3) |
-| 2,000 tips | 400 | 24 s | 100 | 41 min | 21 min (x2.0) | 11 min (x3.8) | 5 min (x8.8) |
-| 5,000 tips | 1,000 | 3 min | 10 | 33 min | 17 min (x2.0) | 10 min (x3.2) | 4 min (x8.5) |
-| 5,000 tips | 1,000 | 3 min | 100 | 5.5 h | 2.8 h (x2.0) | 1.4 h (x3.9) | 34 min (x9.7) |
-| 10,000 tips | 2,000 | 13 min | 10 | 2.2 h | 1.1 h (x2.0) | 40 min (x3.3) | 14 min (x9.5) |
-| 10,000 tips | 2,000 | 13 min | 100 | 21.9 h | 10.9 h (x2.0) | 5.5 h (x4.0) | 2.2 h (x9.9) |
+We therefore benchmarked backbones of 5,000 and 10,000 tips with **20% of missing taxa** (1,000 and 2,000 taxa): see the latest rows of the table in *Section 4*.
 
 At this scale, **parallel computation is not optional**. A single grafted phylogeny takes about 3 minutes (5,000 tips) to about 13 minutes (10,000 tips), so a set of 100 grafted phylogenies would last about 5 hours to about 22 hours sequentially.
 The fixed cost of setting up the workers is negligible, and the speed-up is close to the number of workers.
