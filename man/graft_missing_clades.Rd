@@ -157,7 +157,7 @@ Default is \code{NULL}: save each phylogeny only once fully grafted.}
 \item{temp_file_path}{Character string. Path of the \code{.rds} file used for the temporary saves. It must end with \code{.rds} and its directory must exist and be writable.
 Default is \code{NULL}, which saves in \code{"temp_phy_from_grafting.rds"} in the working directory.
 With several simulations and/or several stochastic maps, the path is a template:
-the suffixes \code{"_map_<name>"} (several maps) and \code{"_sim_<k>"} (several simulations) are added before \code{".rds"}, in this order (e.g., \code{"temp_map_A_sim_2.rds"}).
+the suffixes \code{"_map_<name>"} (several maps; \code{"map_"} is not repeated if the name of the map already starts with it, e.g., \code{"temp_map_1.rds"} for a map named \code{"map_1"}) and \code{"_sim_<k>"} (several simulations) are added before \code{".rds"}, in this order (e.g., \code{"temp_map_A_sim_2.rds"}).
 See 'Temporary saves and resuming' in the Details section.}
 
 \item{clean_temp_files}{Logical. Whether to delete all the temporary files of the run once it is completed without stopping/crashing. Only used if \code{save_temp = TRUE}.
@@ -436,7 +436,8 @@ For instance, with \code{temp_file_path = "dir/temp.rds"}:
 \item a single phylogeny uses \code{"dir/temp.rds"};
 \item several simulations use \code{"dir/temp_sim_1.rds"}, \code{"dir/temp_sim_2.rds"}, ...;
 \item several maps use \code{"dir/temp_map_A.rds"}, \code{"dir/temp_map_B.rds"}, ...;
-\item several simulations across several maps use both suffixes as \code{"dir/temp_map_A_sim_1.rds"}.
+\item several simulations across several maps use both suffixes as \code{"dir/temp_map_A_sim_1.rds"};
+\item the prefix \code{"map_"} is not repeated if the name of the map already starts with it: maps named \code{"map_1"}, \code{"map_2"}, ... (default names of a \code{"multiSimmap"} without names) use \code{"dir/temp_map_1_sim_1.rds"}, \code{"dir/temp_map_2_sim_1.rds"}, ...
 }
 
 With \code{force_simulations = TRUE}, \verb{<k>} is the number of the attempt, not necessarily the ID to which the grafted phylogeny will be attributed to in the final output.

@@ -103,7 +103,7 @@ Each task is one simulation (\strong{both steps} of one map and one simulation).
 Default is \code{NULL}: each step of each phylogeny is saved only once fully grafted.}
 
 \item{temp_file_path}{Character string. Path of the \code{.rds} file used as template for the temporary saves.
-The suffixes \code{"_step_taxa"} or \code{"_step_clades"}, \code{"_map_<name>"} (several maps) and \code{"_sim_<k>"} (several simulations) are added before \code{".rds"}.
+The suffixes \code{"_step_taxa"} or \code{"_step_clades"}, \code{"_map_<name>"} (several maps; \code{"map_"} is not repeated if the name of the map already starts with it) and \code{"_sim_<k>"} (several simulations) are added before \code{".rds"}.
 Default is \code{NULL}, which uses \code{"temp_phy_from_grafting.rds"} in the working directory.}
 
 \item{clean_temp_files}{Logical. Whether to delete all the temporary files of the run once it is completed without stopping/crashing. Only used if \code{save_temp = TRUE}. Default is \code{TRUE}.}
