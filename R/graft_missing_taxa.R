@@ -161,7 +161,7 @@
 #' @param temp_file_path Character string. Path of the `.rds` file used for the temporary saves. It must end with `.rds` and its directory must exist and be writable.
 #'   Default is `NULL`, which saves in `"temp_phy_from_grafting.rds"` in the working directory.
 #'   With several simulations and/or several stochastic maps, the path is a template:
-#'   the suffixes `"_map_<name>"` (several maps) and `"_sim_<k>"` (several simulations) are added before `".rds"`, in this order (e.g., `"temp_map_A_sim_2.rds"`).
+#'   the suffixes `"_map_<name>"` (several maps; `"map_"` is not repeated if the name of the map already starts with it, e.g., `"temp_map_1.rds"` for a map named `"map_1"`) and `"_sim_<k>"` (several simulations) are added before `".rds"`, in this order (e.g., `"temp_map_A_sim_2.rds"`).
 #'   See 'Temporary saves and resuming' in the Details section.
 #' @param clean_temp_files Logical. Whether to delete all the temporary files of the run once it is completed without stopping/crashing. Only used if `save_temp = TRUE`.
 #'   If the run crashes or is interrupted, nothing is deleted so it can be resumed. Use `FALSE` to keep the files. Default is `TRUE`.
@@ -447,7 +447,8 @@
 #' * a single phylogeny uses `"dir/temp.rds"`;
 #' * several simulations use `"dir/temp_sim_1.rds"`, `"dir/temp_sim_2.rds"`, ...;
 #' * several maps use `"dir/temp_map_A.rds"`, `"dir/temp_map_B.rds"`, ...;
-#' * several simulations across several maps use both suffixes as `"dir/temp_map_A_sim_1.rds"`.
+#' * several simulations across several maps use both suffixes as `"dir/temp_map_A_sim_1.rds"`;
+#' * the prefix `"map_"` is not repeated if the name of the map already starts with it: maps named `"map_1"`, `"map_2"`, ... (default names of a `"multiSimmap"` without names) use `"dir/temp_map_1_sim_1.rds"`, `"dir/temp_map_2_sim_1.rds"`, ...
 #'
 #' With `force_simulations = TRUE`, `<k>` is the number of the attempt, not necessarily the ID to which the grafted phylogeny will be attributed to in the final output.
 #' This is required to identify the appropriate seed used to produce each attempt; attempts that failed leave a file too for tractability.
@@ -461,6 +462,7 @@
 #' Use `clean_temp_files = FALSE` to keep the files after a successful run.
 #'
 #' With `resume = TRUE`, the function must be called again with **exactly the same arguments** as the interrupted run.
+#' If the inputs differ (backbone, list of missing taxa, simmap or other arguments), the function stops and the message lists what differs, with the previous and the new values.
 #' For each phylogeny, its temporary file is searched: a complete phylogeny is reused as it is, an unfinished one is continued from its last save, and a phylogeny without file is grafted from scratch.
 #'
 #' **Resuming is not equivalent to grafting the taxa left on the temporary phylogeny used as a new backbone**, with a `missing_taxa_list` restricted to these taxa:

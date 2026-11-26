@@ -93,7 +93,8 @@ derive_simulation_seeds <- function (seed, n)
 #' @title Path of the temporary file of a simulation
 #'
 #' @description With several simulations (or several maps), the temporary phylogenies are saved in one file per simulation (and map), to avoid overwriting:
-#'   `"_map_<name>"` (name of the map, with the characters other than letters, digits, `_`, `.` and `-` replaced by `_`) and `"_sim_k"` are added before the extension `".rds"`.
+#'   `"_map_<name>"` (name of the map, with the characters other than letters, digits, `_`, `.` and `-` replaced by `_`; the prefix `"map_"` is not repeated if the name already starts with it, e.g., `"_map_1"` for a map named `"map_1"`)
+#'   and `"_sim_k"` are added before the extension `".rds"`.
 #'
 #' @param temp_file_path `NULL` (default path `"./temp_phy_from_grafting.rds"`), or path ending with `".rds"`.
 #' @param index Integer. Index of the simulation.
@@ -112,7 +113,7 @@ temp_file_path_simulation <- function (temp_file_path, index, multiple, map_name
   if (is.null(temp_file_path)) { temp_file_path <- "./temp_phy_from_grafting.rds" }
   # The tag of the map is computed once for all the maps (see temp_map_tags()), so maps never share a file; otherwise from the name
   if (is.null(map_tag) && !is.null(map_name)) { map_tag <- gsub("[^A-Za-z0-9_.-]", "_", map_name) }
-  suffix <- paste0(if (!is.null(map_name)) paste0("_map_", map_tag),
+  suffix <- paste0(if (!is.null(map_name)) paste0("_", map_file_tag(map_tag)),
                    if (multiple) paste0("_sim_", index), collapse = "")
   sub("\\.rds$", paste0(suffix, ".rds"), temp_file_path)
 }

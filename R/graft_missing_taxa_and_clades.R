@@ -71,7 +71,7 @@
 #' @param save_temp_every Integer or `NULL`. Frequency of the saves of the progress within each step. Only used if `save_temp = TRUE`.
 #'   Default is `NULL`: each step of each phylogeny is saved only once fully grafted.
 #' @param temp_file_path Character string. Path of the `.rds` file used as template for the temporary saves.
-#'   The suffixes `"_step_taxa"` or `"_step_clades"`, `"_map_<name>"` (several maps) and `"_sim_<k>"` (several simulations) are added before `".rds"`.
+#'   The suffixes `"_step_taxa"` or `"_step_clades"`, `"_map_<name>"` (several maps; `"map_"` is not repeated if the name of the map already starts with it) and `"_sim_<k>"` (several simulations) are added before `".rds"`.
 #'   Default is `NULL`, which uses `"temp_phy_from_grafting.rds"` in the working directory.
 #' @param clean_temp_files Logical. Whether to delete all the temporary files of the run once it is completed without stopping/crashing. Only used if `save_temp = TRUE`. Default is `TRUE`.
 #' @param resume Logical. Whether to resume an interrupted run from its temporary files, which **must come from a run with the exact same arguments**. Needs `save_temp = TRUE`. Default is `FALSE`.
