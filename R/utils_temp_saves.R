@@ -97,9 +97,28 @@ temp_map_tags <- function (map_names)
 {
   if (is.null(map_names)) { return(NULL) }
   tags <- gsub("[^A-Za-z0-9_.-]", "_", map_names)
-  duplicated_tags <- tags %in% tags[duplicated(tags)]
+  # Tags are compared as they appear in the names of the files (see map_file_tag()): "map_1" and "1" would both give "map_1"
+  file_tags <- map_file_tag(tags)
+  duplicated_tags <- file_tags %in% file_tags[duplicated(file_tags)]
   tags[duplicated_tags] <- paste0(tags[duplicated_tags], "-", which(duplicated_tags))
   stats::setNames(tags, map_names)
+}
+
+
+#' @title Tag of a map as it appears in the name of the temporary files
+#'
+#' @description Adds the prefix `"map_"` to the tag of the map, unless the tag already starts with it (a map named `"map_1"` gives `"map_1"`, not `"map_map_1"`).
+#'
+#' @param tag Character vector. Tag(s) of the map(s) (see `temp_map_tags()`).
+#'
+#' @noRd
+#'
+#' @return Character vector.
+#'
+
+map_file_tag <- function (tag)
+{
+  ifelse(startsWith(tag, "map_"), tag, paste0("map_", tag))
 }
 
 
@@ -208,9 +227,63 @@ fingerprint <- function (x)
 }
 
 
+#' @title Quick checksum of an object
+#'
+#' @description A cheap checksum (length and weighted sum of the bytes of the serialized object), used to tell which parts of the inputs differ in the message of `check_temp_signature()`.
+#'   It is much faster than `fingerprint()`, which is used for the decision to stop (several hundreds of calls per simulation are possible, one per taxon).
+#'
+#' @param x Any object.
+#'
+#' @noRd
+#'
+#' @return Character string.
+#'
+
+quick_hash <- function (x)
+{
+  bytes <- as.numeric(serialize(x, connection = NULL, version = 2))
+  paste0(length(bytes), "-", sprintf("%.0f", sum(bytes * (seq_along(bytes) %% 65521 + 1))))
+}
+
+
+#' @title Readable summary of the inputs of a simulation
+#'
+#' @description Small summary stored in the temporary files with the fingerprints, to tell the user **what differs** (and the previous and the new values) when resuming with other inputs.
+#'
+#' @inheritParams temp_signature
+#'
+#' @noRd
+#'
+#' @return List with the summaries of the backbone, the taxa, the states and the options.
+#'
+
+temp_signature_details <- function (phy, missing_taxa_list, tracker, options)
+{
+  # Backbone
+  node_depths <- ape::node.depth.edgelength(phy)
+  backbone <- list(n_tips = length(phy$tip.label), n_nodes = phy$Nnode, depth = max(node_depths), total_length = sum(phy$edge.length),
+                   parts = c(tip_labels = quick_hash(phy$tip.label), topology = quick_hash(phy$edge), branch_lengths = quick_hash(phy$edge.length), node_labels = quick_hash(phy$node.label)))
+  # Taxa (or clades): names, one checksum per taxon (all its constraints), one checksum per item of the list (e.g., "allowed_states")
+  taxon_names <- as.character(missing_taxa_list$Taxon_name)
+  n_taxa <- length(taxon_names)
+  items <- setdiff(names(missing_taxa_list), "Taxon_name")
+  per_taxon <- vapply(seq_len(n_taxa), function (i)
+  {
+    quick_hash(lapply(missing_taxa_list[items], function (item) if (length(item) == n_taxa) { if (is.list(item)) item[i] else unname(item[i]) } else item))
+  }, character(1))
+  taxa <- list(names = taxon_names, per_taxon = stats::setNames(per_taxon, taxon_names), items = vapply(missing_taxa_list[items], quick_hash, character(1)))
+  # States of the map
+  states <- if (is.null(tracker)) NULL else list(states = tracker$states, extra_states = tracker$extra_states, table = quick_hash(tracker$state_table))
+  # Other arguments: short values are kept as they are, the others (e.g., the table of total richness) are summarised by a checksum
+  options <- lapply(options, function (x) if (is.atomic(x) && length(x) <= 10) x else list(checksum = quick_hash(x)))
+  list(backbone = backbone, taxa = taxa, states = states, options = options)
+}
+
+
 #' @title Signature of the inputs of a simulation
 #'
 #' @description Fingerprints of the inputs that determine the simulation, stored in the temporary file and compared when resuming.
+#'   The element `details` is a readable summary used only to explain what differs (see `temp_signature_details()`).
 #'
 #' @param phy Backbone phylogeny, as provided by the user.
 #' @param missing_taxa_list The list of the taxa of the map, after resolution of the arguments and before the random order.
@@ -219,7 +292,7 @@ fingerprint <- function (x)
 #'
 #' @noRd
 #'
-#' @return Named list of fingerprints.
+#' @return Named list of fingerprints, and of the summary `details`.
 #'
 
 temp_signature <- function (phy, missing_taxa_list, tracker, options)
@@ -227,7 +300,85 @@ temp_signature <- function (phy, missing_taxa_list, tracker, options)
   list(backbone = fingerprint(list(phy$edge, phy$edge.length, phy$tip.label, phy$node.label)),
        taxa = fingerprint(missing_taxa_list),
        states = if (is.null(tracker)) NULL else fingerprint(tracker),
-       options = fingerprint(options))
+       options = fingerprint(options),
+       details = temp_signature_details(phy = phy, missing_taxa_list = missing_taxa_list, tracker = tracker, options = options))
+}
+
+
+#' @title Describe how the inputs of the interrupted run and of the current call differ
+#'
+#' @param stored,current Summaries of the inputs (`details` of the signatures, see `temp_signature_details()`).
+#' @param differs Character vector. Names of the inputs that differ (`"backbone"`, `"taxa"`, `"states"`, `"options"`).
+#'
+#' @noRd
+#'
+#' @return Character vector, one line per difference, with the previous and the new values.
+#'
+
+describe_signature_differences <- function (stored, current, differs)
+{
+  fmt <- function (x) if (length(x) == 0) "none" else paste0(utils::head(x, 8), collapse = ", ")
+  fmt_list <- function (x, max_shown = 5) paste0(paste0("'", utils::head(x, max_shown), "'", collapse = ", "), if (length(x) > max_shown) paste0(", ... (", length(x), " in total)") else "")
+  lines <- character(0)
+  if ("backbone" %in% differs)
+  {
+    s <- stored$backbone; n <- current$backbone
+    if (s$n_tips != n$n_tips) { lines <- c(lines, paste0("Backbone: number of tips, previous = ", s$n_tips, ", new = ", n$n_tips)) }
+    if (!isTRUE(all.equal(s$depth, n$depth, tolerance = 1e-8))) { lines <- c(lines, paste0("Backbone: age of the root, previous = ", signif(s$depth, 6), ", new = ", signif(n$depth, 6))) }
+    parts <- c(tip_labels = "tip labels", topology = "topology", branch_lengths = "branch lengths", node_labels = "node labels")
+    parts_differ <- names(parts)[s$parts[names(parts)] != n$parts[names(parts)]]
+    if (length(parts_differ) > 0) { lines <- c(lines, paste0("Backbone: different ", paste(parts[parts_differ], collapse = ", "))) }
+  }
+  if ("taxa" %in% differs)
+  {
+    s <- stored$taxa; n <- current$taxa
+    only_stored <- setdiff(s$names, n$names); only_current <- setdiff(n$names, s$names)
+    if (length(only_stored) > 0) { lines <- c(lines, paste0("Missing taxa: only in the interrupted run (", length(only_stored), "): ", fmt_list(only_stored))) }
+    if (length(only_current) > 0) { lines <- c(lines, paste0("Missing taxa: only in the current call (", length(only_current), "): ", fmt_list(only_current))) }
+    common <- intersect(s$names, n$names)
+    changed <- common[s$per_taxon[common] != n$per_taxon[common]]
+    if (length(changed) > 0) { lines <- c(lines, paste0("Missing taxa: different constraints for ", length(changed), " taxa: ", fmt_list(changed))) }
+    items_stored <- names(s$items); items_current <- names(n$items)
+    items_added <- setdiff(items_current, items_stored); items_removed <- setdiff(items_stored, items_current)
+    items_changed <- intersect(items_stored, items_current); items_changed <- items_changed[s$items[items_changed] != n$items[items_changed]]
+    if (length(c(items_changed, items_added, items_removed)) > 0)
+    {
+      lines <- c(lines, paste0("Missing taxa: items of the list that differ: ",
+                               paste(c(items_changed, if (length(items_added) > 0) paste0(items_added, " (only in the current call)"), if (length(items_removed) > 0) paste0(items_removed, " (only in the interrupted run)")), collapse = ", ")))
+    }
+    if (length(changed) == 0 && length(only_stored) == 0 && length(only_current) == 0 && length(c(items_changed, items_added, items_removed)) == 0)
+    {
+      lines <- c(lines, "Missing taxa: same names and constraints, but a different order of the taxa or of the items of the list")
+    }
+  }
+  if ("states" %in% differs)
+  {
+    s <- stored$states; n <- current$states
+    if (is.null(s) || is.null(n))
+    {
+      lines <- c(lines, paste0("Simmap: ", if (is.null(s)) "none in the interrupted run, one in the current call" else "one in the interrupted run, none in the current call"))
+    } else {
+      if (!identical(s$states, n$states)) { lines <- c(lines, paste0("Simmap: states, previous = ", fmt(s$states), "; new = ", fmt(n$states))) }
+      if (!identical(s$extra_states, n$extra_states)) { lines <- c(lines, paste0("Simmap: extra states inherited, previous = ", fmt(s$extra_states), "; new = ", fmt(n$extra_states))) }
+      if (identical(s$states, n$states) && !identical(s$table, n$table)) { lines <- c(lines, "Simmap: same states, but different states along the branches (another map, or another backbone)") }
+    }
+  }
+  if ("options" %in% differs)
+  {
+    labels <- c(richness = "Total richness of the clades", sim_seed = "Seed of the simulation (derived from 'seed')",
+                sim_index = "Index of the simulation (see 'nb_simulations')", map_name = "Name of the map")
+    show <- function (x) if (is.list(x)) "(table, other content)" else if (is.null(x)) "NULL" else paste0(format(x), collapse = ", ")
+    keys <- union(names(stored$options), names(current$options))
+    for (key in keys)
+    {
+      if (!identical(stored$options[[key]], current$options[[key]]))
+      {
+        label <- if (key %in% names(labels)) labels[[key]] else paste0("Argument '", key, "'")
+        lines <- c(lines, paste0(label, ": previous = ", show(stored$options[[key]]), ", new = ", show(current$options[[key]])))
+      }
+    }
+  }
+  lines
 }
 
 
@@ -238,15 +389,18 @@ temp_signature <- function (phy, missing_taxa_list, tracker, options)
 #'
 #' @noRd
 #'
-#' @return `TRUE` (invisibly). Stops with an informative message if the signatures differ.
+#' @return `TRUE` (invisibly). Stops with an informative message if the signatures differ, listing what differs with the previous and the new values.
 #'
 
 check_temp_signature <- function (stored, current, path)
 {
-  differs <- names(current)[!vapply(names(current), function (name) identical(stored[[name]], current[[name]]), logical(1))]
+  keys <- setdiff(names(current), "details")
+  differs <- keys[!vapply(keys, function (name) identical(stored[[name]], current[[name]]), logical(1))]
   if (length(differs) == 0) { return(invisible(TRUE)) }
   labels <- c(backbone = "the backbone phylogeny", taxa = "the list of missing taxa", states = "the simmap", options = "other arguments (method, seed, number of simulations or maps, ...)")
+  differences <- if (is.null(stored$details)) character(0) else describe_signature_differences(stored = stored$details, current = current$details, differs = differs)
   stop("Cannot resume from the temporary file '", path, "': it was produced with different inputs (", paste(labels[differs], collapse = ", "), ").\n",
+       if (length(differences) > 0) paste0("Differences between the interrupted run (previous) and the current call (new):\n", paste0("  - ", differences, collapse = "\n"), "\n"),
        "Use the same inputs as in the interrupted run, or run with 'resume = FALSE' to overwrite the temporary files.", call. = FALSE)
 }
 
