@@ -24,3 +24,6 @@ R/_benchmark_parallel.R
 
 # Archived packages needed by BioGeoBEARS
 sources/*
+
+# Benchmark results
+benchmark/*

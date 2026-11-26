@@ -552,6 +552,9 @@ and in this vignette: `vignette("phylograftR")`.
 - [Handle **uncertainty** and ensure
   **reproducibility**](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html):
   `vignette("handle_uncertainty")`.
+- [Run grafting in
+  **parallel**](https://maeldore.github.io/phylograftR/articles/parallel_grafting.html):
+  `vignette("parallel_grafting")`.
 
 Alternatively, if you prefer to view the vignettes in R, you can install
 the package with `build_vignettes = TRUE`.

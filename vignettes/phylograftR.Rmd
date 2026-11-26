@@ -40,7 +40,7 @@ For more advanced uses, please refer to the tutorials below.
 | Constrain grafting with several traits | [`multiple_traits`](https://maeldore.github.io/phylograftR/articles/multiple_traits.html): `vignette("multiple_traits")` |
 | Constrain grafting with a continuous trait | [`continuous_data`](https://maeldore.github.io/phylograftR/articles/continuous_data.html): `vignette("continuous_data")` |
 | Account for uncertainty (simulations, stochastic maps, backbones), and make runs reproducible with seeds | [`handle_uncertainty`](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html): `vignette("handle_uncertainty")` |
-| Speed up grafting with parallel computation | `parallel_grafting` *(in preparation)* |
+| Speed up grafting with parallel computation | [`parallel_grafting`](https://maeldore.github.io/phylograftR/articles/parallel_grafting.html): `vignette("parallel_grafting")` |
 | Resume a crashed or interrupted run | `resume_crashed_run` *(in preparation)* |
 
 
@@ -83,7 +83,7 @@ They provide explanations on available arguments and interpretations of results 
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.1/ [Handle __uncertainty__ and ensure __reproducibility__](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html): `vignette("handle_uncertainty")`.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.2/ Run grafting in __parallel__: `parallel_grafting` *(in preparation)*.
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.2/ [Run grafting in __parallel__](https://maeldore.github.io/phylograftR/articles/parallel_grafting.html): `vignette("parallel_grafting")`.
 
 &nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.3/ __Resume__ a crashed or interrupted run: `resume_crashed_run` *(in preparation)*.
 <br>

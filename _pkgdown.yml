@@ -55,6 +55,8 @@ navbar:
       - text: 6/ Uncertainty, reproducibility, and scaling
       - text: Handle uncertainty and ensure reproducibility
         href: articles/handle_uncertainty.html
+      - text: Run grafting in parallel
+        href: articles/parallel_grafting.html
 reference:
 - title: Graft missing lineages
   desc: |

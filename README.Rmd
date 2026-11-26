@@ -381,6 +381,7 @@ They are listed below, in the [companion website](https://maeldore.github.io/phy
 **6/ Uncertainty, reproducibility, and scaling**
 
 - [Handle __uncertainty__ and ensure __reproducibility__](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html): `vignette("handle_uncertainty")`.
+- [Run grafting in __parallel__](https://maeldore.github.io/phylograftR/articles/parallel_grafting.html): `vignette("parallel_grafting")`.
 
 Alternatively, if you prefer to view the vignettes in R, you can install the package with `build_vignettes = TRUE`. 
 
