@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Maël Doré" />
+
+<meta name="date" content="2026-11-26" />
+
+<title>Format inputs prior to grafting</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Format inputs prior to grafting</h1>
+<h4 class="author">Maël Doré</h4>
+<h4 class="date">2026-11-26</h4>
+
+
+
+<p><br> This vignette explains how to <strong>format the inputs</strong>
+needed to graft missing lineages: the
+<strong><code>missing_taxa_list</code></strong> that describes the taxa
+to graft and the constraints on where they can be grafted, and,
+optionally, the <strong><code>total_richness_per_clades</code></strong>
+that accounts for the species that are neither in the backbone nor in
+the list (i.e., <strong>unsampled species</strong>).</p>
+<p>All the examples use the <strong>toy datasets</strong> shipped with
+the package: a backbone phylogeny of 30 tips
+(<code>toy_backbone</code>), tables in <code>.csv</code> format, and the
+corresponding R objects.</p>
+<p>For a full analysis from scratch, see the main workflow tutorial:
+<code>vignette(&quot;main_workflow&quot;)</code>.<br> For the tutorials listed by
+theme, see: <code>vignette(&quot;phylograftR&quot;)</code>.</p>
+<p><br></p>
+<div id="what-does-grafting-need" class="section level2">
+<h2>1/ What does grafting need?</h2>
+<div id="the-missing_taxa_list" class="section level3">
+<h3>The <code>missing_taxa_list</code></h3>
+<p>Each missing taxon is assigned to a clade of the <strong>backbone
+phylogeny</strong>, defined by <strong>tips</strong>: a pair of tips
+whose most recent common ancestor (MRCA) is the clade, or a single tip
+for a terminal branch. There are two types of missing lineages, grafted
+with two functions:</p>
+<table>
+<colgroup>
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Type</th>
+<th align="left">Grafting function</th>
+<th align="left">Clade item</th>
+<th align="left">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Missing <strong>taxa</strong></td>
+<td align="left"><code>graft_missing_taxa()</code></td>
+<td align="left"><code>Target_clade</code></td>
+<td align="left">The taxon is grafted <strong>within</strong> its target
+clade.</td>
+</tr>
+<tr class="even">
+<td align="left">Missing <strong>clades</strong></td>
+<td align="left"><code>graft_missing_clades()</code></td>
+<td align="left"><code>Sister_clade</code></td>
+<td align="left">The taxa sharing the same sister clade are grafted
+<strong>together</strong>, as one missing clade attached to the stem
+branch of their sister clade.</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>missing_taxa_list</code> is a list with the following
+items. Every item is <strong>named after the taxa</strong>
+(<code>$Taxon_name</code>):</p>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Item</th>
+<th align="left">Used for</th>
+<th align="left">Content</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>Taxon_name</code></td>
+<td align="left">Both</td>
+<td align="left">Names of the taxa to graft. They must be unique and
+absent from the backbone.</td>
+</tr>
+<tr class="even">
+<td align="left"><code>Target_clade</code> or
+<code>Sister_clade</code></td>
+<td align="left">Taxa / Clades</td>
+<td align="left">One clade per taxon (a vector of tips).</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>Target_clade_name</code> or
+<code>Sister_clade_name</code></td>
+<td align="left">Both</td>
+<td align="left">(Optional) Names of the clades, to make outputs easier
+to read.</td>
+</tr>
+<tr class="even">
+<td align="left"><code>include_target_clade_stem</code></td>
+<td align="left">Taxa</td>
+<td align="left">(Optional) Can the taxon be grafted on the stem branch
+of its target clade?</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>Excluded_subclades</code></td>
+<td align="left">Taxa</td>
+<td align="left">(Optional) Subclades of the target clade where the
+taxon is known <strong>not</strong> to belong.</td>
+</tr>
+<tr class="even">
+<td align="left"><code>exclude_subclades_stem</code></td>
+<td align="left">Taxa</td>
+<td align="left">(Optional) Is the stem branch of each excluded subclade
+also excluded?</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>allowed_states</code></td>
+<td align="left">Both</td>
+<td align="left">(Optional) States of a stochastic map where the taxon
+can be grafted. See the tutorials on data types.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="the-backbone-phylogeny-phy" class="section level3">
+<h3>The backbone phylogeny: <code>phy</code></h3>
+<p>The <strong>backbone phylogeny</strong> (<code>phy</code>) is the
+time-calibrated phylogeny on which the missing lineages are grafted: it
+must be <strong>rooted, binary (no polytomies) and ultrametric</strong>.
+All the clades used to define the constraints of the grafting are clades
+of the backbone phylogeny:</p>
+<ul>
+<li>the <strong>target clade</strong> of a missing taxon: the clade
+within which it is grafted;</li>
+<li>the <strong>excluded subclades</strong> of a missing taxon: clades
+nested within its target clade where it must <strong>not</strong> be
+grafted;</li>
+<li>the <strong>sister clade</strong> of a missing clade: the clade of
+the backbone whose stem branch receives the missing clade.</li>
+</ul>
+<p>Each of these clades can be a <strong>clade with several
+tips</strong>, or a <strong>single terminal branch</strong>, when it is
+defined by one tip only.</p>
+<p>Clades are defined from the <strong>labels of the tips</strong> and
+the <strong>IDs of the nodes</strong> of the backbone:</p>
+<ul>
+<li>a <strong>pair of tips</strong> defines the clade subtended by their
+most recent common ancestor (MRCA). Any pair of tips whose MRCA is the
+clade can be used, so a clade can be written in several ways;</li>
+<li>a <strong>single tip</strong> defines the terminal branch of this
+tip;</li>
+<li>a <strong>node ID</strong> defines the clade subtended by this
+internal node directly, with no need to pick tips. Node IDs are the
+integers that follow the tip IDs (<code>1</code> to <code>Ntip</code>)
+and are displayed by <code>ape::nodelabels()</code>.</li>
+</ul>
+<p>The toy backbone is shown below with its <strong>tip labels in
+green</strong> and its <strong>node IDs in blue boxes</strong>. We will
+use both in the following Sections. For instance, the clade of node
+<code>34</code> is also defined by the pair of tips <code>t8</code> and
+<code>t7</code>, whose MRCA is node <code>34</code>, and the tip
+<code>t5</code> alone is the terminal branch of <code>t5</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(toy_backbone)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co"># Plot the backbone with the tip labels in green, and the node IDs in label boxes</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>ape<span class="sc">::</span><span class="fu">plot.phylo</span>(toy_backbone, <span class="at">cex =</span> <span class="fl">0.7</span>, <span class="at">no.margin =</span> <span class="cn">TRUE</span>, <span class="at">tip.color =</span> <span class="st">&quot;green3&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>ape<span class="sc">::</span><span class="fu">nodelabels</span>(<span class="at">cex =</span> <span class="fl">0.7</span>, <span class="at">frame =</span> <span class="st">&quot;rect&quot;</span>, <span class="at">bg =</span> <span class="st">&quot;lightblue&quot;</span>, <span class="at">col =</span> <span class="st">&quot;darkblue&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" /></p>
+</div>
+<div id="the-total_richness_per_clades" class="section level3">
+<h3>The <code>total_richness_per_clades</code></h3>
+<p>The backbone is incomplete, and the missing taxa of the
+<code>missing_taxa_list</code> are not necessarily all the missing
+species: some species may be <strong>unsampled</strong>, i.e., neither
+in the backbone nor in the list. Optionally, the grafting functions use
+a <strong><code>total_richness_per_clades</code></strong> to account for
+them: it gives the <strong>total number of species of some
+clades</strong> of the backbone (their richness), and their number of
+unsampled species is deduced from it:</p>
+<p><code>total_richness = nb_backbone + nb_missing + nb_unsampled</code></p>
+<p>with <code>nb_backbone</code> the tips of the backbone in the clade,
+<code>nb_missing</code> the taxa of the <code>missing_taxa_list</code>
+that belong to the clade, and <code>nb_unsampled</code> the unsampled
+species. This information is used to estimate the <strong>sampling
+fraction</strong> of the clades when fitting the <strong>birth-death
+models</strong> used to draw the divergence times of the grafted
+lineages (it requires <code>method = &quot;BD_clades&quot;</code> for the missing
+taxa). <strong>Unsampled species are only used to fit the
+rates</strong>: they are not grafted and do not need to be identified.
+Only their count is deduced from the <code>total_richness</code> values
+provided per clade:</p>
+<ul>
+<li>For a clade with a total richness provided,
+<code>nb_unsampled = total_richness - nb_backbone - nb_missing</code>.</li>
+<li>For a clade without a total richness (<code>NA</code>, or not
+listed), <code>nb_unsampled</code> is the sum of the unsampled species
+of the largest clades nested within it that have a total richness
+provided (or 0 if there is none). Unsampled species of nested clades are
+never counted twice.</li>
+<li>Without <code>total_richness_per_clades</code>, all the clades are
+assumed to have no unsampled species.</li>
+</ul>
+<p>The total richness is described in a table with the clades and their
+total richness, which is converted by dedicated functions: see
+<em>Section 9</em>.</p>
+</div>
+<div id="the-stochastic-maps-simmap" class="section level3">
+<h3>The stochastic maps: <code>simmap</code></h3>
+<p>Grafting can also be constrained by <strong>species
+attributes</strong> (e.g., traits or biogeographic ranges) described by
+<strong>stochastic character maps</strong> (<code>simmap</code>) of the
+backbone summarizing the evolutionary history of traits or ranges along
+branches. These stochastic maps are another input of the grafting
+functions, used with the <code>allowed_states</code> of the
+<code>missing_taxa_list</code> to further constrain grafting:
+<strong>each taxon can only be grafted on the pieces of the available
+branches that are in its allowed states</strong>. This combines with the
+other constraints:</p>
+<ul>
+<li>For <strong>missing taxa</strong>, the available branches are those
+of the target clade, minus the excluded subclades, restricted to pieces
+in the allowed states.</li>
+<li>For <strong>missing clades</strong>, the available branch is the
+stem branch of the sister clade, restricted to pieces in the allowed
+states.</li>
+</ul>
+<p>Preparing these maps is thoroughly explained in a dedicated tutorial:
+<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>. The use of
+<strong>allowed states</strong> is only briefly introduced in
+<em>Section 6</em> of this vignette.</p>
+</div>
+</div>
+<div id="which-way-to-build-the-list" class="section level2">
+<h2>2/ Which way to build the list?</h2>
+<p>The <code>missing_taxa_list</code> can be obtained in three ways all
+returning the <strong>same kind of object</strong>, validated against
+the backbone. Whatever the way chosen, the list can then be
+<strong>edited by hand</strong> afterward for finer level of
+control.</p>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">You have…</th>
+<th align="left">Use</th>
+<th align="left">Section</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">A <strong>taxonomy</strong> of the backbone tips, and
+the taxonomic groups of the missing taxa</td>
+<td align="left"><code>build_missing_taxa_list_from_taxonomy()</code></td>
+<td align="left">3</td>
+</tr>
+<tr class="even">
+<td align="left">A table that defines the <strong>clades</strong>
+directly (with pairs of tips or node IDs)</td>
+<td align="left"><code>build_missing_taxa_list()</code> for a data.frame
+already in R, or <code>import_missing_taxa_list()</code> for an external
+file</td>
+<td align="left">4</td>
+</tr>
+<tr class="odd">
+<td align="left">A list written by hand in R, with <strong>node
+IDs</strong> defining the clades of interest</td>
+<td align="left"><code>convert_nodes_to_tips()</code></td>
+<td align="left">5</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>Any of the above</strong>: a list already built
+that you want to fine-tune further (stem branches, excluded subclades,
+taxa to keep…)</td>
+<td align="left">Edit the list <strong>manually</strong> in R. This is
+available <strong>independently of the way the list was built</strong>
+(taxonomy, table/data.frame, or by hand)</td>
+<td align="left">8</td>
+</tr>
+</tbody>
+</table>
+<p>The taxonomy is the most convenient way to start, as it only requires
+the <strong>names</strong> of the groups. Defining the clades from a
+data.frame or an external table offers more
+<strong>fine-tuning</strong>, as any node of the backbone can be
+used.</p>
+<p><br></p>
+</div>
+<div id="use-a-taxonomy-build_missing_taxa_list_from_taxonomy" class="section level2">
+<h2>3/ Use a taxonomy:
+<code>build_missing_taxa_list_from_taxonomy()</code></h2>
+<p>When the missing taxa are known by their <strong>taxonomic
+groups</strong> (families, genera, tribes…), they can be used to
+retrieve the defining tips of the clades of interest (i.e., target
+clades, excluded subclades, sister clades) directly from the
+<strong>taxonomy of the backbone tips</strong>.</p>
+<p><strong>When to use taxonomic tables?</strong></p>
+<p>Taxonomic tables are the <strong>go-to option for large phylogenies
+with neatly defined taxonomic levels</strong> (e.g., Family, Subfamily,
+Tribe, Genus). The taxonomy of the backbone is provided
+<strong>once</strong>, and each taxon to graft only needs its own
+taxonomic levels: the constraints (target clade, sister clade, excluded
+subclades) are written with the <strong>names of the taxonomic
+groups</strong> or of the <strong>taxonomic levels</strong> to use, and
+the clades are retrieved from the phylogeny. The same taxonomic group is
+therefore always the same clade, whatever the number of taxa, which
+avoids the typos and inconsistencies of clades written taxon by taxon,
+and the tables can be taken as such from a taxonomic database. The limit
+is that <strong>only the taxonomic groups of the backbone table can be
+used as clades</strong>: see <em>Section 4</em> for finer control using
+any clade and <em>Section 8</em> for editing the
+<code>missing_taxa_list</code> after building it.</p>
+<p>Two tables are needed, and they can be imported from external files
+(text or Excel) with <code>import_taxonomic_table()</code>:</p>
+<ul>
+<li>the <strong>backbone table</strong>: one row per tip of the
+backbone, one column per taxonomic level
+(<code>type = &quot;backbone&quot;</code>).</li>
+<li>the <strong>missing taxa table</strong>: one row per taxon to graft,
+with its taxonomic groups, and the constraints written with taxonomic
+group names (<code>type = &quot;missing_taxa&quot;</code>).</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># ------ Step 1: Look at the taxonomic tables ------ #</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># Taxonomy of the backbone: the first column holds the tip labels (`Taxa`)</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">data</span>(toy_backbone_taxonomic_table)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">head</span>(toy_backbone_taxonomic_table)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt;   Taxa   Family Subfamily     Tribe Genus</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; 1  t26 Family_A Subfam_A2 Tribe_A2a  &lt;NA&gt;</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; 2   t2 Family_A Subfam_A2 Tribe_A2a  &lt;NA&gt;</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; 3  t21 Family_A Subfam_A2 Tribe_A2a  &lt;NA&gt;</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; 4  t16 Family_A Subfam_A2 Tribe_A2a  &lt;NA&gt;</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; 5  t11 Family_A Subfam_A2 Tribe_A2a  &lt;NA&gt;</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; 6   t4 Family_A Subfam_A2 Tribe_A2a  &lt;NA&gt;</span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co"># Description of the taxa to graft: one row per taxon</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="fu">data</span>(toy_missing_taxa_taxonomic_table)</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>toy_missing_taxa_taxonomic_table</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt;           Taxa   Type   Family Subfamily     Tribe   Genus Target_clade</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt; 1      New_sp1   taxa Family_A      &lt;NA&gt;      &lt;NA&gt;    &lt;NA&gt;       Family</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt; 2      New_sp2   taxa Family_A      &lt;NA&gt;      &lt;NA&gt;    &lt;NA&gt;       Family</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt; 3      New_sp3   taxa Family_A      &lt;NA&gt;      &lt;NA&gt;    &lt;NA&gt;       Family</span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co">#&gt; 4      New_sp4   taxa Family_B      &lt;NA&gt;      &lt;NA&gt;    &lt;NA&gt;     Family_B</span></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="co">#&gt; 5      New_sp5   taxa Family_B Subfam_B1      &lt;NA&gt;    &lt;NA&gt;    Subfamily</span></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co">#&gt; 6      New_sp6   taxa Family_B Subfam_B2  Tribe_B2    &lt;NA&gt;        Gen_2</span></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a><span class="co">#&gt; 7      New_sp7   taxa Family_B Subfam_B2  Tribe_B2    &lt;NA&gt;        Tribe</span></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a><span class="co">#&gt; 8  Genus_a_sp1 clades Family_B Subfam_B1      &lt;NA&gt; Genus_a         &lt;NA&gt;</span></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co">#&gt; 9  Genus_a_sp2 clades Family_B Subfam_B1      &lt;NA&gt; Genus_a         &lt;NA&gt;</span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a><span class="co">#&gt; 10 Genus_b_sp1 clades Family_A Subfam_A1 Tribe_A1b Genus_b         &lt;NA&gt;</span></span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a><span class="co">#&gt;    Sister_clade  Excluded_subclades include_target_clade_stem</span></span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="co">#&gt; 1          &lt;NA&gt; Subfam_A1;Tribe_A2a                      TRUE</span></span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a><span class="co">#&gt; 2          &lt;NA&gt;     Tribe_A2a;Gen_3                      TRUE</span></span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co">#&gt; 3          &lt;NA&gt;                &lt;NA&gt;                     FALSE</span></span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a><span class="co">#&gt; 4          &lt;NA&gt;                &lt;NA&gt;                        NA</span></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt; 5          &lt;NA&gt;               Gen_1                      TRUE</span></span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a><span class="co">#&gt; 6          &lt;NA&gt;                &lt;NA&gt;                        NA</span></span>
+<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a><span class="co">#&gt; 7          &lt;NA&gt;                &lt;NA&gt;                     FALSE</span></span>
+<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a><span class="co">#&gt; 8         Gen_1                &lt;NA&gt;                        NA</span></span>
+<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a><span class="co">#&gt; 9         Gen_1                &lt;NA&gt;                        NA</span></span>
+<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a><span class="co">#&gt; 10        Tribe                &lt;NA&gt;                        NA</span></span>
+<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a><span class="co">#&gt;    exclude_subclades_stem</span></span>
+<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a><span class="co">#&gt; 1              TRUE;FALSE</span></span>
+<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a><span class="co">#&gt; 2              FALSE;TRUE</span></span>
+<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a><span class="co">#&gt; 3                    &lt;NA&gt;</span></span>
+<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a><span class="co">#&gt; 4                    &lt;NA&gt;</span></span>
+<span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a><span class="co">#&gt; 5                    &lt;NA&gt;</span></span>
+<span id="cb2-45"><a href="#cb2-45" tabindex="-1"></a><span class="co">#&gt; 6                    &lt;NA&gt;</span></span>
+<span id="cb2-46"><a href="#cb2-46" tabindex="-1"></a><span class="co">#&gt; 7                    &lt;NA&gt;</span></span>
+<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a><span class="co">#&gt; 8                    &lt;NA&gt;</span></span>
+<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a><span class="co">#&gt; 9                    &lt;NA&gt;</span></span>
+<span id="cb2-49"><a href="#cb2-49" tabindex="-1"></a><span class="co">#&gt; 10                   &lt;NA&gt;</span></span></code></pre></div>
+<p>In the table of missing taxa:</p>
+<ul>
+<li><code>Type</code> states whether the taxon is grafted within a
+target clade (<code>&quot;taxa&quot;</code>), or as part of a missing clade
+(<code>&quot;clades&quot;</code>).</li>
+<li><code>Target_clade</code> and <code>Sister_clade</code> are written
+with <strong>group names</strong> (e.g., <code>&quot;Family_B&quot;</code>), or
+with the <strong>name of a taxonomic level</strong> (e.g.,
+<code>&quot;Family&quot;</code>, meaning the family of the taxon, as written in
+the column <code>Family</code>).</li>
+<li><code>Excluded_subclades</code> are written the same way, several
+groups being separated by semicolons.</li>
+</ul>
+<p>The tables can be imported from external files with the same checks
+against the backbone:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># ------ Step 2: Import the tables from external files (optional) ------ #</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>backbone_path <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;toy_backbone_taxonomic_table.csv&quot;</span>, <span class="at">package =</span> <span class="st">&quot;phylograftR&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>missing_taxa_path <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;toy_missing_taxa_taxonomic_table.csv&quot;</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>                                 <span class="at">package =</span> <span class="st">&quot;phylograftR&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># Import the taxonomy of the backbone, checked against the tips of the phylogeny</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>backbone_taxonomic_table <span class="ot">&lt;-</span> <span class="fu">import_taxonomic_table</span>(<span class="at">file =</span> backbone_path, <span class="at">type =</span> <span class="st">&quot;backbone&quot;</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>                                                   <span class="at">phy =</span> toy_backbone, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co"># Import the description of the taxa to graft</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>missing_taxa_taxonomic_table <span class="ot">&lt;-</span> <span class="fu">import_taxonomic_table</span>(<span class="at">file =</span> missing_taxa_path, <span class="at">type =</span> <span class="st">&quot;missing_taxa&quot;</span>,</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>                                                       <span class="at">phy =</span> toy_backbone, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># ------ Step 3: Build the missing_taxa_list ------ #</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co"># Taxonomic names are converted into clades of the backbone phylogeny</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>missing_taxa_lists <span class="ot">&lt;-</span> <span class="fu">build_missing_taxa_list_from_taxonomy</span>(</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">backbone_taxonomic_table =</span> toy_backbone_taxonomic_table,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">missing_taxa_taxonomic_table =</span> toy_missing_taxa_taxonomic_table,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">phy =</span> toy_backbone,</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co"># Since both types of taxa were provided, the output has one list per grafting function</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="fu">names</span>(missing_taxa_lists)</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; [1] &quot;taxa&quot;   &quot;clades&quot;</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="fu">str</span>(missing_taxa_lists<span class="sc">$</span>taxa, <span class="at">max.level =</span> <span class="dv">1</span>)</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; List of 6</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;  $ Taxon_name               : chr [1:7] &quot;New_sp1&quot; &quot;New_sp2&quot; &quot;New_sp3&quot; &quot;New_sp4&quot; ...</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;  $ Target_clade             :List of 7</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;  $ Target_clade_name        : Named chr [1:7] &quot;Family_A&quot; &quot;Family_A&quot; &quot;Family_A&quot; &quot;Family_B&quot; ...</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:7] &quot;New_sp1&quot; &quot;New_sp2&quot; &quot;New_sp3&quot; &quot;New_sp4&quot; ...</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt;  $ include_target_clade_stem: Named logi [1:7] TRUE TRUE FALSE NA TRUE NA ...</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:7] &quot;New_sp1&quot; &quot;New_sp2&quot; &quot;New_sp3&quot; &quot;New_sp4&quot; ...</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;  $ Excluded_subclades       :List of 7</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt;  $ exclude_subclades_stem   :List of 7</span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co"># Clades are written as pairs of tips, and named after their taxonomic groups</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a>missing_taxa_lists<span class="sc">$</span>taxa<span class="sc">$</span>Target_clade<span class="sc">$</span>New_sp1</span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t26&quot; &quot;t19&quot;</span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a>missing_taxa_lists<span class="sc">$</span>taxa<span class="sc">$</span>Target_clade_name</span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt;     New_sp1     New_sp2     New_sp3     New_sp4     New_sp5     New_sp6 </span></span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="co">#&gt;  &quot;Family_A&quot;  &quot;Family_A&quot;  &quot;Family_A&quot;  &quot;Family_B&quot; &quot;Subfam_B1&quot;     &quot;Gen_2&quot; </span></span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt;     New_sp7 </span></span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a><span class="co">#&gt;  &quot;Tribe_B2&quot;</span></span>
+<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a></span>
+<span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a><span class="co"># Taxa to graft as a clade have the same sister clade: they will be grafted together</span></span>
+<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a>missing_taxa_lists<span class="sc">$</span>clades<span class="sc">$</span>Sister_clade_name</span>
+<span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a><span class="co">#&gt; Genus_a_sp1 Genus_a_sp2 Genus_b_sp1 </span></span>
+<span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a><span class="co">#&gt;     &quot;Gen_1&quot;     &quot;Gen_1&quot; &quot;Tribe_A1b&quot;</span></span>
+<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a></span>
+<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a><span class="co"># Information on the groups used (clade node, number of tips, monophyly...) can be inspected</span></span>
+<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a><span class="co"># in the attribute &quot;taxonomic_groups&quot;</span></span>
+<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a><span class="fu">attr</span>(missing_taxa_lists, <span class="st">&quot;taxonomic_groups&quot;</span>)[, <span class="fu">c</span>(<span class="st">&quot;Group&quot;</span>, <span class="st">&quot;Level&quot;</span>, <span class="st">&quot;clade_node&quot;</span>,</span>
+<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a>                                                 <span class="st">&quot;n_tips_clade&quot;</span>, <span class="st">&quot;monophyletic&quot;</span>)]</span>
+<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a><span class="co">#&gt;        Group     Level clade_node n_tips_clade monophyletic</span></span>
+<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a><span class="co">#&gt; 1   Family_A    Family         32           17         TRUE</span></span>
+<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a><span class="co">#&gt; 2   Family_B    Family         33           13         TRUE</span></span>
+<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a><span class="co">#&gt; 3  Subfam_B1 Subfamily         34            9         TRUE</span></span>
+<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a><span class="co">#&gt; 4      Gen_2     Genus         27            1         TRUE</span></span>
+<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a><span class="co">#&gt; 5   Tribe_B2     Tribe         53            3         TRUE</span></span>
+<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a><span class="co">#&gt; 6      Gen_1     Genus         50            3         TRUE</span></span>
+<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a><span class="co">#&gt; 7  Tribe_A1b     Tribe         40            2         TRUE</span></span>
+<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a><span class="co">#&gt; 8  Subfam_A1 Subfamily         37            8         TRUE</span></span>
+<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a><span class="co">#&gt; 9  Tribe_A2a     Tribe         39            6         TRUE</span></span>
+<span id="cb4-52"><a href="#cb4-52" tabindex="-1"></a><span class="co">#&gt; 10     Gen_3     Genus         14            1         TRUE</span></span></code></pre></div>
+<p><strong>Non-monophyletic groups.</strong> A taxonomic group is not
+always monophyletic in the backbone. The argument
+<code>non_monophyletic</code> controls what is done:</p>
+<ul>
+<li><code>&quot;exclude&quot;</code> (default) excludes the group from the
+grafting constraints of the taxa that use it;</li>
+<li><code>&quot;mrca&quot;</code> uses the clade of the MRCA of its tips (which
+includes tips of other groups);</li>
+<li><code>&quot;error&quot;</code> stops.</li>
+</ul>
+<p>The groups, their MRCA node and their monophyly are reported in the
+attribute <code>&quot;taxonomic_groups&quot;</code>, so you can check them.</p>
+<p>The groups can only be those of the taxonomy. To use <strong>any
+clade of the backbone</strong> as a target, sister or excluded clade,
+define the clades directly with a data.frame (<em>Section 4</em>), or
+edit the list afterwards (<em>Section 8</em>).</p>
+<p><br></p>
+</div>
+<div id="build-from-a-data.frame-build_missing_taxa_list" class="section level2">
+<h2>4/ Build from a data.frame:
+<code>build_missing_taxa_list()</code></h2>
+<p>Taxonomic groups are convenient, but they have limits: a clade that
+is not an identified taxonomic group cannot be used.
+<code>build_missing_taxa_list()</code> <strong>converts a
+data.frame</strong> into a <code>missing_taxa_list</code>, and gives you
+<strong>full control</strong> over the constraints: <strong>clades are
+defined directly on the backbone</strong>, from:</p>
+<ul>
+<li><strong>tips</strong>: a pair of tips whose MRCA is the clade
+(<code>&quot;t26, t18&quot;</code>), or a single tip;</li>
+<li><strong>node IDs</strong>: the ID of the node of the backbone, as
+shown by <code>ape::nodelabels()</code> (e.g., <code>&quot;34&quot;</code>).</li>
+</ul>
+<p><strong>Any node of the backbone can therefore be a target, sister,
+or excluded clade</strong>, whatever the taxonomy. This option makes it
+much easier to <strong>fine-tune</strong> the grafting constraints, for
+instance to graft a taxon within a clade that is not named in any
+taxonomy, or to exclude a precise subclade. Tips and node IDs can be
+<strong>mixed</strong> between clades, but a single clade is defined by
+either tips or one node ID.</p>
+<p>The data.frame has <strong>one row per taxon</strong>, and each
+column fills an item of the list:</p>
+<ul>
+<li><code>Taxon_name</code>: name of the taxon to graft.</li>
+<li><code>Target_clade</code> (or <code>Sister_clade</code>): tips used
+to retrieve the MRCA of the clade, separated by commas
+(<code>&quot;t26,t18&quot;</code>), or a node ID (<code>&quot;34&quot;</code>).</li>
+<li><code>Target_clade_name</code>: (optional) name of the clade, used
+in printed reports (<code>&quot;Genus_1&quot;</code>).</li>
+<li><code>include_target_clade_stem</code>: <code>TRUE</code> or
+<code>FALSE</code>. A blank cell means the default value of the grafting
+function.</li>
+<li><code>Excluded_subclades</code>: tips (or node IDs) of the
+subclades. Several subclades are separated by
+<strong>semicolons</strong>, and the tips of one subclade by
+<strong>commas</strong> (<code>&quot;t10,t19;t26,t4&quot;</code>).</li>
+<li><code>Excluded_subclades_names</code>: names of the subclades,
+separated by semicolons (<code>&quot;Tribe_A;Genus_3&quot;</code>).</li>
+<li><code>exclude_subclades_stem</code>: <code>TRUE</code> or
+<code>FALSE</code> with one value per excluded subclade, separated by
+semicolons (<code>&quot;TRUE;FALSE&quot;</code>).</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># ------ Step 1: Build the missing_taxa_list from a data.frame ------ #</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co"># Write the table in R, with a mix of tips and node IDs (see the plot of the backbone)</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>my_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> <span class="fu">c</span>(<span class="st">&quot;M1&quot;</span>, <span class="st">&quot;M2&quot;</span>, <span class="st">&quot;M3&quot;</span>),</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                       <span class="at">Target_clade =</span> <span class="fu">c</span>(<span class="st">&quot;34&quot;</span>, <span class="st">&quot;t5, t12&quot;</span>, <span class="st">&quot;t26, t18&quot;</span>),</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>                       <span class="at">Excluded_subclades =</span> <span class="fu">c</span>(<span class="st">&quot;50&quot;</span>, <span class="cn">NA</span>, <span class="st">&quot;t10, t19; t26, t4&quot;</span>),</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>                       <span class="at">Excluded_subclades_names =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="cn">NA</span>, <span class="st">&quot;group_1; group_2&quot;</span>),</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>                       <span class="at">include_target_clade_stem =</span> <span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>, <span class="cn">NA</span>))</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>my_table</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt;   Taxon_name Target_clade Excluded_subclades Excluded_subclades_names</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; 1         M1           34                 50                     &lt;NA&gt;</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; 2         M2      t5, t12               &lt;NA&gt;                     &lt;NA&gt;</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; 3         M3     t26, t18  t10, t19; t26, t4         group_1; group_2</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt;   include_target_clade_stem</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; 1                      TRUE</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; 2                     FALSE</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; 3                        NA</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co"># The table is checked against the backbone phylogeny.</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co"># Node IDs are converted into tips, and the conversions are printed</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>my_missing_taxa_list <span class="ot">&lt;-</span> <span class="fu">build_missing_taxa_list</span>(<span class="at">data =</span> my_table, <span class="at">phy =</span> toy_backbone)</span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; 2 node ID(s) converted into tips (a tip node gives its tip, an internal node gives one pair of tips with this MRCA node):</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt;   - node 34 (internal node, 9 tips) -&gt; t8, t7   [Target_clade: M1]</span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt;   - node 50 (internal node, 3 tips) -&gt; t13, t27   [Excluded_subclades: M1]</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="fu">str</span>(my_missing_taxa_list, <span class="at">max.level =</span> <span class="dv">1</span>)</span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt; List of 4</span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt;  $ Taxon_name               : chr [1:3] &quot;M1&quot; &quot;M2&quot; &quot;M3&quot;</span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt;  $ Target_clade             :List of 3</span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt;  $ include_target_clade_stem: Named logi [1:3] TRUE FALSE NA</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:3] &quot;M1&quot; &quot;M2&quot; &quot;M3&quot;</span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt;  $ Excluded_subclades       :List of 3</span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co"># Node 34 is now defined by a pair of tips whose MRCA is node 34</span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a>my_missing_taxa_list<span class="sc">$</span>Target_clade<span class="sc">$</span>M1</span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t8&quot; &quot;t7&quot;</span></span></code></pre></div>
+<p>Any data.frame can be used, for instance a table loaded in R with
+<code>read.csv()</code>. The function removes extra spaces and treats
+blank cells and <code>&quot;NA&quot;</code> as missing values.</p>
+<div id="import-the-table-from-an-external-file" class="section level3">
+<h3>Import the table from an external file</h3>
+<p>The table can also be stored in an <strong>external file</strong>,
+which is convenient to edit it with a spreadsheet, to share it, or to
+keep it with the data of a project.
+<code>import_missing_taxa_list()</code> is <strong>equivalent</strong>
+to reading the file and giving the data.frame to
+<code>build_missing_taxa_list()</code>: it uses the same table format,
+the same checks and the same conversions of node IDs, and the clades are
+defined directly on the backbone, with the same flexibility. Text files
+(<code>.csv</code>, <code>.tsv</code>, <code>.txt</code>) and Excel
+files (<code>.xlsx</code>, <code>.xls</code>) are supported, and the
+format is chosen from the extension of the file.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># ------ Step 2 (optional): Import the table from an external file ------ #</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co"># Path to a table provided with the package</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>file_path <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;toy_missing_taxa.csv&quot;</span>, <span class="at">package =</span> <span class="st">&quot;phylograftR&quot;</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co"># One row per taxon, one column per item of the list</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="fu">read.csv</span>(file_path)</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;   Taxon_name Target_clade Target_clade_name include_target_clade_stem</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1      t26,t18          Family_A                      TRUE</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2      t26,t18          Family_A                      TRUE</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3      t26,t18          Family_A                     FALSE</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4       t8,t22          Family_B                        NA</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5        t8,t7         Subfam_B1                      TRUE</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6           t5             Gen_2                        NA</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7       t5,t12          Tribe_B2                     FALSE</span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt;   Excluded_subclades Excluded_subclades_names exclude_subclades_stem</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; 1     t10,t19;t26,t4      Subfam_A1;Tribe_A2a             TRUE;FALSE</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="co">#&gt; 2         t26,t4;t30          Tribe_A2a;Gen_3             FALSE;TRUE</span></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="co">#&gt; 3                                                                   </span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co">#&gt; 4                                                                   </span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="co">#&gt; 5            t13,t27                    Gen_1                       </span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a><span class="co">#&gt; 6                                                                   </span></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co">#&gt; 7</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="co"># Import it as a missing_taxa_list, checked against the backbone phylogeny</span></span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>missing_taxa_list <span class="ot">&lt;-</span> <span class="fu">import_missing_taxa_list</span>(<span class="at">file =</span> file_path, <span class="at">phy =</span> toy_backbone)</span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a></span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a><span class="co"># Items are named after the taxa, tips are split, and excluded subclades are named</span></span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a><span class="fu">str</span>(missing_taxa_list, <span class="at">max.level =</span> <span class="dv">1</span>)</span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a><span class="co">#&gt; List of 6</span></span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a><span class="co">#&gt;  $ Taxon_name               : chr [1:7] &quot;New_sp1&quot; &quot;New_sp2&quot; &quot;New_sp3&quot; &quot;New_sp4&quot; ...</span></span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a><span class="co">#&gt;  $ Target_clade             :List of 7</span></span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a><span class="co">#&gt;  $ Target_clade_name        : Named chr [1:7] &quot;Family_A&quot; &quot;Family_A&quot; &quot;Family_A&quot; &quot;Family_B&quot; ...</span></span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a><span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:7] &quot;New_sp1&quot; &quot;New_sp2&quot; &quot;New_sp3&quot; &quot;New_sp4&quot; ...</span></span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a><span class="co">#&gt;  $ include_target_clade_stem: Named logi [1:7] TRUE TRUE FALSE NA TRUE NA ...</span></span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a><span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:7] &quot;New_sp1&quot; &quot;New_sp2&quot; &quot;New_sp3&quot; &quot;New_sp4&quot; ...</span></span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a><span class="co">#&gt;  $ Excluded_subclades       :List of 7</span></span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a><span class="co">#&gt;  $ exclude_subclades_stem   :List of 7</span></span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a></span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a><span class="co"># Example of the clades of one taxon</span></span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a>missing_taxa_list<span class="sc">$</span>Target_clade<span class="sc">$</span>New_sp1</span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t26&quot; &quot;t18&quot;</span></span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a>missing_taxa_list<span class="sc">$</span>Excluded_subclades<span class="sc">$</span>New_sp1</span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a><span class="co">#&gt; $Subfam_A1</span></span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t10&quot; &quot;t19&quot;</span></span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a><span class="co">#&gt; $Tribe_A2a</span></span>
+<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t26&quot; &quot;t4&quot;</span></span>
+<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a>missing_taxa_list<span class="sc">$</span>exclude_subclades_stem<span class="sc">$</span>New_sp1</span>
+<span id="cb6-50"><a href="#cb6-50" tabindex="-1"></a><span class="co">#&gt; Subfam_A1 Tribe_A2a </span></span>
+<span id="cb6-51"><a href="#cb6-51" tabindex="-1"></a><span class="co">#&gt;      TRUE     FALSE</span></span>
+<span id="cb6-52"><a href="#cb6-52" tabindex="-1"></a></span>
+<span id="cb6-53"><a href="#cb6-53" tabindex="-1"></a><span class="co"># The result is the same as reading the file and building the list from the data.frame</span></span>
+<span id="cb6-54"><a href="#cb6-54" tabindex="-1"></a><span class="fu">identical</span>(missing_taxa_list, <span class="fu">build_missing_taxa_list</span>(<span class="at">data =</span> <span class="fu">read.csv</span>(file_path), <span class="at">phy =</span> toy_backbone))</span>
+<span id="cb6-55"><a href="#cb6-55" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb6-56"><a href="#cb6-56" tabindex="-1"></a></span>
+<span id="cb6-57"><a href="#cb6-57" tabindex="-1"></a><span class="co"># The same list is provided as a dataset</span></span>
+<span id="cb6-58"><a href="#cb6-58" tabindex="-1"></a><span class="fu">data</span>(toy_missing_taxa_list)</span>
+<span id="cb6-59"><a href="#cb6-59" tabindex="-1"></a><span class="fu">identical</span>(missing_taxa_list, toy_missing_taxa_list)</span>
+<span id="cb6-60"><a href="#cb6-60" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>To import an <strong>Excel file</strong>, use the same function with
+the <code>sheet</code> argument to select the sheet. It requires the
+package <code>readxl</code>. Any other format (e.g., <code>.ods</code>,
+or an export of an online spreadsheet) can be read with your own
+function, provided in <code>reader</code>.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># Import an Excel file</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>missing_taxa_list <span class="ot">&lt;-</span> <span class="fu">import_missing_taxa_list</span>(<span class="at">file =</span> <span class="st">&quot;my_missing_taxa.xlsx&quot;</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                                              <span class="at">phy =</span> toy_backbone, <span class="at">sheet =</span> <span class="st">&quot;missing_taxa&quot;</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co"># Import any other format with a reader function (e.g., &#39;.ods&#39;)</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>missing_taxa_list <span class="ot">&lt;-</span> <span class="fu">import_missing_taxa_list</span>(<span class="at">file =</span> <span class="st">&quot;my_missing_taxa.ods&quot;</span>, <span class="at">phy =</span> toy_backbone,</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>                                              <span class="at">reader =</span> readODS<span class="sc">::</span>read_ods)</span></code></pre></div>
+<p><br></p>
+</div>
+</div>
+<div id="convert-node-ids-of-a-list-convert_nodes_to_tips" class="section level2">
+<h2>5/ Convert node IDs of a list:
+<code>convert_nodes_to_tips()</code></h2>
+<p>If you build the <strong>list directly in R</strong>, by hand
+(without a table), clades can be defined by node IDs too, but the
+grafting functions only accept <strong>tips</strong>.
+<code>convert_nodes_to_tips()</code> converts all the node IDs of the
+list into tips. It also <strong>checks the list against the backbone
+tree</strong> to make sure that it is valid: items named after
+<code>$Taxon_name</code>, node IDs and tips that exist in the backbone,
+no mix of tips and node IDs in a clade… It is used internally by
+<code>build_missing_taxa_list()</code>,
+<code>import_missing_taxa_list()</code> and
+<code>build_missing_taxa_list_from_taxonomy()</code>, so it is only
+needed for lists written by hand.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># A list with clades defined by node IDs, tips, or both</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>list_with_nodes <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">Taxon_name =</span> <span class="fu">c</span>(<span class="st">&quot;X1&quot;</span>, <span class="st">&quot;X2&quot;</span>, <span class="st">&quot;X3&quot;</span>),</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">Target_clade =</span> <span class="fu">list</span>(<span class="at">X1 =</span> <span class="dv">34</span>, <span class="at">X2 =</span> <span class="fu">c</span>(<span class="st">&quot;t5&quot;</span>, <span class="st">&quot;t12&quot;</span>), <span class="at">X3 =</span> <span class="st">&quot;t26&quot;</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">Excluded_subclades =</span> <span class="fu">list</span>(<span class="at">X1 =</span> <span class="fu">list</span>(<span class="at">group_1 =</span> <span class="dv">50</span>), <span class="at">X2 =</span> <span class="cn">NULL</span>, <span class="at">X3 =</span> <span class="cn">NULL</span>))</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co"># Convert the node IDs into tips: the conversions are printed</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>list_with_tips <span class="ot">&lt;-</span> <span class="fu">convert_nodes_to_tips</span>(list_with_nodes, <span class="at">phy =</span> toy_backbone)</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; 2 node ID(s) converted into tips (a tip node gives its tip, an internal node gives one pair of tips with this MRCA node):</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;   - node 34 (internal node, 9 tips) -&gt; t8, t7   [Target_clade: X1]</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt;   - node 50 (internal node, 3 tips) -&gt; t13, t27   [Excluded_subclades: X1]</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>list_with_tips<span class="sc">$</span>Target_clade<span class="sc">$</span>X1</span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t8&quot; &quot;t7&quot;</span></span></code></pre></div>
+<p>An internal node is converted into a <strong>pair of tips whose MRCA
+is the node</strong>, chosen in a deterministic way. A clade that is
+already defined by tips in the list is always defined by the same tips,
+so the same clade has the same tips in all the objects. The
+<code>total_richness_per_clades</code> (<em>Section 9</em>) can be
+converted at the same time to keep this consistency:
+<code>convert_nodes_to_tips(list, phy, total_richness_per_clades = richness)</code>.</p>
+<p><br></p>
+</div>
+<div id="species-attributes-allowed-states" class="section level2">
+<h2>6/ Species attributes: allowed states</h2>
+<p>Columns of the table can also restrict the <strong>states of a
+stochastic map</strong> where each taxon can be grafted. For instance,
+<code>allowed_states</code> gives one or several states for each taxon,
+separated by commas (blank cells mean no restriction for the taxon):</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>file_path <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;toy_missing_taxa_with_allowed_states.csv&quot;</span>, <span class="at">package =</span> <span class="st">&quot;phylograftR&quot;</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">read.csv</span>(file_path)[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;Target_clade_name&quot;</span>, <span class="st">&quot;allowed_states&quot;</span>)]</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt;   Taxon_name Target_clade_name allowed_states</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1          Family_A            red</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2          Family_A               </span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3          Family_A               </span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4          Family_B    blue, green</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5         Subfam_B1          green</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6             Gen_2               </span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7          Tribe_B2      blue, red</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co"># In this example, the allowed states define color (i.e., &quot;red&quot;, &quot;blue&quot;, &quot;green&quot;) that evolve along the branches of a `simmap`</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co"># and are used to contraint the grafting of each taxon depending on its allowed states.</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>missing_taxa_list_states <span class="ot">&lt;-</span> <span class="fu">import_missing_taxa_list</span>(<span class="at">file =</span> file_path, <span class="at">phy =</span> toy_backbone, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>missing_taxa_list_states<span class="sc">$</span>allowed_states</span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; $New_sp1</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; [1] &quot;red&quot;</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; $New_sp2</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; $New_sp3</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt; $New_sp4</span></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; [1] &quot;blue&quot;  &quot;green&quot;</span></span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt; $New_sp5</span></span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt; [1] &quot;green&quot;</span></span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt; $New_sp6</span></span>
+<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
+<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a><span class="co">#&gt; $New_sp7</span></span>
+<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a><span class="co">#&gt; [1] &quot;blue&quot; &quot;red&quot;</span></span></code></pre></div>
+<p>These constraints are used only when a stochastic map
+(<code>simmap</code>) is provided to the grafting function. Please refer
+to the dedicated tutorials explaining how to prepare the maps
+(<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>) and how to use the
+ranges and several traits (<code>vignette(&quot;biogeographic_data&quot;)</code>
+and <code>vignette(&quot;multiple_traits&quot;)</code>) for more detailed
+information.</p>
+<p><br></p>
+</div>
+<div id="both-types-of-missing-lineages-in-one-table" class="section level2">
+<h2>7/ Both types of missing lineages in one table</h2>
+<p>A single table can describe <strong>both types of missing
+lineages</strong>. With a column <code>Type</code> (<code>&quot;taxa&quot;</code>
+or <code>&quot;clades&quot;</code>), each row fills the clade item of its type
+(<code>Target_clade</code> or <code>Sister_clade</code>). Without
+<code>Type</code>, the clade item filled (<code>Target_clade</code> or
+<code>Sister_clade</code>) defines the type of the row. The builders
+(<code>import_missing_taxa_list()</code>,
+<code>build_missing_taxa_list()</code>,
+<code>build_missing_taxa_list_from_taxonomy()</code>) then return a
+<strong>named list with two elements</strong>, <code>taxa</code> and
+<code>clades</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># ------ Step 1: A table with both types ------ #</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>both_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> <span class="fu">c</span>(<span class="st">&quot;M1&quot;</span>, <span class="st">&quot;M2&quot;</span>, <span class="st">&quot;M3&quot;</span>, <span class="st">&quot;M4&quot;</span>),</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>                         <span class="at">Type =</span> <span class="fu">c</span>(<span class="st">&quot;taxa&quot;</span>, <span class="st">&quot;taxa&quot;</span>, <span class="st">&quot;clades&quot;</span>, <span class="st">&quot;clades&quot;</span>),</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>                         <span class="at">Target_clade =</span> <span class="fu">c</span>(<span class="st">&quot;t26, t18&quot;</span>, <span class="st">&quot;t5, t12&quot;</span>, <span class="cn">NA</span>, <span class="cn">NA</span>),</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>                         <span class="at">Sister_clade =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="cn">NA</span>, <span class="st">&quot;t10, t19&quot;</span>, <span class="st">&quot;t10, t19&quot;</span>),</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>                         <span class="at">Excluded_subclades =</span> <span class="fu">c</span>(<span class="st">&quot;t26, t4&quot;</span>, <span class="cn">NA</span>, <span class="cn">NA</span>, <span class="cn">NA</span>))</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co"># ------ Step 2: Build the lists ------ #</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>lists <span class="ot">&lt;-</span> <span class="fu">build_missing_taxa_list</span>(<span class="at">data =</span> both_table, <span class="at">phy =</span> toy_backbone)</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="fu">names</span>(lists)</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#&gt; [1] &quot;taxa&quot;   &quot;clades&quot;</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>lists<span class="sc">$</span>taxa<span class="sc">$</span>Taxon_name      <span class="co"># Taxa to graft with graft_missing_taxa()</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co">#&gt; [1] &quot;M1&quot; &quot;M2&quot;</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>lists<span class="sc">$</span>clades<span class="sc">$</span>Taxon_name    <span class="co"># Taxa to graft with graft_missing_clades()</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co">#&gt; [1] &quot;M3&quot; &quot;M4&quot;</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>lists<span class="sc">$</span>clades<span class="sc">$</span>Sister_clade  <span class="co"># M3 and M4 have the same sister clade: they form one missing clade</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="co">#&gt; $M3</span></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t10&quot; &quot;t19&quot;</span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="co">#&gt; $M4</span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t10&quot; &quot;t19&quot;</span></span></code></pre></div>
+<p>This <code>list(taxa, clades)</code> is the format expected by
+<code>graft_missing_taxa_and_clades()</code>, which grafts both types in
+one run, see <code>vignette(&quot;combine_missing_taxa_and_clades&quot;)</code>.
+The functions that <strong>check</strong> the grafting before or after
+(<code>check_grafting_plan()</code>,
+<code>check_grafting_constraints()</code>,
+<code>extract_grafting_info()</code>,
+<code>extract_sampling_info()</code>) and
+<code>convert_nodes_to_tips()</code> accept it too. They return a named
+list with the result of each type, see
+<code>vignette(&quot;check_grafting&quot;)</code>. To graft the types separately,
+use each element with the matching function: <code>lists$taxa</code> for
+<code>graft_missing_taxa()</code> and <code>lists$clades</code> for
+<code>graft_missing_clades()</code>.</p>
+<p><br></p>
+</div>
+<div id="edit-the-list-manually" class="section level2">
+<h2>8/ Edit the list manually</h2>
+<p>The <code>missing_taxa_list</code> is a regular R list. Whatever the
+way it was built (taxonomy, data.frame, external table, or by hand), it
+can be <strong>edited directly in R</strong> before grafting, and the
+same edit can also be applied to a list of both types of taxa
+(<em>Section 7</em>), element by element. This is the <strong>final
+level of fine-tuning</strong> and control: any item can be changed for
+any taxon.</p>
+<p>The rules to keep in mind are:</p>
+<ul>
+<li>every item must remain <strong>named after
+<code>$Taxon_name</code></strong> and have <strong>one element per
+taxon</strong> (in the same order);</li>
+<li>clades must be defined by <strong>tips</strong>: if you use node
+IDs, convert them with <code>convert_nodes_to_tips()</code> (see
+<em>Section 5</em>);</li>
+<li>the list of a given type must keep its clade item
+(<code>Target_clade</code> for the missing taxa,
+<code>Sister_clade</code> for the missing clades).</li>
+</ul>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># ------ Step 1: Edit the list ------ #</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co"># Start from the list of taxa built from the taxonomy (Section 3)</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>taxa_list <span class="ot">&lt;-</span> missing_taxa_lists<span class="sc">$</span>taxa</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co"># Allow New_sp3 to be grafted on the stem branch of its target clade</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>taxa_list<span class="sc">$</span>include_target_clade_stem[[<span class="st">&quot;New_sp3&quot;</span>]] <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co"># Add an excluded subclade (and exclude its stem) for New_sp4</span></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>taxa_list<span class="sc">$</span>Excluded_subclades[[<span class="st">&quot;New_sp4&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Gen_1 =</span> <span class="fu">c</span>(<span class="st">&quot;t13&quot;</span>, <span class="st">&quot;t27&quot;</span>))</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>taxa_list<span class="sc">$</span>exclude_subclades_stem[[<span class="st">&quot;New_sp4&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">Gen_1 =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a><span class="co"># Remove a taxon: subset all the items with the same selection</span></span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a>keep <span class="ot">&lt;-</span> taxa_list<span class="sc">$</span>Taxon_name <span class="sc">!=</span> <span class="st">&quot;New_sp7&quot;</span></span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a>taxa_list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(taxa_list, <span class="cf">function</span> (item) item[keep])</span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a></span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a><span class="co"># ------ Step 2: Check the edited list ------ #</span></span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a></span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co"># The structure of the list and the availability of branches for grafting</span></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a><span class="co"># can be checked with check_grafting_plan() (see `vignette(&quot;check_grafting&quot;)`)</span></span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a>plan <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_list, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a>plan[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;n_branches&quot;</span>, <span class="st">&quot;feasible&quot;</span>)]</span>
+<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a><span class="co">#&gt;   Taxon_name n_branches feasible</span></span>
+<span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1          8     TRUE</span></span>
+<span id="cb11-25"><a href="#cb11-25" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2         22     TRUE</span></span>
+<span id="cb11-26"><a href="#cb11-26" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3         33     TRUE</span></span>
+<span id="cb11-27"><a href="#cb11-27" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4         20     TRUE</span></span>
+<span id="cb11-28"><a href="#cb11-28" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5         12     TRUE</span></span>
+<span id="cb11-29"><a href="#cb11-29" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6          1     TRUE</span></span></code></pre></div>
+<p>The checks stop with an explicit message if the edited list is not
+valid, for instance if a clade is defined by a node ID, or if an item
+does not have one element per taxon.</p>
+<p><br></p>
+</div>
+<div id="the-total-richness-of-clades" class="section level2">
+<h2>9/ The total richness of clades</h2>
+<p>The backbone is incomplete, and the missing taxa of the list are not
+necessarily all the missing species: other species may also be
+<strong>unsampled</strong> (neither in the backbone nor in the
+<code>missing_taxa_list</code>). Optionally, the grafting functions use
+a <strong><code>total_richness_per_clades</code></strong> to account for
+them: it gives the <strong>total number of species of some
+clades</strong> of the backbone (their richness), and their number of
+unsampled species is deduced from it:</p>
+<p><code>total_richness = nb_backbone + nb_missing + nb_unsampled</code></p>
+<p>with <code>nb_backbone</code> the tips of the backbone in the clade,
+<code>nb_missing</code> the taxa of the <code>missing_taxa_list</code>
+that belong to the clade, and <code>nb_unsampled</code> the unsampled
+species. This information is used to estimate the <strong>sampling
+fraction</strong> of the clades when fitting the <strong>birth-death
+models</strong> used to draw the divergence times of the grafted
+lineages (it requires <code>method = &quot;BD_clades&quot;</code> for the missing
+taxa). <strong>Unsampled species are only used to fit the
+rates</strong>: they are not grafted and do not need to be identified.
+Only their count is deduced from the <code>total_richness</code> values
+provided per clade:</p>
+<ul>
+<li>For a clade with a total richness provided,
+<code>nb_unsampled = total_richness - nb_backbone - nb_missing</code>.</li>
+<li>For a clade without a total richness (<code>NA</code>, or not
+listed), <code>nb_unsampled</code> is the sum of the unsampled species
+of the largest clades nested within it that have a total richness
+provided (or 0 if there is none). Unsampled species of nested clades are
+never counted twice.</li>
+<li>Without <code>total_richness_per_clades</code>, all the clades are
+assumed to have no unsampled species.</li>
+</ul>
+<p>A table with the clades and their total richness is converted by
+<code>build_total_richness_per_clades()</code> (internal data.frame) or
+<code>import_total_richness_per_clades()</code> (external file). Both
+need the <strong><code>missing_taxa_list</code></strong> (or the
+<code>list(taxa, clades)</code>) to check the richness values against
+the species of the backbone and of the list, and to make sure that the
+clades are defined by the same tips.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># ------ Step 1: A table with the clades and their total richness ------ #</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="co"># Clades are written with their taxonomic names, as in the list built from the taxonomy.</span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co"># Use NA if the total richness is unknown</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>richness_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Clade =</span> <span class="fu">c</span>(<span class="st">&quot;Family_A&quot;</span>, <span class="st">&quot;Family_B&quot;</span>, <span class="st">&quot;Subfam_B1&quot;</span>, <span class="st">&quot;Tribe_B2&quot;</span>),</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>                             <span class="at">total_richness =</span> <span class="fu">c</span>(<span class="dv">25</span>, <span class="cn">NA</span>, <span class="dv">14</span>, <span class="dv">8</span>))</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co"># ------ Step 2: Build the total_richness_per_clades ------ #</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="co"># Check against the backbone and the lists of both types</span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>richness_per_clades <span class="ot">&lt;-</span> <span class="fu">build_total_richness_per_clades</span>(<span class="at">data =</span> richness_table, <span class="at">phy =</span> toy_backbone,</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>                                                       <span class="at">missing_taxa_list =</span> missing_taxa_lists,</span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a>                                                       <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="co"># With both types, the output has one element per type. Clades are defined by the same tips as in the lists</span></span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a><span class="fu">names</span>(richness_per_clades)</span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt; [1] &quot;taxa&quot;   &quot;clades&quot;</span></span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="fu">str</span>(richness_per_clades, <span class="at">max.level =</span> <span class="dv">2</span>)</span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="co">#&gt; List of 2</span></span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a><span class="co">#&gt;  $ taxa  :List of 3</span></span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a><span class="co">#&gt;   ..$ Target_clade     :List of 7</span></span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a><span class="co">#&gt;   ..$ Target_clade_name: chr [1:7] &quot;Family_A&quot; &quot;Family_B&quot; &quot;Subfam_B1&quot; &quot;Tribe_B2&quot; ...</span></span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a><span class="co">#&gt;   ..$ total_richness   : int [1:7] 25 NA 14 8 NA NA NA</span></span>
+<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a><span class="co">#&gt;  $ clades:List of 3</span></span>
+<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a><span class="co">#&gt;   ..$ Sister_clade     :List of 7</span></span>
+<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a><span class="co">#&gt;   ..$ Sister_clade_name: chr [1:7] &quot;Family_A&quot; &quot;Family_B&quot; &quot;Subfam_B1&quot; &quot;Tribe_B2&quot; ...</span></span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a><span class="co">#&gt;   ..$ total_richness   : int [1:7] 25 NA 14 8 NA NA NA</span></span>
+<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a><span class="co">#&gt;  - attr(*, &quot;richness_table&quot;)=&#39;data.frame&#39;:   7 obs. of  8 variables:</span></span>
+<span id="cb12-29"><a href="#cb12-29" tabindex="-1"></a><span class="co">#&gt;   ..$ Clade_name             : chr [1:7] &quot;Family_A&quot; &quot;Family_B&quot; &quot;Subfam_B1&quot; &quot;Tribe_B2&quot; ...</span></span>
+<span id="cb12-30"><a href="#cb12-30" tabindex="-1"></a><span class="co">#&gt;   ..$ Clade_tips             : chr [1:7] &quot;t26, t19&quot; &quot;t8, t22&quot; &quot;t8, t7&quot; &quot;t5, t12&quot; ...</span></span>
+<span id="cb12-31"><a href="#cb12-31" tabindex="-1"></a><span class="co">#&gt;   ..$ total_richness_provided: num [1:7] 25 NA 14 8 NA NA NA</span></span>
+<span id="cb12-32"><a href="#cb12-32" tabindex="-1"></a><span class="co">#&gt;   ..$ total_richness         : num [1:7] 25 24 14 8 2 3 2</span></span>
+<span id="cb12-33"><a href="#cb12-33" tabindex="-1"></a><span class="co">#&gt;   ..$ nb_backbone_species    : num [1:7] 17 13 9 3 1 3 2</span></span>
+<span id="cb12-34"><a href="#cb12-34" tabindex="-1"></a><span class="co">#&gt;   ..$ nb_missing_species     : num [1:7] 4 6 3 2 1 0 0</span></span>
+<span id="cb12-35"><a href="#cb12-35" tabindex="-1"></a><span class="co">#&gt;   ..$ nb_unsampled_species   : num [1:7] 4 5 2 3 0 0 0</span></span>
+<span id="cb12-36"><a href="#cb12-36" tabindex="-1"></a><span class="co">#&gt;   ..$ sampling_fraction      : num [1:7] 0.84 0.792 0.857 0.625 1 ...</span></span>
+<span id="cb12-37"><a href="#cb12-37" tabindex="-1"></a></span>
+<span id="cb12-38"><a href="#cb12-38" tabindex="-1"></a><span class="co"># ------ Step 3: Check the richness before grafting ------ #</span></span>
+<span id="cb12-39"><a href="#cb12-39" tabindex="-1"></a></span>
+<span id="cb12-40"><a href="#cb12-40" tabindex="-1"></a><span class="co"># Expected richness and sampling fraction of each clade</span></span>
+<span id="cb12-41"><a href="#cb12-41" tabindex="-1"></a><span class="fu">attr</span>(richness_per_clades, <span class="st">&quot;richness_table&quot;</span>)[, <span class="fu">c</span>(<span class="st">&quot;Clade_name&quot;</span>, <span class="st">&quot;total_richness&quot;</span>, <span class="st">&quot;nb_backbone_species&quot;</span>,</span>
+<span id="cb12-42"><a href="#cb12-42" tabindex="-1"></a>                                                <span class="st">&quot;nb_missing_species&quot;</span>, <span class="st">&quot;nb_unsampled_species&quot;</span>,</span>
+<span id="cb12-43"><a href="#cb12-43" tabindex="-1"></a>                                                <span class="st">&quot;sampling_fraction&quot;</span>)]</span>
+<span id="cb12-44"><a href="#cb12-44" tabindex="-1"></a><span class="co">#&gt;   Clade_name total_richness nb_backbone_species nb_missing_species</span></span>
+<span id="cb12-45"><a href="#cb12-45" tabindex="-1"></a><span class="co">#&gt; 1   Family_A             25                  17                  4</span></span>
+<span id="cb12-46"><a href="#cb12-46" tabindex="-1"></a><span class="co">#&gt; 2   Family_B             24                  13                  6</span></span>
+<span id="cb12-47"><a href="#cb12-47" tabindex="-1"></a><span class="co">#&gt; 3  Subfam_B1             14                   9                  3</span></span>
+<span id="cb12-48"><a href="#cb12-48" tabindex="-1"></a><span class="co">#&gt; 4   Tribe_B2              8                   3                  2</span></span>
+<span id="cb12-49"><a href="#cb12-49" tabindex="-1"></a><span class="co">#&gt; 5      Gen_2              2                   1                  1</span></span>
+<span id="cb12-50"><a href="#cb12-50" tabindex="-1"></a><span class="co">#&gt; 6      Gen_1              3                   3                  0</span></span>
+<span id="cb12-51"><a href="#cb12-51" tabindex="-1"></a><span class="co">#&gt; 7  Tribe_A1b              2                   2                  0</span></span>
+<span id="cb12-52"><a href="#cb12-52" tabindex="-1"></a><span class="co">#&gt;   nb_unsampled_species sampling_fraction</span></span>
+<span id="cb12-53"><a href="#cb12-53" tabindex="-1"></a><span class="co">#&gt; 1                    4         0.8400000</span></span>
+<span id="cb12-54"><a href="#cb12-54" tabindex="-1"></a><span class="co">#&gt; 2                    5         0.7916667</span></span>
+<span id="cb12-55"><a href="#cb12-55" tabindex="-1"></a><span class="co">#&gt; 3                    2         0.8571429</span></span>
+<span id="cb12-56"><a href="#cb12-56" tabindex="-1"></a><span class="co">#&gt; 4                    3         0.6250000</span></span>
+<span id="cb12-57"><a href="#cb12-57" tabindex="-1"></a><span class="co">#&gt; 5                    0         1.0000000</span></span>
+<span id="cb12-58"><a href="#cb12-58" tabindex="-1"></a><span class="co">#&gt; 6                    0         1.0000000</span></span>
+<span id="cb12-59"><a href="#cb12-59" tabindex="-1"></a><span class="co">#&gt; 7                    0         1.0000000</span></span></code></pre></div>
+<p>The attribute <code>&quot;richness_table&quot;</code> gives the number of
+species in the backbone, the missing species of the list, and the
+<strong>unsampled species</strong> deduced from the total richness, and
+the resulting <strong>sampling fraction</strong> of each clade. It can
+be removed with <code>return_richness_table = FALSE</code>.</p>
+<p><strong>These values are expectations, computed before any
+grafting.</strong> The table assumes that all the taxa to graft end up
+in the clade where they belong. However, where taxa are actually grafted
+varies among the grafted phylogenies (and among the stochastic maps, if
+any): a taxon can be grafted on the stem of its target clade, which is
+outside of the clade, or within a clade nested in its target clade,
+which changes the richness of these nested clades. The <strong>effective
+sampling fractions of the grafted phylogenies may therefore
+differ</strong> from the expected ones. They can be extracted <strong>a
+posteriori</strong> with <code>extract_sampling_info()</code>, using the
+same <code>total_richness_per_clades</code>, on the output of the
+grafting functions (see the tutorial on checks:
+<code>vignette(&quot;check_grafting&quot;)</code>).</p>
+<div id="import-the-richness-data-from-an-external-file" class="section level3">
+<h3>Import the richness data from an external file</h3>
+<p>A table in an external file is imported the same way, with the same
+checks:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>file_path <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;toy_total_richness.csv&quot;</span>, <span class="at">package =</span> <span class="st">&quot;phylograftR&quot;</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="fu">read.csv</span>(file_path)</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="co">#&gt;   Target_clade Target_clade_name total_richness</span></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co">#&gt; 1      t26,t18          Family_A             25</span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="co">#&gt; 2       t8,t22          Family_B             NA</span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co">#&gt; 3        t8,t7         Subfam_B1             14</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co">#&gt; 4           t5             Gen_2             NA</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co">#&gt; 5       t5,t12          Tribe_B2              8</span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co"># The richness table of the toy dataset is defined with tips, and goes with the toy missing_taxa_list</span></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>richness <span class="ot">&lt;-</span> <span class="fu">import_total_richness_per_clades</span>(<span class="at">file =</span> file_path, <span class="at">phy =</span> toy_backbone,</span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>                                             <span class="at">missing_taxa_list =</span> toy_missing_taxa_list,</span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>                                             <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="fu">str</span>(richness, <span class="at">max.level =</span> <span class="dv">1</span>)</span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="co">#&gt; List of 3</span></span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="co">#&gt;  $ Target_clade     :List of 5</span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt;  $ Target_clade_name: chr [1:5] &quot;Family_A&quot; &quot;Family_B&quot; &quot;Subfam_B1&quot; &quot;Gen_2&quot; ...</span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">#&gt;  $ total_richness   : int [1:5] 25 NA 14 NA 8</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">#&gt;  - attr(*, &quot;richness_table&quot;)=&#39;data.frame&#39;:   5 obs. of  8 variables:</span></span></code></pre></div>
+</div>
+<div id="define-the-clades-of-the-richness-table-by-node-ids" class="section level3">
+<h3>Define the clades of the richness table by node IDs</h3>
+<p>The clades of the total richness table can be defined by <strong>tips
+or node IDs</strong> too (see <em>Section 4</em>). When the objects are
+written <strong>by hand in R</strong>,
+<code>convert_nodes_to_tips()</code> converts the node IDs of the
+<code>missing_taxa_list</code> <strong>and</strong> of its
+<code>total_richness_per_clades</code> in the same call (see <em>Section
+5</em>), so that <strong>the same clade is defined by the same tips in
+both objects</strong>:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># A missing_taxa_list written by hand with node IDs and tips (see Section 5)</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>list_with_nodes <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="at">Taxon_name =</span> <span class="fu">c</span>(<span class="st">&quot;X1&quot;</span>, <span class="st">&quot;X2&quot;</span>),</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>  <span class="at">Target_clade =</span> <span class="fu">list</span>(<span class="at">X1 =</span> <span class="dv">34</span>, <span class="at">X2 =</span> <span class="fu">c</span>(<span class="st">&quot;t5&quot;</span>, <span class="st">&quot;t12&quot;</span>)))</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co"># A total_richness_per_clades written by hand: node 34 is the clade of X1</span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>richness_with_nodes <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Target_clade =</span> <span class="fu">list</span>(<span class="dv">34</span>, <span class="fu">c</span>(<span class="st">&quot;t5&quot;</span>, <span class="st">&quot;t12&quot;</span>)),</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>                            <span class="at">total_richness =</span> <span class="fu">c</span>(<span class="dv">14</span>, <span class="dv">8</span>))</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a></span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="co"># Convert both objects at the same time</span></span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>converted <span class="ot">&lt;-</span> <span class="fu">convert_nodes_to_tips</span>(<span class="at">missing_taxa_list =</span> list_with_nodes, <span class="at">phy =</span> toy_backbone,</span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>                                   <span class="at">total_richness_per_clades =</span> richness_with_nodes)</span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="co">#&gt; 1 node ID(s) converted into tips (a tip node gives its tip, an internal node gives one pair of tips with this MRCA node):</span></span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="co">#&gt;   - node 34 (internal node, 9 tips) -&gt; t8, t7   [Target_clade: X1 | total_richness_per_clades$Target_clade: clade 1]</span></span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="fu">names</span>(converted)</span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a><span class="co">#&gt; [1] &quot;missing_taxa_list&quot;         &quot;total_richness_per_clades&quot;</span></span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a></span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a><span class="co"># Node 34 is defined by the same tips in the list and in the total richness</span></span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a>converted<span class="sc">$</span>missing_taxa_list<span class="sc">$</span>Target_clade<span class="sc">$</span>X1</span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t8&quot; &quot;t7&quot;</span></span>
+<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a>converted<span class="sc">$</span>total_richness_per_clades<span class="sc">$</span>Target_clade[[<span class="dv">1</span>]]</span>
+<span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t8&quot; &quot;t7&quot;</span></span></code></pre></div>
+<p>With both types of missing lineages,
+<code>convert_nodes_to_tips()</code> takes the
+<code>list(taxa, clades)</code> and a
+<code>total_richness_per_clades</code> of the same form, and converts
+both parts with a shared record of the clades.</p>
+<p>The richness is provided to the grafting functions in the argument
+<code>total_richness_per_clades</code>: the list of the matching type to
+<code>graft_missing_taxa()</code> or
+<code>graft_missing_clades()</code>, and the
+<code>list(taxa, clades)</code> to
+<code>graft_missing_taxa_and_clades()</code>.</p>
+<p><br></p>
+</div>
+</div>
+<div id="common-input-errors" class="section level2">
+<h2>10/ Common input errors</h2>
+<p>The functions check the inputs against the backbone and stop with
+<strong>explicit messages</strong>, before any grafting. Below are the
+most common cases.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># Helper to display the message of an error</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>show_error <span class="ot">&lt;-</span> <span class="cf">function</span> (expr) <span class="fu">cat</span>(<span class="st">&quot;Error:&quot;</span>, <span class="fu">conditionMessage</span>(<span class="fu">tryCatch</span>(expr, <span class="at">error =</span> <span class="cf">function</span> (e) e)), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co"># A tip that is not in the backbone (e.g., a typo, or a wrong separator)</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="fu">show_error</span>(<span class="fu">build_missing_taxa_list</span>(<span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> <span class="fu">c</span>(<span class="st">&quot;M1&quot;</span>, <span class="st">&quot;M2&quot;</span>), <span class="at">Target_clade =</span> <span class="fu">c</span>(<span class="st">&quot;t1, t999&quot;</span>, <span class="st">&quot;t5&quot;</span>)),</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>                                   <span class="at">phy =</span> toy_backbone, <span class="at">verbose =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co">#&gt; Error: Some tips of &#39;Target_clade&#39; are missing from the backbone phylogeny (check the spelling of the tips, or the separators):</span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="co">#&gt;   - M1 (row 1): t999</span></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co"># Tips and a node ID mixed in the same clade</span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="fu">show_error</span>(<span class="fu">build_missing_taxa_list</span>(<span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> <span class="fu">c</span>(<span class="st">&quot;M1&quot;</span>, <span class="st">&quot;M2&quot;</span>), <span class="at">Target_clade =</span> <span class="fu">c</span>(<span class="st">&quot;t1, 34&quot;</span>, <span class="st">&quot;t5&quot;</span>)),</span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>                                   <span class="at">phy =</span> toy_backbone, <span class="at">verbose =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="co">#&gt; Error: &#39;Target_clade&#39; of &#39;M1&#39; mixes node IDs and tips in the same clade: t1, 34.</span></span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a><span class="co">#&gt; A clade is defined either by tips (labels with at least one other character than digits), or by one node ID, not both.</span></span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a></span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a><span class="co"># A node ID that does not exist</span></span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="fu">show_error</span>(<span class="fu">build_missing_taxa_list</span>(<span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> <span class="fu">c</span>(<span class="st">&quot;M1&quot;</span>, <span class="st">&quot;M2&quot;</span>), <span class="at">Target_clade =</span> <span class="fu">c</span>(<span class="st">&quot;t8, t7&quot;</span>, <span class="st">&quot;900&quot;</span>)),</span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a>                                   <span class="at">phy =</span> toy_backbone, <span class="at">verbose =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="co">#&gt; Error: &#39;Target_clade&#39; of &#39;M2&#39; has an invalid node ID: 900. Node IDs of &#39;phy&#39; are integers between 1 and 59 (1 to 30 for the tips).</span></span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a></span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a><span class="co"># Duplicated names of taxa</span></span>
+<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a><span class="fu">show_error</span>(<span class="fu">build_missing_taxa_list</span>(<span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> <span class="fu">c</span>(<span class="st">&quot;M1&quot;</span>, <span class="st">&quot;M1&quot;</span>), <span class="at">Target_clade =</span> <span class="fu">c</span>(<span class="st">&quot;t8, t7&quot;</span>, <span class="st">&quot;t5&quot;</span>)),</span>
+<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a>                                   <span class="at">phy =</span> toy_backbone, <span class="at">verbose =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a><span class="co">#&gt; Error: &#39;Taxon_name&#39; must be unique. Duplicated: M1</span></span>
+<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a></span>
+<span id="cb15-26"><a href="#cb15-26" tabindex="-1"></a><span class="co"># A taxon to graft that is already a tip of the backbone</span></span>
+<span id="cb15-27"><a href="#cb15-27" tabindex="-1"></a><span class="fu">show_error</span>(<span class="fu">build_missing_taxa_list</span>(<span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> <span class="fu">c</span>(<span class="st">&quot;t5&quot;</span>, <span class="st">&quot;M2&quot;</span>), <span class="at">Target_clade =</span> <span class="fu">c</span>(<span class="st">&quot;t8, t7&quot;</span>, <span class="st">&quot;t5&quot;</span>)),</span>
+<span id="cb15-28"><a href="#cb15-28" tabindex="-1"></a>                                   <span class="at">phy =</span> toy_backbone, <span class="at">verbose =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb15-29"><a href="#cb15-29" tabindex="-1"></a><span class="co">#&gt; Error: &#39;Taxon_name&#39; must be absent from the backbone phylogeny (these are taxa to graft). Present in &#39;phy&#39;: t5</span></span>
+<span id="cb15-30"><a href="#cb15-30" tabindex="-1"></a></span>
+<span id="cb15-31"><a href="#cb15-31" tabindex="-1"></a><span class="co"># A taxon without clade</span></span>
+<span id="cb15-32"><a href="#cb15-32" tabindex="-1"></a><span class="fu">show_error</span>(<span class="fu">build_missing_taxa_list</span>(<span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> <span class="fu">c</span>(<span class="st">&quot;M1&quot;</span>, <span class="st">&quot;M2&quot;</span>), <span class="at">Target_clade =</span> <span class="fu">c</span>(<span class="st">&quot;t8, t7&quot;</span>, <span class="cn">NA</span>)),</span>
+<span id="cb15-33"><a href="#cb15-33" tabindex="-1"></a>                                   <span class="at">phy =</span> toy_backbone, <span class="at">verbose =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb15-34"><a href="#cb15-34" tabindex="-1"></a><span class="co">#&gt; Error: &#39;Target_clade&#39; is empty for: &#39;M2&#39; (row 2)</span></span></code></pre></div>
+<p>Node IDs are recognized as text made <strong>only of digits</strong>:
+tip labels of the backbone must therefore include at least one other
+character than digits. If some tips are only digits, rename them
+first.</p>
+<p><br></p>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next steps</h2>
+<p>With a <code>missing_taxa_list</code> (and optionally a
+<code>total_richness_per_clades</code>), you are ready to graft:</p>
+<ul>
+<li>the <strong>missing taxa</strong>:
+<code>graft_missing_taxa()</code>, see
+<code>vignette(&quot;graft_missing_taxa&quot;)</code>;</li>
+<li>the <strong>missing clades</strong>:
+<code>graft_missing_clades()</code>, see
+<code>vignette(&quot;graft_missing_clades&quot;)</code>;</li>
+<li><strong>both types</strong> in one run:
+<code>graft_missing_taxa_and_clades()</code>, see
+<code>vignette(&quot;combine_missing_taxa_and_clades&quot;)</code>.</li>
+</ul>
+<p>The <strong>grafting plan</strong> can be checked beforehand with
+<code>check_grafting_plan()</code>:
+<code>vignette(&quot;check_grafting&quot;)</code>.</p>
+<p>If you wish to use <strong>species attributes</strong> to further
+constraint grafting based on the evolutionary history of traits and/or
+biogeographic ranges, you will need to provide <strong>stochastic
+character maps</strong> under the <code>simmap</code> argument to
+grafting functions. Please refer to the dedicated tutorials explaining
+how to:</p>
+<ul>
+<li>prepare the <strong>stochastic maps</strong>: see
+<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>;</li>
+<li>use <strong>biogeographic ranges</strong> as constraints (i.e., GIG
+= <strong>geographically-informed grafting</strong>): see
+<code>vignette(&quot;biogeographic_data&quot;)</code>;</li>
+<li>use <strong>several traits</strong> as constraints: see
+<code>vignette(&quot;multiple_traits&quot;)</code>.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Maël Doré" />
+
+<meta name="date" content="2026-11-26" />
+
+<title>Handle uncertainty: simulations, stochastic maps and backbones</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Handle uncertainty: simulations, stochastic
+maps and backbones</h1>
+<h4 class="author">Maël Doré</h4>
+<h4 class="date">2026-11-26</h4>
+
+
+
+<p>A grafted phylogeny is <strong>one realization</strong> of a
+stochastic process, conditioned on the information you provide. It can
+be used for your main analyses, but ideally you would like to accoutn
+for potential <strong>sources of uncertainty</strong> in order to assess
+the robustness of your results. This tutorial explains how to account
+for different sources of uncertainty with phylograftR, and how to handle
+the resulting sets of grafted phylogenies in downstream analyses.</p>
+<p>Here, we cover:</p>
+<ol style="list-style-type: decimal">
+<li><strong>N simulations</strong>: the uncertainty in the
+<strong>stochasticity of the grafting process</strong> itself.</li>
+<li><strong>P stochastic maps</strong>: the uncertainty in the
+<strong>evolution of the traits</strong> used as constraints.</li>
+<li><strong>P x N</strong>: how the stochastic maps and the simulations
+are <strong>crossed</strong> to produce grafted phylogenies that account
+for both sources of uncertainty mentioned above.</li>
+<li>How to <strong>flatten</strong> the outputs with
+<code>flatten_grafted_phylogenies()</code> to use them in downstream
+analyses.</li>
+<li>Summary the <strong>format and the naming system of the
+outputs</strong>.</li>
+<li><strong>Loop over several backbones</strong> to account for the
+uncertainty in the backbone phylogeny (topology + divergence
+dating).</li>
+</ol>
+<p>The principle is the same <strong>whatever the type of
+attribute</strong> used as constraint: categorical traits, biogeographic
+ranges, and continuous traits (once discretized into states). To learn
+how to build the stochastic maps from your own tip data, see
+<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>.</p>
+<p>This tutorial is also about <strong>reproducibility</strong>. The
+grafting is stochastic, so phylograftR relies on a <strong>seed
+system</strong>: a single <code>seed</code> makes a whole run
+reproducible (all the simulations and all the maps), and <strong>each
+grafted phylogeny can be reproduced alone</strong> from its own seed
+(and its map). We explain how the seeds work in <em>Section 1</em>
+(simulations), <em>Section 3</em> (maps and simulations crossed), and
+<em>Section 6</em> (several backbones), and what it implies for the
+analyses.</p>
+<div id="data" class="section level2">
+<h2>0/ Data</h2>
+<p>We use the toy backbone, the toy list of <strong>7 missing
+taxa</strong>, and the toy <strong><code>multiSimmap</code></strong> of
+10 stochastic maps of a color with three states. 10 maps are enough for
+illustration, but real analyses should use <strong>100 maps or
+more</strong> to properly account for the uncertainty in trait
+evolution.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># ------ Toy data ------ #</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">data</span>(toy_backbone)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">data</span>(toy_missing_taxa_list) <span class="co"># Taxonomic constraints only (target clades and excluded subclades)</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="fu">data</span>(toy_missing_taxa_list_with_allowed_states) <span class="co"># Same, with colors allowed for some taxa</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="fu">data</span>(toy_multiSimmap) <span class="co"># 10 stochastic maps of the color</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="co"># Missing taxa list with the colors allowed for some taxa</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>taxa_colors <span class="ot">&lt;-</span> toy_missing_taxa_list_with_allowed_states</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co"># New_sp1 is only allowed in &quot;red&quot; in the shipped list. We also allow &quot;green&quot;, so that a branch</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co"># is available for it in each of the 10 maps (see the end of Section 2 for what happens otherwise)</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>taxa_colors<span class="sc">$</span>allowed_states[[<span class="st">&quot;New_sp1&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;red&quot;</span>, <span class="st">&quot;green&quot;</span>)</span></code></pre></div>
+<p>To show the variability among grafted phylogenies, we use
+<code>extract_grafting_info()</code>. This function is used <strong>a
+posteriori</strong> to returns a summary table with <strong>one row per
+grafted taxon and per grafted phylogeny</strong>, with the <strong>age
+of the grafting</strong> and the <strong>branch</strong>
+(<code>parent_node</code>) on which the taxon was grafted (see
+<code>vignette(&quot;check_grafting&quot;)</code>).</p>
+</div>
+<div id="n-simulations-stochasticity-of-the-grafting" class="section level2">
+<h2>1/ N simulations: stochasticity of the grafting</h2>
+<p>Even with the same backbone and the same constraints, <strong>two
+runs of the grafting function with different seeds give different
+phylogenies</strong>. With the default method
+(<code>&quot;BD_clades&quot;</code>), the <strong>divergence ages are drawn at
+random</strong> from the distributions expected under the birth-death
+model fit on each target clade, and the <strong>branch is drawn at
+random</strong> among the branches available at this age. For the
+<code>&quot;uniform&quot;</code> method, there is no diversification model
+involved, but the location of the graft is <strong>still drawn at
+random</strong> from a uniform distribution among all avaialble
+branches. A single grafted phylogeny is thus <strong>one possible
+outcome</strong> among many.</p>
+<p><code>nb_simulations</code> runs the grafting <strong>N
+times</strong> from the same inputs, producing <strong>N different
+outcomes</strong>. A <strong>unique seed</strong> makes the run
+reproducible. It controls the series of seeds used to produce each of
+the outcomes.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># ------ N simulations ------ #</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># Graft the missing taxa 100 times, with taxonomic constraints only (no stochastic map)</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>grafted_sims <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> toy_missing_taxa_list,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>                                   <span class="at">nb_simulations =</span> <span class="dv">100</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co"># The output is a multiPhylo with one phylogeny per simulation</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">class</span>(grafted_sims)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;multiPhylo&quot;</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="fu">length</span>(grafted_sims)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; [1] 100</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">names</span>(grafted_sims))</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sim_1&quot; &quot;sim_2&quot; &quot;sim_3&quot; &quot;sim_4&quot; &quot;sim_5&quot; &quot;sim_6&quot;</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co"># The seed of each simulation is stored in the attribute &quot;seeds&quot;</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">attr</span>(grafted_sims, <span class="st">&quot;seeds&quot;</span>))</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt;      sim_1      sim_2      sim_3      sim_4      sim_5      sim_6 </span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt;          1 1140350788  312928385  866248189 1909893419  554504146</span></span></code></pre></div>
+<p>The grafting of each taxon <strong>varies across the
+simulations</strong>: the <strong>ages</strong> and the
+<strong>branches</strong> differ. We use
+<code>extract_grafting_info()</code> to summarize the
+<strong>branch</strong> (<code>parent_node</code>) on which the taxon
+was grafted and the <strong>age of the grafting</strong> across
+simulations.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># ------ Variability of the grafting among simulations ------ #</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>info_sims <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(grafted_sims, <span class="at">missing_taxa_list =</span> toy_missing_taxa_list,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>                                   <span class="at">phy_backbone =</span> toy_backbone)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co"># Summarize the number of different branches used for each taxon, and their median grafting age</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">N_simulations =</span> <span class="fu">tapply</span>(info_sims<span class="sc">$</span>simulation, info_sims<span class="sc">$</span>Taxon_name, length),</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>           <span class="at">N_parent_branches =</span> <span class="fu">tapply</span>(info_sims<span class="sc">$</span>parent_node, info_sims<span class="sc">$</span>Taxon_name, <span class="cf">function</span> (x) <span class="fu">length</span>(<span class="fu">unique</span>(x))),</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>           <span class="at">Graft_age_median =</span> <span class="fu">round</span>(<span class="fu">tapply</span>(info_sims<span class="sc">$</span>graft_age, info_sims<span class="sc">$</span>Taxon_name, median), <span class="dv">2</span>))</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;         N_simulations N_parent_branches Graft_age_median</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; New_sp1           100                 7             1.65</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; New_sp2           100                18             1.58</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; New_sp3           100                28             1.51</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; New_sp4           100                21             0.78</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; New_sp5           100                11             1.14</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; New_sp6           100                 1             0.61</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; New_sp7           100                 4             0.63</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co"># Distribution of the grafting ages</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">4.5</span>, <span class="fl">4.5</span>, <span class="dv">1</span>, <span class="dv">1</span>))</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="fu">boxplot</span>(graft_age <span class="sc">~</span> Taxon_name, <span class="at">data =</span> info_sims, <span class="at">ylab =</span> <span class="st">&quot;Grafting age&quot;</span>, <span class="at">xlab =</span> <span class="st">&quot;&quot;</span>,</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>        <span class="at">las =</span> <span class="dv">2</span>, <span class="at">col =</span> <span class="st">&quot;grey85&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="80%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">5.1</span>, <span class="fl">4.1</span>, <span class="fl">4.1</span>, <span class="fl">2.1</span>))</span></code></pre></div>
+<p>The <strong>more constrained a taxon is</strong> (e.g., a younger and
+smaller target clade like <code>New_sp6</code> and
+<code>New_sp7</code>), the <strong>less it varies</strong>. Downstream
+analyses performed over the 100 grafted phylogenies are <strong>more
+robust</strong> than the results obtained from a single phylogeny.</p>
+<div id="ensure-reproducibility-across-simulations" class="section level3">
+<h3>Ensure reproducibility across simulations</h3>
+<p><strong>phylograftR</strong> is design to ensure <strong>full
+reproducibility of analyses</strong> based on the use of
+<code>seed</code> controlling the random number generation. The
+<strong>first simulation in a grafting run uses the value in
+<code>seed</code></strong>, and the seeds of the other simulations of
+the run are all derived from it. Each simulation can therefore be
+<strong>reproduced alone</strong> with its own seed, and the whole set
+of simulations can be reproduced with the unique <code>seed</code>
+too:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># ------ Reproduce one simulation ------ #</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co"># Rerun the simulation 3 alone, with its seed</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>seed_3 <span class="ot">&lt;-</span> <span class="fu">attr</span>(grafted_sims, <span class="st">&quot;seeds&quot;</span>)[<span class="st">&quot;sim_3&quot;</span>]</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>sim_3_alone <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> toy_missing_taxa_list,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>                                  <span class="at">nb_simulations =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> seed_3)</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co"># Same grafted phylogeny</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="fu">all.equal</span>(sim_3_alone<span class="sc">$</span>edge, grafted_sims[[<span class="st">&quot;sim_3&quot;</span>]]<span class="sc">$</span>edge)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="fu">all.equal</span>(sim_3_alone<span class="sc">$</span>edge.length, grafted_sims[[<span class="st">&quot;sim_3&quot;</span>]]<span class="sc">$</span>edge.length)</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>If some simulations fail because of the random draws (e.g., no usable
+age after many redraws), they are skipped with a warning, and listed in
+the attribute <code>&quot;failed&quot;</code>. Use
+<code>force_simulations = TRUE</code> (the default is
+<code>FALSE</code>) to try new seeds until <code>nb_simulations</code>
+phylogenies are obtained (see <code>?graft_missing_taxa</code>).</p>
+</div>
+</div>
+<div id="p-maps-uncertainty-in-the-trait-evolution" class="section level2">
+<h2>2/ P maps: uncertainty in the trait evolution</h2>
+<p>When the grafting is constrained by a <strong>trait</strong> or by
+<strong>biogeographic ranges</strong>, the <strong>evolutionary history
+of this attribute</strong> along the backbone is itself uncertain:
+ancestral states are inferred using models, not observed. A
+<strong>stochastic map</strong> (<code>simmap</code>) is only
+<strong>one possible history</strong>. A <strong>set of stochastic
+maps</strong> of the same trait (a
+<strong><code>multiSimmap</code></strong>) describes the uncertainty in
+its evolutionary history, and each map can be used as a different
+constraint for the grafting (see also <em>Section 3</em> in
+<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>).</p>
+<p>The <code>multiSimmap</code> is provided to the same argument
+<code>simmap</code>. The grafting is run <strong>with each of the P
+maps</strong>, so the uncertainty in the trait history is
+<strong>propagated to the grafted phylogenies</strong>.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># ------ P maps ------ #</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co"># Graft with each of the 10 maps (one simulation per map by default)</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>grafted_maps <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_colors,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                                   <span class="at">simmap =</span> toy_multiSimmap, <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co"># The output is a list with one grafted phylogeny per map, named after the maps</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="fu">class</span>(grafted_maps)</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;list&quot;</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="fu">names</span>(grafted_maps)</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt;  [1] &quot;map_1&quot;  &quot;map_2&quot;  &quot;map_3&quot;  &quot;map_4&quot;  &quot;map_5&quot;  &quot;map_6&quot;  &quot;map_7&quot;  &quot;map_8&quot; </span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;  [9] &quot;map_9&quot;  &quot;map_10&quot;</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="fu">class</span>(grafted_maps<span class="sc">$</span>map_1)</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; [1] &quot;phylo&quot;</span></span></code></pre></div>
+<p>The maps differ in the <strong>branches in the allowed
+states</strong>, so the constraints applied when grafting differ, and a
+taxon is not grafted in the same location from one map to the next:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># ------ Variability of the grafting among maps ------ #</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>info_maps <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(grafted_maps, <span class="at">missing_taxa_list =</span> taxa_colors,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>                                   <span class="at">phy_backbone =</span> toy_backbone)</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co"># Number of different branches used for each taxon across the 10 maps</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="fu">tapply</span>(info_maps<span class="sc">$</span>parent_node, info_maps<span class="sc">$</span>Taxon_name, <span class="cf">function</span> (x) <span class="fu">length</span>(<span class="fu">unique</span>(x)))</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; New_sp1 New_sp2 New_sp3 New_sp4 New_sp5 New_sp6 New_sp7 </span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt;       1       4       2       4       2       1       2</span></span></code></pre></div>
+<p>The variability depends on the taxon: it is higher for the taxa whose
+allowed states, and thus the available branches, change more among the
+maps.</p>
+<p>Each grafted phylogeny comes with its <strong>updated simmap</strong>
+(<code>$simmap</code>), derived from the map it was grafted on. The same
+applies to <strong>several traits</strong>: provide a <strong>list of
+<code>multiSimmap</code>s</strong> with the same number of maps for each
+trait, and the maps are <strong>paired</strong> (see
+<code>vignette(&quot;multiple_traits&quot;)</code>). Each grafted phylogeny then
+has one updated simmap per trait.</p>
+<p><strong>This works for all the types of attributes.</strong>
+Biogeographic stochastic maps (<code>multiSimmap</code> of ranges, see
+<code>vignette(&quot;biogeographic_data&quot;)</code>) and the maps discretized
+from continuous stochastic maps
+(<code>vignette(&quot;continuous_data&quot;)</code>) are <code>multiSimmap</code>s
+too, and are used in the same way.</p>
+<div id="what-happens-when-a-map-cannot-be-used" class="section level3">
+<h3>What happens when a map cannot be used?</h3>
+<p>A map can fail for two reasons, which are handled differently:</p>
+<p><strong>1/ Random failure</strong></p>
+<p>A taxon can be grafted in a map, but the draws of its divergence age
+did not give a usable age after <code>max_age_redraws</code> attempts
+(see <code>vignette(&quot;graft_missing_taxa&quot;)</code>). In this case, the map
+is <strong>dropped from the output with a warning</strong>, while the
+other maps are returned, and the dropped map is listed in the attribute
+<code>&quot;failed_maps&quot;</code>.</p>
+<p>We illustrate it by allowing very few redraws:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># ------ A map dropped at random ------ #</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co"># Only 3 attempts to draw a usable divergence age</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>grafted_dropped <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_colors,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>                                      <span class="at">simmap =</span> toy_multiSimmap, <span class="at">max_age_redraws =</span> <span class="dv">3</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>                                      <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; Warning: Map &#39;map_7&#39;: none of the 1 simulation(s) could be obtained, the map is dropped from the output.</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; Reasons:</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt;   - No usable divergence age was found for 1 taxa of the target clade defined by t26, t18 after 3 redraws of their divergence ages (&#39;max_age_redraws&#39;).</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; Time window of the divergence ages: from age 0 to age 50 (stem age of the target clade).</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; Share of this window crossed by the available branches in the allowed states (current tree):</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt;   - New_sp1: 46.72% (allowed states: red, green)</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; No available branch crosses the ages drawn: the part of the time window where branches are available is too narrow or too far from the ages expected from the diversification model.</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; Increase &#39;max_age_redraws&#39;, extend the allowed states, or use method = &#39;uniform&#39;.</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co"># An output is produced, without the map(s) that failed</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="fu">names</span>(grafted_dropped)</span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; [1] &quot;map_1&quot;  &quot;map_2&quot;  &quot;map_3&quot;  &quot;map_4&quot;  &quot;map_5&quot;  &quot;map_6&quot;  &quot;map_8&quot;  &quot;map_9&quot; </span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; [9] &quot;map_10&quot;</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="fu">attr</span>(grafted_dropped, <span class="st">&quot;failed_maps&quot;</span>)<span class="sc">$</span>map</span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; [1] &quot;map_7&quot;</span></span></code></pre></div>
+<p>With more maps or simulations, <code>force_simulations = TRUE</code>
+tries new seeds until the requested number of phylogenies is obtained,
+so that fewer maps are dropped. With the default
+<code>max_age_redraws = 1000</code>, such random failures are rare,
+except for very narrow windows of grafting.</p>
+<p><strong>2/ Hard constraints that cannot be met</strong></p>
+<p>A taxon cannot be grafted in a map because its constraints (i.e.,
+target clade, excluded subclades, allowed states) leaves no available
+branch pieces for grafting. In this case, the run <strong>stops with an
+error</strong>.</p>
+<p>To illustrate this, we now use the original list, where
+<code>New_sp1</code> is only allowed in <code>&quot;red&quot;</code>:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># ------ A map where the constraints cannot be met ------ #</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co"># Colors allowed for New_sp1 in the shipped list</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>toy_missing_taxa_list_with_allowed_states<span class="sc">$</span>allowed_states[[<span class="st">&quot;New_sp1&quot;</span>]]</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; [1] &quot;red&quot;</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co"># Graft with each of the 10 maps</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> toy_missing_taxa_list_with_allowed_states,</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>                   <span class="at">simmap =</span> toy_multiSimmap, <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; ! Map &#39;map_3&#39;: 1 taxa have no branch available for grafting in their allowed states: none of the available branches of their target clade has a piece in these states.</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt;   - New_sp1 (target clade tips: t26, t18; allowed states: red)</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; Adjust &#39;allowed_states&#39; (global or in missing_taxa_list), or the constraints on the branches (&#39;include_target_clade_stem&#39;, &#39;Excluded_subclades&#39;, &#39;exclude_subclades_stem&#39;) for these taxa.</span></span></code></pre></div>
+<p>The grafting <strong>stops with an error</strong> that names the map:
+in the map 3, <strong>no branch of the target clade of
+<code>New_sp1</code> has a piece in red</strong>. Since the problem is
+in the inputs, the whole run is stopped instead of silently skipping the
+map. <code>check_grafting_plan()</code> finds such maps
+<strong>before</strong> the run (see
+<code>vignette(&quot;check_grafting&quot;)</code>):</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># ------ Check the grafting plan across the maps ------ #</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>plan_maps <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone,</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>                                 <span class="at">missing_taxa_list =</span> toy_missing_taxa_list_with_allowed_states,</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>                                 <span class="at">simmap =</span> toy_multiSimmap, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co"># Number of maps where each taxon cannot be grafted</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>plan_maps[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;allowed_states&quot;</span>, <span class="st">&quot;n_maps_infeasible&quot;</span>)]</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt;   Taxon_name   allowed_states n_maps_infeasible</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1              red                 1</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2 blue, green, red                 0</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3 blue, green, red                 0</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4      blue, green                 0</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5            green                 0</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6 blue, green, red                 0</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7        blue, red                 0</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="co"># Which maps?</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>per_map <span class="ot">&lt;-</span> <span class="fu">attr</span>(plan_maps, <span class="st">&quot;per_map&quot;</span>)</span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>per_map[<span class="sc">!</span>per_map<span class="sc">$</span>feasible, <span class="fu">c</span>(<span class="st">&quot;map&quot;</span>, <span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;cause&quot;</span>)]</span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="co">#&gt;      map Taxon_name          cause</span></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="co">#&gt; 15 map_3    New_sp1 allowed_states</span></span></code></pre></div>
+<p>To solve it, <strong>relax the constraints of the taxon</strong> (as
+we did in <em>Section 0</em>), remove the maps that cannot be used, or
+change the other constraints of the taxon (e.g., its target clade or its
+excluded subclades).</p>
+</div>
+</div>
+<div id="p-x-n-crossing-maps-and-simulations" class="section level2">
+<h2>3/ P x N: crossing maps and simulations</h2>
+<p>The two sources of uncertainty are <strong>independent</strong>: a
+given stochastic map still leaves room for the stochasticity of the
+grafting. Therefore, both sources can be combined: each map is used for
+<code>nb_simulations</code> simulations, so <code>P</code> maps give
+<strong><code>P * nb_simulations</code> grafted
+phylogenies</strong>.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># ------ P x N ------ #</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co"># Graft with each of the 10 maps, 5 simulations per map: 50 grafted phylogenies</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>grafted_crossed <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_colors,</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>                                      <span class="at">simmap =</span> toy_multiSimmap, <span class="at">nb_simulations =</span> <span class="dv">5</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>                                      <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co"># One element per map, each a multiPhylo with the 5 simulations of this map</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="fu">length</span>(grafted_crossed)</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; [1] 10</span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="fu">sapply</span>(grafted_crossed, length)</span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="co">#&gt;  map_1  map_2  map_3  map_4  map_5  map_6  map_7  map_8  map_9 map_10 </span></span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a><span class="co">#&gt;      5      5      5      5      5      5      5      5      5      5</span></span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="co"># Total number of grafted phylogenies</span></span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">sapply</span>(grafted_crossed, length))</span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a><span class="co">#&gt; [1] 50</span></span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a></span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co"># Names of the phylogenies in the first map: &quot;&lt;map&gt;_sim_&lt;k&gt;&quot;</span></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a><span class="fu">names</span>(grafted_crossed<span class="sc">$</span>map_1)</span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a><span class="co">#&gt; [1] &quot;map_1_sim_1&quot; &quot;map_1_sim_2&quot; &quot;map_1_sim_3&quot; &quot;map_1_sim_4&quot; &quot;map_1_sim_5&quot;</span></span></code></pre></div>
+<p>The seeds of the simulations are the <strong>same in each
+map</strong> (the simulation 1 of each map uses <code>seed</code>, the
+simulation 2 of each map uses the second seed, etc.). Each phylogeny can
+be <strong>reproduced alone</strong> from its map (as a single
+<code>simmap</code>) and its seed, which is stored in the attribute
+<code>&quot;seeds&quot;</code> of the map:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># ------ Reproduce one phylogeny of the crossed output ------ #</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="co"># Seed of the simulation 2 of the map 3</span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>seed_map_3_sim_2 <span class="ot">&lt;-</span> <span class="fu">attr</span>(grafted_crossed<span class="sc">$</span>map_3, <span class="st">&quot;seeds&quot;</span>)[<span class="st">&quot;map_3_sim_2&quot;</span>]</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>seed_map_3_sim_2</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a><span class="co">#&gt; map_3_sim_2 </span></span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a><span class="co">#&gt;  1140350788</span></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="co"># Graft again with the map 3 alone (a single simmap) and this seed</span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>map_3_sim_2_alone <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_colors,</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>                                        <span class="at">simmap =</span> toy_multiSimmap[[<span class="dv">3</span>]], <span class="at">nb_simulations =</span> <span class="dv">1</span>,</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>                                        <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> seed_map_3_sim_2)</span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co"># Same grafted phylogeny</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="fu">all.equal</span>(map_3_sim_2_alone<span class="sc">$</span>edge, grafted_crossed<span class="sc">$</span>map_3[[<span class="st">&quot;map_3_sim_2&quot;</span>]]<span class="sc">$</span>edge)</span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="fu">all.equal</span>(map_3_sim_2_alone<span class="sc">$</span>edge.length, grafted_crossed<span class="sc">$</span>map_3[[<span class="st">&quot;map_3_sim_2&quot;</span>]]<span class="sc">$</span>edge.length)</span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>We can compare how much of the variation among grafted phylogenies is
+<strong>due to the maps</strong> or <strong>due to the
+simulations</strong>, with the grafting ages:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># ------ Variation among maps and within maps ------ #</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>info_crossed <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(grafted_crossed, <span class="at">missing_taxa_list =</span> taxa_colors,</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>                                      <span class="at">phy_backbone =</span> toy_backbone)</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co"># For each taxon: standard deviation of the grafting age among simulations of the same map (within),</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co"># and standard deviation of the mean grafting age of the maps (between)</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>sd_within <span class="ot">&lt;-</span> <span class="fu">tapply</span>(info_crossed<span class="sc">$</span>graft_age, info_crossed<span class="sc">$</span>Taxon_name, <span class="cf">function</span> (x) <span class="cn">NA</span>)</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="cf">for</span> (taxon <span class="cf">in</span> <span class="fu">names</span>(sd_within))</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>{</span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>  ages <span class="ot">&lt;-</span> info_crossed[info_crossed<span class="sc">$</span>Taxon_name <span class="sc">==</span> taxon, ]</span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>  sd_within[taxon] <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(<span class="fu">tapply</span>(ages<span class="sc">$</span>graft_age, ages<span class="sc">$</span>map, var)))</span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>}</span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>sd_between <span class="ot">&lt;-</span> <span class="fu">tapply</span>(info_crossed<span class="sc">$</span>graft_age, <span class="fu">list</span>(info_crossed<span class="sc">$</span>Taxon_name, info_crossed<span class="sc">$</span>map), mean)</span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">SD_within_maps =</span> <span class="fu">round</span>(sd_within, <span class="dv">2</span>), <span class="at">SD_between_maps =</span> <span class="fu">round</span>(<span class="fu">apply</span>(sd_between, <span class="dv">1</span>, sd), <span class="dv">2</span>))</span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="co">#&gt;         SD_within_maps SD_between_maps</span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt; New_sp1           1.65            0.80</span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">#&gt; New_sp2           4.22            0.70</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">#&gt; New_sp3           1.79            0.05</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="co">#&gt; New_sp4           0.46            0.17</span></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="co">#&gt; New_sp5           1.76            0.48</span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="co">#&gt; New_sp6           0.51            0.00</span></span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a><span class="co">#&gt; New_sp7           0.52            0.09</span></span></code></pre></div>
+<p><strong>How are these values computed?</strong> For each taxon, the
+50 grafting ages are arranged by map (10 maps) and by simulation (5
+simulations per map):</p>
+<ul>
+<li><code>SD_within_maps</code> is the variation <strong>among the 5
+simulations of the same map</strong>. We compute the variance of the 5
+ages in each map, average these 10 variances, and take the square
+root.</li>
+<li><code>SD_between_maps</code> is the variation <strong>among the
+maps</strong>. We compute the mean age of the 5 simulations of each map,
+and take the standard deviation of these 10 means.</li>
+</ul>
+<p>In most cases, <strong>both sources of uncertainty
+contribute</strong>. Here, the variation among the simulations of a map
+is larger than the variation among the mean ages of the maps, but this
+depends on the taxon and on how much the constraint changes from one map
+to the next. The maps also change the <strong>branches</strong> that can
+be used, not only the ages.</p>
+<p>A <code>SD_between_maps</code> of <code>0.00</code> means that all
+the maps have the same mean age. This is the case for
+<code>New_sp6</code>. It is a particular case: <code>New_sp6</code> has
+a target clade made of a single tip and <strong>all colors
+allowed</strong>, so its constraints are <strong>the same in all the
+maps</strong>.</p>
+<div id="beware-of-the-inflation" class="section level3">
+<h3>Beware of the inflation</h3>
+<p>The number of grafted phylogenies grows with the
+<strong>product</strong> <code>P * nb_simulations</code> (and with the
+number of traits and of backbones: see <em>Section 6</em>), and so do
+the <strong>computation time</strong> and the <strong>memory
+usage</strong>. 100 maps with 100 simulations each already make 10,000
+grafted phylogenies with eventually 10,000 associated simmaps (per
+trait). <strong>A warning is sent if the total number of grafted
+phylogenies is more than 1000</strong>:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># ------ Not run: more than 1000 grafted phylogenies ------ #</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co"># 10 maps x 101 simulations = 1010 phylogenies</span></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_colors,</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>                   <span class="at">simmap =</span> toy_multiSimmap, <span class="at">nb_simulations =</span> <span class="dv">101</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt; Warning: 10 maps x 101 simulations = 1010 grafted phylogenies will be produced (more than 1000):</span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; this can take a long time and use a lot of memory.</span></span></code></pre></div>
+<p>Some ways to keep the size of the problem manageable:</p>
+<ul>
+<li>Use <strong>a few simulations per map</strong> (even one) when you
+have many maps: the maps already provide a variety of constraints, and
+within each map, the graft age is still <strong>drawn at random</strong>
+among all the valid branch pieces in the respective allowed states of
+each missing taxon/clade.</li>
+<li>Use <code>return_simmap = FALSE</code> if you do not need the
+<strong>updated simmaps</strong> (<code>$simmap</code>) of the grafted
+phylogenies. They are stored in each phylogeny, <strong>once per
+trait</strong>, so they can take more space than the phylogeny itself.
+They can also be removed afterwards with
+<code>flatten_grafted_phylogenies(keep_simmap = FALSE)</code> (see
+<em>Section 4</em>).</li>
+<li>Use <strong>parallel computation</strong> for large problems (see
+<code>vignette(&quot;parallel_grafting&quot;)</code>), and <strong>temporary
+saves</strong> to resume a crashed run (see
+<code>vignette(&quot;resume_run&quot;)</code>).</li>
+</ul>
+</div>
+</div>
+<div id="flatten-the-outputs-for-downstream-analyses" class="section level2">
+<h2>4/ Flatten the outputs for downstream analyses</h2>
+<p>If you use P maps with N simulations, you will produce
+<code>P * nb_simulations</code> grafted phylogenies stored as a list of
+P <code>multiPhylo</code> objects holding the N simulations based on
+each map. All <strong>phylograftR functions</strong> used downstream
+(e.g., <code>check_grafting_constraints()</code>,
+<code>extract_grafting_info()</code>, …) accept the nested outputs as
+such, as we did above. However, <strong>most functions of other
+packages</strong> (e.g., <code>ape</code>, <code>phytools</code>)
+<strong>expect a single <code>multiPhylo</code></strong>, not a list of
+<code>multiPhylo</code> objects. The function
+<code>flatten_grafted_phylogenies()</code> is provided as a tool to
+flattens the output into <strong>one <code>multiPhylo</code></strong>
+holding the <code>P * nb_simulations</code> grafted phylogenies, where
+each phylogeny is <strong>named after both its map and its
+simulation</strong>:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># ------ Flatten the grafted phylogenies ------ #</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="co"># We use the output of Section 3, where 5 simulations per map where produced</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co"># stored as a list of 10 multiPhylo, with 5 simulations each</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="fu">length</span>(grafted_crossed)</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="co">#&gt; [1] 10</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="fu">sapply</span>(grafted_crossed, length)</span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="co">#&gt;  map_1  map_2  map_3  map_4  map_5  map_6  map_7  map_8  map_9 map_10 </span></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="co">#&gt;      5      5      5      5      5      5      5      5      5      5</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co"># We flatten this output into a single multiPhylo with 50 grafted phylogenies</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>flat_phylos <span class="ot">&lt;-</span> <span class="fu">flatten_grafted_phylogenies</span>(grafted_crossed)</span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="fu">class</span>(flat_phylos)</span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a><span class="co">#&gt; [1] &quot;multiPhylo&quot;</span></span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a><span class="fu">length</span>(flat_phylos)</span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a><span class="co">#&gt; [1] 50</span></span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">names</span>(flat_phylos))</span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a><span class="co">#&gt; [1] &quot;map_1_sim_1&quot; &quot;map_1_sim_2&quot; &quot;map_1_sim_3&quot; &quot;map_1_sim_4&quot; &quot;map_1_sim_5&quot;</span></span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="co">#&gt; [6] &quot;map_2_sim_1&quot;</span></span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a></span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a><span class="co"># The map, the simulation and the seed of each phylogeny are kept in the attribute &quot;phylogenies&quot;</span></span>
+<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">attr</span>(flat_phylos, <span class="st">&quot;phylogenies&quot;</span>))</span>
+<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a><span class="co">#&gt;          name   map simulation       seed</span></span>
+<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a><span class="co">#&gt; 1 map_1_sim_1 map_1          1          1</span></span>
+<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a><span class="co">#&gt; 2 map_1_sim_2 map_1          2 1140350788</span></span>
+<span id="cb15-26"><a href="#cb15-26" tabindex="-1"></a><span class="co">#&gt; 3 map_1_sim_3 map_1          3  312928385</span></span>
+<span id="cb15-27"><a href="#cb15-27" tabindex="-1"></a><span class="co">#&gt; 4 map_1_sim_4 map_1          4  866248189</span></span>
+<span id="cb15-28"><a href="#cb15-28" tabindex="-1"></a><span class="co">#&gt; 5 map_1_sim_5 map_1          5 1909893419</span></span>
+<span id="cb15-29"><a href="#cb15-29" tabindex="-1"></a><span class="co">#&gt; 6 map_2_sim_1 map_2          1          1</span></span></code></pre></div>
+<p>The flattened set can be used by any function that accepts a
+<code>multiPhylo</code>. For instance, we plot the <strong>lineages
+through time</strong> of the 50 grafted phylogenies, against the
+backbone phylogeny:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="co"># ------ Use the multiPhylo: lineages through time ------ #</span></span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a><span class="co"># phytools::ltt() takes the flattened multiPhylo as such</span></span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>ltt_grafted <span class="ot">&lt;-</span> phytools<span class="sc">::</span><span class="fu">ltt</span>(flat_phylos, <span class="at">plot =</span> <span class="cn">FALSE</span>, <span class="at">gamma =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>ltt_backbone <span class="ot">&lt;-</span> phytools<span class="sc">::</span><span class="fu">ltt</span>(toy_backbone, <span class="at">plot =</span> <span class="cn">FALSE</span>, <span class="at">gamma =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a></span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a><span class="co"># Plot the 50 grafted phylogenies, then add the backbone</span></span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a><span class="fu">plot</span>(ltt_grafted, <span class="at">col =</span> <span class="st">&quot;grey70&quot;</span>, <span class="at">log.lineages =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Time since the root&quot;</span>, <span class="at">ylab =</span> <span class="st">&quot;Number of lineages&quot;</span>)</span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a><span class="fu">plot</span>(ltt_backbone, <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">&quot;firebrick&quot;</span>, <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">log.lineages =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">&quot;topleft&quot;</span>, <span class="at">legend =</span> <span class="fu">c</span>(<span class="st">&quot;Grafted phylogenies&quot;</span>, <span class="st">&quot;Backbone&quot;</span>),</span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">c</span>(<span class="st">&quot;grey70&quot;</span>, <span class="st">&quot;firebrick&quot;</span>), <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="80%" style="display: block; margin: auto;" /></p>
+<p>The function <code>flatten_grafted_phylogenies()</code> can also
+<strong>subset</strong> the phylogenies, and <strong>remove the updated
+simmaps</strong> to save memory when they are not needed:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="co"># ------ Subset and remove the simmaps ------ #</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a><span class="co"># Keep the first two simulations of two maps only, without the simmaps</span></span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>subset_phylos <span class="ot">&lt;-</span> <span class="fu">flatten_grafted_phylogenies</span>(grafted_crossed, <span class="at">maps =</span> <span class="fu">c</span>(<span class="st">&quot;map_1&quot;</span>, <span class="st">&quot;map_3&quot;</span>),</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>                                             <span class="at">simulations =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="at">keep_simmap =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a><span class="fu">attr</span>(subset_phylos, <span class="st">&quot;phylogenies&quot;</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a><span class="co">#&gt;          name   map simulation       seed</span></span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a><span class="co">#&gt; 1 map_1_sim_1 map_1          1          1</span></span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a><span class="co">#&gt; 2 map_1_sim_2 map_1          2 1140350788</span></span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a><span class="co">#&gt; 3 map_3_sim_1 map_3          1          1</span></span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a><span class="co">#&gt; 4 map_3_sim_2 map_3          2 1140350788</span></span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a></span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a><span class="co"># Memory used with and without the simmaps (in Mb)</span></span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">c</span>(<span class="at">with_simmaps =</span> <span class="fu">as.numeric</span>(<span class="fu">object.size</span>(flat_phylos)),</span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a>        <span class="at">without_simmaps =</span> <span class="fu">as.numeric</span>(<span class="fu">object.size</span>(<span class="fu">flatten_grafted_phylogenies</span>(grafted_crossed,</span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a>                                                                             <span class="at">keep_simmap =</span> <span class="cn">FALSE</span>)))) <span class="sc">/</span> <span class="fl">1e6</span>, <span class="dv">2</span>)</span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a><span class="co">#&gt;    with_simmaps without_simmaps </span></span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a><span class="co">#&gt;            2.41            0.68</span></span></code></pre></div>
+</div>
+<div id="summary-of-the-output-formats" class="section level2">
+<h2>5/ Summary of the output formats</h2>
+<p>The format of the output of <code>graft_missing_taxa()</code> (and of
+<code>graft_missing_clades()</code>) depends on the <strong>number of
+maps</strong> (P) and on <code>nb_simulations</code> (N). This summary
+table provides an overview of the associated <strong>output
+formats</strong> and the <strong>naming scheme</strong> used to identify
+the resulting grafted phylogenies.</p>
+<table>
+<colgroup>
+<col width="26%" />
+<col width="20%" />
+<col width="26%" />
+<col width="26%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"><code>simmap</code></th>
+<th align="left"><code>nb_simulations</code></th>
+<th align="left">Output</th>
+<th align="left">Names of the phylogenies</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">none, a <code>simmap</code>, or a list of
+<code>simmap</code>s (one per trait)</td>
+<td align="left"><code>1</code></td>
+<td align="left">a single <code>phylo</code></td>
+<td align="left"></td>
+</tr>
+<tr class="even">
+<td align="left">none, a <code>simmap</code>, or a list of
+<code>simmap</code>s (one per trait)</td>
+<td align="left"><code>N &gt; 1</code></td>
+<td align="left">a <code>multiPhylo</code> of N phylogenies</td>
+<td align="left"><code>sim_1</code>, …, <code>sim_N</code></td>
+</tr>
+<tr class="odd">
+<td align="left">a <code>multiSimmap</code>, or a list of
+<code>multiSimmap</code>s (one per trait) with P maps each</td>
+<td align="left"><code>1</code></td>
+<td align="left">a list of P <code>phylo</code></td>
+<td align="left"><code>map_1</code>, …, <code>map_P</code> (or the names
+of the maps)</td>
+</tr>
+<tr class="even">
+<td align="left">a <code>multiSimmap</code>, or a list of
+<code>multiSimmap</code>s (one per trait) with P maps each</td>
+<td align="left"><code>N &gt; 1</code></td>
+<td align="left">a list of P <code>multiPhylo</code> of N
+phylogenies</td>
+<td align="left">list: <code>map_k</code>; phylogenies in the element
+<code>map_k</code>: <code>map_k_sim_1</code>, …,
+<code>map_k_sim_N</code></td>
+</tr>
+<tr class="odd">
+<td align="left">any of the above, after
+<code>flatten_grafted_phylogenies()</code></td>
+<td align="left">any</td>
+<td align="left">a single <code>multiPhylo</code> of all the
+phylogenies</td>
+<td align="left">as above (<code>map_k_sim_j</code>, <code>map_k</code>,
+or <code>sim_j</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>Whatever the format, <strong>each grafted phylogeny has the same
+elements</strong>: <code>$grafted_tips</code> and
+<code>$grafted_edges</code> (what was grafted) and <code>$simmap</code>
+(the updated map, or a list of maps with one per trait, if a
+<code>simmap</code> was provided). The attributes <code>&quot;seeds&quot;</code>,
+<code>&quot;failed&quot;</code> and <code>&quot;failed_maps&quot;</code> document the
+reproducibility and the failures.</p>
+</div>
+<div id="several-backbones-uncertainty-in-the-backbone-phylogeny" class="section level2">
+<h2>6/ Several backbones: uncertainty in the backbone phylogeny</h2>
+<p>So far we covered the sources of uncertainty associated to the
+stochasticity of the grafting (<em>Section 1</em>), the trait evolution
+(<em>Section 2</em>), and how to combine them (<em>Section 3</em>). All
+of these are handled within the grafting function (i.e.,
+<code>graft_missing_taxa()</code> and
+<code>graft_missing_clades()</code>).</p>
+<p>Yet, there is one more potential sources of uncertainty that may
+require to be accounted for: the <strong>uncertainty in the backbone
+phylogeny</strong>. The <strong>topology</strong> and <strong>divergence
+dating</strong> of the backbone itself can be uncertain.
+<strong>Sensitivity analyses</strong> are typically performed across a
+set of phylogenies such as <strong>posterior samples of time-calibrated
+trees</strong>.</p>
+<p>We account for this source of uncertainty outside of the grafting
+functions: we <strong>loop over the B backbones</strong> and graft on
+each of them. Each element of the loop is a complete grafting, so it can
+also use P maps and N simulations: the total number of grafted
+phylogenies is then <strong>B x P x N</strong>.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="co"># ------ Alternative backbones ------ #</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a><span class="fu">data</span>(toy_backbone_taxonomic_table) <span class="co"># Taxonomy of the tips (the same for all the backbones)</span></span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a><span class="fu">data</span>(toy_missing_taxa_taxonomic_table) <span class="co"># Taxonomic groups of the missing taxa</span></span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a><span class="co"># For illustration, we build two alternative backbones from the toy backbone</span></span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a><span class="co"># Backbone 2: the tips t16 and t3 are swapped, which changes the topology</span></span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>backbone_2 <span class="ot">&lt;-</span> toy_backbone</span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a>swapped <span class="ot">&lt;-</span> <span class="fu">match</span>(<span class="fu">c</span>(<span class="st">&quot;t16&quot;</span>, <span class="st">&quot;t3&quot;</span>), backbone_2<span class="sc">$</span>tip.label)</span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>backbone_2<span class="sc">$</span>tip.label[swapped] <span class="ot">&lt;-</span> backbone_2<span class="sc">$</span>tip.label[<span class="fu">rev</span>(swapped)]</span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a></span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a><span class="co"># Backbone 3: same topology, older ages (all the branches are 30% longer)</span></span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a>backbone_3 <span class="ot">&lt;-</span> toy_backbone</span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a>backbone_3<span class="sc">$</span>edge.length <span class="ot">&lt;-</span> backbone_3<span class="sc">$</span>edge.length <span class="sc">*</span> <span class="fl">1.30</span></span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a></span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a>backbones <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">backbone_1 =</span> toy_backbone, <span class="at">backbone_2 =</span> backbone_2, <span class="at">backbone_3 =</span> backbone_3)</span>
+<span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a></span>
+<span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a><span class="co"># One color per backbone, used in the figures below</span></span>
+<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a>backbone_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">backbone_1 =</span> <span class="st">&quot;black&quot;</span>, <span class="at">backbone_2 =</span> <span class="st">&quot;firebrick&quot;</span>, <span class="at">backbone_3 =</span> <span class="st">&quot;dodgerblue&quot;</span>)</span></code></pre></div>
+<div id="the-missing-taxa-list-may-need-to-be-adapted-to-each-backbone" class="section level3">
+<h3>The missing taxa list may need to be adapted to each backbone</h3>
+<p>The <code>missing_taxa_list</code> defines the clades with
+<strong>tips</strong> (the MRCA of the tips gives the clade), so
+<strong>it refers to a given topology</strong>. When the topology
+changes, <strong>the same tips may define a different clade</strong>,
+and the same list does not describe the same taxonomic constraints. For
+example, the excluded subclade <code>Tribe_A2a</code> of the taxa
+<code>New_sp1</code> and <code>New_sp2</code> is defined by the tips
+<code>t26</code> and <code>t4</code>. In the backbone 2, the clade
+defined by these two tips contains <code>t3</code>, which belongs to
+another tribe, and no longer contains <code>t16</code>, which belongs to
+<code>Tribe_A2a</code>:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="co"># ------ The same list in two topologies ------ #</span></span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a><span class="co"># Identify the tips of Tribe_A2a across the different backbone phylogenies</span></span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>excluded_tips <span class="ot">&lt;-</span> toy_missing_taxa_list<span class="sc">$</span>Excluded_subclades<span class="sc">$</span>New_sp1<span class="sc">$</span>Tribe_A2a</span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>clade_tips <span class="ot">&lt;-</span> <span class="fu">lapply</span>(backbones, <span class="at">FUN =</span> <span class="cf">function</span> (phy) </span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>   { <span class="fu">sort</span>(ape<span class="sc">::</span><span class="fu">extract.clade</span>(phy, phytools<span class="sc">::</span><span class="fu">findMRCA</span>(phy, excluded_tips))<span class="sc">$</span>tip.label) }) </span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a>clade_tips</span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a><span class="co">#&gt; $backbone_1</span></span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t11&quot; &quot;t16&quot; &quot;t2&quot;  &quot;t21&quot; &quot;t26&quot; &quot;t4&quot; </span></span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a><span class="co">#&gt; $backbone_2</span></span>
+<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t11&quot; &quot;t2&quot;  &quot;t21&quot; &quot;t26&quot; &quot;t3&quot;  &quot;t4&quot; </span></span>
+<span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a><span class="co">#&gt; $backbone_3</span></span>
+<span id="cb19-15"><a href="#cb19-15" tabindex="-1"></a><span class="co">#&gt; [1] &quot;t11&quot; &quot;t16&quot; &quot;t2&quot;  &quot;t21&quot; &quot;t26&quot; &quot;t4&quot;</span></span>
+<span id="cb19-16"><a href="#cb19-16" tabindex="-1"></a></span>
+<span id="cb19-17"><a href="#cb19-17" tabindex="-1"></a><span class="co"># Compare to the tips of Tribe_A2a as identified in the taxonomic table used</span></span>
+<span id="cb19-18"><a href="#cb19-18" tabindex="-1"></a><span class="co"># to describe the initial backbone (i.e., Backbone 1)</span></span>
+<span id="cb19-19"><a href="#cb19-19" tabindex="-1"></a>tribe_A2a <span class="ot">&lt;-</span> toy_backbone_taxonomic_table<span class="sc">$</span>Taxa[<span class="fu">which</span>(toy_backbone_taxonomic_table<span class="sc">$</span>Tribe <span class="sc">==</span> <span class="st">&quot;Tribe_A2a&quot;</span>)]</span>
+<span id="cb19-20"><a href="#cb19-20" tabindex="-1"></a><span class="fu">sapply</span>(clade_tips, <span class="cf">function</span> (x) <span class="fu">all</span>(x <span class="sc">%in%</span> tribe_A2a))</span>
+<span id="cb19-21"><a href="#cb19-21" tabindex="-1"></a><span class="co">#&gt; backbone_1 backbone_2 backbone_3 </span></span>
+<span id="cb19-22"><a href="#cb19-22" tabindex="-1"></a><span class="co">#&gt;       TRUE      FALSE       TRUE</span></span></code></pre></div>
+<p>The safest way is to <strong>build one <code>missing_taxa_list</code>
+per backbone from the taxonomy</strong>, which retrieves the clades from
+the names of the taxonomic groups in each topology (see
+<code>vignette(&quot;format_inputs&quot;)</code>). The function <strong>reports
+the groups that are not monophyletic</strong> in a backbone, which tells
+you that the constraints should be reconsidered for this backbone:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="co"># ------ One missing_taxa_list per backbone ------ #</span></span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a><span class="co"># Rebuild the missing_taxa_list based on the taxonomic table, across all backbone phylogenies</span></span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>taxa_lists <span class="ot">&lt;-</span> <span class="fu">lapply</span>(backbones, <span class="cf">function</span> (phy)</span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>{</span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>  <span class="fu">build_missing_taxa_list_from_taxonomy</span>(<span class="at">backbone_taxonomic_table =</span> toy_backbone_taxonomic_table,</span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>                                        <span class="at">missing_taxa_taxonomic_table =</span> toy_missing_taxa_taxonomic_table,</span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a>                                        <span class="at">phy =</span> phy, <span class="at">verbose =</span> <span class="cn">FALSE</span>)<span class="sc">$</span>taxa</span>
+<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a>})</span>
+<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a><span class="co">#&gt; Warning: Excluded groups are not monophyletic: their clade (MRCA of their tips) is excluded, so all its descending branches are excluded too, including the tips of other groups:</span></span>
+<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a><span class="co">#&gt;   - Tribe_A2a (Tribe): 3 tip(s) of other groups among 9 tips</span></span>
+<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a></span>
+<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a><span class="co"># The excluded clade corresponding to the smallest clade that contains all tips labeled as</span></span>
+<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a><span class="co"># belonging to Tribe_A2a has different tips in the backbone 2 (since we swapped tips on purpose)</span></span>
+<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a><span class="fu">sapply</span>(taxa_lists, <span class="cf">function</span> (x) <span class="fu">paste</span>(x<span class="sc">$</span>Excluded_subclades<span class="sc">$</span>New_sp1<span class="sc">$</span>Tribe_A2a, <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>))</span>
+<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a><span class="co">#&gt; backbone_1 backbone_2 backbone_3 </span></span>
+<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a><span class="co">#&gt;  &quot;t26, t4&quot; &quot;t26, t28&quot;  &quot;t26, t4&quot;</span></span></code></pre></div>
+<p>When the maps are used, they also need to be <strong>built for each
+backbone</strong> (a map is only valid for the tips, the topology and
+the branch lengths of the backbone it was built on): you need to prepare
+<strong>one <code>simmap</code> (or <code>multiSimmap</code>) per
+backbone</strong> (see
+<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>).</p>
+</div>
+<div id="loop-over-the-backbones" class="section level3">
+<h3>Loop over the backbones</h3>
+<p>We graft the taxa on each backbone, with 10 simulations each. We use
+the <strong>same seed for each backbone</strong>, so that the
+differences among the grafted phylogenies are due to the changes of
+backbone <strong>only</strong>: the taxa that are not affected by the
+changes of backbone get the same random draws, and thus the same ages,
+in each backbone. If you want to avoid this
+<strong>pseudo-replication</strong>, you can simply set a different seed
+for each backbone run. Each run remains <strong>fully
+reproducible</strong> with its seed.</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a><span class="co"># ------ Graft on each backbone ------ #</span></span>
+<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a><span class="co"># Loop across all backbone, using each dedicated missing_taxa_list</span></span>
+<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a>grafted_backbones <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">seq_along</span>(backbones), <span class="cf">function</span> (i)</span>
+<span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a>{</span>
+<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a>  <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> backbones[[i]], <span class="at">missing_taxa_list =</span> taxa_lists[[i]],</span>
+<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a>                     <span class="at">nb_simulations =</span> <span class="dv">10</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a>})</span>
+<span id="cb21-9"><a href="#cb21-9" tabindex="-1"></a><span class="fu">names</span>(grafted_backbones) <span class="ot">&lt;-</span> <span class="fu">names</span>(backbones)</span>
+<span id="cb21-10"><a href="#cb21-10" tabindex="-1"></a></span>
+<span id="cb21-11"><a href="#cb21-11" tabindex="-1"></a><span class="co"># Since we provided no stochastic maps for constraints,</span></span>
+<span id="cb21-12"><a href="#cb21-12" tabindex="-1"></a><span class="co"># we only produce 10 simulations per backbone.</span></span>
+<span id="cb21-13"><a href="#cb21-13" tabindex="-1"></a><span class="co"># The output is therefore a list with one multiPhylo of 10 phylogenies per backbone</span></span>
+<span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a><span class="fu">sapply</span>(grafted_backbones, length)</span>
+<span id="cb21-15"><a href="#cb21-15" tabindex="-1"></a><span class="co">#&gt; backbone_1 backbone_2 backbone_3 </span></span>
+<span id="cb21-16"><a href="#cb21-16" tabindex="-1"></a><span class="co">#&gt;         10         10         10</span></span></code></pre></div>
+<p>With stochastic maps to constrain the grafting, loop over the
+backbones <strong>with their own <code>multiSimmap</code></strong> and
+respective missing taxa lists:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a><span class="co"># ------ Not run: loop over backbones, with one multiSimmap per backbone ------ #</span></span>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a>grafted_backbones_maps <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">seq_along</span>(backbones), <span class="cf">function</span> (i)</span>
+<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a>{</span>
+<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a>  <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> backbones[[i]], <span class="at">missing_taxa_list =</span> taxa_lists[[i]],</span>
+<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a>                     <span class="at">simmap =</span> multiSimmaps_per_backbone[[i]],</span>
+<span id="cb22-7"><a href="#cb22-7" tabindex="-1"></a>                     <span class="at">nb_simulations =</span> <span class="dv">5</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb22-8"><a href="#cb22-8" tabindex="-1"></a>})</span>
+<span id="cb22-9"><a href="#cb22-9" tabindex="-1"></a><span class="fu">names</span>(grafted_backbones_maps) <span class="ot">&lt;-</span> <span class="fu">names</span>(backbones)</span></code></pre></div>
+<p>The grafted phylogenies are on <strong>different backbones</strong>.
+If you want to summarize the results of the grafting process, you need
+to apply the check functions over <strong>each of the backbone and the
+list that were used</strong>.</p>
+<p>Here, we apply <code>extract_grafting_info()</code> backbone by
+backbone, and the results are then pooled in a shared data.frame:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a><span class="co"># ------ Compare the grafting among backbones ------ #</span></span>
+<span id="cb23-2"><a href="#cb23-2" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" tabindex="-1"></a>info_backbones <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(<span class="fu">names</span>(backbones), <span class="cf">function</span> (name)</span>
+<span id="cb23-4"><a href="#cb23-4" tabindex="-1"></a>{</span>
+<span id="cb23-5"><a href="#cb23-5" tabindex="-1"></a>  info <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(grafted_backbones[[name]], </span>
+<span id="cb23-6"><a href="#cb23-6" tabindex="-1"></a>                                <span class="at">missing_taxa_list =</span> taxa_lists[[name]],</span>
+<span id="cb23-7"><a href="#cb23-7" tabindex="-1"></a>                                <span class="at">phy_backbone =</span> backbones[[name]])</span>
+<span id="cb23-8"><a href="#cb23-8" tabindex="-1"></a>  <span class="fu">cbind</span>(<span class="at">backbone =</span> name, info)</span>
+<span id="cb23-9"><a href="#cb23-9" tabindex="-1"></a>}))</span>
+<span id="cb23-10"><a href="#cb23-10" tabindex="-1"></a></span>
+<span id="cb23-11"><a href="#cb23-11" tabindex="-1"></a><span class="co"># Grafting ages of the two taxa of the family A (&quot;New_sp1&quot;, &quot;New_sp2&quot;), per backbone</span></span>
+<span id="cb23-12"><a href="#cb23-12" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">4.5</span>, <span class="fl">4.5</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb23-13"><a href="#cb23-13" tabindex="-1"></a><span class="cf">for</span> (taxon <span class="cf">in</span> <span class="fu">c</span>(<span class="st">&quot;New_sp1&quot;</span>, <span class="st">&quot;New_sp2&quot;</span>))</span>
+<span id="cb23-14"><a href="#cb23-14" tabindex="-1"></a>{</span>
+<span id="cb23-15"><a href="#cb23-15" tabindex="-1"></a>  <span class="fu">boxplot</span>(graft_age <span class="sc">~</span> backbone, <span class="at">data =</span> info_backbones[info_backbones<span class="sc">$</span>Taxon_name <span class="sc">==</span> taxon, ],</span>
+<span id="cb23-16"><a href="#cb23-16" tabindex="-1"></a>          <span class="at">main =</span> taxon, <span class="at">ylab =</span> <span class="st">&quot;Grafting age&quot;</span>, <span class="at">xlab =</span> <span class="st">&quot;Backbone&quot;</span>,</span>
+<span id="cb23-17"><a href="#cb23-17" tabindex="-1"></a>          <span class="at">names =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">col =</span> <span class="fu">adjustcolor</span>(backbone_colors, <span class="at">alpha.f =</span> <span class="fl">0.35</span>), <span class="at">border =</span> backbone_colors)</span>
+<span id="cb23-18"><a href="#cb23-18" tabindex="-1"></a>}</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="90%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">5.1</span>, <span class="fl">4.1</span>, <span class="fl">4.1</span>, <span class="fl">2.1</span>))</span></code></pre></div>
+<p>Here, we see that the grafting age of <code>New_sp1</code> is much
+more sensitive to the tip swapping (Backbone 2) than the one of
+<code>New_sp2</code>. This is because of differences in their
+<strong>constraints</strong>: the number of <strong>branches
+available</strong> for the grafting changes a lot for
+<code>New_sp1</code>, not for <code>New_sp2</code>. Between backbone 1
+and backbone 2, the available branches for <code>New_sp1</code> are much
+more restricted (and older) due to the change in the definition of its
+excluded subclade <code>Tribe_A2a</code> due to the tip swapping.
+Meanwhile, <code>New_sp2</code> is less affected, with most branches of
+its target clade remainng available. Overall, the backbone 3 has older
+grafting ages: it retaints the <strong>same topology</strong> as the
+backbone 1, with the same branches available, but with all ages
+<strong>stretched by 30%</strong>. Since we used the same seed, the ages
+of the backbone 3 are exactly the ages of the backbone 1 multiplied by
+1.30.</p>
+<p>To use all the grafted phylogenies in a downstream analysis,
+<strong>flatten each backbone</strong> and pool them in a <strong>single
+<code>multiPhylo</code></strong>, with names that keep the backbone:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="co"># ------ Pool the phylogenies of all the backbones ------ #</span></span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a><span class="co"># Flatten results of each backbone and name the resulting grafted phylogenies accordingly</span></span>
+<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a>flat_backbones <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">names</span>(grafted_backbones), <span class="cf">function</span> (name)</span>
+<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a>{</span>
+<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a>  flat <span class="ot">&lt;-</span> <span class="fu">flatten_grafted_phylogenies</span>(grafted_backbones[[name]])</span>
+<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a>  <span class="fu">names</span>(flat) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(name, <span class="st">&quot;_&quot;</span>, <span class="fu">names</span>(flat))</span>
+<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a>  flat</span>
+<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a>})</span>
+<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a><span class="co"># Concatenate in a shared list all flatten outputs from each backbone</span></span>
+<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a>all_phylos <span class="ot">&lt;-</span> <span class="fu">do.call</span>(c, flat_backbones)</span>
+<span id="cb25-12"><a href="#cb25-12" tabindex="-1"></a></span>
+<span id="cb25-13"><a href="#cb25-13" tabindex="-1"></a><span class="fu">class</span>(all_phylos)</span>
+<span id="cb25-14"><a href="#cb25-14" tabindex="-1"></a><span class="co">#&gt; [1] &quot;multiPhylo&quot;</span></span>
+<span id="cb25-15"><a href="#cb25-15" tabindex="-1"></a><span class="fu">length</span>(all_phylos)</span>
+<span id="cb25-16"><a href="#cb25-16" tabindex="-1"></a><span class="co">#&gt; [1] 30</span></span>
+<span id="cb25-17"><a href="#cb25-17" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">names</span>(all_phylos))</span>
+<span id="cb25-18"><a href="#cb25-18" tabindex="-1"></a><span class="co">#&gt; [1] &quot;backbone_1_sim_1&quot; &quot;backbone_1_sim_2&quot; &quot;backbone_1_sim_3&quot; &quot;backbone_1_sim_4&quot;</span></span>
+<span id="cb25-19"><a href="#cb25-19" tabindex="-1"></a><span class="co">#&gt; [5] &quot;backbone_1_sim_5&quot; &quot;backbone_1_sim_6&quot;</span></span>
+<span id="cb25-20"><a href="#cb25-20" tabindex="-1"></a><span class="fu">table</span>(<span class="fu">sub</span>(<span class="st">&quot;_sim_[0-9]+$&quot;</span>, <span class="st">&quot;&quot;</span>, <span class="fu">names</span>(all_phylos)))</span>
+<span id="cb25-21"><a href="#cb25-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb25-22"><a href="#cb25-22" tabindex="-1"></a><span class="co">#&gt; backbone_1 backbone_2 backbone_3 </span></span>
+<span id="cb25-23"><a href="#cb25-23" tabindex="-1"></a><span class="co">#&gt;         10         10         10</span></span></code></pre></div>
+<p>The pooled <code>multiPhylo</code> can be used as any set of
+phylogenies. For instance, as for the single backbone in <em>Section
+4</em>, we can plot the <strong>lineages through time</strong> of the
+three backbones, and of all the grafted phylogenies obtained on each of
+them :</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="co"># ------ Lineages through time of the backbones and of the grafted phylogenies ------ #</span></span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a>backbone_of_phylo <span class="ot">&lt;-</span> <span class="fu">sub</span>(<span class="st">&quot;_sim_[0-9]+$&quot;</span>, <span class="st">&quot;&quot;</span>, <span class="fu">names</span>(all_phylos))</span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a><span class="co"># phytools::ltt() takes the pooled multiPhylo: we split it by backbone to color the curves</span></span>
+<span id="cb26-6"><a href="#cb26-6" tabindex="-1"></a>ltt_pooled <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">names</span>(backbones), <span class="cf">function</span> (name)</span>
+<span id="cb26-7"><a href="#cb26-7" tabindex="-1"></a>{</span>
+<span id="cb26-8"><a href="#cb26-8" tabindex="-1"></a>  phytools<span class="sc">::</span><span class="fu">ltt</span>(all_phylos[backbone_of_phylo <span class="sc">==</span> name], <span class="at">plot =</span> <span class="cn">FALSE</span>, <span class="at">gamma =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb26-9"><a href="#cb26-9" tabindex="-1"></a>})</span>
+<span id="cb26-10"><a href="#cb26-10" tabindex="-1"></a><span class="fu">names</span>(ltt_pooled) <span class="ot">&lt;-</span> <span class="fu">names</span>(backbones)</span>
+<span id="cb26-11"><a href="#cb26-11" tabindex="-1"></a>ltt_backbones <span class="ot">&lt;-</span> <span class="fu">lapply</span>(backbones, phytools<span class="sc">::</span>ltt, <span class="at">plot =</span> <span class="cn">FALSE</span>, <span class="at">gamma =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb26-12"><a href="#cb26-12" tabindex="-1"></a></span>
+<span id="cb26-13"><a href="#cb26-13" tabindex="-1"></a><span class="co"># The backbone 3 is the oldest: start the plot with it, and zoom on the recent part of the time axis</span></span>
+<span id="cb26-14"><a href="#cb26-14" tabindex="-1"></a><span class="fu">plot</span>(ltt_pooled<span class="sc">$</span>backbone_3, <span class="at">col =</span> <span class="fu">adjustcolor</span>(backbone_colors[<span class="st">&quot;backbone_3&quot;</span>], <span class="at">alpha.f =</span> <span class="fl">0.25</span>),</span>
+<span id="cb26-15"><a href="#cb26-15" tabindex="-1"></a>     <span class="at">log.lineages =</span> <span class="cn">FALSE</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">30</span>, <span class="dv">65</span>),</span>
+<span id="cb26-16"><a href="#cb26-16" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Time since the root&quot;</span>, <span class="at">ylab =</span> <span class="st">&quot;Number of lineages&quot;</span>)</span>
+<span id="cb26-17"><a href="#cb26-17" tabindex="-1"></a><span class="cf">for</span> (name <span class="cf">in</span> <span class="fu">c</span>(<span class="st">&quot;backbone_2&quot;</span>, <span class="st">&quot;backbone_1&quot;</span>))</span>
+<span id="cb26-18"><a href="#cb26-18" tabindex="-1"></a>{</span>
+<span id="cb26-19"><a href="#cb26-19" tabindex="-1"></a>  <span class="fu">plot</span>(ltt_pooled[[name]], <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="fu">adjustcolor</span>(backbone_colors[name], <span class="at">alpha.f =</span> <span class="fl">0.25</span>), <span class="at">log.lineages =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb26-20"><a href="#cb26-20" tabindex="-1"></a>}</span>
+<span id="cb26-21"><a href="#cb26-21" tabindex="-1"></a></span>
+<span id="cb26-22"><a href="#cb26-22" tabindex="-1"></a><span class="co"># Backbones: thick lines</span></span>
+<span id="cb26-23"><a href="#cb26-23" tabindex="-1"></a><span class="cf">for</span> (name <span class="cf">in</span> <span class="fu">names</span>(backbones))</span>
+<span id="cb26-24"><a href="#cb26-24" tabindex="-1"></a>{</span>
+<span id="cb26-25"><a href="#cb26-25" tabindex="-1"></a>  <span class="fu">plot</span>(ltt_backbones[[name]], <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> backbone_colors[name], <span class="at">lwd =</span> <span class="fl">2.5</span>, <span class="at">log.lineages =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb26-26"><a href="#cb26-26" tabindex="-1"></a>}</span>
+<span id="cb26-27"><a href="#cb26-27" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">&quot;topleft&quot;</span>, <span class="at">legend =</span> <span class="fu">names</span>(backbones), <span class="at">col =</span> backbone_colors, <span class="at">lwd =</span> <span class="fl">2.5</span>, <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="80%" style="display: block; margin: auto;" /></p>
+</div>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next steps</h2>
+<ul>
+<li>Choose the method and the <strong>options of the grafting</strong>:
+see <code>vignette(&quot;graft_missing_taxa&quot;)</code> and
+<code>vignette(&quot;graft_missing_clades&quot;)</code>.</li>
+<li>Prepare the <strong>stochastic maps</strong> from your own data: see
+<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>.</li>
+<li><strong>Check</strong> the feasibility of the plan across the maps,
+and the result of the grafting: see
+<code>vignette(&quot;check_grafting&quot;)</code>.</li>
+<li>Run large sets of grafted phylogenies in <strong>parallel</strong>:
+see <code>vignette(&quot;parallel_grafting&quot;)</code>, and resume a crashed
+run: see <code>vignette(&quot;resume_run&quot;)</code>.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

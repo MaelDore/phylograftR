@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Maël Doré" />
+
+<meta name="date" content="2026-11-26" />
+
+<title>Combine several traits as constraints</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Combine several traits as constraints</h1>
+<h4 class="author">Maël Doré</h4>
+<h4 class="date">2026-11-26</h4>
+
+
+
+<p>Grafting can be constrained by <strong>species attributes</strong>
+described by <strong>stochastic character maps</strong>
+(<code>simmap</code>) of the backbone phylogeny. This tutorial explains
+how to use <strong>several traits at once</strong>, e.g., the color and
+the elevation of the species, or their biogeographic ranges and their
+elevation. The rule is simple: <strong>a taxon can only be grafted on
+the parts of the branches that are in one of its allowed states, for
+every trait</strong>. The more traits you use, the narrower the
+<strong>set of eligible branches</strong> is.</p>
+<p>In this tutorial, we cover:</p>
+<ol style="list-style-type: decimal">
+<li><strong>How to provide the maps and the allowed states</strong> of
+several traits.</li>
+<li><strong>The joint effect of the constraints</strong>, checked with
+<code>check_grafting_plan()</code>.</li>
+<li><strong>Grafting with two categorical traits</strong>.</li>
+<li><strong>Grafting with one trait treated as biogeographic
+ranges</strong> and one other trait.</li>
+<li><strong>Several maps per trait</strong>.</li>
+</ol>
+<p><strong>Other types of data</strong></p>
+<p>The principle of species attribute-based constraints is the same for
+all the types of data. For examples addressing different data types,
+please refer to:</p>
+<ul>
+<li><strong>categorical traits</strong> (single trait):
+<code>vignette(&quot;main_workflow&quot;)</code>, and the examples of
+<code>vignette(&quot;graft_missing_taxa&quot;)</code>,
+<code>vignette(&quot;graft_missing_clades&quot;)</code> and
+<code>vignette(&quot;combine_missing_taxa_and_clades&quot;)</code>;</li>
+<li><strong>biogeographic ranges</strong> (multi-area states,
+<code>treat_states_as_ranges</code>):
+<code>vignette(&quot;biogeographic_data&quot;)</code>;</li>
+<li><strong>continuous traits</strong>:
+<code>vignette(&quot;continuous_data&quot;)</code>;</li>
+<li><strong>several stochastic maps</strong> to account for the
+uncertainty in the evolutionary history:
+<code>vignette(&quot;handle_uncertainty&quot;)</code>.</li>
+</ul>
+<p>To build stochastic maps from your own data, see
+<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>.</p>
+<div id="data" class="section level2">
+<h2>0/ Data</h2>
+<p>We use the toy backbone, and the toy stochastic maps of two
+<strong>categorical traits</strong>: a <strong>color</strong> with three
+states (<code>&quot;blue&quot;</code>, <code>&quot;green&quot;</code>, <code>&quot;red&quot;</code>)
+and an <strong>elevation</strong> with two states (<code>&quot;low&quot;</code>,
+<code>&quot;high&quot;</code>). Both maps have the <strong>same tips, topology and
+branch lengths</strong> as the backbone, as required.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># ------ Toy data ------ #</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">data</span>(toy_backbone)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">data</span>(toy_simmap)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="fu">data</span>(toy_simmap_elevation)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="fu">data</span>(toy_missing_taxa_list_with_two_traits)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="co"># Group the maps of the traits in a named list: the names are the names of the traits</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>maps_color_elevation <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">color =</span> toy_simmap, <span class="at">elevation =</span> toy_simmap_elevation)</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>color_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">blue =</span> <span class="st">&quot;blue&quot;</span>, <span class="at">green =</span> <span class="st">&quot;green3&quot;</span>, <span class="at">red =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>elevation_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">low =</span> <span class="st">&quot;steelblue&quot;</span>, <span class="at">high =</span> <span class="st">&quot;darkorange&quot;</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co"># Plot the two maps side by side</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="dv">2</span>, <span class="fl">0.5</span>))</span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>phytools<span class="sc">::</span><span class="fu">plotSimmap</span>(toy_simmap, <span class="at">colors =</span> color_colors, <span class="at">fsize =</span> <span class="fl">0.55</span>, <span class="at">ftype =</span> <span class="st">&quot;i&quot;</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a><span class="fu">title</span>(<span class="st">&quot;A: Color&quot;</span>, <span class="at">line =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">cex.main =</span> <span class="dv">1</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>phytools<span class="sc">::</span><span class="fu">plotSimmap</span>(toy_simmap_elevation, <span class="at">colors =</span> elevation_colors, <span class="at">fsize =</span> <span class="fl">0.55</span>, <span class="at">ftype =</span> <span class="st">&quot;i&quot;</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="fu">title</span>(<span class="st">&quot;B: Elevation&quot;</span>, <span class="at">line =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">cex.main =</span> <span class="dv">1</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">5.1</span>, <span class="fl">4.1</span>, <span class="fl">4.1</span>, <span class="fl">2.1</span>))</span></code></pre></div>
+<p>The maps are provided to the grafting functions in a <strong>list
+with one map per trait</strong>:
+<code>simmap = list(color = toy_simmap, elevation = toy_simmap_elevation)</code>.
+Naming the elements is optional (the traits are otherwise called
+<code>&quot;trait_1&quot;</code>, <code>&quot;trait_2&quot;</code>, …), but it makes the
+allowed states and the outputs easier to read. Names cannot contain
+<code>;</code>, <code>,</code>, <code>=</code> or <code>|</code>.</p>
+</div>
+<div id="allowed-states-of-several-traits" class="section level2">
+<h2>1/ Allowed states of several traits</h2>
+<p>The allowed states are set of states <strong>for each trait</strong>,
+provided as with a single trait:</p>
+<ul>
+<li><strong>for all the taxa</strong>, with the <strong>global</strong>
+argument <code>allowed_states</code>, here as a <strong>list with one
+element per trait</strong>, in the order of the maps. Ex:
+<code>list(c(&quot;blue&quot;, &quot;green&quot;), &quot;high&quot;)</code> restricts the color to
+blue or green and the elevation to high.</li>
+<li><strong>for each taxon</strong>, with the item
+<code>allowed_states</code> of the <code>missing_taxa_list</code>: it
+has the same structure, and its values <strong>supersede</strong> the
+global ones, <strong>trait by trait</strong>.</li>
+</ul>
+<p>A trait with <code>NULL</code> (or an empty vector, or
+<code>NA</code>) has <strong>no taxon-level value</strong>, so the
+global value of the trait is used. If there is no global value either,
+<strong>all the states of the trait are allowed</strong>.</p>
+<p>Below, we print as a reference the taxon-level values of the 7
+missing taxa of the toy list, for each trait:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># ------ Allowed states of two traits for each taxon ------ #</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co"># Rename the loaded missing_taxa_list for simplicity</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>taxa_two_traits <span class="ot">&lt;-</span> toy_missing_taxa_list_with_two_traits</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co"># Helper: extract the taxon-level allowed states of one trait</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># Elements of the list are either named after the traits, or in the order of the maps</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>get_allowed <span class="ot">&lt;-</span> <span class="cf">function</span>(taxa, trait_name, trait_index)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>{</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="fu">vapply</span>(taxa<span class="sc">$</span>allowed_states, <span class="cf">function</span>(x)</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  {</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>    values <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">is.null</span>(<span class="fu">names</span>(x))) x[trait_index][[<span class="dv">1</span>]] <span class="cf">else</span> x[[trait_name]]</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">is.null</span>(values)) <span class="st">&quot;NULL&quot;</span> <span class="cf">else</span> <span class="fu">paste</span>(values, <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>)</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  }, <span class="fu">character</span>(<span class="dv">1</span>))</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>}</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co"># Build and print allowed states as a data.frame</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> taxa_two_traits<span class="sc">$</span>Taxon_name,</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>           <span class="at">Color =</span> <span class="fu">get_allowed</span>(taxa_two_traits, <span class="st">&quot;color&quot;</span>, <span class="dv">1</span>),</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>           <span class="at">Elevation =</span> <span class="fu">get_allowed</span>(taxa_two_traits, <span class="st">&quot;elevation&quot;</span>, <span class="dv">2</span>),</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>           <span class="at">row.names =</span> <span class="cn">NULL</span>)</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt;   Taxon_name       Color Elevation</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1         red      NULL</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2        NULL      NULL</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3        NULL      NULL</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4 blue, green      high</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5        NULL       low</span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6        NULL      NULL</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7        NULL      high</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co"># NULL will be using the global &#39;allowed_states&#39; provided to the grafting function</span></span></code></pre></div>
+<p>In a <code>.csv</code> or <code>.xlsx</code> table imported with
+<code>import_missing_taxa_list()</code> (see
+<code>vignette(&quot;format_inputs&quot;)</code>), the <code>allowed_states</code>
+column uses a compact syntax:</p>
+<ul>
+<li>sets of states for each trait are separated by
+<strong>semicolons</strong>, in the order of the maps (the color, then
+the elevation);</li>
+<li>the states within a trait are separated by
+<strong>commas</strong>.</li>
+</ul>
+<p>In the <code>missing_taxa_list</code>, <code>$allowed_states</code>
+is a list of (named) character vectors (e.g.,
+<code>list(color = c(&quot;red&quot;, &quot;blue&quot;), elevation = &quot;low&quot;)</code>). See
+<em>Section 2</em> below for an example of how to modify the list
+manually.</p>
+<p>For illustration, we print the <code>allowed_states</code> column of
+the .csv table used to build the toy list
+(<code>taxa_two_traits &lt;- toy_missing_taxa_list_with_two_traits</code>)
+loaded above:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># The initial table of the toy list</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>csv_file <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;toy_missing_taxa_with_two_traits.csv&quot;</span>, <span class="at">package =</span> <span class="st">&quot;phylograftR&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>csv_table <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(csv_file)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>csv_table[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;allowed_states&quot;</span>)]</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt;   Taxon_name   allowed_states</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1             red;</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2                 </span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3                 </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4 blue, green;high</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5             ;low</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6                 </span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7   elevation=high</span></span></code></pre></div>
+<p>The syntaxes illustrated by the toy table are:</p>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="66%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">In the table</th>
+<th align="left">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>red;</code></td>
+<td align="left">color <code>&quot;red&quot;</code>, no taxon-level value for the
+elevation (global value used)</td>
+</tr>
+<tr class="even">
+<td align="left"><code>blue, green;high</code></td>
+<td align="left">color <code>&quot;blue&quot;</code> or <code>&quot;green&quot;</code>, and
+elevation <code>&quot;high&quot;</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>;low</code></td>
+<td align="left">no taxon-level value for the color, elevation
+<code>&quot;low&quot;</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>elevation=high</code></td>
+<td align="left">traits <strong>named</strong>, so the color can be
+omitted (no taxon-level value)</td>
+</tr>
+<tr class="odd">
+<td align="left">blank</td>
+<td align="left">no taxon-level value for any trait: the global
+<code>allowed_states</code> is used for both</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>names of the traits</strong> must match the names of the
+maps in <code>simmap</code> to use the syntax with names.</p>
+</div>
+<div id="joint-effect-of-the-constraints" class="section level2">
+<h2>2/ Joint effect of the constraints</h2>
+<p><code>check_grafting_plan()</code> reports, for each taxon, the
+<strong>share of the branches of its target clade</strong> that are
+available given <strong>all its constraints</strong>
+(<code>valid_fraction</code>). To see the <strong>joint effect</strong>
+of the two traits, we compare the grafting plan with the constraints on
+the <strong>color only</strong>, on the <strong>elevation only</strong>,
+and on <strong>both</strong>.</p>
+<p>In the toy list, the taxa are mostly constrained by one trait only.
+To illustrate the <strong>joint effect</strong> of the traits, we add
+<strong>elevation constraints</strong> to three taxa, so that the
+elevation is a limiting factor for them, and not only the color:</p>
+<ul>
+<li><code>New_sp1</code> is allowed in <strong>red</strong> (as before)
+and now also in <strong>high elevation</strong>;</li>
+<li><code>New_sp3</code> is allowed in the global colors (blue or green)
+and now also in <strong>low elevation</strong>;</li>
+<li><code>New_sp4</code> is now allowed in <strong>blue</strong>
+(instead of blue or green) and in <strong>high elevation</strong>.</li>
+</ul>
+<p>We update the list of missing taxa, and <strong>use this updated list
+for the rest of the tutorial</strong>.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># ------ Add elevation constraints to three taxa ------ #</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>taxa_two_traits<span class="sc">$</span>allowed_states<span class="sc">$</span>New_sp1 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">&quot;red&quot;</span>, <span class="at">elevation =</span> <span class="st">&quot;high&quot;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>taxa_two_traits<span class="sc">$</span>allowed_states<span class="sc">$</span>New_sp3 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="cn">NULL</span>, <span class="at">elevation =</span> <span class="st">&quot;low&quot;</span>) <span class="co"># NULL: the global colors are used</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>taxa_two_traits<span class="sc">$</span>allowed_states<span class="sc">$</span>New_sp4 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">&quot;blue&quot;</span>, <span class="at">elevation =</span> <span class="st">&quot;high&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># ------ Valid fraction with the color only, the elevation only, and both ------ #</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co"># Helper: keep the taxon-level allowed states of one trait only</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>keep_trait <span class="ot">&lt;-</span> <span class="cf">function</span>(taxa, trait, <span class="at">traits =</span> <span class="fu">c</span>(<span class="st">&quot;color&quot;</span>, <span class="st">&quot;elevation&quot;</span>))</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>{</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  taxa<span class="sc">$</span>allowed_states <span class="ot">&lt;-</span> <span class="fu">lapply</span>(taxa<span class="sc">$</span>allowed_states, <span class="cf">function</span>(x)</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  {</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">is.null</span>(x)) <span class="fu">return</span>(<span class="cn">NULL</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>    out <span class="ot">&lt;-</span> <span class="fu">setNames</span>(<span class="fu">vector</span>(<span class="st">&quot;list&quot;</span>, <span class="fu">length</span>(traits)), traits)</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(x))</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>    {</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>      name <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">is.null</span>(<span class="fu">names</span>(x))) traits[i] <span class="cf">else</span> <span class="fu">names</span>(x)[i]</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>      out[name] <span class="ot">&lt;-</span> <span class="fu">list</span>(x[[i]])</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>    }</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>    out[<span class="fu">setdiff</span>(traits, trait)] <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="cn">NULL</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">all</span>(<span class="fu">vapply</span>(out, is.null, <span class="fu">logical</span>(<span class="dv">1</span>)))) <span class="cn">NULL</span> <span class="cf">else</span> out</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  })</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  taxa</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>}</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="co"># Set the global allowed states: blue or green for the color, no restriction for the elevation</span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>global_allowed_states <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;green&quot;</span>), <span class="cn">NULL</span>)</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="co"># Check grafting plan with colors only</span></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>plan_colors <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, </span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>                                   <span class="at">missing_taxa_list =</span> <span class="fu">keep_trait</span>(taxa_two_traits, <span class="st">&quot;color&quot;</span>),</span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>                                   <span class="at">simmap =</span> maps_color_elevation,</span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a>                                   <span class="at">allowed_states =</span> global_allowed_states, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a><span class="co"># Check grafting plan with elevation only</span></span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>plan_elevation <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, </span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a>                                      <span class="at">missing_taxa_list =</span> <span class="fu">keep_trait</span>(taxa_two_traits, <span class="st">&quot;elevation&quot;</span>),</span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>                                   <span class="at">simmap =</span> maps_color_elevation,</span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>                                   <span class="at">allowed_states =</span> <span class="fu">list</span>(<span class="cn">NULL</span>, <span class="cn">NULL</span>), <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a><span class="co"># Check grafting plan with both</span></span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a>plan_both <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, </span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a>                                 <span class="at">missing_taxa_list =</span> taxa_two_traits,</span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a>                                 <span class="at">simmap =</span> maps_color_elevation,</span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a>                                 <span class="at">allowed_states =</span> global_allowed_states, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a></span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a><span class="co"># Extract the valid fractions for each plan</span></span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a>valid_fractions <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> taxa_two_traits<span class="sc">$</span>Taxon_name,</span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a>  <span class="at">Color_only =</span> plan_colors<span class="sc">$</span>valid_fraction,</span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a>  <span class="at">Elevation_only =</span> plan_elevation<span class="sc">$</span>valid_fraction,</span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a>  <span class="at">Both =</span> plan_both<span class="sc">$</span>valid_fraction)</span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a>valid_fractions[, <span class="sc">-</span><span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="fu">round</span>(valid_fractions[, <span class="sc">-</span><span class="dv">1</span>], <span class="dv">2</span>)</span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a>valid_fractions</span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a><span class="co">#&gt;   Taxon_name Color_only Elevation_only Both</span></span>
+<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1       0.57           0.48 0.14</span></span>
+<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2       0.31           1.00 0.31</span></span>
+<span id="cb6-50"><a href="#cb6-50" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3       0.52           0.20 0.11</span></span>
+<span id="cb6-51"><a href="#cb6-51" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4       0.31           0.23 0.04</span></span>
+<span id="cb6-52"><a href="#cb6-52" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5       0.91           1.00 0.91</span></span>
+<span id="cb6-53"><a href="#cb6-53" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6       0.41           1.00 0.41</span></span>
+<span id="cb6-54"><a href="#cb6-54" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7       0.75           1.00 0.75</span></span></code></pre></div>
+<p>The traits do not constrain all the taxa in the same way:</p>
+<ul>
+<li>For <code>New_sp2</code>, <code>New_sp5</code>, <code>New_sp6</code>
+and <code>New_sp7</code>, the <strong>color is the limiting
+constraint</strong> and the valid fraction with both traits is the one
+of the color. Their <strong>elevation is not restrictive</strong>
+(<code>Elevation_only</code> of 1): either they have no elevation
+constraint (<code>New_sp2</code>, <code>New_sp6</code>) or all their
+eligible branches are already in the allowed elevation
+(<code>New_sp5</code>, <code>New_sp7</code>: e.g., once the excluded
+subclade <code>Gen_1</code> is removed, all the branches left for
+<code>New_sp5</code> are in low elevation).</li>
+<li>For <code>New_sp1</code>, <code>New_sp3</code> and
+<code>New_sp4</code>, <strong>the traits interact</strong>: both
+constrain the grafting to a restricted portion of available branches,
+and the <strong>branch pieces that match both constraints are much
+rarer</strong> than those matching each of them (14%, 11% and 4% of
+branch length, respectively), since the states of the two traits are not
+aligned along the branches (see the simmaps in <em>Section 0</em>
+above).</li>
+</ul>
+<p>In general, the more traits are combined, the more <strong>likely a
+taxon has few or no eligible branches</strong>. Therefore, it is
+recommended to use <code>check_grafting_plan()</code> to evaluate the
+feasibility of the grafting plan beforehand.</p>
+<p>Here, the valid fraction of <code>New_sp4</code> is below the
+threshold <code>min_valid_fraction</code> (10% by default), which
+triggers a warning at grafting (see
+<code>vignette(&quot;check_grafting&quot;)</code>). Nonetheless, the grafting plan
+is still feasible.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># The plan flags New_sp4 for its low valid fraction</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>plan_both[plan_both<span class="sc">$</span>Taxon_name <span class="sc">==</span> <span class="st">&quot;New_sp4&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;valid_fraction&quot;</span>, <span class="st">&quot;feasible&quot;</span>, <span class="st">&quot;cause&quot;</span>)]</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt;   Taxon_name valid_fraction feasible              cause</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4     0.04108687     TRUE low_valid_fraction</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co"># Inspect overall feasibility</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>plan_both[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;feasible&quot;</span>)]</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt;   Taxon_name feasible</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1     TRUE</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2     TRUE</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3     TRUE</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4     TRUE</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5     TRUE</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6     TRUE</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7     TRUE</span></span></code></pre></div>
+</div>
+<div id="graft-with-two-categorical-traits" class="section level2">
+<h2>3/ Graft with two categorical traits</h2>
+<p>We graft the 7 taxa with the global
+<code>allowed_states = list(c(&quot;blue&quot;, &quot;green&quot;), NULL)</code>. The
+grafting warns about <code>New_sp4</code>, as anticipated by the plan in
+<em>Section 2</em>: allowed branches cover only about 4.8% of the time
+window of its divergence ages, so its age is drawn within a narrow
+window, and may need to be redrawn many times until a suitable
+divergence ages is found.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># ------ Graft with two categorical traits ------ #</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>grafted_two_traits <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_two_traits,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>                                         <span class="at">simmap =</span> maps_color_elevation,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>                                         <span class="at">allowed_states =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;green&quot;</span>), <span class="cn">NULL</span>),</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>                                         <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">4</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; Warning: 1 taxa have less than 10% of the time window of their divergence ages covered by available branches in their allowed states (&#39;min_valid_fraction&#39; = 0.1): their divergence ages will be concentrated on a narrow time window, or many ages will need to be redrawn.</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt;   - New_sp4 (target clade tips: t8, t22; 4.86% in allowed states)</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co"># The output has one updated simmap per trait, named after the traits</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="fu">names</span>(grafted_two_traits<span class="sc">$</span>simmap)</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; [1] &quot;color&quot;     &quot;elevation&quot;</span></span></code></pre></div>
+<p>In each updated simmap, the grafted branches are <strong>entirely in
+the state of each trait at the point where they were grafted</strong>:
+each trait is <strong>inherited from the lineage</strong> the taxon was
+grafted on. We plot the two updated maps, with the grafted tips marked
+with a point in the color of their state:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># ------ Compare the updated maps of the two traits ------ #</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co"># Helper: plot the updated simmap of one trait of a grafted phylogeny</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>plot_trait <span class="ot">&lt;-</span> <span class="cf">function</span>(phy_grafted, trait, colors, main)</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>{</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="fu">plot_grafted</span>(phy_grafted, <span class="at">which =</span> <span class="st">&quot;edges&quot;</span>, <span class="at">trait =</span> trait, <span class="at">simmap_colors =</span> colors, <span class="at">fsize =</span> <span class="fl">0.55</span>, <span class="at">main =</span> main)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  grafted_tips <span class="ot">&lt;-</span> <span class="fu">which</span>(phy_grafted<span class="sc">$</span>grafted_tips)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>  tip_states <span class="ot">&lt;-</span> phytools<span class="sc">::</span><span class="fu">getStates</span>(phy_grafted<span class="sc">$</span>simmap[[trait]], <span class="at">type =</span> <span class="st">&quot;tips&quot;</span>)[phy_grafted<span class="sc">$</span>tip.label[grafted_tips]]</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  ape<span class="sc">::</span><span class="fu">tiplabels</span>(<span class="at">tip =</span> grafted_tips, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">1.5</span>, <span class="at">col =</span> colors[tip_states])</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>}</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="dv">2</span>, <span class="fl">0.5</span>))</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="fu">plot_trait</span>(grafted_two_traits, <span class="at">trait =</span> <span class="st">&quot;color&quot;</span>, <span class="at">colors =</span> color_colors, <span class="at">main =</span> <span class="st">&quot;A: Color&quot;</span>)</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="fu">plot_trait</span>(grafted_two_traits, <span class="at">trait =</span> <span class="st">&quot;elevation&quot;</span>, <span class="at">colors =</span> elevation_colors, <span class="at">main =</span> <span class="st">&quot;B: Elevation&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">5.1</span>, <span class="fl">4.1</span>, <span class="fl">4.1</span>, <span class="fl">2.1</span>))</span></code></pre></div>
+<p>Using <code>extract_grafting_info()</code>, we summarize the state
+inherited by each taxon for each trait, next to its allowed states:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># ------ States of the grafted taxa ------ #</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>info_two_traits <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(grafted_two_traits, <span class="at">missing_taxa_list =</span> taxa_two_traits)</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co"># Helper: allowed states of a trait for each taxon, taxon-level value or else global value</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>allowed_of_trait <span class="ot">&lt;-</span> <span class="cf">function</span>(taxa, trait_name, trait_index, global)</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>{</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>  values <span class="ot">&lt;-</span> <span class="fu">get_allowed</span>(taxa, trait_name, trait_index)</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>  <span class="fu">ifelse</span>(values <span class="sc">==</span> <span class="st">&quot;NULL&quot;</span>, <span class="cf">if</span> (<span class="fu">is.null</span>(global)) <span class="st">&quot;all&quot;</span> <span class="cf">else</span> <span class="fu">paste</span>(global, <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>), values)</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>}</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a></span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> info_two_traits<span class="sc">$</span>Taxon_name,</span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>           <span class="at">Allowed_color =</span> <span class="fu">allowed_of_trait</span>(taxa_two_traits, <span class="st">&quot;color&quot;</span>, <span class="dv">1</span>, <span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;green&quot;</span>)),</span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a>           <span class="at">Color =</span> info_two_traits<span class="sc">$</span>tip_state_color,</span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a>           <span class="at">Allowed_elevation =</span> <span class="fu">allowed_of_trait</span>(taxa_two_traits, <span class="st">&quot;elevation&quot;</span>, <span class="dv">2</span>, <span class="cn">NULL</span>),</span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>           <span class="at">Elevation =</span> info_two_traits<span class="sc">$</span>tip_state_elevation,</span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a>           <span class="at">row.names =</span> <span class="cn">NULL</span>)</span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a><span class="co">#&gt;   Taxon_name Allowed_color Color Allowed_elevation Elevation</span></span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1           red   red              high      high</span></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2   blue, green  blue               all      high</span></span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3   blue, green  blue               low       low</span></span>
+<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4          blue  blue              high      high</span></span>
+<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5   blue, green green               low       low</span></span>
+<span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6   blue, green  blue               all      high</span></span>
+<span id="cb11-25"><a href="#cb11-25" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7   blue, green  blue              high      high</span></span></code></pre></div>
+<p>Each taxon has <strong>a state in its allowed states for each
+trait</strong>. The a posteriori check of
+<code>check_grafting_constraints()</code> reports it <strong>for each
+trait</strong> (<code>states_ok_color</code>,
+<code>states_ok_elevation</code>) and <strong>overall</strong>
+(<code>states_ok</code>):</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># ------ A posteriori check ------ #</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>constraints_two_traits <span class="ot">&lt;-</span> <span class="fu">check_grafting_constraints</span>(<span class="at">phy_grafted =</span> grafted_two_traits, <span class="at">phy_backbone =</span> toy_backbone,</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>                                                     <span class="at">missing_taxa_list =</span> taxa_two_traits,</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>                                                     <span class="at">allowed_states =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;green&quot;</span>), <span class="cn">NULL</span>),</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>                                                     <span class="at">use_excluded_subclades =</span> <span class="cn">FALSE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>constraints_two_traits[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;states_ok_color&quot;</span>, <span class="st">&quot;states_ok_elevation&quot;</span>, <span class="st">&quot;states_ok&quot;</span>)]</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co">#&gt;         Taxon_name states_ok_color states_ok_elevation states_ok</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="co">#&gt; New_sp1    New_sp1            TRUE                TRUE      TRUE</span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="co">#&gt; New_sp2    New_sp2            TRUE                TRUE      TRUE</span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="co">#&gt; New_sp3    New_sp3            TRUE                TRUE      TRUE</span></span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="co">#&gt; New_sp4    New_sp4            TRUE                TRUE      TRUE</span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a><span class="co">#&gt; New_sp5    New_sp5            TRUE                TRUE      TRUE</span></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co">#&gt; New_sp6    New_sp6            TRUE                TRUE      TRUE</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="co">#&gt; New_sp7    New_sp7            TRUE                TRUE      TRUE</span></span></code></pre></div>
+</div>
+<div id="graft-with-one-trait-treated-as-ranges" class="section level2">
+<h2>4/ Graft with one trait treated as ranges</h2>
+<p>One of the traits can be <strong>treated as biogeographic
+ranges</strong> (see <code>vignette(&quot;biogeographic_data&quot;)</code>), and
+combined with any number of other traits.</p>
+<p>Here, we combine the toy biogeographic ranges (<code>&quot;A&quot;</code>,
+<code>&quot;B&quot;</code>, <code>&quot;AB&quot;</code>, <code>&quot;BC&quot;</code>) and the
+elevation:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># ------ Toy data: ranges and elevation ------ #</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="fu">data</span>(toy_simmap_ranges)</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="fu">data</span>(toy_missing_taxa_list_with_ranges_and_elevation)</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co"># Rename the missing taxa list for consistency</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>taxa_ranges_elevation <span class="ot">&lt;-</span> toy_missing_taxa_list_with_ranges_and_elevation</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co"># Combine simmap for biogeographic ranges and elevation</span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>maps_ranges_elevation <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">biogeo =</span> toy_simmap_ranges, <span class="at">elevation =</span> toy_simmap_elevation)</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co"># Print in a data.frame the taxon-level allowed states of the two traits</span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> taxa_ranges_elevation<span class="sc">$</span>Taxon_name,</span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>           <span class="at">Ranges =</span> <span class="fu">get_allowed</span>(taxa_ranges_elevation, <span class="st">&quot;biogeo&quot;</span>, <span class="dv">1</span>),</span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>           <span class="at">Elevation =</span> <span class="fu">get_allowed</span>(taxa_ranges_elevation, <span class="st">&quot;elevation&quot;</span>, <span class="dv">2</span>),</span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>           <span class="at">row.names =</span> <span class="cn">NULL</span>)</span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="co">#&gt;   Taxon_name Ranges Elevation</span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1      A      high</span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2   NULL      NULL</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3   NULL      NULL</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4  B, BC      NULL</span></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5   NULL       low</span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6   NULL      NULL</span></span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7  A, BC      high</span></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a></span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a><span class="co"># NULL will be using the global &#39;allowed_states&#39; provided to the grafting function</span></span></code></pre></div>
+<p>The argument <code>treat_states_as_ranges</code> is a <strong>logical
+vector with one value per trait</strong>, with <strong>at most one
+<code>TRUE</code></strong> that identifies the <strong>range
+trait</strong>. It is either <strong>positional</strong>
+(<code>c(TRUE, FALSE)</code>: the first trait is the range trait) or
+<strong>named</strong> after the traits, in any order
+(<code>c(biogeo = TRUE, elevation = FALSE)</code>).</p>
+<ul>
+<li>The range trait follows the logic of <strong>range
+matching</strong>: a taxon allowed in <code>&quot;A&quot;</code> can be grafted on
+branch pieces in <code>&quot;A&quot;</code>, <code>&quot;AB&quot;</code> or
+<code>&quot;ABC&quot;</code>, and <strong>inherits one of its allowed
+range</strong>.</li>
+<li>The other traits are <strong>matched exactly</strong>, and are
+<strong>inherited as they are</strong> at the point where the taxon is
+grafted.</li>
+</ul>
+<p>Only one trait can be treated as ranges, to prevent an inflation of
+the number of combined states to consider.</p>
+<p>Here, we graft the taxa, with the global allowed ranges
+<code>&quot;A&quot;</code> or <code>&quot;B&quot;</code>, and no restriction on the
+elevation:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># ------ Graft with ranges and elevation ------ #</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>grafted_ranges_elevation <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, </span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>                                               <span class="at">missing_taxa_list =</span> taxa_ranges_elevation,</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>                                               <span class="at">simmap =</span> maps_ranges_elevation,</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>                                               <span class="at">allowed_states =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>), <span class="cn">NULL</span>),</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>                                               <span class="at">treat_states_as_ranges =</span> <span class="fu">c</span>(<span class="at">biogeo =</span> <span class="cn">TRUE</span>, <span class="at">elevation =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>                                               <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">9</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># ------ Compare the updated maps of the two traits ------ #</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>range_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="st">&quot;gold&quot;</span>, <span class="at">B =</span> <span class="st">&quot;dodgerblue&quot;</span>, <span class="at">AB =</span> <span class="st">&quot;limegreen&quot;</span>, <span class="at">BC =</span> <span class="st">&quot;firebrick2&quot;</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="dv">2</span>, <span class="fl">0.5</span>))</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="fu">plot_trait</span>(grafted_ranges_elevation, <span class="at">trait =</span> <span class="st">&quot;biogeo&quot;</span>, <span class="at">colors =</span> range_colors, <span class="at">main =</span> <span class="st">&quot;A: Ranges&quot;</span>)</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="fu">plot_trait</span>(grafted_ranges_elevation, <span class="at">trait =</span> <span class="st">&quot;elevation&quot;</span>, <span class="at">colors =</span> elevation_colors, <span class="at">main =</span> <span class="st">&quot;B: Elevation&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">5.1</span>, <span class="fl">4.1</span>, <span class="fl">4.1</span>, <span class="fl">2.1</span>))</span></code></pre></div>
+<p>Using <code>extract_grafting_info()</code>, we summarize, for each
+taxon, the state of each trait at the point where it was grafted
+(<code>parent_state_*</code>) and the state it inherited
+(<code>tip_state_*</code>):</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="co"># ------ States at grafting and inherited states ------ #</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>info_ranges_elevation <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(grafted_ranges_elevation, <span class="at">missing_taxa_list =</span> taxa_ranges_elevation)</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>info_ranges_elevation[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;parent_state_biogeo&quot;</span>, <span class="st">&quot;tip_state_biogeo&quot;</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>                          <span class="st">&quot;parent_state_elevation&quot;</span>, <span class="st">&quot;tip_state_elevation&quot;</span>)]</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a><span class="co">#&gt;   Taxon_name parent_state_biogeo tip_state_biogeo parent_state_elevation</span></span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1                   A                A                   high</span></span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2                   A                A                   high</span></span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3                   B                B                    low</span></span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4                  BC               BC                   high</span></span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5                  BC                B                    low</span></span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6                  BC                B                   high</span></span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7                  BC               BC                   high</span></span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a><span class="co">#&gt;   tip_state_elevation</span></span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a><span class="co">#&gt; 1                high</span></span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a><span class="co">#&gt; 2                high</span></span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a><span class="co">#&gt; 3                 low</span></span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a><span class="co">#&gt; 4                high</span></span>
+<span id="cb17-19"><a href="#cb17-19" tabindex="-1"></a><span class="co">#&gt; 5                 low</span></span>
+<span id="cb17-20"><a href="#cb17-20" tabindex="-1"></a><span class="co">#&gt; 6                high</span></span>
+<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a><span class="co">#&gt; 7                high</span></span></code></pre></div>
+<p>The elevation is always inherited as it is, whereas the <strong>range
+can be smaller than the range of the branch</strong>, which represents
+<strong>subset sympatric speciation events</strong> (e.g.,
+<code>(AB) -&gt; (AB), (A)</code>).</p>
+<p>The a posteriori check verifies that the inherited tip range is among
+the allowed_states (<code>states_ok_biogeo</code> and
+<code>states_ok_elevation</code>). It also verifies, for the range
+trait, that <strong>the inherited range is contained in the range of its
+parent branch</strong> (<code>ranges_ok</code>):</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="co"># ------ A posteriori check ------ #</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>constraints_ranges_elevation <span class="ot">&lt;-</span> <span class="fu">check_grafting_constraints</span>(<span class="at">phy_grafted =</span> grafted_ranges_elevation, <span class="at">phy_backbone =</span> toy_backbone,</span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>                                                           <span class="at">missing_taxa_list =</span> taxa_ranges_elevation,</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>                                                           <span class="at">allowed_states =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>), <span class="cn">NULL</span>),</span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>                                                           <span class="at">treat_states_as_ranges =</span> <span class="fu">c</span>(<span class="at">biogeo =</span> <span class="cn">TRUE</span>, <span class="at">elevation =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a>                                                           <span class="at">use_excluded_subclades =</span> <span class="cn">FALSE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>constraints_ranges_elevation[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;states_ok_biogeo&quot;</span>, <span class="st">&quot;states_ok_elevation&quot;</span>, <span class="st">&quot;ranges_ok&quot;</span>, <span class="st">&quot;ok&quot;</span>)]</span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a><span class="co">#&gt;         Taxon_name states_ok_biogeo states_ok_elevation ranges_ok   ok</span></span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a><span class="co">#&gt; New_sp1    New_sp1             TRUE                TRUE      TRUE TRUE</span></span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a><span class="co">#&gt; New_sp2    New_sp2             TRUE                TRUE      TRUE TRUE</span></span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a><span class="co">#&gt; New_sp3    New_sp3             TRUE                TRUE      TRUE TRUE</span></span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a><span class="co">#&gt; New_sp4    New_sp4             TRUE                TRUE      TRUE TRUE</span></span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a><span class="co">#&gt; New_sp5    New_sp5             TRUE                TRUE      TRUE TRUE</span></span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a><span class="co">#&gt; New_sp6    New_sp6             TRUE                TRUE      TRUE TRUE</span></span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a><span class="co">#&gt; New_sp7    New_sp7             TRUE                TRUE      TRUE TRUE</span></span></code></pre></div>
+</div>
+<div id="several-maps-per-trait" class="section level2">
+<h2>5/ Several maps per trait</h2>
+<p>Each trait can be described by <strong>several stochastic
+maps</strong> (a <code>&quot;multiSimmap&quot;</code>), to account for the
+<strong>uncertainty</strong> in its evolutionary history (see
+<code>vignette(&quot;handle_uncertainty&quot;)</code>). The maps of the traits are
+<strong>paired</strong>: the grafting is run with the map 1 of every
+trait, then with the map 2 of every trait, and so on. <strong>All the
+traits must therefore have the same number of maps.</strong></p>
+<p>This also applies to a trait described by a <strong>single
+<code>simmap</code></strong>: it <strong>cannot be mixed</strong> with a
+trait described by a <code>multiSimmap</code>, and such a list is
+refused. You can always <strong>duplicate the single
+<code>simmap</code></strong> in the list, so that it pairs with all the
+maps of the <code>multiSimmap</code> of the other trait. For instance,
+<code>toy_multiSimmap_elevation[rep(1, 10)]</code> repeats the map 1 of
+a <code>multiSimmap</code> 10 times and keeps the class
+<code>&quot;multiSimmap&quot;</code>, which is essential to tell phylograftR that
+this set of maps are inferred for a unique trait (a list of
+<code>simmap</code>s, without the <code>multiSimmap</code> class, would
+be read as 10 unique maps for 10 different traits).</p>
+<p>We quickly generate <strong>10 stochastic maps</strong> for each
+trait with <code>phytools::make.simmap()</code>, from the states of the
+tips of the toy maps (equal-rates model). Of course, in a real analysis,
+the maps would be built from your own data (see
+<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>).</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="co"># ------ 10 stochastic maps for the color and for the elevation ------ #</span></span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a><span class="co"># States of the tips of each trait</span></span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>tip_colors <span class="ot">&lt;-</span> phytools<span class="sc">::</span><span class="fu">getStates</span>(toy_simmap, <span class="at">type =</span> <span class="st">&quot;tips&quot;</span>)</span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>tip_elevations <span class="ot">&lt;-</span> phytools<span class="sc">::</span><span class="fu">getStates</span>(toy_simmap_elevation, <span class="at">type =</span> <span class="st">&quot;tips&quot;</span>)</span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a></span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a><span class="co"># Simulate 10 stochastic maps per trait</span></span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">33</span>)</span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a>multi_color <span class="ot">&lt;-</span> phytools<span class="sc">::</span><span class="fu">make.simmap</span>(toy_backbone, tip_colors, <span class="at">model =</span> <span class="st">&quot;ER&quot;</span>, <span class="at">nsim =</span> <span class="dv">10</span>, <span class="at">message =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a>multi_elevation <span class="ot">&lt;-</span> phytools<span class="sc">::</span><span class="fu">make.simmap</span>(toy_backbone, tip_elevations, <span class="at">model =</span> <span class="st">&quot;ER&quot;</span>, <span class="at">nsim =</span> <span class="dv">10</span>, <span class="at">message =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a></span>
+<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a><span class="co"># Group them in a named list, as with a single map per trait</span></span>
+<span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a>multi_maps <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">color =</span> multi_color, <span class="at">elevation =</span> multi_elevation)</span></code></pre></div>
+<p>With random maps, the constraints can differ a lot from one map to
+the next. <code>check_grafting_plan()</code> summarizes the
+<strong>valid fraction</strong> of each taxon across the pairs of maps
+(minimum, mean and maximum). It also reports the maps with no available
+branch for a taxon (<code>n_maps_infeasible</code>), which would stop
+the grafting:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="co"># ------ Grafting plan across the 10 pairs of maps ------ #</span></span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>plan_paired <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_two_traits,</span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>                                   <span class="at">simmap =</span> multi_maps,</span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>                                   <span class="at">allowed_states =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;green&quot;</span>), <span class="cn">NULL</span>), <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>plan_paired[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;valid_fraction_min&quot;</span>, <span class="st">&quot;valid_fraction_mean&quot;</span>, <span class="st">&quot;valid_fraction_max&quot;</span>, <span class="st">&quot;n_maps_infeasible&quot;</span>, <span class="st">&quot;feasible&quot;</span>)]</span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a><span class="co">#&gt;   Taxon_name valid_fraction_min valid_fraction_mean valid_fraction_max</span></span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1        0.004298103           0.1067638          0.4359657</span></span>
+<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2        0.422849278           0.5879249          0.7761303</span></span>
+<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3        0.042590491           0.1864553          0.3814805</span></span>
+<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4        0.062828303           0.1426612          0.2321527</span></span>
+<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5        0.410359896           0.6267012          0.8664758</span></span>
+<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6        0.178834499           0.5189147          0.9898609</span></span>
+<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7        0.649172440           0.7944653          0.9956683</span></span>
+<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a><span class="co">#&gt;   n_maps_infeasible feasible</span></span>
+<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a><span class="co">#&gt; 1                 0     TRUE</span></span>
+<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a><span class="co">#&gt; 2                 0     TRUE</span></span>
+<span id="cb20-18"><a href="#cb20-18" tabindex="-1"></a><span class="co">#&gt; 3                 0     TRUE</span></span>
+<span id="cb20-19"><a href="#cb20-19" tabindex="-1"></a><span class="co">#&gt; 4                 0     TRUE</span></span>
+<span id="cb20-20"><a href="#cb20-20" tabindex="-1"></a><span class="co">#&gt; 5                 0     TRUE</span></span>
+<span id="cb20-21"><a href="#cb20-21" tabindex="-1"></a><span class="co">#&gt; 6                 0     TRUE</span></span>
+<span id="cb20-22"><a href="#cb20-22" tabindex="-1"></a><span class="co">#&gt; 7                 0     TRUE</span></span></code></pre></div>
+<p>As in <em>Section 2</em>, the strict constraints leave few eligible
+branches for some taxa (e.g., <code>New_sp1</code>), especially in some
+maps.</p>
+<p>Here, we graft with <code>method = &quot;uniform&quot;</code>, which only
+requires an available branch in each map as the age of the grafting is
+not drawn from a diversification model. This is a solution when
+constrains are too strict to be easily realized under diversification
+models, but at the cost of ignoring diversification dynamics, which tend
+to create a bias towards older divergence ages (see <em>Section 2</em>
+<code>vignette(&quot;graft_missing_taxa&quot;)</code>). <strong>It is not the
+recommended use of phylograftR</strong>, but is used here only as
+illustration.</p>
+<p>We also silence the warnings about the low valid fractions already
+shown above by setting <code>min_valid_fraction = 0</code>, i.e.,
+warnings are sent only if no branch pieces are available at all.</p>
+<p>We generate <strong>5 simulations for each pair of maps</strong>:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a><span class="co"># ------ Graft with paired maps ------ #</span></span>
+<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a>grafted_paired <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_two_traits,</span>
+<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a>                                     <span class="at">simmap =</span> multi_maps,</span>
+<span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a>                                     <span class="at">allowed_states =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;green&quot;</span>), <span class="cn">NULL</span>),</span>
+<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a>                                     <span class="at">method =</span> <span class="st">&quot;uniform&quot;</span>, <span class="at">min_valid_fraction =</span> <span class="dv">0</span>,</span>
+<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a>                                     <span class="at">nb_simulations =</span> <span class="dv">5</span>, <span class="at">seed =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<p>The output is a <strong>list with one element per pair of
+maps</strong> (<code>&quot;map_1&quot;</code>, <code>&quot;map_2&quot;</code>, …), each
+being a <code>multiPhylo</code> of the <strong>5 grafted
+phylogenies</strong> obtained with this pair:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a><span class="co"># ------ Structure of the output ------ #</span></span>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a><span class="co"># One element per pair of maps</span></span>
+<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a><span class="fu">length</span>(grafted_paired)</span>
+<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a><span class="co">#&gt; [1] 10</span></span>
+<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a><span class="fu">names</span>(grafted_paired)</span>
+<span id="cb22-7"><a href="#cb22-7" tabindex="-1"></a><span class="co">#&gt;  [1] &quot;map_1&quot;  &quot;map_2&quot;  &quot;map_3&quot;  &quot;map_4&quot;  &quot;map_5&quot;  &quot;map_6&quot;  &quot;map_7&quot;  &quot;map_8&quot; </span></span>
+<span id="cb22-8"><a href="#cb22-8" tabindex="-1"></a><span class="co">#&gt;  [9] &quot;map_9&quot;  &quot;map_10&quot;</span></span>
+<span id="cb22-9"><a href="#cb22-9" tabindex="-1"></a></span>
+<span id="cb22-10"><a href="#cb22-10" tabindex="-1"></a><span class="co"># Each element contains 5 grafted phylogenies</span></span>
+<span id="cb22-11"><a href="#cb22-11" tabindex="-1"></a><span class="fu">sapply</span>(grafted_paired, length)</span>
+<span id="cb22-12"><a href="#cb22-12" tabindex="-1"></a><span class="co">#&gt;  map_1  map_2  map_3  map_4  map_5  map_6  map_7  map_8  map_9 map_10 </span></span>
+<span id="cb22-13"><a href="#cb22-13" tabindex="-1"></a><span class="co">#&gt;      5      5      5      5      5      5      5      5      5      5</span></span>
+<span id="cb22-14"><a href="#cb22-14" tabindex="-1"></a></span>
+<span id="cb22-15"><a href="#cb22-15" tabindex="-1"></a><span class="co"># Total number of grafted phylogenies</span></span>
+<span id="cb22-16"><a href="#cb22-16" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">sapply</span>(grafted_paired, length))</span>
+<span id="cb22-17"><a href="#cb22-17" tabindex="-1"></a><span class="co">#&gt; [1] 50</span></span></code></pre></div>
+<p>Each grafted phylogeny comes with <strong>one updated simmap per
+trait</strong>, derived from the pair of maps it was grafted on:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a><span class="co"># ------ Updated simmaps of a grafted phylogeny ------ #</span></span>
+<span id="cb23-2"><a href="#cb23-2" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" tabindex="-1"></a><span class="co"># First phylogeny of the first pair of maps</span></span>
+<span id="cb23-4"><a href="#cb23-4" tabindex="-1"></a>phy_1_1 <span class="ot">&lt;-</span> grafted_paired<span class="sc">$</span>map_1[[<span class="dv">1</span>]]</span>
+<span id="cb23-5"><a href="#cb23-5" tabindex="-1"></a><span class="fu">names</span>(phy_1_1<span class="sc">$</span>simmap)</span>
+<span id="cb23-6"><a href="#cb23-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;color&quot;     &quot;elevation&quot;</span></span>
+<span id="cb23-7"><a href="#cb23-7" tabindex="-1"></a><span class="fu">class</span>(phy_1_1<span class="sc">$</span>simmap<span class="sc">$</span>color)</span>
+<span id="cb23-8"><a href="#cb23-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;simmap&quot; &quot;phylo&quot;</span></span>
+<span id="cb23-9"><a href="#cb23-9" tabindex="-1"></a><span class="fu">class</span>(phy_1_1<span class="sc">$</span>simmap<span class="sc">$</span>elevation)</span>
+<span id="cb23-10"><a href="#cb23-10" tabindex="-1"></a><span class="co">#&gt; [1] &quot;simmap&quot; &quot;phylo&quot;</span></span></code></pre></div>
+<p>Note that pairing the map 1 of a trait with the map 1 of the others
+is a <strong>choice of the analysis</strong>: the maps of two traits are
+usually built independently, so any pairing is arbitrary and does not
+represent a correlated evolution of the traits. If you want to
+<strong>cross every pair of maps</strong> instead, you can
+<strong>duplicate the maps in a dedicated fashion</strong> so that each
+map of the first trait meets each map of the second trait. With 10 maps
+per trait, repeat each map of the color 10 times in a row (map 1 x 10,
+then map 2 x 10, …), and repeat the whole series of maps of the
+elevation 10 times (maps 1 to 10, then again 1 to 10, …):</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="co"># ------ Not run: cross all the pairs of maps ------ #</span></span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a><span class="co"># Each map of the color repeated 10 times in a row: c1, c1, ..., c2, c2, ..., c10</span></span>
+<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a>crossed_color <span class="ot">&lt;-</span> multi_color[<span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="at">each =</span> <span class="dv">10</span>)]</span>
+<span id="cb24-5"><a href="#cb24-5" tabindex="-1"></a><span class="co"># The 10 maps of the elevation repeated 10 times: e1, ..., e10, e1, ..., e10, ...</span></span>
+<span id="cb24-6"><a href="#cb24-6" tabindex="-1"></a>crossed_elevation <span class="ot">&lt;-</span> multi_elevation[<span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="at">times =</span> <span class="dv">10</span>)]</span>
+<span id="cb24-7"><a href="#cb24-7" tabindex="-1"></a></span>
+<span id="cb24-8"><a href="#cb24-8" tabindex="-1"></a><span class="co"># 100 pairs of maps = all the combinations of the 10 maps of each trait</span></span>
+<span id="cb24-9"><a href="#cb24-9" tabindex="-1"></a>grafted_crossed <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_two_traits,</span>
+<span id="cb24-10"><a href="#cb24-10" tabindex="-1"></a>                                      <span class="at">simmap =</span> <span class="fu">list</span>(<span class="at">color =</span> crossed_color, <span class="at">elevation =</span> crossed_elevation),</span>
+<span id="cb24-11"><a href="#cb24-11" tabindex="-1"></a>                                      <span class="at">allowed_states =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;green&quot;</span>), <span class="cn">NULL</span>),</span>
+<span id="cb24-12"><a href="#cb24-12" tabindex="-1"></a>                                      <span class="at">nb_simulations =</span> <span class="dv">5</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span></code></pre></div>
+<p><strong>Beware of the rapid inflation of the number of grafted
+phylogenies!</strong></p>
+<p>Crossing all the maps multiplies the numbers of maps of the traits:
+here, 10 x 10 pairs of maps x 5 simulations = <strong>500
+phylogenies</strong>, instead of 50 with paired maps. In practice, 100
+to 1000 stochastic maps per trait are typically used to <strong>account
+for the uncertainty in the evolutionary history</strong>. Crossing 100
+maps per trait with 10 simulations each already gives 100 x 100 x 10 =
+<strong>100,000 phylogenies</strong>, and crossing 1000 maps per trait
+up to 1,000,000 pairs of maps (10,000,000 phylogenies with 10
+simulations each). Each additional trait multiplies this number again.
+Crossing every pair is therefore only realistic with a small number of
+maps, whereas pairing the maps (and a subset of them if needed) keeps
+the number of runs manageable.</p>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next steps</h2>
+<p>Now that you know how to use <strong>several traits</strong> as
+constraints, you may be interested in:</p>
+<ul>
+<li>exploring options to graft <strong>missing taxa</strong>,
+<strong>missing clades</strong>, or <strong>both types</strong>:
+<code>vignette(&quot;graft_missing_taxa&quot;)</code>,
+<code>vignette(&quot;graft_missing_clades&quot;)</code> and
+<code>vignette(&quot;combine_missing_taxa_and_clades&quot;)</code>;</li>
+<li>using <strong>biogeographic ranges</strong>:
+<code>vignette(&quot;biogeographic_data&quot;)</code>;</li>
+<li>using <strong>continuous traits</strong>:
+<code>vignette(&quot;continuous_data&quot;)</code>;</li>
+<li>handling <strong>uncertainty</strong> with several simulations and
+stochastic maps, and ensuring the <strong>reproducibility</strong> of
+the runs with the seed system:
+<code>vignette(&quot;handle_uncertainty&quot;)</code>;</li>
+<li>speeding up your runs by using <strong>parallel
+computation</strong>: <code>vignette(&quot;parallel_grafting&quot;)</code>.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

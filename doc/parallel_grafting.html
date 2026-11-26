@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Maël Doré" />
+
+<meta name="date" content="2026-11-26" />
+
+<title>Run grafting in parallel</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Run grafting in parallel</h1>
+<h4 class="author">Maël Doré</h4>
+<h4 class="date">2026-11-26</h4>
+
+
+
+<p>Grafting is stochastic, so a robust analysis may need <strong>many
+grafted phylogenies</strong>: N simulations, eventually crossed with P
+stochastic maps to apply attribute-based constraints (see
+<code>vignette(&quot;handle_uncertainty&quot;)</code>). Each grafted phylogeny is
+<strong>independent</strong> from the others, so they can be computed
+<strong>at the same time</strong> on the different cores of your
+computer, using a <strong>unique call</strong> to one of the grafting
+functions.</p>
+<p>This tutorial explains <strong>how to run the grafting in
+parallel</strong>, and <strong>when it is worth it</strong>. Parallel
+computation has a small cost (starting the workers, sending the data to
+them), so it is <strong>not always faster</strong>. We present the
+results of a <strong>benchmark</strong> to help you decide, with the
+<strong>expected gain</strong> depending on the size of the backbone
+phylogeny, the number of grafted phylogenies, and the number of
+workers.</p>
+<p>Here, we cover:</p>
+<ol style="list-style-type: decimal">
+<li>How to <strong>set up</strong> the parallel computation.</li>
+<li>What is <strong>run in parallel</strong>, and why the output is the
+<strong>same</strong> as without parallelization.</li>
+<li>The <strong>design of the benchmark</strong>, and the machine
+used.</li>
+<li>The <strong>results</strong>: from which number of grafted
+phylogenies is it worth it, and which speed-up to expect.</li>
+<li><strong>Larger backbones</strong> (5,000 and 10,000 tips).</li>
+<li>The <strong>memory</strong> needed.</li>
+</ol>
+<p>Everything below applies in the same way to all grafting functions:
+<code>graft_missing_taxa()</code>, <code>graft_missing_clades()</code>
+and <code>graft_missing_taxa_and_clades()</code>.</p>
+<div id="set-up-the-parallel-computation" class="section level2">
+<h2>1/ Set up the parallel computation</h2>
+<p>The parallel computation relies on the packages
+<strong><code>future</code></strong> and
+<strong><code>future.apply</code></strong>. They are <strong>not
+installed with phylograftR</strong>, so you must install them first.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="fu">c</span>(<span class="st">&quot;future&quot;</span>, <span class="st">&quot;future.apply&quot;</span>))</span></code></pre></div>
+<p>phylograftR <strong>does not manage the workers</strong>: <strong>you
+set a computation plan before the grafting</strong>, and reset it
+afterwards. The plan <code>multisession</code> starts separate R
+sessions (the <em>workers</em>), and works on all systems.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># How many workers? You can use up to the number of physical cores of your computer, minus one or two to keep it responsive</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>parallel<span class="sc">::</span><span class="fu">detectCores</span>(<span class="at">logical =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Set the plan: Here, 4 workers</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>future<span class="sc">::</span><span class="fu">plan</span>(future<span class="sc">::</span>multisession, <span class="at">workers =</span> <span class="dv">4</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>future<span class="sc">::</span><span class="fu">nbrOfWorkers</span>()</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; [1] 4</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co"># Run the grafting as usual</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># The argument &#39;parallel = NULL&#39; (default) uses the plan if one is set</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>grafted_phylo <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone,</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>                                    <span class="at">missing_taxa_list =</span> toy_missing_taxa_list,</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>                                    <span class="at">nb_simulations =</span> <span class="dv">100</span>,</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>                                    <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co"># Reset the plan when you are done, to free the workers</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>future<span class="sc">::</span><span class="fu">plan</span>(future<span class="sc">::</span>sequential)</span></code></pre></div>
+<p>The argument <code>parallel</code> controls how the plan is used:</p>
+<ul>
+<li><code>parallel = NULL</code> (default): the run is parallel
+<strong>if a plan with several workers is set</strong>, and sequential
+otherwise.</li>
+<li><code>parallel = FALSE</code>: the plan is <strong>ignored</strong>,
+the run is sequential.</li>
+<li><code>parallel = TRUE</code>: the plan is used, and the function
+<strong>stops</strong> if <code>future</code> is not installed or if no
+plan with several workers (i.e., with parallel computation) is set.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># No plan set: error</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> toy_missing_taxa_list,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>                   <span class="at">nb_simulations =</span> <span class="dv">4</span>, <span class="at">parallel =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; Error: &#39;parallel = TRUE&#39; needs a &#39;future&#39; plan with several workers, set before the call,</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; e.g., future::plan(future::multisession, workers = 4). Use &#39;parallel = FALSE&#39; to run sequentially.</span></span></code></pre></div>
+<p><strong>Choosing the number of workers</strong>:</p>
+<p>You can use up to the <strong>number of physical cores of your
+computer</strong>, minus one or two to keep your system responsive. Keep
+in mind that <strong>each worker is a full R session that needs its own
+memory</strong>, so memory usage multiplies roughly linearly with the
+number of workers set (see <em>Section 6</em> for estimates of memory
+usage). There is also no point in having more workers than grafted
+phylogenies.</p>
+</div>
+<div id="what-is-run-in-parallel" class="section level2">
+<h2>2/ What is run in parallel</h2>
+<p>Each <strong>grafted phylogeny</strong> is one <strong>independent
+task</strong>: one simulation (one seed) for one stochastic map. With
+<code>P</code> maps and <code>nb_simulations = N</code>, all the
+<code>P x N</code> tasks are <strong>shared evenly across the
+workers</strong>. There is no need to loop over the maps yourself.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># 10 stochastic maps x 5 simulations = 50 tasks, shared among the workers</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>future<span class="sc">::</span><span class="fu">plan</span>(future<span class="sc">::</span>multisession, <span class="at">workers =</span> <span class="dv">4</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>grafted_phylo_par <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>                                        <span class="at">missing_taxa_list =</span> taxa_colors, <span class="co"># See `vignette(&quot;handle_uncertainty&quot;)`</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>                                        <span class="at">simmap =</span> toy_multiSimmap,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>                                        <span class="at">nb_simulations =</span> <span class="dv">5</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>                                        <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>future<span class="sc">::</span><span class="fu">plan</span>(future<span class="sc">::</span>sequential)</span></code></pre></div>
+<div id="the-output-is-the-same-as-in-a-sequential-run" class="section level3">
+<h3>The output is the same as in a sequential run</h3>
+<p>The <strong>seed system</strong> is not affected by the
+parallelization: each grafted phylogeny uses its own seed, derived from
+<code>seed</code> (see <code>vignette(&quot;handle_uncertainty&quot;)</code>). The
+output is thus <strong>exactly the same</strong> with or without
+parallelization, whatever the number of workers.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co"># Run the same example without a parallel plan = sequentially</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>grafted_phylo_seq <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>                                        <span class="at">missing_taxa_list =</span> taxa_colors,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                                        <span class="at">simmap =</span> toy_multiSimmap,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>                                        <span class="at">nb_simulations =</span> <span class="dv">5</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>                                        <span class="at">seed =</span> <span class="dv">1</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>                                        <span class="at">parallel =</span> <span class="cn">FALSE</span>) <span class="co"># Ignore the plan</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co"># Compare outputs</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="fu">identical</span>(grafted_phylo_seq, grafted_phylo_par)</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>The format and names of the outputs are the same too (here: a list of
+10 <code>multiPhylo</code> named <code>map_1</code>, <code>map_2</code>,
+…). Everything you learn in <code>vignette(&quot;handle_uncertainty&quot;)</code>
+applies.</p>
+<p>The only difference: <strong>messages and warnings</strong> raised in
+the workers are <strong>relayed to your session once the tasks are
+collected</strong>, so they appear after the run, not live. With
+<code>verbose = TRUE</code>, one line is printed when each simulation is
+done.</p>
+</div>
+</div>
+<div id="benchmark-design-and-machine" class="section level2">
+<h2>3/ Benchmark: design and machine</h2>
+<p>We benchmarked the computation time of the grafting, sequential and
+parallel, to find from which size of backbone and number of grafted
+phylogenies the parallelization pays off.</p>
+<p><strong>Machine</strong>: Intel Xeon W-2255 (3.7 GHz), 10 physical
+cores (20 threads).</p>
+<p><strong>Configurations</strong>:</p>
+<ul>
+<li><strong>Backbones</strong>: random coalescent trees of <strong>100,
+500, 1000, 5,000 and 10,000 tips</strong>.</li>
+<li><strong>Taxa to graft</strong>: <strong>as many as tips</strong> for
+100, 500 and 1000 tips (e.g., 1000 taxa on a backbone of 1000 tips),
+which is a <strong>demanding case</strong>, as the time of a grafting
+depends mostly on the number of taxa to graft. For larger phylogenies,
+we used a more realistic scenario with <strong>20% of the tips</strong>
+to graft for 5,000 and 10,000 tips (1,000 and 2,000 taxa).</li>
+<li><strong>Taxa distribution</strong>: taxa spread over a few target
+clades, with a <strong>broken stick distribution</strong> of the number
+of taxa per clade (a few large groups of taxa, and many small ones, as
+in a taxonomy).</li>
+<li><strong>Number of simulations</strong>: 10, 100 and 1000
+simulations, without stochastic maps: the final number of grafted
+phylogenies equals the number of simulations.</li>
+<li><strong>Number of workers for parallelization</strong>: 2, 4 and 10
+workers, with the plan <code>future::multisession</code>. The times
+include the set-up of the workers, as when you set the plan just before
+the grafting.</li>
+</ul>
+<p><strong>Method</strong>: the benchmark uses the default method,
+<code>&quot;BD_clades&quot;</code>, without stochastic maps for attribute-based
+constraints. The method <code>&quot;uniform&quot;</code> has no birth-death model
+to fit, yet it gave <strong>similar times</strong> (within about 10%
+from 500 tips). The birth-death models in <code>&quot;BD_clades&quot;</code> are
+fitted only once per target clade, which is usually negligible. However,
+<code>&quot;BD_clades&quot;</code> can be about 25% to 50% slower than
+<code>&quot;uniform&quot;</code> when using <strong>large clades</strong> as
+target clades (hundreds of tips). For the effect of the <strong>use of
+stochastic maps</strong> as attribute-based constraints, please see the
+last subsection of the Results in <em>Section 4</em>.</p>
+<div id="fixed-costs-and-time-of-one-task" class="section level3">
+<h3>Fixed costs and time of one task</h3>
+<p>Setting up the workers, loading phylograftR in each of them, and
+sending the data has a <strong>fixed cost</strong>, paid once per plan.
+It <strong>increases with the number of workers</strong>:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Workers</th>
+<th align="left">Set-up time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">2</td>
+<td align="left">about 14 s</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">about 18 s</td>
+</tr>
+<tr class="odd">
+<td align="left">10</td>
+<td align="left">about 32 s</td>
+</tr>
+</tbody>
+</table>
+<p>Keep the plan set across several grafting calls to <strong>pay this
+cost only once</strong>.</p>
+<p>The time of one task, i.e., <strong>one grafted phylogeny</strong>,
+grows with the size of the backbone and the number of taxa to graft:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Backbone</th>
+<th align="right">Taxa to graft</th>
+<th align="left">One grafted phylogeny (sequential)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">100 tips</td>
+<td align="right">100</td>
+<td align="left">0.5 s</td>
+</tr>
+<tr class="even">
+<td align="left">500 tips</td>
+<td align="right">500</td>
+<td align="left">11 s</td>
+</tr>
+<tr class="odd">
+<td align="left">1000 tips</td>
+<td align="right">1000</td>
+<td align="left">41 s</td>
+</tr>
+<tr class="even">
+<td align="left">5,000 tips</td>
+<td align="right">1,000</td>
+<td align="left">3 min</td>
+</tr>
+<tr class="odd">
+<td align="left">10,000 tips</td>
+<td align="right">2,000</td>
+<td align="left">13 min</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="results-when-does-parallel-pay-off" class="section level2">
+<h2>4/ Results: when does parallel pay off?</h2>
+<div id="benchmark-results" class="section level3">
+<h3>Benchmark results</h3>
+<p>The table gives the time of the runs for all combinations of backbone
+and number of simulations (<code>N</code>), sequential and with 2, 4 and
+10 workers, with the <strong>speed-up</strong> in brackets (sequential
+time / parallel time). A speed-up below 1 means that the parallel run is
+<strong>slower</strong>.</p>
+<table style="width:100%;">
+<colgroup>
+<col width="14%" />
+<col width="14%" />
+<col width="14%" />
+<col width="14%" />
+<col width="14%" />
+<col width="14%" />
+<col width="14%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Backbone</th>
+<th align="right">Taxa to graft</th>
+<th align="right">Simulations (N)</th>
+<th align="left">Sequential</th>
+<th align="left">2 workers</th>
+<th align="left">4 workers</th>
+<th align="left">10 workers</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">100 tips</td>
+<td align="right">100</td>
+<td align="right">10</td>
+<td align="left">5 s</td>
+<td align="left">19 s (x0.3)</td>
+<td align="left">23 s (x0.2)</td>
+<td align="left">33 s (x0.1)</td>
+</tr>
+<tr class="even">
+<td align="left">100 tips</td>
+<td align="right">100</td>
+<td align="right">100</td>
+<td align="left">49 s</td>
+<td align="left">41 s (x1.2)</td>
+<td align="left">32 s (x1.5)</td>
+<td align="left">38 s (x1.3)</td>
+</tr>
+<tr class="odd">
+<td align="left">100 tips</td>
+<td align="right">100</td>
+<td align="right">1000</td>
+<td align="left">8.7 min</td>
+<td align="left">4.5 min (x1.9)</td>
+<td align="left">2.9 min (x3.0)</td>
+<td align="left">90 s (x5.5)</td>
+</tr>
+<tr class="even">
+<td align="left">500 tips</td>
+<td align="right">500</td>
+<td align="right">10</td>
+<td align="left">1.8 min</td>
+<td align="left">1.1 min (x1.6)</td>
+<td align="left">53 s (x2.0)</td>
+<td align="left">44 s (x2.5)</td>
+</tr>
+<tr class="odd">
+<td align="left">500 tips</td>
+<td align="right">500</td>
+<td align="right">100</td>
+<td align="left">18 min</td>
+<td align="left">9 min (x2.0)</td>
+<td align="left">5 min (x3.5)</td>
+<td align="left">3 min (x7.2)</td>
+</tr>
+<tr class="even">
+<td align="left">500 tips</td>
+<td align="right">500</td>
+<td align="right">1000</td>
+<td align="left">3.0 h</td>
+<td align="left">1.5 h (x2.0)</td>
+<td align="left">50 min (x3.6)</td>
+<td align="left">20 min (x8.9)</td>
+</tr>
+<tr class="odd">
+<td align="left">1,000 tips</td>
+<td align="right">1,000</td>
+<td align="right">10</td>
+<td align="left">6.8 min</td>
+<td align="left">3.4 min (x2.0)</td>
+<td align="left">2.4 min (x2.9)</td>
+<td align="left">73 s (x5.5)</td>
+</tr>
+<tr class="even">
+<td align="left">1,000 tips</td>
+<td align="right">1,000</td>
+<td align="right">100</td>
+<td align="left">1.1 h</td>
+<td align="left">34 min (x2.0)</td>
+<td align="left">17 min (x3.9)</td>
+<td align="left">7 min (x9.2)</td>
+</tr>
+<tr class="odd">
+<td align="left">1,000 tips</td>
+<td align="right">1,000</td>
+<td align="right">1000</td>
+<td align="left">11.3 h</td>
+<td align="left">5.6 h (x2.0)</td>
+<td align="left">2.9 h (x4.0)</td>
+<td align="left">1.1 h (x9.8)</td>
+</tr>
+<tr class="even">
+<td align="left">5,000 tips</td>
+<td align="right">1,000</td>
+<td align="right">10</td>
+<td align="left">33 min</td>
+<td align="left">17 min (x2.0)</td>
+<td align="left">10 min (x3.2)</td>
+<td align="left">4 min (x8.5)</td>
+</tr>
+<tr class="odd">
+<td align="left">5,000 tips</td>
+<td align="right">1,000</td>
+<td align="right">100</td>
+<td align="left">5.6 h</td>
+<td align="left">2.8 h (x2.0)</td>
+<td align="left">1.4 h (x3.9)</td>
+<td align="left">34 min (x9.7)</td>
+</tr>
+<tr class="even">
+<td align="left">5,000 tips</td>
+<td align="right">1,000</td>
+<td align="right">1000</td>
+<td align="left">2 days</td>
+<td align="left">27.8 h (x2.0)</td>
+<td align="left">14.0 h (x4.0)</td>
+<td align="left">5.6 h (x9.9)</td>
+</tr>
+<tr class="odd">
+<td align="left">10,000 tips</td>
+<td align="right">2,000</td>
+<td align="right">10</td>
+<td align="left">2.2 h</td>
+<td align="left">1.1 h (x2.0)</td>
+<td align="left">40 min (x3.3)</td>
+<td align="left">14 min (x9.5)</td>
+</tr>
+<tr class="even">
+<td align="left">10,000 tips</td>
+<td align="right">2,000</td>
+<td align="right">100</td>
+<td align="left">21.9 h</td>
+<td align="left">11.0 h (x2.0)</td>
+<td align="left">5.5 h (x4.0)</td>
+<td align="left">2.2 h (x9.9)</td>
+</tr>
+<tr class="odd">
+<td align="left">10,000 tips</td>
+<td align="right">2,000</td>
+<td align="right">1000</td>
+<td align="left">9 days</td>
+<td align="left">5 days (x2.0)</td>
+<td align="left">2 days (x4.0)</td>
+<td align="left">22.2 h (x9.9)</td>
+</tr>
+</tbody>
+</table>
+<p>Three things stand out:</p>
+<ol style="list-style-type: decimal">
+<li>On a <strong>small backbone (100 tips) with few
+simulations</strong>, the parallel run is <strong>slower</strong>: the
+set-up of the workers takes more time than the sequential run.</li>
+<li>From <strong>500 tips</strong>, the gain is clear even with 10
+simulations: about <strong>x2 with 2 workers and x2 to x3 with 4
+workers</strong>.</li>
+<li>When each grafted phylogeny takes <strong>10 seconds or
+more</strong>, the gain is <strong>close to the number of
+workers</strong>.</li>
+</ol>
+</div>
+<div id="expected-gain" class="section level3">
+<h3>Expected gain</h3>
+<p>We model the expected gain from the results of the benchmark,
+accounting for the <strong>fixed cost of setting up the
+workers</strong>, which increases with the number of workers, and the
+<strong>time of one task</strong>. The figure shows the expected
+speed-up as a function of the number of grafted phylogenies
+(<code>P x N</code>), for 2, 4 and 10 workers. The plain red line stands
+at X1 (even time cost for sequential and parallel computing), thus all
+cases above this line are cases when <strong>parallel computation offers
+a gain</strong>.</p>
+<p><img role="img" aria-label src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAqAAAAHgCAMAAABNUi8GAAAApVBMVEUAAAAAADoAAGYAOjoAOpAAZrYbnncekP86AAA6ADo6AGY6OgA6Ojo6OmY6OpA6ZmY6ZrY6kNtNTU1mAABmADpmAGZmOgBmOpBmZmZmkJBmtrZmtv+QOgCQOjqQOmaQkGaQtpCQ27aQ29uQ2/+2ZgC2Zjq2kDq2tma225C2/7a2/9u2///ZXwLbkDrbtrbb/9vb////AAD/tmb/25D//7b//9v///9anfEMAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAc8UlEQVR4nO2dC3sbN3aGaa8ky9k0W0VOu1lpN9uKbTe12KqkxP//0zrA3C+YAQ6AwYeZ730SU6RIXMzXB5fBAIcrIcAcUheAkDkoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaCgogYaCEmgoKIGGghJoKCiBhoISaAILeiDEilSChk2ObBUKSqChoAQaCkqgoaAEGgpKoKGgBBqBoOdqgupplXzJvnEV9P3xcFv+9PF8+Pw9fr5k3zgK+v5L18n+szj5kn3DPiiBJhtBLz98b7oV/d6F/g3ZKBJBi37ozdvxYZ18mzyVksdb9V/9cKWc20cyiv/0crp5e3/0MtRR0NPhT4WK799elJLVg3qdgm4dd0E/nh+uhaDXk8cYfpDv3TSdd/zPm1LxUkpaPVx1LP+knn789beDml04H4rnHqUicLgL+v74pAU9BxPU4Odd7wOTgtavfjx//l6EdPXiuSga2Q7yCHqcM6EYxmiMEosGSTOCPhXdgFv1b4dsC3Ef9DR3Jel0qDqo54OhpxpB0LPqGHte4CJoCEfx8309FWQrToY4KxJ0epDURlD1il/Pg6ARZR6009SafJHNg46nmb6+lIKq6PmknlHQbRFF0FgRVMXuz+2DzunwpAX980F1JjiK3xwCQXULPzcAUn3QKoSG64POopt4skUko3iLiZxaYuNbKSixQjYPumK+VlDQzSKbB5Vn53w/Ptk3gj6oGiuvly/ZNxJB7xcHSQHzbfMs+rNcbrc7JE387dJ76yHSjMaOgp7LPLncbnfEGSSpxRuB8i0pV59yuV3GfLFg4mORBkmLYbaX7+s0neT+2lx553I7ZGwsjC2o3SDpvLBoo5uvwc+OoO/f/qjM43I7IELYZ4GkiZ/vXQbOV6P+Tbz/8p3L7dIR1cIZsrlprmMml9utwuouTpKVoFxuF5n0Po7IQ1Bl3eWnNy63iwGakn1cdxYpRiIJ+qDX06G7zo7L7fwBdrJHHhF0CS4WsSQTKzsIRvHl8CTgXZ3+UNAlMtOyRS5owPvivaGgRvLUssVV0GN7lX3NnUWIM7mbWSGPoCvlS1zZiJkV2xgkEcW2zKzIRtCJ7Re5LLRik2ZW5CLo1PaLXBZ63bCZFRCCTs7O9f6+p7Zf3Puy0I2bWYEgqMHP7l/71PaLu10WuvWg2QNBUCvmBN3TstA9yalwvha/eLdR4Hxr7ATd9rLQXZlZsbEIutFlobtq1PtkJejsIGmzy0L3K6cil1M+prZf3MOy0P2aWZHJKR+T2y9ufVnojuNmC8QpH6HYyqKm/XQ5jffxNiCc8hGMTQi6AzlN95mHEdTqlA/75EKSvaBbNtNayT5xTvlwSY5UbNJOoZYtUU75CJnvTtiWnL5WdshkHlRtv2iO2Jk37RsKnaG0bMlDUDUwO5tjds6CbsTOwFq25CHoWW9ea7QwV0G3IGc0MysgFov8/PP0Y49yCYhy8XL/pJQtmn21490//cvn/y5eVAfelDP36pXvGczVZ25nbDMrECLoz5WQw8c+1ZFgp9vr+ceH6+lBN/ufvytbC2tVB0DJe1LiPl0zWHGXrZwrmVmBIKgV9YWry09v//H3fy5crNc0fVVm/qr2LO28Ar7iLs/Yua6ZFbkIeqob7Pdv//6333/5/ZfvVb9UWfnxfPOft9XpDnppfdkXAXU0z57n6mZWQPRBl+lc+D/+WsTQ3267i0MLTyduUEJc0JShnKnMrMgjgnZ3Hdc90B8frnUftBRU9Tj1AOoH/QrkijvaKSAPQcsNd8omW4/hVYNfjeIrQdWxDfrmuTKC4o3i85IzvZkVAkEtTjsOmO9WyMjO9UdCMwgEPd68nW51IFsj3y2QU/CEMbNCsh70QU8xnvCW20GSS88TKWx2kC1Yrm+xXCHfzMlDTlQ7r9IFy51Jndj5Zk0WdoKaWSHog6o5yeMDm/glsgie2HZeZdNMx9vODZWx862ZC9h4q5my6HjCy6mINA96PBxuP54P5suNzoIeZ/5BoAlKO8Mh64MuoW+qU/vMGe+eHyy3Kxk8777l/Id8Iii8nNdM5FTIRvELaIfLFfCmnupguV3PyKGvKsW//aMUFH49KHzszCV0Vkju6lzsfWqHy7cN3twuNXEq5fX0UPdBsdeDorftmdl5lUXQxdVMjhF0mfd/fasFRV4Pim1nfnIq4gySmj6oscPqOOZ6akbxuOtBofXM085rJqP4KmiXaaGuB8XVM1s5FdmsZmrmQRHXgwJ3PbO285rRaqZGULz1oLDTnrnLqeBqJm8w5cxqsnMGrmbyAjV2Xks/U5chAFzN5AFs237dQuws4WomOchybsXPfFYzwYGp57bsvOZyV+e1f9qxgVXXjED6uTE5FbkI2jvt2MCKguLqmboQoRHvsOy5EmNyud2Azjt6px2b0lxNUMSh0QaDp0a2R/21s1mSf74GP7uC9k47vqZddYen5+Y6nh0k00zVNfF1R/F9QROuukPVM3UxIiGYqC8NWfucpIGgaVbdIc57blhOhTyCrjwPOhA0xao7wHn5LcfOEkkfVH/la5+TdBkMktZfdYcm53YHRl08VtR7rbiTzYN2ppnWXnUHqmfqQkQnl3nQ3mnH+vmqq+4w2/bt65mRoCmhnumgoMtA6pm6EGtBQZcA03NHwVNDQecBa933pqfglI9AkzZ5CIqoZ+pCrIxzBFWzTAEkzUJQ6pkeURMfQNIMBMXSc+uXNE2I+6CejT2+oEh+7q/r2cBB0jR4eu7TTwo6CdTgaL9yKijoGOoJBAUdgaTn7v2koCNw9Nxz17NBeNPczdtxeaf6IPmuDE743PXQqEV209zp5s14PELgfNcFy8/UZUBAtjeTut3jtL15UOqJh2x3OyXoyjfNrQCMn2zbW+QRdOXbjqNDPSER90HXvmkuMjhzn9Szh3jrG89bfbAEpZ6wcB70ytYdGQpKPaHJ5hiaaED5mboMeEhG8SF244IRlHpiI5sHXTHfuDB8oiObB10x36ig+Ek9jQj6oGrDo/XyjQiSnvTTgETQ+20MkkD8pJ6zSJp48zEGEfKNBYiebN0X2OkgCeXSEfVcItIg6ahOMbifuSCaVlAgPennPHEGSdpP9TZjuE0qKPXMB48dls2DJL3avtwK2bSTfUpBcfxMXYYMiHItXsXNqicwWNbc7h7ukFxYMJp36mlJnMUiKnqeICMoxuiIrbs1cQRVGzfpEHo2jZLSCEo9s8N5f9AHiz7oVZ9eoDBOmSYRFEJPtu5O7Gk9KPXMEMEoPs1RiN5AhE+27q7IBc3svngEP6mnO66CHtuJopx2FkHQk627BHkEXSnfICD4ST1F7GKQBKAn/RSyB0EB/KSeUnYgaHo/OTiSs3lBAbqf1NODjQuKcG2TevqwaUER9KSfttzd3U286nwtvp0HhZ+oB9GTftpwdxdE0GCsICiInvTTApOeGxYUIHxST1uMem538zAQPxMXIQ9m9BQJerx5O91eL/fAOyxTz3wwt+4ayU1zD9ezOuUDd4/69H6ydbdkQU/pxg2XH77r/+XEFJR6ZsOSntKNG9SKJlRBMcJn2hJkwrKeoj6oWql8fEBt4iH8TFuAXLDxUzTNdLxVI3mvQXwsQdPrST8tsdJza/Og9DMXFgdHNZsSFEJP+rmMtZ7bEjS5nxy922GvZ7yNG4Lla09qP6mnHS56biiCJu9+Uk8rHFp3zUY2bki+8pN6WuGq51Y2bkDQk34u46znRjZuYOueBQI9t7FxA4CfSfPPA/fWXZP/ICl1804/rZDpKRL04xlomomjozwQ6ilbsOx3Fd4x31kg9KSfy4j9FC5Y9ieIoNQzD6TNuyLnk+YAOp/Ucxnh6KhCsmAZ46zO1OGTgyMr/PQU9UHPhwAh1FtQ+pkFnnpGOmkuZL7TJNeTftrgrWeu86DJ/WT304YAfuYpKIKe9HOJEHrKBC0a+Zu3o99kk4egqcMn9bTBd3BUIxkkfXo53bx5TofKBUXwM2X+WRBKT+l98eqW4zTL7ahnDgTTUzpRrwRNsmA5sZ9s3W0IqKdPBD2uv3EDw2cGhGvdNeI+6Mlvul4iKICfKbPPgsB6ikfxh4PpIPguM1s0CgQFmFxKmn8OhNYz0jyoxU72zoIChE/6uUB4PWNN1J/LG5YCRlCOjuAJ3rprIl2Lf39UQ6ixoG1kdSol9cQnip4eEXRplulYdFJDRVAAPxNmH4re7QdfKrCeT5Ra3sQfF5aFng4PgQSlnhUeBhiegj2fqLNc0MWJ+sv9wTwVZS+ooeArsVrrLhTO5Xm8wkdq3hVyQZcvdX48BxA0qZ9h9Zwzzk64YEUJS0Q/5YK+P3rd+WGZb/rwKf6wY4jLl5h6+oziva50Wuab3E+HdydtY9MRZ3KpBXnBcuLvdMHPzUZEF2LriSxo6m975Od8p3GXRNfTa6Le6765pXxTf/e6+8kQOUur52tF/Rvf5x3Etx3HXc0EoOeuhXQz6nXwa9/nXSTrQUszYx7klUSLRsjXJnyuX4iI2Bg3+K3EqMBAbgGe1M8v6/zFR2YhBJqMs01+hc5nhTyCxltRv5afk014pnraCBgss/X0lK6oL/482axYluQbt2mdGPV0f71SuyXEvk2OSfyppS7iFfV+8/TGfGMOSxZHPch6erbJwVhXT7R50Kij5sUxOZSek0ImLZFmZT3BBA2sp9s8UWIB0o2THVhdT7Ctb8JGT6eJzCQydDLFFLLP2q27Jr+tb+aQzqynUCMDI3sk0TO/rW9mkF/6WcWTqBM/8UmjZ3Zb38wh7sGuYkoObbiZVHpmtvXNBAHG/bGkyVnIAen8zGrrmxFBlnNEcijviNkjoZ6Rt74Jke8MIWZNgyo06GMGSzcpiQZHNVDzoMsEXgAXMsRtJ2J2SaxnXoKGXqEZwKd8R+V2rKPnXcXU7wSCqhnQ0zo3zfUJfKHJ06htRsweEfXsCnkXWNBi+H65v13cWcQ2uQViXZ33dWsfesbxc07IIbJ5UHXXxxrzoNFuuhDKtXUnOwTXcxAybT8mE1SdyB3/SlK0W4Jknu2gTW8Jq6dLyBwgaeJv1eaKK+wsEmvpnYtlWx8FTRNAz3EnU5aOaJB0+PTie+ZxigXLCqcguKOI2cW/dfeImEOgppmi3+jr0kjvqUHvEsCskP1XOEHDZtPHSbhd2ilu3YNFzCGOgr7/0h0Z9Z/FyTccNsbt1MoaoWWzE5meuEbQogNadT4/nn1OjF9d0OX2elej9CncJOu8Oeb1JtHWNyXpVzPZY2Hezu10i54RQ+YAqD5oNPatng1uuq24hGQPgpr03HuT3sFKuEzuSVo5X38W/KSgFnqu16QP2bygVHAJC/OS6bl5QUchkr72mTEvlZJ9tizoqAVnmz7ArGfCmNkHbfOwcBj0jJ5vPswHTwQ7r4jbL4ZhQkba2WPOQRQ7r5gb2PrT6MmgaWKkJ07Q7AG5BbgvlZWcRzIxkjHdNNISmIcoePDK6LnE2EVQORWgx9BIYcxcpJURVsouqAd5yaCeSzR6ojbpQyLNg57q1U6mW+siCPrKPucilZSwPc4xcQRVc1DlXXUrCxo+1e1w12vcs7Dz6tXEm9t3tUOj+nNmm9vAgmYdOtvzaSM+Fkp++VJquUp+Ho89xBF0bpZJ3TqvON68DQRtu6+2+S7w2iFQkkYCfxFf1nzUfpaCrpqv4LGPvImf2fqmjKD6PVEjqKecIEJd24MUJh9f/R914z58PQ/kgs6F0FrLojsQUdBFPeeN8/uXPVuu2UdXwTxBHBC1NzP1HyeQCzq79U09S/rxHLUPWvspM9A/98nHyMLZUnmZVE6DiMOJ2LkiigVdYeubaTpCFqa9Vo/XqcfAWIqIwF2HdfPtPrqIaEI+il9jf9BxL1BHTCVg/RiRBSGRie2nR0h0BGvB8vyw5LUUVP8YY9yeQWS0JpKc8YUcIhO0GaaHzXehiW6VDCNnxhFyko6SoexcT0QTUIJOMXLRP3ZuRcgebYPuEzwXmu4EYAs6aslF056bFLLPwE53n6ZHNQAgCzpy0VXOpr967T5uEfESJTwjB4ALOnxuu7Xn5Oc3hmjZMU7bbQnWKN7MbPDcQRs+ZNSULwVP2DZ8Adf9QYOsVp7Jd9JDU89zh2LWTMhpusG9fss6BQuN6JYP1b6fI9x2PCXi9Gv1r3yKkB+TEhrszF3MGslNc+U1zgg3zRmmlJoX9yqmZtLD0Yv5teELyM5JUsS/7biRc9dilhiiZPvi1sSskUTQcgQfe+OGNnTuWcyaCfF6bfvmxKyR33Ycceub19epnufumBuX125uVswarM3DIq4EyQ3TyLxa4hllKQgiUPOgrwydNROz8O3ru7HzCipo2KzyptvH3JucCmETf/N29LvYaTfNtCv68o0GP3u08yrdH/SkTjv2MjTBSXPQDJvuvok7lVMhm2Y6zWzJEDjfnVDrtzSdtDtkE/VKUOD9QXOhY55pPnPXcirkEdRzov7/9k7TqN8t/Hr697vBWdCqD+q5P2jqaidnTr072tniLmg5Ue93IWmvTbxFe73vLucIqHnQLdMJistvWq9Y8FDQ2PQvAZnftbtrRHZATdRvivbSz/I7KacRTtSHxvGiOdWchxP1wRhNaM5rx7hpBSfq/enek25h212f6MXLm2QT9R6fhaEXM62Eo5muiPugmAd5rcNUK84WPQ7iFfV7nKjvXS+31Y0NuhecB13mbmoqc1k49jVDQEFn6K8w4igoBVg3zSVmvLPWMGYufZ5mhkY2SLrGve14bcwbW9uYdjciamF3hmSaqTlGbo18YzJcJOwi2FhLmhkDwUT9tzJ0ZjhRPxkp7/ozRbOeTVpJLWMij6ARNg+LhWnXVkvDqGVC5FvfAE/UWwppNm1aSVqZAPlBXn572AYV1HKQM6eZUUlqmZas5kEHWw0uTAvNCTnrI5UEAlJQs4g9gSyEXBKRSqLjLOjl/kF1Q+NcizcIuCSkAK/Ck/VwFfRy/1QOk/QPRj6eFzqpk/ma9KSI+8VV0KPaoP6ovDvOHMd9OlT3g5wPhhtDZgWlhaTG+Riah/oYhZmJ+s45X6bZUgtBbUtGtoyzoE+VpXOC1ucsjN/VzlC5F5XsEYmgZfdz5kqSNIISMkTSB9ULmerjkiZpLjO59UEJGeIq6PnTy/ujiorH2atI9eUmY5SloMQK53nQs7bucr/FBcsED8grSYTUUFACDQUl0FBQAg0FJdBQUAINBSXQJBOUECsSCWqNd76+CUSpeOpCQVbKLwEKGpLUhYKsFAVNU4AYiab+fJxEKWiSAsRINPXn4yRKQZMUIEaiqT8fJ1EKmqQAMRJN/fk4iVLQJAWIkWjqz8dJlIImKUCMRFN/Pk6iFDRJAWIkmvrzcRLNUlBCrKCgBBoKSqChoAQaCkqgoaAEGgpKoKGgBBoKSqChoAQaCkqgoaAEGgpKoEkhaLnL6MxGuQtcftB7mMoOzdEHlTzIPz9JWyNJosP6OKUxUR//ik3UxylRY43ci5ZC0MtXr7++90e9ya463/7s/EV8PBcfOam/e9nnp2lqJEl0WB+nNCbqE6Bi4/o4JWqskaBoKQT1O/H7XB7TVG6YP3doziTVRvyfvws/byhTVSNJosP6uKUxrk+Iio3q45SosUaSoqUQ9OTzl3c+POi/vuabESXy6cXr80PqGgkSHdVHUrBufUJUbFQfl0TNNZIULYWgxx/rbpOMsvq6FRIG42Pxl+Xz+VF6VY1kifbrI0mjW58QFRvVxzFRQ40kRUsgaHVag9xQXcOyKyPra6lDSnw+P6SpkSzRfn0EafTqE6Bi4/o4JmqokaRoyaaZPP6J+wp6rscUoQRtipVG0H59glWsW58dCjp/au0snk18echT0CZeU9QoSRM/qE+winXrs6smvsRjrslvkFSdiBt0kKQpaiRL1G+QNKxPsIp16+OYaN6DpLKYvk28dDalPi0v5DRTUyNZov36OKYxqk+Aio3r45iooUa5TDOVZ397DpKE89GX+zrfkBP1TY1EiQ7q45TGRH0CVGxcH7dETTXKZKL+ejwcDuIeaBN8T5Ireqdyf1/1QdHnDTQ1kiQ6rI9LGlP1CVCxcX2cEjXWyL1oXCxCoKGgBBoKSqChoAQaCkqgoaAEGgpKoKGgBBoKSqChoAQaCkqgoaAEGgpKoKGgBBoKSqChoAQaCkqgoaAEGgpKoKGgBBoKSqChoAQaCkqgoaAEGgpKoKGgBBoKSqDZuqAfz+U2QUe1Z/AEVtuUnuZ3LFe/Po+SGW6S9f74NPPUwMy7Pp6f9BZKkyf6dKr9/i3cHr0J2L6g5dfnI+j74+xOfOrXEyIFEXQGddBBWatyx+4e3WqfDVXPg+0L+ge9U66foLPvUb9eX1D9+apW4x0Nu9VWoTZfti/orT5TRbV16ist/rjc/+WxaJQv92qHwcv9r/dVA34qT7Z4//bbodpc96xfUW+sXiia1E+/fXqp3lLuUah+rShUOB3apNT71I+Xr38vM3h//FXnqPfePN3q0pzrDxzrD9SFeFRlrMWv09VZVbbpHQ4rQat/ZWrr4irad6pdvJ5zCN2BoHWsaQXVh7MV36belbp4oneBPVU/tA3mWRty2wa7Y/GZ86EQtDwF47b8UBNB6xSa96nPFFI9VSmpbD+9KLOKoKY+UWfQfqAtRPmkl6728FwZemz8ayKo2sC4krFT7bAnRazODgTVX1pP0IdqZ2J1TIDeobgwtQw95/qHa72F9bmy5FoHqqN6QUfal/KlWtAmheZ95Yd0Bir7Mkf11stXlWiTQT/hphDVm5sXu7umly/WfdBqlHT+/Hs1IupU2+u8ivTsQVAlQk/Qp+pL04Lq7djrI1IqJzTlrzqvNBtbN285182wjod1Cu0G2E0q9YfUH8fb0tenJoPmA/1CFH/00q2OwNSURahG8c0Y7lgP6DvVXhzkYbMHQZVZRkH1WKL481x+14ehoJUlilNf0KJn+PkfnQjapHDqCfr15doXVJXmoSmI+qH5QL8QtaD1i+XJxr1oPuhd1u1/t9oUFBr9TV2PD5YR9NoZXi9E0CaZfgTtvk+nMhL0/du/fXu5zkTQuhC9CFpT9RyqCNoX9OP5z80psE21KSg05Td1+frHthM4ELTpIlZeNj8Y+qD10KU8Te3Q7YP2zD51+6Cdfx9Fuj8W2oz7oKdO36EraH9CqnrW7YM2nG7+9/lhWG32QaEpv6mic3bz9vGs/j8MBVUnoxyqsXI5UKm/zplRfBM8Dw/tAKlOQf/QjuKrDBpBy6O3zKP4phB176J+sTnJRZelM4qvqPoPg2pzFA9N9U3piaFCp8NfRk18OTt5LWcb9UxiE2/O9aRk/UoxKPn8X2qMXfVBP73UMh3reVAtSHcetM6gFVS3+qN5UJVwvxBN97dO93xoT3HpzoPWpdOz8rfDanMedF84HpE30b5efpoUxi1h+ytR3hdVk0JB7dGuuY44JgQ9DVMQJXyyPpcw5wBKQV04H9yPyBsJerkfCyNJ2PYSO1czERIPCkqgoaAEGgpKoKGgBBoKSqChoAQaCkqgoaAEGgpKoKGgBBoKSqChoAQaCkqgoaAEGgpKoKGgBBoKSqChoAQaCkqgoaAEmv8HgJMeQWjRACMAAAAASUVORK5CYII=" alt style="display: block; margin: auto;" /></p>
+</div>
+<div id="from-which-number-of-grafted-phylogenies-is-it-worth-it" class="section level3">
+<h3>From which number of grafted phylogenies is it worth it?</h3>
+<p>The take-home messages are:</p>
+<ul>
+<li><strong>Small backbones (about 100 tips or less, or few taxa to
+graft)</strong>: a grafted phylogeny is fast, so the parallelization
+only pays off for <strong>hundreds of grafted phylogenies</strong>.
+Under 50 grafted phylogenies, <strong>do not bother</strong>.</li>
+<li><strong>Backbones of 500 tips or more</strong>: it pays off from
+<strong>about 10 grafted phylogenies</strong>. Use it by default.</li>
+<li>When the backbone phylogeny and/or the numebr of tips to graft are
+large, and the run lasts several minutes or more, <strong>the expected
+gain is about the number of workers</strong> (x2 with 2 workers, x3.5 to
+x4 with 4 workers, up to x9 or x10 with 10 workers). Below that, the
+fixed cost of setting up the workers limits the gain.</li>
+</ul>
+<p>As a <strong>rule of thumb</strong>: use parallel computation when
+the <strong>sequential run would last more than a minute or
+two</strong>. You can get an estimate by timing one grafted
+phylogeny:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># Time of one grafted phylogeny (sequential), including the preparation of the grafting</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>time_one <span class="ot">&lt;-</span> <span class="fu">system.time</span>(<span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> my_backbone,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                                           <span class="at">missing_taxa_list =</span> my_missing_taxa_list,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                                           <span class="at">simmap =</span> my_simmap[[<span class="dv">1</span>]], <span class="co"># Optional: a single map</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                                           <span class="at">nb_simulations =</span> <span class="dv">1</span>, <span class="at">seed =</span> <span class="dv">1</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>                                           <span class="at">parallel =</span> <span class="cn">FALSE</span>))[<span class="st">&quot;elapsed&quot;</span>]</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co"># Expected sequential time of the full run, in minutes</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>time_one <span class="sc">*</span> P <span class="sc">*</span> N <span class="sc">/</span> <span class="dv">60</span></span></code></pre></div>
+</div>
+<div id="with-stochastic-maps" class="section level3">
+<h3>With stochastic maps</h3>
+<p>The benchmark above grafts the taxa <strong>without stochastic
+maps</strong>. With a simmap, each grafted phylogeny takes
+<strong>roughly 10% to 30% longer</strong>, as the states of the
+branches must be tracked and matched with the allowed states of each
+taxon. The <strong>gain from parallel computation and the rules of thumb
+are therefore about the same</strong>: multiply the times of the tables
+by about 1.2.</p>
+<p>One exception: with <code>&quot;BD_clades&quot;</code>, the time can be
+<strong>several times longer</strong> when the allowed states leave only
+a <strong>narrow part of the time window</strong> with available
+branches. The divergence ages drawn from the birth-death model then
+often fall where no branch is in an allowed state, and have to be
+<strong>redrawn</strong>, again and again (see
+<code>max_age_redraws</code>). The time then varies a lot among
+simulations (up to x10 longer when the number of draws needed is close
+to 1,000). It can affect the overall time needed, but this time cost
+applies only for maps that have a small portion of valid branches
+available (<code>min_valid_fraction</code>). You can inspect if such
+issue, and for which maps, is likely to arrive beforehand using the
+<code>check_grafting_plan()</code> function.</p>
+</div>
+</div>
+<div id="larger-backbones-5000-and-10000-tips" class="section level2">
+<h2>5/ Larger backbones (5,000 and 10,000 tips)</h2>
+<p>Backbones of <strong>thousands of tips</strong> are realistic for
+phylograftR, but then it is unlikely that the number of taxa to graft
+equals the number of tips. The <strong>cost of a grafting depends much
+more on the number of taxa to graft than on the number of tips</strong>:
+on a backbone of 1000 tips, grafting 100, 250, 500 and 1000 taxa takes
+about 7%, 19%, 40% and 100% of the time needed for 1000 taxa, so the
+time grows <strong>slightly faster than linearly</strong> with the
+number of taxa.</p>
+<p>We therefore benchmarked backbones of 5,000 and 10,000 tips with
+<strong>20% of missing taxa</strong> (1,000 and 2,000 taxa): see the
+latest rows of the table in <em>Section 4</em>.</p>
+<p>At this scale, <strong>parallel computation is not optional</strong>.
+A single grafted phylogeny takes about 3 minutes (5,000 tips) to about
+13 minutes (10,000 tips), so a set of 100 grafted phylogenies would last
+about 5 hours to about 22 hours sequentially. The fixed cost of setting
+up the workers is negligible, and the speed-up is close to the number of
+workers.</p>
+</div>
+<div id="memory-needed" class="section level2">
+<h2>6/ Memory needed</h2>
+<p>Each worker is a <strong>separate R session</strong>, with its own
+copy of the backbone and of the objects needed for the grafting. The
+<strong>memory used is therefore about
+<code>(1 + number of workers)</code> times the memory of one R
+session</strong> running one grafting. The table gives the
+<strong>approximate peak memory of all the R sessions</strong>:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Run</th>
+<th align="left">100 to 1000 tips</th>
+<th align="left">5,000 tips</th>
+<th align="left">10,000 tips</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Sequential</td>
+<td align="left">0.3 GB</td>
+<td align="left">0.3 GB</td>
+<td align="left">0.7 GB</td>
+</tr>
+<tr class="even">
+<td align="left">2 workers</td>
+<td align="left">0.8 GB</td>
+<td align="left">0.9 GB</td>
+<td align="left">1.5 GB</td>
+</tr>
+<tr class="odd">
+<td align="left">4 workers</td>
+<td align="left">1.4 GB</td>
+<td align="left">1.5 GB</td>
+<td align="left">2.5 GB</td>
+</tr>
+<tr class="even">
+<td align="left">10 workers</td>
+<td align="left">3 GB</td>
+<td align="left">3.5 GB</td>
+<td align="left">5.5 GB</td>
+</tr>
+</tbody>
+</table>
+<p>The grafted phylogenies themselves are small (0.06 MB for 100 tips,
+0.6 MB for 1000 tips with as many taxa grafted), so sets of 1000 grafted
+phylogenies add less than 1 GB in your main session.</p>
+<p>Memory is thus <strong>not a limiting factor on a recent
+computer</strong>. If you are short of memory, check the memory of a
+single grafting (run one simulation sequentially and look at the memory
+used by the R session in the task manager of your system), make sure
+that <code>(1 + workers) x this value</code> fits in your RAM, and
+<strong>reduce the number of workers</strong> if needed: the speed-up
+decreases, but the run completes.</p>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next steps</h2>
+<ul>
+<li>Understand how to <strong>account for the uncertainty</strong> with
+N simulations and P maps, and to handle the outputs: see
+<code>vignette(&quot;handle_uncertainty&quot;)</code>.</li>
+<li><strong>Resume</strong> a crashed or interrupted run: see
+<code>vignette(&quot;resume_run&quot;)</code>.</li>
+<li>Choose the <strong>method and the options of the grafting</strong>:
+see <code>vignette(&quot;graft_missing_taxa&quot;)</code> and
+<code>vignette(&quot;graft_missing_clades&quot;)</code>.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

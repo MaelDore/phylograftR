@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Maël Doré" />
+
+<meta name="date" content="2026-11-26" />
+
+<title>Check the grafting plan and the grafted phylogenies</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Check the grafting plan and the grafted
+phylogenies</h1>
+<h4 class="author">Maël Doré</h4>
+<h4 class="date">2026-11-26</h4>
+
+
+
+<p>Grafting is <strong>constrained</strong> (target clades, allowed
+states, …) and <strong>stochastic</strong> (divergence ages and
+positions are drawn from statistical distributions): it is worth
+checking that your <strong>grafting plan is feasible before
+grafting</strong>, that the <strong>constraints were respected after
+grafting</strong>. In addition, you may wish to check whether the
+resulting grafted phylogenies are consistent with what you expect in
+term of <strong>grafting positions, sampling fractions, and fit of
+diversification models</strong>.</p>
+<p>This tutorial explains how to perform <strong>a priori</strong> and
+<strong>a posterior</strong> checks of grafted phylogenies, and detail
+<strong>how to read and interpret</strong> the outputs of the dedicated
+<strong>checking functions</strong> provided in the phylograftR
+package:</p>
+<table>
+<colgroup>
+<col width="25%" />
+<col width="25%" />
+<col width="37%" />
+<col width="12%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">When</th>
+<th align="left">What it tells you</th>
+<th align="left">Section</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>check_grafting_plan()</code></td>
+<td align="left">before grafting</td>
+<td align="left">can each lineage be grafted with its constraints?</td>
+<td align="left">1</td>
+</tr>
+<tr class="even">
+<td align="left"><code>check_grafting_constraints()</code></td>
+<td align="left">after grafting</td>
+<td align="left">were all the constraints respected in each grafted
+phylogeny?</td>
+<td align="left">2</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>extract_grafting_info()</code></td>
+<td align="left">after grafting</td>
+<td align="left">where and when was each lineage grafted?</td>
+<td align="left">3</td>
+</tr>
+<tr class="even">
+<td align="left"><code>extract_sampling_info()</code></td>
+<td align="left">after grafting</td>
+<td align="left">what are the clade-specific sampling fractions after
+grafting?</td>
+<td align="left">4</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>extract_BD_model_summary()</code></td>
+<td align="left">after grafting</td>
+<td align="left">which birth-death models were used to draw the
+ages?</td>
+<td align="left">5</td>
+</tr>
+</tbody>
+</table>
+<div id="setup" class="section level2">
+<h2>0/ Setup</h2>
+<p>We use the toy backbone with its toy stochastic map (<strong>one
+map</strong>), and <strong>5 stochastic maps</strong> sampled from the
+tip data to illustrate the checks with <strong>many maps</strong> (see
+<code>vignette(&quot;main_workflow&quot;)</code> and
+<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>).</p>
+<p><strong>Helper functions</strong> build the lists of missing taxa to
+graft.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(toy_backbone)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">data</span>(toy_simmap)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co"># One map: toy_simmap (states: blue, green, red)</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co"># Many maps: sample 5 stochastic maps from the tip data, with an equal-rates model of evolution</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>tip_data <span class="ot">&lt;-</span> phytools<span class="sc">::</span><span class="fu">getStates</span>(toy_simmap, <span class="at">type =</span> <span class="st">&quot;tips&quot;</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>simmaps <span class="ot">&lt;-</span> phytools<span class="sc">::</span><span class="fu">make.simmap</span>(<span class="at">tree =</span> toy_backbone, <span class="at">x =</span> tip_data[toy_backbone<span class="sc">$</span>tip.label],</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>                                 <span class="at">model =</span> <span class="st">&quot;ER&quot;</span>, <span class="at">nsim =</span> <span class="dv">5</span>, <span class="at">message =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="fu">class</span>(simmaps)</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt; [1] &quot;multiSimmap&quot; &quot;multiPhylo&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Helper 1: build a missing_taxa_list with n taxa to graft within a target clade defined by tips</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>make_taxa_list <span class="ot">&lt;-</span> <span class="cf">function</span>(n, target_tips, prefix, <span class="at">allowed_states =</span> <span class="cn">NULL</span>, <span class="at">start =</span> <span class="dv">1</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>{</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  taxa <span class="ot">&lt;-</span> <span class="fu">paste0</span>(prefix, <span class="fu">seq</span>(start, <span class="at">length.out =</span> n))</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  out <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Taxon_name =</span> taxa, <span class="at">Target_clade =</span> <span class="fu">setNames</span>(<span class="fu">rep</span>(<span class="fu">list</span>(target_tips), n), taxa))</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(allowed_states)) out<span class="sc">$</span>allowed_states <span class="ot">&lt;-</span> <span class="fu">setNames</span>(<span class="fu">rep</span>(<span class="fu">list</span>(allowed_states), n), taxa)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="fu">return</span>(out)</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>}</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># Helper 2: combine several lists of missing taxa</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>combine_lists <span class="ot">&lt;-</span> <span class="cf">function</span>(...)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>{</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  lists <span class="ot">&lt;-</span> <span class="fu">list</span>(...)</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  out <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Taxon_name =</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(lists, <span class="st">`</span><span class="at">[[</span><span class="st">`</span>, <span class="st">&quot;Taxon_name&quot;</span>)),</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>              <span class="at">Target_clade =</span> <span class="fu">do.call</span>(c, <span class="fu">lapply</span>(lists, <span class="st">`</span><span class="at">[[</span><span class="st">`</span>, <span class="st">&quot;Target_clade&quot;</span>)))</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  out<span class="sc">$</span>allowed_states <span class="ot">&lt;-</span> <span class="fu">do.call</span>(c, <span class="fu">lapply</span>(lists, <span class="cf">function</span>(x)</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  {</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">is.null</span>(x<span class="sc">$</span>allowed_states)) <span class="fu">setNames</span>(<span class="fu">rep</span>(<span class="fu">list</span>(<span class="cn">NULL</span>), <span class="fu">length</span>(x<span class="sc">$</span>Taxon_name)), x<span class="sc">$</span>Taxon_name) <span class="cf">else</span> x<span class="sc">$</span>allowed_states</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>  }))</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  <span class="fu">return</span>(out)</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="before-grafting-check_grafting_plan" class="section level2">
+<h2>1/ Before grafting: <code>check_grafting_plan()</code></h2>
+<p><code>check_grafting_plan()</code> verifies that <strong>each lineage
+can be grafted</strong> with its constraints, <strong>without grafting
+anything</strong>. For each taxon, it identifies the branches of its
+target clade available for grafting, after removing the excluded
+subclades; it checks that there are branch pieces in the <strong>allowed
+states</strong> in the stochastic map, and reports the proportion of
+branch pieces that are available for grafting within the <strong>time
+window</strong> of the target clade. It returns one row per taxon, and
+prints a summary.</p>
+<p>The goal of this function is to <strong>evaluate potential issues
+before grafting</strong> and <strong>adjust the constraints</strong>
+before running any potentially time-consuming task that would be deem to
+failure.</p>
+<div id="check-the-plan" class="section level3">
+<h3><strong>Check the plan</strong></h3>
+<p>Here, as an illustration, We build a list of five taxa to graft
+representing different situations:</p>
+<ul>
+<li><code>Fam_blue1</code> and <code>Fam_blue2</code>: grafted within
+<code>Family_B</code>, in the state “blue”;</li>
+<li><code>Small_sp1</code>: grafted within <code>Gen_1</code>, a
+<strong>small clade</strong> of 3 tips;</li>
+<li><code>Narrow_sp1</code>: grafted within <code>Subfam_B2</code>, in
+the state “red”, which is <strong>rare</strong> in this clade;</li>
+<li><code>Mistake_sp1</code>: grafted within <code>Gen_1</code>, in the
+state “red”: <strong>a mistake</strong>, as no branch of this target
+clade is red.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># ------ Check the plan with one stochastic map ------ #</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co"># Build the list of missing taxa</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>taxa_blue <span class="ot">&lt;-</span> <span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">2</span>, <span class="at">target_tips =</span> <span class="fu">c</span>(<span class="st">&quot;t8&quot;</span>, <span class="st">&quot;t22&quot;</span>), <span class="at">prefix =</span> <span class="st">&quot;Fam_blue&quot;</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>                            <span class="at">allowed_states =</span> <span class="st">&quot;blue&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>taxa_small <span class="ot">&lt;-</span> <span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">1</span>, <span class="at">target_tips =</span> <span class="fu">c</span>(<span class="st">&quot;t13&quot;</span>, <span class="st">&quot;t27&quot;</span>), <span class="at">prefix =</span> <span class="st">&quot;Small_sp&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>taxa_narrow <span class="ot">&lt;-</span> <span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">1</span>, <span class="at">target_tips =</span> <span class="fu">c</span>(<span class="st">&quot;t5&quot;</span>, <span class="st">&quot;t22&quot;</span>), <span class="at">prefix =</span> <span class="st">&quot;Narrow_sp&quot;</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>                              <span class="at">allowed_states =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>taxa_mistake <span class="ot">&lt;-</span> <span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">1</span>, <span class="at">target_tips =</span> <span class="fu">c</span>(<span class="st">&quot;t13&quot;</span>, <span class="st">&quot;t27&quot;</span>), <span class="at">prefix =</span> <span class="st">&quot;Mistake_sp&quot;</span>,</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>                               <span class="at">allowed_states =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>taxa_list <span class="ot">&lt;-</span> <span class="fu">combine_lists</span>(taxa_blue, taxa_small, taxa_narrow, taxa_mistake)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co"># Check the plan with the toy stochastic map</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>plan_one <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_list, <span class="at">simmap =</span> toy_simmap)</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; Grafting plan: 5 taxa</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;   - Can be grafted: 4/5</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt;   - Cannot be grafted (1):</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt;       allowed_states              1</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt;       e.g., Mistake_sp1</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt;   - Share of the available branches in allowed states (feasible taxa): min 4.3%, median 30.8%</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt;   - Share of the time window with grafting possible (feasible taxa): min 5.5%, median 65.3%</span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt;   - Below &#39;min_valid_fraction&#39; = 0.1 (1): Narrow_sp1</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt;   - Target clades smaller than &#39;min_tips&#39; = 5 (birth-death model fitted on an enclosing clade): 3/5; enclosing clades of 8 to 13 tips in the backbone; in practice, the clade used can be nested within them, as previously grafted taxa count towards &#39;min_tips&#39;</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt;   =&gt; Some cannot be grafted with these constraints (see the table)</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co"># The table has one row per taxon: the main columns are</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a>plan_one[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;target_n_tips&quot;</span>, <span class="st">&quot;allowed_states&quot;</span>,</span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a>             <span class="st">&quot;valid_fraction&quot;</span>, <span class="st">&quot;time_coverage&quot;</span>, <span class="st">&quot;feasible&quot;</span>, <span class="st">&quot;cause&quot;</span>)]</span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt;    Taxon_name target_n_tips   allowed_states valid_fraction time_coverage</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt; 1   Fam_blue1            13             blue     0.30765350     0.6528254</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; 2   Fam_blue2            13             blue     0.30765350     0.6528254</span></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; 3   Small_sp1             3 blue, green, red     1.00000000     1.0000000</span></span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; 4  Narrow_sp1             4              red     0.04276293     0.0547333</span></span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt; 5 Mistake_sp1             3              red     0.00000000     0.0000000</span></span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt;   feasible              cause</span></span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt; 1     TRUE               none</span></span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt; 2     TRUE               none</span></span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="co">#&gt; 3     TRUE               none</span></span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="co">#&gt; 4     TRUE low_valid_fraction</span></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co">#&gt; 5    FALSE     allowed_states</span></span></code></pre></div>
+<p>The summary reads from top to bottom:</p>
+<ul>
+<li><strong>Can be grafted</strong>: the number of taxa with at least
+one branch piece available in their allowed states. Here,
+<code>Mistake_sp1</code> <strong>cannot</strong> be grafted
+(<code>cause = &quot;allowed_states&quot;</code>): it needs red branches, and
+there are none in <code>Gen_1</code>. Grafting stops with an error for
+such a taxon, so it must be fixed first (see below).</li>
+<li><strong>Share of the available branches in allowed states</strong>
+(<code>valid_fraction</code>) and <strong>share of the time window with
+grafting possible</strong> (<code>time_coverage</code>): how much room
+there is for grafting each taxon in average.</li>
+<li>When the room is <strong>below
+<code>min_valid_fraction</code></strong> (10% by default), the taxon can
+be grafted but only in a <strong>narrow place</strong>:
+<code>Narrow_sp1</code> would always land in the same few branches
+(<code>cause = &quot;low_valid_fraction&quot;</code>). It is not a mistake, but
+this is reported here as you may wish to check that this is what you
+want, as this is a strong constraint on the placement of the missing
+taxon.</li>
+<li><strong>Target clades smaller than <code>min_tips</code></strong>:
+the birth-death model that draws the divergence ages is fitted on the
+target clade, or on <strong>an enclosing clade</strong> if it has fewer
+than <code>min_tips</code> tips (5 by default). This reports how many
+cases of such changes in clades used for fitting diversification
+dynamics occurred. See the section on <code>min_tips</code> of
+<code>vignette(&quot;graft_missing_taxa&quot;)</code> for more information on
+<strong>enclosing clades</strong>. See <em>Section 5</em> in this
+tutorial for how to use <code>extract_BD_model_summary()</code> to
+explore a posteriori the parameters and results of all Birth-Death (BD)
+models used during the run.</li>
+</ul>
+<p>The output table provides <strong>causes</strong> for which each
+grafted taxon may lead to an error. The possible causes that make a
+taxon <strong>unfeasible</strong> are <code>&quot;allowed_states&quot;</code> (no
+branch piece available in the allowed states) and, when excluded
+subclades are used, <code>&quot;excluded&quot;</code>,
+<code>&quot;excluded_contains_target&quot;</code> and
+<code>&quot;excluded_identical&quot;</code> (when the excluded subclades leave no
+branch to graft on). The cause <code>&quot;low_valid_fraction&quot;</code> is only
+a <strong>warning</strong>: the taxon is feasible, but the stochastic
+process may fail to draw a divergence age compatible with the available
+branch pieces.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># If you try to graft anyway, the grafting will stops with an informative error</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co"># highlighting the taxon that could not be grafted</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">tryCatch</span>(<span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_list, <span class="at">simmap =</span> toy_simmap,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>                            <span class="at">seed =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>         <span class="at">error =</span> <span class="cf">function</span>(e) <span class="fu">cat</span>(<span class="fu">conditionMessage</span>(e)))</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; 1 taxa have no branch available for grafting in their allowed states: none of the available branches of their target clade has a piece in these states.</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt;   - Mistake_sp1 (target clade tips: t13, t27; allowed states: red)</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; Adjust &#39;allowed_states&#39; (global or in missing_taxa_list), or the constraints on the branches (&#39;include_target_clade_stem&#39;, &#39;Excluded_subclades&#39;, &#39;exclude_subclades_stem&#39;) for these taxa.</span></span></code></pre></div>
+</div>
+<div id="fix-the-plan" class="section level3">
+<h3><strong>Fix the plan</strong></h3>
+<p>Here, we fix our grating plan by adjusting constraints to cover all
+potential issues:</p>
+<ul>
+<li>we correct the allowed states of the mistaken taxon;</li>
+<li>we widen the states of the narrow one;</li>
+<li>we use <code>min_tips = 3</code> to fit the model on the 3-tip clade
+<code>Gen_1</code> instead of an alternative enclosing clade.</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># Fix the allowed states</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>taxa_narrow_fixed <span class="ot">&lt;-</span> <span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">1</span>, <span class="at">target_tips =</span> <span class="fu">c</span>(<span class="st">&quot;t5&quot;</span>, <span class="st">&quot;t22&quot;</span>), <span class="at">prefix =</span> <span class="st">&quot;Narrow_sp&quot;</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                                    <span class="at">allowed_states =</span> <span class="fu">c</span>(<span class="st">&quot;red&quot;</span>, <span class="st">&quot;green&quot;</span>)) <span class="co"># Use red AND green as allowed states</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>taxa_mistake_fixed <span class="ot">&lt;-</span> <span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">1</span>, <span class="at">target_tips =</span> <span class="fu">c</span>(<span class="st">&quot;t13&quot;</span>, <span class="st">&quot;t27&quot;</span>), <span class="at">prefix =</span> <span class="st">&quot;Mistake_sp&quot;</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                                     <span class="at">allowed_states =</span> <span class="st">&quot;green&quot;</span>) <span class="co"># use green instead of red</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>taxa_list_fixed <span class="ot">&lt;-</span> <span class="fu">combine_lists</span>(taxa_blue, taxa_small, taxa_narrow_fixed, taxa_mistake_fixed)</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co"># Check the fixed plan, with min_tips = 3</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co"># By using a lower min_tips value, we ensure that the BD models are fitted strictly on our target clades</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co"># However, as a trade-off, we may have lower accuracy in our estimates of diversification rates as we used smaller clades for fitting models</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>plan_fixed <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_list_fixed,</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>                                  <span class="at">simmap =</span> toy_simmap, <span class="at">min_tips =</span> <span class="dv">3</span>)</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; Grafting plan: 5 taxa</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt;   - Can be grafted: 5/5</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt;   - Share of the available branches in allowed states (feasible taxa): min 30.8%, median 82.8%</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt;   - Share of the time window with grafting possible (feasible taxa): min 65.3%, median 100.0%</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt;   - Target clades smaller than &#39;min_tips&#39; = 3 (birth-death model fitted on an enclosing clade): 0/5</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt;   =&gt; All can be grafted with these constraints</span></span></code></pre></div>
+</div>
+<div id="check-plan-with-many-maps" class="section level3">
+<h3><strong>Check plan with many maps</strong></h3>
+<p>The evolutionary history of a trait is uncertain. This uncertainty
+can be accounted for by providing phylograftR with <strong>multiple
+stochastic maps</strong> to constrain grafting using species-attributes
+(see <code>vignette(&quot;handle_uncertainty&quot;)</code> for more details).</p>
+<p>As a consequence, a taxon can be feasible on some maps but not on
+others. With <strong>many stochastic maps</strong>,
+<code>check_grafting_plan()</code> checks <strong>each map</strong>, and
+summarizes them: it reports the taxa that are not feasible <strong>in
+all the maps</strong>, and the <strong>range of the room for
+grafting</strong> across the maps (<code>valid_fraction_min</code>,
+<code>valid_fraction_mean</code>, <code>valid_fraction_max</code>…),
+with the <strong>worst map</strong> being the one that limits the
+plan.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># ------ Check the plan with many stochastic maps ------ #</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co"># Check grafting plan for all simmaps</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>plan_many <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_list, <span class="at">simmap =</span> simmaps)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; Grafting plan: 5 taxa, 5 maps</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt;   - Can be grafted in all the maps: 4/5</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt;   - Cannot be grafted (1):</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;       allowed_states              1</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt;       e.g., Mistake_sp1</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt;   - Share of the available branches in allowed states (worst map, feasible taxa): min 6.6%, median 7.5%</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt;   - Share of the time window with grafting possible (worst map, feasible taxa): min 8.5%, median 13.8%</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;   - Below &#39;min_valid_fraction&#39; = 0.1 (3): Narrow_sp1, Fam_blue1, Fam_blue2</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;   - Target clades smaller than &#39;min_tips&#39; = 5 (birth-death model fitted on an enclosing clade): 3/5; enclosing clades of 8 to 13 tips in the backbone; in practice, the clade used can be nested within them, as previously grafted taxa count towards &#39;min_tips&#39;</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt;   =&gt; Some cannot be grafted with these constraints (see the table)</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co"># One row per taxon, summarizing the maps</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>plan_many[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;valid_fraction_min&quot;</span>, <span class="st">&quot;valid_fraction_mean&quot;</span>, <span class="st">&quot;valid_fraction_max&quot;</span>, <span class="st">&quot;n_maps_infeasible&quot;</span>, <span class="st">&quot;feasible&quot;</span>, <span class="st">&quot;cause&quot;</span>)]</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="co">#&gt;    Taxon_name valid_fraction_min valid_fraction_mean valid_fraction_max</span></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="co">#&gt; 1   Fam_blue1         0.07490391          0.30912238          0.5309309</span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co">#&gt; 2   Fam_blue2         0.07490391          0.30912238          0.5309309</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="co">#&gt; 3   Small_sp1         1.00000000          1.00000000          1.0000000</span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a><span class="co">#&gt; 4  Narrow_sp1         0.06623615          0.38813997          0.7096280</span></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co">#&gt; 5 Mistake_sp1         0.00000000          0.03083723          0.1541861</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="co">#&gt;   n_maps_infeasible feasible              cause</span></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="co">#&gt; 1                 0     TRUE low_valid_fraction</span></span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a><span class="co">#&gt; 2                 0     TRUE low_valid_fraction</span></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="co">#&gt; 3                 0     TRUE               none</span></span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a><span class="co">#&gt; 4                 0     TRUE low_valid_fraction</span></span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a><span class="co">#&gt; 5                 4    FALSE     allowed_states</span></span></code></pre></div>
+<p>The column <code>n_maps_infeasible</code> counts the maps in which
+the taxon <strong>cannot</strong> be grafted. Here,
+<code>Mistake_sp1</code> is not feasible in 4 of the 5 maps (one map has
+red branches in the clade by chance), so it still must be fixed.</p>
+<p>Note that <code>Fam_blue1</code> and <code>Fam_blue2</code> were fine
+with <code>toy_simmap</code>, but have <strong>a narrow room for
+grafting in the worst map</strong>.</p>
+<p>When a taxon is <strong>unfeasible in some maps only</strong>, you
+can <strong>extend its allowed states</strong>, <strong>widen its target
+clade</strong>, or <strong>remove the maps</strong> that are not
+compatible with your constraints (only if you can justify it, as it
+modifies the uncertainty in ancestral trait inferrence that you want to
+propagate).</p>
+<p>The details of <strong>checks for each map</strong> are in the
+attribute <code>per_map</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co"># Extract checks per map</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>per_map <span class="ot">&lt;-</span> <span class="fu">attr</span>(plan_many, <span class="st">&quot;per_map&quot;</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co"># Inspect issues with &quot;Narrow_sp1&quot; across all maps</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>per_map[per_map<span class="sc">$</span>Taxon_name <span class="sc">==</span> <span class="st">&quot;Narrow_sp1&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;map&quot;</span>, <span class="st">&quot;valid_fraction&quot;</span>, <span class="st">&quot;time_coverage&quot;</span>, <span class="st">&quot;feasible&quot;</span>, <span class="st">&quot;cause&quot;</span>)]</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;      map valid_fraction time_coverage feasible              cause</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; 4  map_1     0.35333250    0.45223872     TRUE               none</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; 9  map_2     0.70962802    0.74116493     TRUE               none</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; 14 map_3     0.06623615    0.08477723     TRUE low_valid_fraction</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; 19 map_4     0.17351136    0.22208134     TRUE               none</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; 24 map_5     0.63799184    0.80316840     TRUE               none</span></span></code></pre></div>
+<p>The same list, fixed as above, is feasible in all the maps (the
+<code>Fam_blue</code> taxa remain flagged as having a narrow room for
+grafting in the worst map):</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># Check grafting plan for all simmaps with the fixed list</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>plan_many_fixed <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_list_fixed,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                                       <span class="at">simmap =</span> simmaps, <span class="at">min_tips =</span> <span class="dv">3</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; Grafting plan: 5 taxa, 5 maps</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;   - Can be grafted in all the maps: 5/5</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt;   - Share of the available branches in allowed states (worst map, feasible taxa): min 7.5%, median 14.5%</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt;   - Share of the time window with grafting possible (worst map, feasible taxa): min 13.8%, median 14.3%</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt;   - Below &#39;min_valid_fraction&#39; = 0.1 (2): Fam_blue1, Fam_blue2</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt;   - Target clades smaller than &#39;min_tips&#39; = 3 (birth-death model fitted on an enclosing clade): 0/5</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;   =&gt; All can be grafted with these constraints</span></span></code></pre></div>
+</div>
+</div>
+<div id="after-grafting-check_grafting_constraints" class="section level2">
+<h2>2/ After grafting: <code>check_grafting_constraints()</code></h2>
+<p>Once the grafting is done, <code>check_grafting_constraints()</code>
+verifies <strong>a posteriori</strong> that <strong>each lineage of each
+grafted phylogeny</strong> respects its constraints: it is in the tree,
+within its target clade, outside of its excluded subclades, in its
+allowed states. Globally, it also checks that the <strong>backbone is
+preserved</strong> (same topology, branch lengths unchanged).</p>
+<p>The constraints are read from the <code>missing_taxa_list</code>, and
+the states from the <code>$simmap</code> carried by each grafted
+phylogeny. The function accepts one grafted phylogeny, or the outputs of
+the grafting functions with <strong>many simulations and
+maps</strong>.</p>
+<div id="check-constraints-with-one-map" class="section level3">
+<h3><strong>Check constraints with one map</strong></h3>
+<p>Here, we graft the fixed list of missing taxa on the toy map with
+<strong>10 simulations</strong>, and check them after grafting:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># ------ Check the constraints with one stochastic map ------ #</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co"># Graft the missing taxa with the fixed list</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>grafted_one <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_list_fixed,</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>                                  <span class="at">simmap =</span> toy_simmap, <span class="at">min_tips =</span> <span class="dv">3</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>                                  <span class="at">nb_simulations =</span> <span class="dv">10</span>, <span class="at">seed =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co"># Check the constraints</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>constraints_one <span class="ot">&lt;-</span> <span class="fu">check_grafting_constraints</span>(<span class="at">phy_grafted =</span> grafted_one, <span class="at">phy_backbone =</span> toy_backbone,</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>                                              <span class="at">missing_taxa_list =</span> taxa_list_fixed,</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>                                              <span class="at">use_excluded_subclades =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; 10 phylogenies checked (1 map(s)), 5 taxa each</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;   - Phylogenies respecting all the constraints: 10/10</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;   Violations, over all the phylogenies (number of taxa x phylogenies):</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;   - Missing from the grafted tree: 0</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt;   - Target clade violated:          0</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt;   - Excluded subclade violated:     0</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt;   - Allowed states violated:        0</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt;   - Backbone: preserved in 10/10 phylogenies, branch lengths shifted by max 9.06e-11 of backbone depth (tolerance = 1e-06)</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt;   =&gt; All constraints respected</span></span></code></pre></div>
+<p>The summary counts the <strong>violations of constraints</strong>
+over all the taxa and all the grafted phylogenies, and report them in a
+<strong>printed summary</strong>:</p>
+<ul>
+<li>taxa missing from the tree;</li>
+<li>taxa outside of their target clade;</li>
+<li>taxa in an excluded subclade;</li>
+<li>taxa <strong>in a state that is not allowed</strong>;</li>
+<li>whether the backbone was preserved or not, with an estimate of shift
+in branch length (attributed to rounding errors in floating-point
+numbers).</li>
+</ul>
+<p>In addition to the printed summary, the function returns a table with
+one row per taxon and per grafted phylogeny (columns
+<code>target_ok</code>, <code>excluded_ok</code>, <code>states_ok</code>
+and <code>ok</code>) and, as attributes, the summary of each phylogeny
+(<code>phylogenies</code>) and of the backbone preservation.</p>
+<p>The grafting functions are designed to <strong>always
+respect</strong> the constraints: this check is a <strong>safety
+net</strong> to run on the final outputs, particularly when the inputs
+are complex (many maps, ranges, several traits).</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Inspect table with checks per taxon per grafted phylogeny</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="fu">head</span>(constraints_one[, <span class="fu">c</span>(<span class="st">&quot;map&quot;</span>, <span class="st">&quot;simulation&quot;</span>, <span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;in_tree&quot;</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>                         <span class="st">&quot;target_ok&quot;</span>, <span class="st">&quot;excluded_ok&quot;</span>, <span class="st">&quot;states_ok&quot;</span>, <span class="st">&quot;ok&quot;</span>)])</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co">#&gt;     map simulation  Taxon_name in_tree target_ok excluded_ok states_ok   ok</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; 1 map_1          1   Fam_blue1    TRUE      TRUE        TRUE      TRUE TRUE</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; 2 map_1          1   Fam_blue2    TRUE      TRUE        TRUE      TRUE TRUE</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; 3 map_1          1   Small_sp1    TRUE      TRUE        TRUE      TRUE TRUE</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; 4 map_1          1  Narrow_sp1    TRUE      TRUE        TRUE      TRUE TRUE</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; 5 map_1          1 Mistake_sp1    TRUE      TRUE        TRUE      TRUE TRUE</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; 6 map_1          2   Fam_blue1    TRUE      TRUE        TRUE      TRUE TRUE</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co"># Inspect overall result</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="fu">attr</span>(constraints_one, <span class="st">&quot;all_ok&quot;</span>)</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co"># Inspect the summary table of the checks per phylogeny</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">attr</span>(constraints_one, <span class="st">&quot;phylogenies&quot;</span>))</span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="co">#&gt;     map simulation       seed n_failed backbone_preserved all_ok</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="co">#&gt; 1 map_1          1          1        0               TRUE   TRUE</span></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="co">#&gt; 2 map_1          2 1140350788        0               TRUE   TRUE</span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="co">#&gt; 3 map_1          3  312928385        0               TRUE   TRUE</span></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="co">#&gt; 4 map_1          4  866248189        0               TRUE   TRUE</span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a><span class="co">#&gt; 5 map_1          5 1909893419        0               TRUE   TRUE</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a><span class="co">#&gt; 6 map_1          6  554504146        0               TRUE   TRUE</span></span></code></pre></div>
+<p>To see <strong>what a constraint violation looks like</strong>, we
+check the same grafted phylogenies against a <strong>stricter
+list</strong>: we change the target clade of <code>Fam_blue1</code> for
+its embedded subclade <code>Subfam_B2</code>, and the allowed states of
+<code>Fam_blue2</code> from “blue” to “green”, which the grafting
+process did not use as constraints:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># A stricter list: the constraints on two taxa are changed after grafting</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>taxa_list_strict <span class="ot">&lt;-</span> taxa_list_fixed</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>taxa_list_strict<span class="sc">$</span>Target_clade[[<span class="st">&quot;Fam_blue1&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;t5&quot;</span>, <span class="st">&quot;t22&quot;</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>taxa_list_strict<span class="sc">$</span>allowed_states[[<span class="st">&quot;Fam_blue2&quot;</span>]] <span class="ot">&lt;-</span> <span class="st">&quot;green&quot;</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co"># Check the constraints</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>constraints_strict <span class="ot">&lt;-</span> <span class="fu">check_grafting_constraints</span>(<span class="at">phy_grafted =</span> grafted_one, <span class="at">phy_backbone =</span> toy_backbone,</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>                                                 <span class="at">missing_taxa_list =</span> taxa_list_strict,</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>                                                 <span class="at">use_excluded_subclades =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; 10 phylogenies checked (1 map(s)), 5 taxa each</span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt;   - Phylogenies respecting all the constraints: 0/10</span></span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="co">#&gt;   Violations, over all the phylogenies (number of taxa x phylogenies):</span></span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a><span class="co">#&gt;   - Missing from the grafted tree: 0</span></span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co">#&gt;   - Target clade violated:          1</span></span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="co">#&gt;   - Excluded subclade violated:     0</span></span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a><span class="co">#&gt;   - Allowed states violated:        10</span></span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a><span class="co">#&gt;   - Backbone: preserved in 10/10 phylogenies, branch lengths shifted by max 9.06e-11 of backbone depth (tolerance = 1e-06)</span></span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a><span class="co">#&gt;   Phylogenies with violations:</span></span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co">#&gt;     - map map_1, simulation 1 (seed 1): 1 taxa failed</span></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a><span class="co">#&gt;     - map map_1, simulation 2 (seed 1140350788): 1 taxa failed</span></span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a><span class="co">#&gt;     - map map_1, simulation 3 (seed 312928385): 1 taxa failed</span></span>
+<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a><span class="co">#&gt;     - map map_1, simulation 4 (seed 866248189): 1 taxa failed</span></span>
+<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a><span class="co">#&gt;     - map map_1, simulation 5 (seed 1909893419): 1 taxa failed</span></span>
+<span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a><span class="co">#&gt;     - map map_1, simulation 6 (seed 554504146): 1 taxa failed</span></span>
+<span id="cb11-25"><a href="#cb11-25" tabindex="-1"></a><span class="co">#&gt;     - map map_1, simulation 7 (seed 884616499): 1 taxa failed</span></span>
+<span id="cb11-26"><a href="#cb11-26" tabindex="-1"></a><span class="co">#&gt;     - map map_1, simulation 8 (seed 803234389): 2 taxa failed</span></span>
+<span id="cb11-27"><a href="#cb11-27" tabindex="-1"></a><span class="co">#&gt;     - map map_1, simulation 9 (seed 1158971242): 1 taxa failed</span></span>
+<span id="cb11-28"><a href="#cb11-28" tabindex="-1"></a><span class="co">#&gt;     - map map_1, simulation 10 (seed 934673902): 1 taxa failed</span></span>
+<span id="cb11-29"><a href="#cb11-29" tabindex="-1"></a><span class="co">#&gt;   =&gt; Some constraints NOT respected (see returned data.frame(s) and attributes)</span></span>
+<span id="cb11-30"><a href="#cb11-30" tabindex="-1"></a></span>
+<span id="cb11-31"><a href="#cb11-31" tabindex="-1"></a><span class="co"># We can use the output table to summarize the proportion of the grafted phylogenies</span></span>
+<span id="cb11-32"><a href="#cb11-32" tabindex="-1"></a><span class="co"># in which each taxon respects each constraint</span></span>
+<span id="cb11-33"><a href="#cb11-33" tabindex="-1"></a><span class="co"># Here, we focus on the target clade and allowed states constraints</span></span>
+<span id="cb11-34"><a href="#cb11-34" tabindex="-1"></a><span class="fu">aggregate</span>(<span class="fu">cbind</span>(target_ok, states_ok, ok) <span class="sc">~</span> Taxon_name, <span class="at">data =</span> constraints_strict, <span class="at">FUN =</span> mean)</span>
+<span id="cb11-35"><a href="#cb11-35" tabindex="-1"></a><span class="co">#&gt;    Taxon_name target_ok states_ok  ok</span></span>
+<span id="cb11-36"><a href="#cb11-36" tabindex="-1"></a><span class="co">#&gt; 1   Fam_blue1       0.9         1 0.9</span></span>
+<span id="cb11-37"><a href="#cb11-37" tabindex="-1"></a><span class="co">#&gt; 2   Fam_blue2       1.0         0 0.0</span></span>
+<span id="cb11-38"><a href="#cb11-38" tabindex="-1"></a><span class="co">#&gt; 3 Mistake_sp1       1.0         1 1.0</span></span>
+<span id="cb11-39"><a href="#cb11-39" tabindex="-1"></a><span class="co">#&gt; 4  Narrow_sp1       1.0         1 1.0</span></span>
+<span id="cb11-40"><a href="#cb11-40" tabindex="-1"></a><span class="co">#&gt; 5   Small_sp1       1.0         1 1.0</span></span></code></pre></div>
+<p><code>Fam_blue2</code> is in the state “blue” in all the phylogenies,
+so it always violates the new constraint (<code>states_ok</code> is 0),
+whereas <code>Fam_blue1</code> is outside of <code>Subfam_B2</code> in
+the two simulations in which it was grafted elsewhere in
+<code>Family_B</code> (<code>target_ok</code>).</p>
+</div>
+<div id="check-constraints-with-many-maps" class="section level3">
+<h3><strong>Check constraints with many maps</strong></h3>
+<p>For outputs with <strong>many stochastic maps</strong> (one element
+per map, each with its simulations), the summary covers all the
+phylogenies, and the function returns <strong>one table per stochastic
+map</strong>:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># ------ Check the constraints with many stochastic maps ------ #</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="co"># Graft with the 5 maps, and 4 simulations per map</span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>grafted_many <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_list_fixed,</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>                                   <span class="at">simmap =</span> simmaps, <span class="at">min_tips =</span> <span class="dv">3</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>                                   <span class="at">nb_simulations =</span> <span class="dv">4</span>, <span class="at">seed =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co"># Check the constraints</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>constraints_many <span class="ot">&lt;-</span> <span class="fu">check_grafting_constraints</span>(<span class="at">phy_grafted =</span> grafted_many, <span class="at">phy_backbone =</span> toy_backbone,</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>                                               <span class="at">missing_taxa_list =</span> taxa_list_fixed,</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>                                               <span class="at">use_excluded_subclades =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="co">#&gt; 20 phylogenies checked (5 map(s)), 5 taxa each</span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a><span class="co">#&gt;   - Phylogenies respecting all the constraints: 20/20</span></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co">#&gt;   Violations, over all the phylogenies (number of taxa x phylogenies):</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="co">#&gt;   - Missing from the grafted tree: 0</span></span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a><span class="co">#&gt;   - Target clade violated:          0</span></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt;   - Excluded subclade violated:     0</span></span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt;   - Allowed states violated:        0</span></span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="co">#&gt;   - Backbone: preserved in 20/20 phylogenies, branch lengths shifted by max 1.5e-10 of backbone depth (tolerance = 1e-06)</span></span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a><span class="co">#&gt;   =&gt; All constraints respected</span></span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a></span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a><span class="co"># One table per map</span></span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a><span class="fu">names</span>(constraints_many)</span>
+<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a><span class="co">#&gt; [1] &quot;map_1&quot; &quot;map_2&quot; &quot;map_3&quot; &quot;map_4&quot; &quot;map_5&quot;</span></span>
+<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a><span class="co"># Are all constraints respected in all the maps?</span></span>
+<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a><span class="fu">sapply</span>(constraints_many, attr, <span class="st">&quot;all_ok&quot;</span>)</span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a><span class="co">#&gt; map_1 map_2 map_3 map_4 map_5 </span></span>
+<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a><span class="co">#&gt;  TRUE  TRUE  TRUE  TRUE  TRUE</span></span></code></pre></div>
+</div>
+</div>
+<div id="where-and-when-extract_grafting_info" class="section level2">
+<h2>3/ Where and when: <code>extract_grafting_info()</code></h2>
+<p><code>extract_grafting_info()</code> describes <strong>where and
+when</strong> each lineage was grafted in each grafted phylogeny.</p>
+<p>It reports:</p>
+<ul>
+<li>the <strong>parent clade</strong> (<code>parent_node</code> and
+<code>parent_tips</code>: the clade of the <strong>backbone</strong> on
+which the lineage was grafted);</li>
+<li>the <strong>graft age</strong> (when the lineage branched from the
+backbone);</li>
+<li>the <strong>divergence age</strong> (when it branched from its
+closest relative, which can be another grafted taxon);</li>
+<li>and the <strong>state</strong> of the lineage, when a stochastic map
+is available.</li>
+</ul>
+<p>It returns <strong>one row per taxon and per phylogeny</strong>, with
+the <code>map</code>, <code>simulation</code> and <code>seed</code> that
+produced it, so the outputs of <strong>many simulations and
+maps</strong> can be summarized with <code>aggregate()</code>, and each
+phylogeny can be <strong>reproduced alone</strong> with its seed (see
+<code>vignette(&quot;handle_uncertainty&quot;)</code>).</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># ------ Grafting information with one stochastic map ------ #</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="co"># Extract grafting information</span></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>info_one <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(<span class="at">phy_grafted =</span> grafted_one, <span class="at">missing_taxa_list =</span> taxa_list_fixed,</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>                                  <span class="at">phy_backbone =</span> toy_backbone)</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co"># Inspect the first rows describing the results for the first simulation (among 10)</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="fu">head</span>(info_one[, <span class="fu">c</span>(<span class="st">&quot;simulation&quot;</span>, <span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;parent_tips&quot;</span>, <span class="st">&quot;graft_age&quot;</span>, <span class="st">&quot;divergence_age&quot;</span>, <span class="st">&quot;tip_state&quot;</span>)], <span class="dv">4</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co">#&gt;   simulation Taxon_name parent_tips graft_age divergence_age tip_state</span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="co">#&gt; 1          1  Fam_blue1    t23, t12 1.2503493      1.2503493      blue</span></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co">#&gt; 2          1  Fam_blue2          t5 0.9880183      0.9880183      blue</span></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co">#&gt; 3          1  Small_sp1         t27 0.2125734      0.2125734      blue</span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="co">#&gt; 4          1 Narrow_sp1     t5, t22 6.5994546      6.5994546     green</span></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co"># Summarize the ages of each taxon across the 10 simulations</span></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="fu">aggregate</span>(divergence_age <span class="sc">~</span> Taxon_name, <span class="at">data =</span> info_one,</span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a>          <span class="at">FUN =</span> <span class="cf">function</span>(x) <span class="fu">round</span>(<span class="fu">c</span>(<span class="at">mean =</span> <span class="fu">mean</span>(x), <span class="at">min =</span> <span class="fu">min</span>(x), <span class="at">max =</span> <span class="fu">max</span>(x)), <span class="dv">2</span>))</span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt;    Taxon_name divergence_age.mean divergence_age.min divergence_age.max</span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">#&gt; 1   Fam_blue1                0.68               0.00               2.11</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">#&gt; 2   Fam_blue2                0.63               0.00               1.28</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="co">#&gt; 3 Mistake_sp1                0.59               0.01               2.89</span></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="co">#&gt; 4  Narrow_sp1                1.47               0.08               6.60</span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="co">#&gt; 5   Small_sp1                0.29               0.01               0.95</span></span></code></pre></div>
+<p>The <strong>states</strong> (<code>parent_state</code> and
+<code>tip_state</code>) show where the taxa landed in the stochastic
+map. They allow checking that taxa with allowed states are indeed
+grafted in these states, and <strong>summarizing the distribution of
+states</strong> of each taxon, which may vary when multiple
+<code>allowed_states</code> were provided:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># Summarize the number of simulations with each state, for each taxon</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="fu">table</span>(info_one<span class="sc">$</span>Taxon_name, info_one<span class="sc">$</span>tip_state)</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co">#&gt;              </span></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt;               blue green red</span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt;   Fam_blue1     10     0   0</span></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt;   Fam_blue2     10     0   0</span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt;   Mistake_sp1    0    10   0</span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co">#&gt;   Narrow_sp1     0     8   2</span></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt;   Small_sp1      4     6   0</span></span></code></pre></div>
+<p>With <strong>many maps</strong>, the output has one row per taxon,
+<strong>per map and per simulation</strong>: the summaries then average
+over the two sources of uncertainty (the <strong>maps</strong> and the
+<strong>simulations</strong>), and can be split by map to see how much
+the differences in ancestral states between maps matter:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># ------ Grafting information with many stochastic maps ------ #</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>info_many <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(<span class="at">phy_grafted =</span> grafted_many, <span class="at">missing_taxa_list =</span> taxa_list_fixed,</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>                                   <span class="at">phy_backbone =</span> toy_backbone)</span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="co"># We grafted 5 taxa over 5 stochastic maps, and 4 simulations per map</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co"># Therefore, the table report 5 × 5 × 4 = 100 entries</span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="fu">dim</span>(info_many)</span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="co">#&gt; [1] 100  11</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co"># We can then aggregate information per taxon, per map</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="co"># to inspect the effect of each map on the graftong</span></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a></span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a><span class="co"># Ex: Mean divergence age of each taxon, in each map (4 simulations per map)</span></span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">tapply</span>(info_many<span class="sc">$</span>divergence_age, <span class="fu">list</span>(info_many<span class="sc">$</span>Taxon_name, info_many<span class="sc">$</span>map), mean), <span class="dv">2</span>)</span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a><span class="co">#&gt;             map_1 map_2 map_3 map_4 map_5</span></span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="co">#&gt; Fam_blue1    1.95  0.74  0.57  0.45  0.63</span></span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a><span class="co">#&gt; Fam_blue2    1.57  0.73  0.64  1.41  0.82</span></span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="co">#&gt; Mistake_sp1  0.43  0.43  0.40  0.08  0.40</span></span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a><span class="co">#&gt; Narrow_sp1   5.56  5.56  0.74  0.53  2.08</span></span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a><span class="co">#&gt; Small_sp1    0.32  0.27  0.23  0.24  0.23</span></span></code></pre></div>
+<p>The same function also works for <strong>missing clades</strong> (one
+row per clade, with its crown age) and for both types together (one
+table per type): see <code>vignette(&quot;graft_missing_clades&quot;)</code> and
+<code>vignette(&quot;combine_missing_taxa_and_clades&quot;)</code>.</p>
+</div>
+<div id="sampling-fractions-extract_sampling_info" class="section level2">
+<h2>4/ Sampling fractions: <code>extract_sampling_info()</code></h2>
+<p>When the <strong>total richness</strong> of some clades is known, it
+can be provided as inputs (<code>total_richness_per_clades</code>) to
+account for <strong>unsampled species</strong> (not in the backbone, nor
+listed to be grafted) when fitting BD models to estimate divergence ages
+of taxa to be grafted: see <em>Section 3</em> in
+<code>vignette(&quot;graft_missing_taxa&quot;)</code> for an illustration of the
+effect.</p>
+<p>However, the grafted taxa <strong>raise the sampling
+fraction</strong> (i.e., the proportion of species present in the
+grafted tree vs. all species) of the clades in which they are grafted.
+Since the grafted taxa are placed at random within their target clades,
+the effective sampling fraction of <strong>nested clades</strong> varies
+among the simulations. <code>extract_sampling_info()</code> returns, for
+each clade with a total richness provided, and <strong>each grafted
+phylogeny</strong>:</p>
+<ul>
+<li>the number of backbone species;</li>
+<li>the number of grafted species;</li>
+<li>the number of unsampled species;</li>
+<li>and the <strong>effective sampling fraction after
+grafting</strong>.</li>
+</ul>
+<p>This is the way to explore how much the grafting procedure may have
+helped to <strong>even sampling across clades</strong>. Moreover,
+<strong>clade-specific sampling fractions</strong> can be used as inputs
+in downstream analyses such as diversification models (e.g., BAMM) to
+still account for the unsampled species in later steps of the analytic
+pipeline.</p>
+<p>Here, we graft 6 taxa within <code>Family_B</code>, in the state
+“blue” (they land in <code>Subfam_B1</code>, <code>Subfam_B2</code> or
+elsewhere), and 2 taxa within <code>Gen_1</code>, with the total
+richness of four clades. <code>Subfam_B1</code>, <code>Subfam_B2</code>
+and <code>Gen_1</code> are nested within <code>Family_B</code>, and
+<code>Gen_1</code> within <code>Subfam_B1</code>.</p>
+<p>We use 10 simulations to account for the uncertainty in the grafting
+procedure (see <code>vignette(&quot;handle_uncertainty&quot;)</code>).</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="co"># ------ Sampling fractions with one stochastic map ------ #</span></span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a><span class="co"># # Build the list of missing taxa</span></span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>taxa_sampling <span class="ot">&lt;-</span> <span class="fu">combine_lists</span>(<span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">6</span>, <span class="at">target_tips =</span> <span class="fu">c</span>(<span class="st">&quot;t8&quot;</span>, <span class="st">&quot;t22&quot;</span>),</span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>                                              <span class="at">prefix =</span> <span class="st">&quot;Fam_sp&quot;</span>, <span class="at">allowed_states =</span> <span class="st">&quot;blue&quot;</span>),</span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>                               <span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">2</span>, <span class="at">target_tips =</span> <span class="fu">c</span>(<span class="st">&quot;t13&quot;</span>, <span class="st">&quot;t27&quot;</span>), <span class="at">prefix =</span> <span class="st">&quot;Gen_sp&quot;</span>))</span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a>taxa_sampling<span class="sc">$</span>Target_clade_name <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="st">&quot;Family_B&quot;</span>, <span class="dv">6</span>), <span class="fu">rep</span>(<span class="st">&quot;Gen_1&quot;</span>, <span class="dv">2</span>))</span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a></span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a><span class="co"># Build the list informing on Total richness for four clades</span></span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a>richness_list <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Target_clade =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">&quot;t8&quot;</span>, <span class="st">&quot;t22&quot;</span>), <span class="fu">c</span>(<span class="st">&quot;t8&quot;</span>, <span class="st">&quot;t7&quot;</span>), <span class="fu">c</span>(<span class="st">&quot;t5&quot;</span>, <span class="st">&quot;t22&quot;</span>), <span class="fu">c</span>(<span class="st">&quot;t13&quot;</span>, <span class="st">&quot;t27&quot;</span>)),</span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a>                 <span class="at">Target_clade_name =</span> <span class="fu">c</span>(<span class="st">&quot;Family_B&quot;</span>, <span class="st">&quot;Subfam_B1&quot;</span>, <span class="st">&quot;Subfam_B2&quot;</span>, <span class="st">&quot;Gen_1&quot;</span>),</span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a>                 <span class="at">total_richness =</span> <span class="fu">c</span>(<span class="dv">40</span>, <span class="dv">20</span>, <span class="dv">12</span>, <span class="dv">12</span>))</span>
+<span id="cb16-13"><a href="#cb16-13" tabindex="-1"></a></span>
+<span id="cb16-14"><a href="#cb16-14" tabindex="-1"></a><span class="co"># Graft 10 simulations, and return the birth-death model summaries for the next section</span></span>
+<span id="cb16-15"><a href="#cb16-15" tabindex="-1"></a>grafted_sampling <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_sampling,</span>
+<span id="cb16-16"><a href="#cb16-16" tabindex="-1"></a>                                       <span class="at">total_richness_per_clades =</span> richness_list,</span>
+<span id="cb16-17"><a href="#cb16-17" tabindex="-1"></a>                                       <span class="at">simmap =</span> toy_simmap,</span>
+<span id="cb16-18"><a href="#cb16-18" tabindex="-1"></a>                                       <span class="co"># Ask explicitly to retain BD model info</span></span>
+<span id="cb16-19"><a href="#cb16-19" tabindex="-1"></a>                                       <span class="co"># (useful in Section 5)</span></span>
+<span id="cb16-20"><a href="#cb16-20" tabindex="-1"></a>                                       <span class="at">return_BD_model_summary =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb16-21"><a href="#cb16-21" tabindex="-1"></a>                                       <span class="at">nb_simulations =</span> <span class="dv">10</span>,</span>
+<span id="cb16-22"><a href="#cb16-22" tabindex="-1"></a>                                       <span class="at">seed =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb16-23"><a href="#cb16-23" tabindex="-1"></a></span>
+<span id="cb16-24"><a href="#cb16-24" tabindex="-1"></a><span class="co"># Extract sampling info across all 10 grafted phylogenies</span></span>
+<span id="cb16-25"><a href="#cb16-25" tabindex="-1"></a>sampling_one <span class="ot">&lt;-</span> <span class="fu">extract_sampling_info</span>(<span class="at">phy_grafted =</span> grafted_sampling,</span>
+<span id="cb16-26"><a href="#cb16-26" tabindex="-1"></a>                                      <span class="at">total_richness_per_clades =</span> richness_list)</span>
+<span id="cb16-27"><a href="#cb16-27" tabindex="-1"></a></span>
+<span id="cb16-28"><a href="#cb16-28" tabindex="-1"></a><span class="co"># Inspect the first rows describing the results for the first simulations (among 10)</span></span>
+<span id="cb16-29"><a href="#cb16-29" tabindex="-1"></a><span class="fu">head</span>(sampling_one[, <span class="fu">c</span>(<span class="st">&quot;simulation&quot;</span>, <span class="st">&quot;Clade_name&quot;</span>, <span class="st">&quot;total_richness&quot;</span>,</span>
+<span id="cb16-30"><a href="#cb16-30" tabindex="-1"></a>                      <span class="st">&quot;nb_backbone_species&quot;</span>, <span class="st">&quot;nb_grafted_species&quot;</span>, <span class="st">&quot;nb_unsampled_species&quot;</span>,</span>
+<span id="cb16-31"><a href="#cb16-31" tabindex="-1"></a>                      <span class="st">&quot;sampling_fraction&quot;</span>)])</span>
+<span id="cb16-32"><a href="#cb16-32" tabindex="-1"></a><span class="co">#&gt;   simulation Clade_name total_richness nb_backbone_species nb_grafted_species</span></span>
+<span id="cb16-33"><a href="#cb16-33" tabindex="-1"></a><span class="co">#&gt; 1          1   Family_B             40                  13                  8</span></span>
+<span id="cb16-34"><a href="#cb16-34" tabindex="-1"></a><span class="co">#&gt; 2          1  Subfam_B1             20                   9                  5</span></span>
+<span id="cb16-35"><a href="#cb16-35" tabindex="-1"></a><span class="co">#&gt; 3          1  Subfam_B2             12                   4                  3</span></span>
+<span id="cb16-36"><a href="#cb16-36" tabindex="-1"></a><span class="co">#&gt; 4          1      Gen_1             12                   3                  3</span></span>
+<span id="cb16-37"><a href="#cb16-37" tabindex="-1"></a><span class="co">#&gt; 5          2   Family_B             40                  13                  8</span></span>
+<span id="cb16-38"><a href="#cb16-38" tabindex="-1"></a><span class="co">#&gt; 6          2  Subfam_B1             20                   9                  4</span></span>
+<span id="cb16-39"><a href="#cb16-39" tabindex="-1"></a><span class="co">#&gt;   nb_unsampled_species sampling_fraction</span></span>
+<span id="cb16-40"><a href="#cb16-40" tabindex="-1"></a><span class="co">#&gt; 1                   19         0.5250000</span></span>
+<span id="cb16-41"><a href="#cb16-41" tabindex="-1"></a><span class="co">#&gt; 2                    6         0.7000000</span></span>
+<span id="cb16-42"><a href="#cb16-42" tabindex="-1"></a><span class="co">#&gt; 3                    5         0.5833333</span></span>
+<span id="cb16-43"><a href="#cb16-43" tabindex="-1"></a><span class="co">#&gt; 4                    6         0.5000000</span></span>
+<span id="cb16-44"><a href="#cb16-44" tabindex="-1"></a><span class="co">#&gt; 5                   19         0.5250000</span></span>
+<span id="cb16-45"><a href="#cb16-45" tabindex="-1"></a><span class="co">#&gt; 6                    7         0.6500000</span></span></code></pre></div>
+<p>The resulting table provides the <strong>clade-specific sampling
+fractions</strong> to use in downstream analyses of diversification in
+order to account for the remaining <strong>unsampled
+species</strong>.</p>
+<div id="compare-clade-specific-sampling-fractions-before-grafting-and-after-grafting" class="section level3">
+<h3>Compare clade-specific sampling fractions before grafting and after
+grafting</h3>
+<p>Here, we use the output of <code>extract_sampling_info()</code> to
+explore how much the grafting procedure may have helped to <strong>even
+sampling across clades</strong>. We directly compare the sampling
+fraction of each clade before grafting, and after grafting.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="co"># Compute pre-grafting sampling fraction based on backbone species only </span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>pre_grafting <span class="ot">&lt;-</span> <span class="fu">unique</span>(sampling_one[, <span class="fu">c</span>(<span class="st">&quot;Clade_name&quot;</span>, <span class="st">&quot;total_richness&quot;</span>, <span class="st">&quot;nb_backbone_species&quot;</span>)])</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>pre_grafting<span class="sc">$</span>pre_grafting <span class="ot">&lt;-</span> <span class="fu">round</span>(pre_grafting<span class="sc">$</span>nb_backbone_species <span class="sc">/</span> pre_grafting<span class="sc">$</span>total_richness, <span class="dv">2</span>)</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a></span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a><span class="co"># Compute mean effective sampling fractions (after grafting) across all 10 simulations</span></span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>post_grafting <span class="ot">&lt;-</span> <span class="fu">aggregate</span>(sampling_fraction <span class="sc">~</span> Clade_name, <span class="at">data =</span> sampling_one,</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>                           <span class="at">FUN =</span> <span class="cf">function</span>(x) <span class="fu">round</span>(<span class="fu">c</span>(<span class="at">mean =</span> <span class="fu">mean</span>(x), <span class="at">min =</span> <span class="fu">min</span>(x), <span class="at">max =</span> <span class="fu">max</span>(x)), <span class="dv">2</span>))</span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a><span class="fu">merge</span>(pre_grafting[, <span class="fu">c</span>(<span class="st">&quot;Clade_name&quot;</span>, <span class="st">&quot;total_richness&quot;</span>, <span class="st">&quot;pre_grafting&quot;</span>)], post_grafting, <span class="at">by =</span> <span class="st">&quot;Clade_name&quot;</span>)</span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a><span class="co">#&gt;   Clade_name total_richness pre_grafting sampling_fraction.mean</span></span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a><span class="co">#&gt; 1   Family_B             40         0.32                   0.52</span></span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a><span class="co">#&gt; 2      Gen_1             12         0.25                   0.49</span></span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a><span class="co">#&gt; 3  Subfam_B1             20         0.45                   0.70</span></span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a><span class="co">#&gt; 4  Subfam_B2             12         0.33                   0.59</span></span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a><span class="co">#&gt;   sampling_fraction.min sampling_fraction.max</span></span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a><span class="co">#&gt; 1                  0.52                  0.52</span></span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a><span class="co">#&gt; 2                  0.25                  0.83</span></span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a><span class="co">#&gt; 3                  0.55                  0.80</span></span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a><span class="co">#&gt; 4                  0.42                  0.83</span></span>
+<span id="cb17-19"><a href="#cb17-19" tabindex="-1"></a></span>
+<span id="cb17-20"><a href="#cb17-20" tabindex="-1"></a><span class="co"># Plot the distributions of the effective sampling fractions, with the pre-grafting values in red</span></span>
+<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a>sampling_one<span class="sc">$</span>Clade <span class="ot">&lt;-</span> <span class="fu">factor</span>(sampling_one<span class="sc">$</span>Clade_name, <span class="at">levels =</span> pre_grafting<span class="sc">$</span>Clade_name)</span>
+<span id="cb17-22"><a href="#cb17-22" tabindex="-1"></a><span class="fu">boxplot</span>(sampling_fraction <span class="sc">~</span> Clade, <span class="at">data =</span> sampling_one, <span class="at">ylab =</span> <span class="st">&quot;Sampling fraction&quot;</span>, <span class="at">xlab =</span> <span class="st">&quot;Clade&quot;</span>, <span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>))</span>
+<span id="cb17-23"><a href="#cb17-23" tabindex="-1"></a><span class="fu">points</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(pre_grafting)), pre_grafting<span class="sc">$</span>pre_grafting, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">cex =</span> <span class="fl">1.5</span>)</span>
+<span id="cb17-24"><a href="#cb17-24" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">&quot;topleft&quot;</span>, <span class="at">legend =</span> <span class="st">&quot;Before grafting&quot;</span>, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" style="display: block; margin: auto;" /></p>
+<p>The sampling fraction of <code>Family_B</code> is the same in all the
+simulations (all the taxa are grafted within it), while the fractions of
+the <strong>nested clades</strong> depend on where the taxa landed: some
+simulations graft more species in <code>Subfam_B2</code> than others.
+The red points show the sampling fractions <strong>before
+grafting</strong>: grafting increases them, and the <strong>spread of
+the boxes</strong> is the uncertainty in the sampling of the nested
+clades.</p>
+<p>Note that the sampling fraction that the diversification models use
+to draw the ages is the one of the clade <strong>at the time of
+grafting</strong>, shown in the next <em>Section 5</em> below addressing
+diversification models, and not the final effective sampling fractions
+that may be altered by taxa being grafted in nested clades later in the
+process.</p>
+</div>
+</div>
+<div id="diversification-models-extract_bd_model_summary" class="section level2">
+<h2>5/ Diversification models:
+<code>extract_BD_model_summary()</code></h2>
+<p>The divergence ages of the grafted taxa are drawn from
+<strong>birth-death (BD) models</strong> fitted on the clade they are
+grafted in (see <code>vignette(&quot;graft_missing_taxa&quot;)</code>).</p>
+<p>With <code>phylograftR::graft_missing_taxa()</code>, <strong>a model
+is fitted per target clade</strong>, and used by all the taxa of the
+target clade, whatever their stem availability or excluded subclades.
+With <code>phylograftR::graft_missing_clades()</code>, <strong>a model
+is fitted per missing clade</strong>, i.e., per sister clade.</p>
+<p>Each model is fitted <strong>on the tree as it stands when its group
+of taxa is processed</strong>, not on the backbone: it includes the taxa
+<strong>already grafted</strong> by earlier groups in the same
+simulation, and its sampling fraction accounts for the taxa still
+waiting to be grafted in the clade. As a consequence, the models are
+<strong>not necessarily identical across simulations and
+maps</strong>:</p>
+<ul>
+<li>a model fitted <strong>before any other grafting</strong> in its
+clade (a single group of taxa, or the innermost of several nested
+groups) only depends on the backbone: it is <strong>the same in all
+simulations and maps</strong>. This is the case for the two taxa grafted
+in <code>Gen_1</code> in our example from <em>Section 4</em> above.</li>
+<li>a model fitted on a clade that <strong>contains taxa grafted
+earlier</strong> (e.g., a group grafted in <code>Family_B</code> after
+the taxa grafted in <code>Gen_1</code>) depends on <strong>where and
+when</strong> those taxa were grafted: it <strong>varies across
+simulations</strong>, and across stochastic maps.</li>
+<li>when taxa and clades are grafted successively with
+<code>graft_missing_taxa_and_clades()</code>, the models of the
+<strong>second step</strong> include the taxa grafted in the first one,
+so they vary across simulations.</li>
+</ul>
+<p>With <code>return_BD_model_summary = TRUE</code>, the grafting
+functions record the BD models, and
+<code>extract_BD_model_summary()</code> returns <strong>one row per
+fitted model</strong>, for each simulation and map.</p>
+<p>Here, we use the outputs of the previous section, with total
+richness, to report on the BD model fits used during the grafting
+process for each simulation:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="co"># ------ Birth-death model summaries ------ #</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a><span class="co"># Export info on BD models</span></span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>bd_one <span class="ot">&lt;-</span> <span class="fu">extract_BD_model_summary</span>(grafted_sampling)</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a><span class="co"># Look at the first rows: one row per model, per simulation</span></span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a><span class="fu">head</span>(bd_one[, <span class="fu">c</span>(<span class="st">&quot;simulation&quot;</span>, <span class="st">&quot;Clade_name&quot;</span>, <span class="st">&quot;initial_clade_n_tips&quot;</span>, <span class="st">&quot;fitted_clade_n_backbone_tips&quot;</span>, <span class="st">&quot;enclosing&quot;</span>,</span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>                <span class="st">&quot;b&quot;</span>, <span class="st">&quot;d&quot;</span>, <span class="st">&quot;net_diversification&quot;</span>, <span class="st">&quot;rho&quot;</span>)])</span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a><span class="co">#&gt;   simulation Clade_name initial_clade_n_tips fitted_clade_n_backbone_tips</span></span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a><span class="co">#&gt; 1          1   Family_B                   13                           13</span></span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a><span class="co">#&gt; 2          1      Gen_1                    3                            8</span></span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a><span class="co">#&gt; 3          2   Family_B                   13                           13</span></span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a><span class="co">#&gt; 4          2      Gen_1                    3                            8</span></span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a><span class="co">#&gt; 5          3   Family_B                   13                           13</span></span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a><span class="co">#&gt; 6          3      Gen_1                    3                            8</span></span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a><span class="co">#&gt;   enclosing        b         d net_diversification       rho</span></span>
+<span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a><span class="co">#&gt; 1     FALSE 0.941575 0.9294748          0.01210014 0.3750000</span></span>
+<span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a><span class="co">#&gt; 2      TRUE 1.077888 1.0671094          0.01077888 0.4705882</span></span>
+<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a><span class="co">#&gt; 3     FALSE 1.450617 1.4361105          0.01450617 0.3750000</span></span>
+<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a><span class="co">#&gt; 4      TRUE 1.077888 1.0671094          0.01077888 0.4705882</span></span>
+<span id="cb18-21"><a href="#cb18-21" tabindex="-1"></a><span class="co">#&gt; 5     FALSE 1.177080 1.1653095          0.01177080 0.3750000</span></span>
+<span id="cb18-22"><a href="#cb18-22" tabindex="-1"></a><span class="co">#&gt; 6      TRUE 1.077888 1.0671094          0.01077888 0.4705882</span></span>
+<span id="cb18-23"><a href="#cb18-23" tabindex="-1"></a></span>
+<span id="cb18-24"><a href="#cb18-24" tabindex="-1"></a><span class="co"># Summarize the variation of each model across the 10 simulations</span></span>
+<span id="cb18-25"><a href="#cb18-25" tabindex="-1"></a><span class="co"># Loop across &#39;Clade_name&#39; to summarize the range of &#39;b&#39;, &#39;d&#39;, and &#39;rho&#39;</span></span>
+<span id="cb18-26"><a href="#cb18-26" tabindex="-1"></a>bd_variation <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(<span class="fu">split</span>(bd_one, bd_one<span class="sc">$</span>Clade_name), <span class="cf">function</span>(x) {</span>
+<span id="cb18-27"><a href="#cb18-27" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">n_models =</span> <span class="fu">nrow</span>(x),</span>
+<span id="cb18-28"><a href="#cb18-28" tabindex="-1"></a>             <span class="at">n_distinct_fits =</span> <span class="fu">nrow</span>(<span class="fu">unique</span>(<span class="fu">round</span>(x[, <span class="fu">c</span>(<span class="st">&quot;b&quot;</span>, <span class="st">&quot;d&quot;</span>)], <span class="dv">6</span>))),</span>
+<span id="cb18-29"><a href="#cb18-29" tabindex="-1"></a>             <span class="at">b_range =</span> <span class="fu">paste</span>(<span class="fu">round</span>(<span class="fu">range</span>(x<span class="sc">$</span>b), <span class="dv">3</span>), <span class="at">collapse =</span> <span class="st">&quot; - &quot;</span>),</span>
+<span id="cb18-30"><a href="#cb18-30" tabindex="-1"></a>             <span class="at">d_range =</span> <span class="fu">paste</span>(<span class="fu">round</span>(<span class="fu">range</span>(x<span class="sc">$</span>d), <span class="dv">3</span>), <span class="at">collapse =</span> <span class="st">&quot; - &quot;</span>),</span>
+<span id="cb18-31"><a href="#cb18-31" tabindex="-1"></a>             <span class="at">rho_range =</span> <span class="fu">paste</span>(<span class="fu">round</span>(<span class="fu">range</span>(x<span class="sc">$</span>rho), <span class="dv">2</span>), <span class="at">collapse =</span> <span class="st">&quot; - &quot;</span>))</span>
+<span id="cb18-32"><a href="#cb18-32" tabindex="-1"></a>}))</span>
+<span id="cb18-33"><a href="#cb18-33" tabindex="-1"></a>bd_variation</span>
+<span id="cb18-34"><a href="#cb18-34" tabindex="-1"></a><span class="co">#&gt;          n_models n_distinct_fits       b_range       d_range   rho_range</span></span>
+<span id="cb18-35"><a href="#cb18-35" tabindex="-1"></a><span class="co">#&gt; Family_B       10              10 0.867 - 1.467 0.846 - 1.452 0.38 - 0.38</span></span>
+<span id="cb18-36"><a href="#cb18-36" tabindex="-1"></a><span class="co">#&gt; Gen_1          10               1 1.078 - 1.078 1.067 - 1.067 0.47 - 0.47</span></span></code></pre></div>
+<p>How to read the table:</p>
+<ul>
+<li><strong>Clade used</strong>: <code>initial_clade_tips</code> is the
+target clade of the taxa, and <code>fitted_clade_tips</code> the clade
+on which the model was fitted. They differ
+(<code>enclosing = TRUE</code>) when the target clade has fewer tips
+than <code>min_tips</code>: here, the 3-tip <code>Gen_1</code> is
+replaced by an <strong>enclosing clade</strong> (see
+<code>vignette(&quot;graft_missing_taxa&quot;)</code> for how to tune
+<code>min_tips</code>).</li>
+<li><strong>Sampling fraction</strong>: <code>rho</code> is the sampling
+fraction of the model: the species of the fitted clade over its total
+richness. <code>n_pending</code> is the number of taxa to graft within
+the clade (not counted as sampled) and <code>n_unsampled</code> the
+number of <strong>unsampled</strong> species that the total richness
+adds (see <em>Section 4</em> above).</li>
+<li><strong>Variation across simulations and maps</strong>: the summary
+above shows that the model of the <code>Gen_1</code> taxa is the
+<strong>same in the 10 simulations</strong> (1 distinct fit: it is
+fitted on the backbone), while the model of the <code>Family_B</code>
+taxa is <strong>different in each simulation</strong> (10 distinct
+fits): <code>Family_B</code> contains the <code>Gen_1</code> taxa
+grafted before, at <strong>different ages</strong> in each simulation,
+which changes the rates <code>b</code> and <code>d</code> of the fit.
+The sampling fraction <code>rho</code> is the same because the number of
+tips and the total richness of the clade do not change.</li>
+<li><strong>Rates</strong>: <code>b</code> and <code>d</code> are the
+speciation and extinction rates, <code>net_diversification</code> is
+<code>b - d</code>, and <code>relative_extinction</code> is
+<code>d / b</code>. The extinction rate can be
+<strong>adjusted</strong>, as shown by <code>d_adjustment</code>:
+<code>&quot;none&quot;</code> (the fitted value is used), <code>&quot;capped&quot;</code>
+(the fitted <code>d</code> was too close to, or above <code>b</code>,
+and was <strong>capped</strong> to 99% of <code>b</code>), or
+<code>&quot;set_to_0&quot;</code> (a negative <code>d</code> was set to 0). A
+<code>&quot;capped&quot;</code> or <code>&quot;set_to_0&quot;</code> model means that the
+<strong>data support very high or null extinction</strong>: it is common
+with small clades, and it is a <strong>flag</strong> to look at the tree
+and the sampling fraction before trusting the rates.</li>
+<li><strong>Warnings</strong>: fits on small or very incomplete clades
+may print <code>NA/NaN function evaluation</code> warnings from the
+optimizer. They are not errors: the model is still fitted, but check
+that the rates look sensible.</li>
+</ul>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next steps</h2>
+<p>Now that you know how to <strong>check your grafting plan and
+results</strong>, you may be interested in:</p>
+<ul>
+<li>exploring options to graft <strong>missing taxa</strong>,
+<strong>missing clades</strong>, or <strong>both types</strong>:
+<code>vignette(&quot;graft_missing_taxa&quot;)</code>,
+<code>vignette(&quot;graft_missing_clades&quot;)</code> and
+<code>vignette(&quot;combine_missing_taxa_and_clades&quot;)</code>;</li>
+<li>handling <strong>uncertainty</strong> with several simulations and
+stochastic maps, and ensuring the <strong>reproducibility</strong> of
+the runs with the seed system:
+<code>vignette(&quot;handle_uncertainty&quot;)</code>;</li>
+<li>speeding up your runs by using <strong>parallel
+computation</strong>: <code>vignette(&quot;parallel_grafting&quot;)</code>;</li>
+<li><strong>resuming</strong> interrupted runs:
+<code>vignette(&quot;resume_run&quot;)</code>.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

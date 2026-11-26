@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Maël Doré" />
+
+<meta name="date" content="2026-11-26" />
+
+<title>Use biogeographic ranges as constraints</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Use biogeographic ranges as
+constraints</h1>
+<h4 class="author">Maël Doré</h4>
+<h4 class="date">2026-11-26</h4>
+
+
+
+<p>Grafting can be constrained by <strong>species attributes</strong>
+described by <strong>stochastic character maps</strong>
+(<code>simmap</code>) of the backbone phylogeny. This tutorial explains
+how to use <strong>biogeographic ranges</strong> as attributes, i.e.,
+<strong>geographically-informed grafting</strong>: a missing taxon is
+only grafted on the branches where its lineage could have lived in
+<strong>its known range</strong>. A range is a <strong>set of
+areas</strong> (e.g., <code>&quot;A&quot;</code>, <code>&quot;AB&quot;</code>), and the
+stochastic map shows how the range of the lineages
+<strong>evolved</strong> along the backbone (e.g., from a
+<code>BioGeoBEARS</code> analysis).</p>
+<p>The key is the argument <code>treat_states_as_ranges</code>, which
+tells the grafting functions <strong>how to match the allowed ranges of
+a taxon with the ranges of the map</strong>:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Exact matching</strong>
+(<code>treat_states_as_ranges = FALSE</code>, the default): ranges are
+unrelated states, like for categorical traits (e.g., colors). A taxon
+allowed in <code>&quot;A&quot;</code> can only be grafted on branch pieces where
+the map is <strong>exactly</strong> in <code>&quot;A&quot;</code>.</li>
+<li><strong>Range matching</strong>
+(<code>treat_states_as_ranges = TRUE</code>): a taxon allowed in
+<code>&quot;A&quot;</code> can be grafted wherever the lineage <strong>includes
+the area <code>&quot;A&quot;</code></strong>: <code>&quot;A&quot;</code>, <code>&quot;AB&quot;</code>,
+<code>&quot;ABC&quot;</code>, etc.</li>
+</ol>
+<p>We compare the two options <strong>side by side</strong>, with the
+<strong>same data</strong>, so that the differences shown come from the
+<strong>matching type</strong> argument
+(<code>treat_states_as_ranges</code>).</p>
+<p><strong>Other types of data</strong></p>
+<p>The principle of species attribute-based constraints is the same for
+all the types of data. For examples addressing different data types,
+please refer to:</p>
+<ul>
+<li><strong>categorical traits</strong> (single trait):
+<code>vignette(&quot;main_workflow&quot;)</code>, and the examples of
+<code>vignette(&quot;graft_missing_taxa&quot;)</code>,
+<code>vignette(&quot;graft_missing_clades&quot;)</code> and
+<code>vignette(&quot;combine_missing_taxa_and_clades&quot;)</code>;</li>
+<li><strong>several traits</strong> at once (or a trait and ranges):
+<code>vignette(&quot;multiple_traits&quot;)</code>;</li>
+<li><strong>continuous traits</strong>:
+<code>vignette(&quot;continuous_data&quot;)</code>;</li>
+<li><strong>several stochastic maps</strong> to account for the
+uncertainty in the evolutionary history:
+<code>vignette(&quot;handle_uncertainty&quot;)</code>.</li>
+</ul>
+<p>To build stochastic maps of ranges from your own data, see
+<code>vignette(&quot;prepare_stochastic_maps&quot;)</code>.</p>
+<div id="data" class="section level2">
+<h2>0/ Data</h2>
+<p>We use the toy backbone, and the toy stochastic map of <strong>four
+ranges</strong> built from <strong>three areas</strong>
+(<code>&quot;A&quot;</code>, <code>&quot;B&quot;</code>, <code>&quot;C&quot;</code>):
+<code>&quot;A&quot;</code>, <code>&quot;B&quot;</code>, <code>&quot;AB&quot;</code> and
+<code>&quot;BC&quot;</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># ------ Toy data ------ #</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">data</span>(toy_backbone)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">data</span>(toy_simmap_ranges)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="fu">data</span>(toy_missing_taxa_list_with_allowed_ranges)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co"># Plot the stochastic map of ranges</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>range_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="st">&quot;gold&quot;</span>, <span class="at">B =</span> <span class="st">&quot;dodgerblue&quot;</span>, <span class="at">AB =</span> <span class="st">&quot;limegreen&quot;</span>, <span class="at">BC =</span> <span class="st">&quot;firebrick2&quot;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>phytools<span class="sc">::</span><span class="fu">plotSimmap</span>(toy_simmap_ranges, <span class="at">colors =</span> range_colors, <span class="at">fsize =</span> <span class="fl">0.6</span>, <span class="at">ftype =</span> <span class="st">&quot;i&quot;</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">&quot;bottomleft&quot;</span>, <span class="at">legend =</span> <span class="fu">names</span>(range_colors), <span class="at">fill =</span> range_colors, <span class="at">title =</span> <span class="st">&quot;Range&quot;</span>, <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co"># Time spent in each range, summed on all the branches</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">colSums</span>(toy_simmap_ranges<span class="sc">$</span>mapped.edge))</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; AB  B  A BC </span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; 62 72 60 49</span></span></code></pre></div>
+<p><strong>Ranges must be coded as in <code>BioGeoBEARS</code></strong>:
+one capital letter per area, and the letters of a multi-area range in
+alphabetical order (<code>&quot;AB&quot;</code>, not <code>&quot;BA&quot;</code>).</p>
+<p>The list of missing taxa has the usual structure (see
+<code>vignette(&quot;format_inputs&quot;)</code>), with <strong>allowed
+ranges</strong> in the <code>allowed_states</code> item. Some taxa have
+their own allowed ranges, the others have <code>NULL</code> and use the
+<strong>global</strong> <code>allowed_states</code> argument of the
+grafting function:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Load missing taxa list with the allowed ranges of the 7 missing taxa</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>taxa_ranges <span class="ot">&lt;-</span> toy_missing_taxa_list_with_allowed_ranges</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># Convert to a data.frame for printing neatly the information</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> taxa_ranges<span class="sc">$</span>Taxon_name,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>           <span class="at">Target_clade_name =</span> taxa_ranges<span class="sc">$</span>Target_clade_name,</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>           <span class="at">Allowed_ranges =</span> <span class="fu">sapply</span>(taxa_ranges<span class="sc">$</span>allowed_states,</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>                                   <span class="cf">function</span>(x) <span class="cf">if</span> (<span class="fu">is.null</span>(x)) <span class="st">&quot;NULL&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>                                               <span class="cf">else</span> <span class="fu">paste</span>(x, <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>)),</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>           <span class="at">row.names =</span> <span class="cn">NULL</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt;   Taxon_name Target_clade_name Allowed_ranges</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1          Family_A              A</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2          Family_A           NULL</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3          Family_A           NULL</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4          Family_B          B, BC</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5         Subfam_B1              B</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6             Gen_2           NULL</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7          Tribe_B2          A, BC</span></span></code></pre></div>
+<p>Here, the global <code>allowed_states</code> will be
+<code>c(&quot;A&quot;, &quot;B&quot;)</code>.</p>
+</div>
+<div id="which-mapped-range-match-an-allowed-range" class="section level2">
+<h2>1/ Which mapped range match an allowed range?</h2>
+<p>The matching rule is the only difference between the two options. For
+each range of the map, we list the allowed ranges that can be grafted on
+it, under each <strong>matching type</strong> option:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># ------ Which allowed ranges match each range of the map? ------ #</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>map_ranges <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;AB&quot;</span>, <span class="st">&quot;BC&quot;</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>allowed <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;AB&quot;</span>, <span class="st">&quot;BC&quot;</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co"># A range of the map matches an allowed range if it contains all of its areas</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>contains <span class="ot">&lt;-</span> <span class="cf">function</span>(map_range, allowed_range)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="fu">all</span>(<span class="fu">strsplit</span>(allowed_range, <span class="st">&quot;&quot;</span>)[[<span class="dv">1</span>]] <span class="sc">%in%</span> <span class="fu">strsplit</span>(map_range, <span class="st">&quot;&quot;</span>)[[<span class="dv">1</span>]])</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">Map_range =</span> map_ranges,</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>           <span class="at">Exact_matching =</span> map_ranges,</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>           <span class="at">Range_matching =</span> <span class="fu">sapply</span>(map_ranges, <span class="cf">function</span>(r) </span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>              <span class="fu">paste</span>(allowed[<span class="fu">sapply</span>(allowed, contains, <span class="at">map_range =</span> r)], <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>)),</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>           <span class="at">row.names =</span> <span class="cn">NULL</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;   Map_range Exact_matching Range_matching</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; 1         A              A              A</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; 2         B              B              B</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; 3        AB             AB       A, B, AB</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; 4        BC             BC          B, BC</span></span></code></pre></div>
+<p>With <strong>exact matching</strong>
+(<code>treat_states_as_ranges = FALSE</code>), a branch in
+<code>&quot;AB&quot;</code> is only available for taxa allowed in
+<code>&quot;AB&quot;</code>.</p>
+<p>With <strong>range matching</strong>
+(<code>treat_states_as_ranges = TRUE</code>), it is also available for
+taxa allowed in <code>&quot;A&quot;</code> or <code>&quot;B&quot;</code>, which is
+accounting for a <strong>subset sympatric speciation event</strong>: a
+lineage that lived in <code>&quot;AB&quot;</code> can produce a descendant that
+lives in <code>&quot;A&quot;</code> only such as
+<code>(AB) -&gt; (AB), (A)</code>. Conversely, a taxon allowed in
+<code>&quot;AB&quot;</code> <strong>cannot</strong> be grafted on a branch in
+<code>&quot;A&quot;</code>.</p>
+<p>When a taxon is grafted on a branch in a <strong>larger
+range</strong> than its own range, it <strong>inherits its own allowed
+range</strong>, while the branch it is grafted on continues in its
+range. If several allowed ranges match, the inherited range is drawn at
+random among the allowed ranges <strong>contained in the range of the
+branch</strong>. Ex: a taxon allowed in <code>&quot;A&quot;</code> or
+<code>&quot;B&quot;</code> is grafted on branch in <code>&quot;AB&quot;</code>; it can
+inherit the range <code>&quot;A&quot;</code> or <code>&quot;B&quot;</code>, but not
+both.</p>
+</div>
+<div id="check-the-grafting-plan" class="section level2">
+<h2>2/ Check the grafting plan</h2>
+<p><code>check_grafting_plan()</code> shows the consequences of each
+option <strong>before grafting</strong> (see
+<code>vignette(&quot;check_grafting&quot;)</code>):</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># ------ Check the plan with the two options ------ #</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co"># Exact matching, with the global allowed ranges &quot;A&quot; and &quot;B&quot;</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>plan_exact <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_ranges,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                                  <span class="at">simmap =</span> toy_simmap_ranges, <span class="at">allowed_states =</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>),</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>                                  <span class="at">treat_states_as_ranges =</span> <span class="cn">FALSE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>plan_exact[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;allowed_states&quot;</span>, <span class="st">&quot;states_available&quot;</span>, <span class="st">&quot;valid_fraction&quot;</span>, <span class="st">&quot;feasible&quot;</span>, <span class="st">&quot;cause&quot;</span>)]</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt;   Taxon_name allowed_states states_available valid_fraction feasible</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1              A         A, AB, B     0.07584307     TRUE</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2           A, B         A, AB, B     0.51498705     TRUE</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3           A, B         A, AB, B     0.67397536     TRUE</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4          B, BC            B, BC     1.00000000     TRUE</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5              B            B, BC     0.68175003     TRUE</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6           A, B               BC     0.00000000    FALSE</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7          A, BC               BC     1.00000000     TRUE</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt;                cause</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; 1 low_valid_fraction</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; 2               none</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; 3               none</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; 4               none</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; 5               none</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; 6     allowed_states</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt; 7               none</span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co"># Range matching, with the same global allowed ranges</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>plan_ranges <span class="ot">&lt;-</span> <span class="fu">check_grafting_plan</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_ranges,</span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>                                   <span class="at">simmap =</span> toy_simmap_ranges, <span class="at">allowed_states =</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>),</span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>                                   <span class="at">treat_states_as_ranges =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a>plan_ranges[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;allowed_states&quot;</span>, <span class="st">&quot;states_available&quot;</span>, <span class="st">&quot;valid_fraction&quot;</span>, <span class="st">&quot;feasible&quot;</span>, <span class="st">&quot;cause&quot;</span>)]</span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt;   Taxon_name allowed_states states_available valid_fraction feasible cause</span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1          A, AB         A, AB, B      0.9396164     TRUE  none</span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2   A, AB, B, BC         A, AB, B      1.0000000     TRUE  none</span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3   A, AB, B, BC         A, AB, B      1.0000000     TRUE  none</span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4      AB, B, BC            B, BC      1.0000000     TRUE  none</span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5      AB, B, BC            B, BC      1.0000000     TRUE  none</span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6   A, AB, B, BC               BC      1.0000000     TRUE  none</span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7      A, AB, BC               BC      1.0000000     TRUE  none</span></span></code></pre></div>
+<p>With exact matching, the plan flags <strong>two
+problems</strong>:</p>
+<ul>
+<li><code>New_sp6</code> <strong>cannot be grafted</strong>
+(<code>cause = &quot;allowed_states&quot;</code>): its target clade is only in
+<code>&quot;BC&quot;</code>, which matches neither <code>&quot;A&quot;</code> nor
+<code>&quot;B&quot;</code> exactly.</li>
+<li><code>New_sp1</code>, allowed in <code>&quot;A&quot;</code> only, has a
+<strong>low valid fraction</strong>: only 8% of the branches of its
+target clade are in <code>&quot;A&quot;</code>, so its grafting positions are
+concentrated on a few short branch pieces.</li>
+</ul>
+<p>With range matching, <code>&quot;B&quot;</code> matches <code>&quot;BC&quot;</code> and
+<code>&quot;A&quot;</code> matches <code>&quot;AB&quot;</code>: all the taxa can be grafted,
+on a much larger share of the branches of their target clades.</p>
+</div>
+<div id="graft-with-exact-matching" class="section level2">
+<h2>3/ Graft with exact matching</h2>
+<p>We first graft with exact matching. The grafting stops, as
+<code>New_sp6</code> has no branch available:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># ------ Exact matching: infeasible plan ------ #</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>grafted_error <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_ranges,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                     <span class="at">simmap =</span> toy_simmap_ranges, <span class="at">allowed_states =</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>),</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>                     <span class="at">treat_states_as_ranges =</span> <span class="cn">FALSE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">1</span>),</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="at">error =</span> <span class="cf">function</span>(e) <span class="fu">cat</span>(<span class="fu">conditionMessage</span>(e)))</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; 1 taxa have no branch available for grafting in their allowed states: none of the available branches of their target clade has a piece in these states.</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt;   - New_sp6 (target clade tips: t5; allowed states: A, B)</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt; Adjust &#39;allowed_states&#39; (global or in missing_taxa_list), or the constraints on the branches (&#39;include_target_clade_stem&#39;, &#39;Excluded_subclades&#39;, &#39;exclude_subclades_stem&#39;) for these taxa.</span></span></code></pre></div>
+<p>With exact matching, <strong>every range</strong> that can be used
+must be listed: here, we add <code>&quot;BC&quot;</code> to the global
+<code>allowed_states</code>.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># ------ Exact matching: list all the ranges ------ #</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>grafted_exact <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_ranges,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>                                    <span class="at">simmap =</span> toy_simmap_ranges, <span class="at">allowed_states =</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;BC&quot;</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>                                    <span class="at">treat_states_as_ranges =</span> <span class="cn">FALSE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span></code></pre></div>
+</div>
+<div id="graft-with-range-matching" class="section level2">
+<h2>4/ Graft with range matching</h2>
+<p>With range matching, the global
+<code>allowed_states = c(&quot;A&quot;, &quot;B&quot;)</code> is enough:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># ------ Range matching ------ #</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>grafted_ranges <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_ranges,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>                                     <span class="at">simmap =</span> toy_simmap_ranges, <span class="at">allowed_states =</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>                                     <span class="at">treat_states_as_ranges =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span></code></pre></div>
+</div>
+<div id="compare-the-results" class="section level2">
+<h2>5/ Compare the results</h2>
+<p>We plot the <strong>updated stochastic maps</strong>, in which the
+grafted branches are dashed, and the grafted tips are marked with a
+point in the color of <strong>the range they inherited</strong>:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># ------ Compare the grafted phylogenies ------ #</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co"># Helper: plot the updated simmap of a grafted phylogeny</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>plot_ranges <span class="ot">&lt;-</span> <span class="cf">function</span>(phy_grafted, main)</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>{</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="fu">plot_grafted</span>(phy_grafted, <span class="at">which =</span> <span class="st">&quot;edges&quot;</span>, <span class="at">simmap_colors =</span> range_colors, <span class="at">fsize =</span> <span class="fl">0.55</span>, <span class="at">main =</span> main)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  grafted_tips <span class="ot">&lt;-</span> <span class="fu">which</span>(phy_grafted<span class="sc">$</span>grafted_tips)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>  tip_ranges <span class="ot">&lt;-</span> phytools<span class="sc">::</span><span class="fu">getStates</span>(phy_grafted<span class="sc">$</span>simmap, <span class="at">type =</span> <span class="st">&quot;tips&quot;</span>)[phy_grafted<span class="sc">$</span>tip.label[grafted_tips]]</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  ape<span class="sc">::</span><span class="fu">tiplabels</span>(<span class="at">tip =</span> grafted_tips, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">1.5</span>, <span class="at">col =</span> range_colors[tip_ranges])</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>}</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="dv">2</span>, <span class="fl">0.5</span>))</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="fu">plot_ranges</span>(grafted_exact, <span class="at">main =</span> <span class="st">&quot;A: Exact matching&quot;</span>)</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="fu">plot_ranges</span>(grafted_ranges, <span class="at">main =</span> <span class="st">&quot;B: Range matching&quot;</span>)</span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">&quot;bottomleft&quot;</span>, <span class="at">legend =</span> <span class="fu">names</span>(range_colors), <span class="at">fill =</span> range_colors, <span class="at">title =</span> <span class="st">&quot;Range&quot;</span>, <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="at">cex =</span> <span class="fl">0.8</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">5.1</span>, <span class="fl">4.1</span>, <span class="fl">4.1</span>, <span class="fl">2.1</span>))</span></code></pre></div>
+<p>Since the grafting process is stochastic, placement can vary, and
+final states of taxa with multiple allowed states may vary too (e.g.,
+<code>New_sp3</code> in <code>&quot;A&quot;</code> or <code>&quot;B&quot;</code>). The
+critical change between the two matching type is the differences or not
+that are allowed between the range of parental branch and the inherited
+range of the grafted taxa.</p>
+<p>We summarize below the <strong>range of the branch where each taxon
+was grafted</strong> (<code>parent_state</code>) and <strong>the range
+it inherited</strong> (<code>tip_state</code>) with
+<code>extract_grafting_info()</code>:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># ------ Ranges at grafting and inherited ranges ------ #</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co"># Extract grafting information for the two matching types</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>info_exact <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(grafted_exact, <span class="at">missing_taxa_list =</span> taxa_ranges)</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>info_ranges <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(grafted_ranges, <span class="at">missing_taxa_list =</span> taxa_ranges)</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co"># Summarize information in a data.frame</span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>compare_ranges <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Taxon_name =</span> info_exact<span class="sc">$</span>Taxon_name,</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>                             <span class="at">Exact_parent =</span> info_exact<span class="sc">$</span>parent_state, <span class="at">Exact_inherited =</span> info_exact<span class="sc">$</span>tip_state,</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>                             <span class="at">Ranges_parent =</span> info_ranges<span class="sc">$</span>parent_state, <span class="at">Ranges_inherited =</span> info_ranges<span class="sc">$</span>tip_state)</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co"># Identify subset sympatric speciation event: the taxon inherits a range smaller than the range of the branch</span></span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>compare_ranges<span class="sc">$</span>Ranges_subset_sympatry <span class="ot">&lt;-</span> compare_ranges<span class="sc">$</span>Ranges_parent <span class="sc">!=</span> compare_ranges<span class="sc">$</span>Ranges_inherited</span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>compare_ranges</span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co">#&gt;   Taxon_name Exact_parent Exact_inherited Ranges_parent Ranges_inherited</span></span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="co">#&gt; 1    New_sp1            A               A             A                A</span></span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a><span class="co">#&gt; 2    New_sp2            B               B            AB                B</span></span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a><span class="co">#&gt; 3    New_sp3            B               B             A                A</span></span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a><span class="co">#&gt; 4    New_sp4           BC              BC            BC                B</span></span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co">#&gt; 5    New_sp5            B               B             B                B</span></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a><span class="co">#&gt; 6    New_sp6           BC              BC            BC                B</span></span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a><span class="co">#&gt; 7    New_sp7           BC              BC            BC               BC</span></span>
+<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a><span class="co">#&gt;   Ranges_subset_sympatry</span></span>
+<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a><span class="co">#&gt; 1                  FALSE</span></span>
+<span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a><span class="co">#&gt; 2                   TRUE</span></span>
+<span id="cb11-25"><a href="#cb11-25" tabindex="-1"></a><span class="co">#&gt; 3                  FALSE</span></span>
+<span id="cb11-26"><a href="#cb11-26" tabindex="-1"></a><span class="co">#&gt; 4                   TRUE</span></span>
+<span id="cb11-27"><a href="#cb11-27" tabindex="-1"></a><span class="co">#&gt; 5                  FALSE</span></span>
+<span id="cb11-28"><a href="#cb11-28" tabindex="-1"></a><span class="co">#&gt; 6                   TRUE</span></span>
+<span id="cb11-29"><a href="#cb11-29" tabindex="-1"></a><span class="co">#&gt; 7                  FALSE</span></span></code></pre></div>
+<p>With <strong>exact matching</strong>, the range of the branch and the
+<strong>inherited range are always the same</strong>.</p>
+<p>With <strong>range matching</strong>, taxa can be grafted on
+<strong>larger ranges</strong> and inherit a smaller one (subset
+sympatry), as for <code>New_sp2</code>, <code>New_sp4</code>, and
+<code>New_sp6</code>. The diversity of available positions is also
+wider.</p>
+</div>
+<div id="check-the-grafted-phylogenies" class="section level2">
+<h2>6/ Check the grafted phylogenies</h2>
+<p>The <strong>a posteriori</strong> check of
+<code>check_grafting_constraints()</code> must use the <strong>same
+<code>treat_states_as_ranges</code></strong> as the grafting (see
+<code>vignette(&quot;check_grafting&quot;)</code>):</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># ------ A posteriori check ------ #</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>constraints <span class="ot">&lt;-</span> <span class="fu">check_grafting_constraints</span>(<span class="at">phy_grafted =</span> grafted_ranges, <span class="at">phy_backbone =</span> toy_backbone,</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>                                          <span class="at">missing_taxa_list =</span> taxa_ranges, <span class="at">allowed_states =</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>),</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>                                          <span class="at">treat_states_as_ranges =</span> <span class="cn">TRUE</span>, <span class="at">use_excluded_subclades =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>                                          <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>constraints[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;in_tree&quot;</span>, <span class="st">&quot;target_ok&quot;</span>, <span class="st">&quot;states_ok&quot;</span>, <span class="st">&quot;ranges_ok&quot;</span>)]</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co">#&gt;         Taxon_name in_tree target_ok states_ok ranges_ok</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="co">#&gt; New_sp1    New_sp1    TRUE      TRUE      TRUE      TRUE</span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="co">#&gt; New_sp2    New_sp2    TRUE      TRUE      TRUE      TRUE</span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="co">#&gt; New_sp3    New_sp3    TRUE      TRUE      TRUE      TRUE</span></span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="co">#&gt; New_sp4    New_sp4    TRUE      TRUE      TRUE      TRUE</span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a><span class="co">#&gt; New_sp5    New_sp5    TRUE      TRUE      TRUE      TRUE</span></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co">#&gt; New_sp6    New_sp6    TRUE      TRUE      TRUE      TRUE</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="co">#&gt; New_sp7    New_sp7    TRUE      TRUE      TRUE      TRUE</span></span></code></pre></div>
+<p><code>states_ok</code> is <code>TRUE</code> when the range of the
+taxon is one of its allowed ranges, and <code>ranges_ok</code> when it
+also respects the rule of <strong>range matching</strong>: the branch it
+was grafted on contains the range it inherited.</p>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next steps</h2>
+<p>Now that you know how to use <strong>biogeographic ranges</strong> as
+constraints, you may be interested in:</p>
+<ul>
+<li>combining <strong>several traits</strong> or a trait and ranges:
+<code>vignette(&quot;multiple_traits&quot;)</code>;</li>
+<li>exploring options to graft <strong>missing taxa</strong>,
+<strong>missing clades</strong>, or <strong>both types</strong>:
+<code>vignette(&quot;graft_missing_taxa&quot;)</code>,
+<code>vignette(&quot;graft_missing_clades&quot;)</code> and
+<code>vignette(&quot;combine_missing_taxa_and_clades&quot;)</code>;</li>
+<li>handling <strong>uncertainty</strong> with several simulations and
+stochastic maps, and ensuring the <strong>reproducibility</strong> of
+the runs with the seed system:
+<code>vignette(&quot;handle_uncertainty&quot;)</code>;</li>
+<li>speeding up your runs by using <strong>parallel
+computation</strong>: <code>vignette(&quot;parallel_grafting&quot;)</code>.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

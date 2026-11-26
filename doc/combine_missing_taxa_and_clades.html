@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Maël Doré" />
+
+<meta name="date" content="2026-11-26" />
+
+<title>Graft both missing taxa and missing clades in one run</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Graft both missing taxa and missing clades
+in one run</h1>
+<h4 class="author">Maël Doré</h4>
+<h4 class="date">2026-11-26</h4>
+
+
+
+<p>Missing lineages come in two types: <strong>missing taxa</strong>,
+grafted within target clades with <code>graft_missing_taxa()</code>, and
+<strong>missing clades</strong>, grafted as sisters of clades of the
+backbone with <code>graft_missing_clades()</code> (see
+<code>vignette(&quot;graft_missing_taxa&quot;)</code> and
+<code>vignette(&quot;graft_missing_clades&quot;)</code>).</p>
+<p>When your data include <strong>both types</strong>, they must be
+grafted <strong>one after the other</strong>, each type being grafted on
+the phylogeny produced by the previous step: this is a
+<strong>successive grafting</strong>. This tutorial explains how to do
+it, with the wrapper <code>graft_missing_taxa_and_clades()</code> or
+<strong>manually</strong> with the individual functions:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Graft both types in one run</strong> with
+<code>graft_missing_taxa_and_clades()</code>.</li>
+<li><strong>The order of the grafting steps</strong>: why grafting
+missing taxa first, then missing clades, is the default.</li>
+<li><strong>Successive graftings by hand</strong>, to chain any number
+of steps, with a three-step example.</li>
+</ol>
+<p><strong>Arguments not covered here</strong></p>
+<p>The parameters of the grafting functions (<code>method</code>,
+<code>min_tips</code>, <code>include_target_clade_stem</code>,
+<code>allowed_states</code>, …) work as in the dedicated tutorials, and
+are not explained again here.</p>
+<ul>
+<li>for the arguments of <code>graft_missing_taxa()</code>: see
+<code>vignette(&quot;graft_missing_taxa&quot;)</code>;</li>
+<li>for the arguments of <code>graft_missing_clades()</code>: see
+<code>vignette(&quot;graft_missing_clades&quot;)</code>;</li>
+</ul>
+<p>Other arguments are explained in <strong>dedicated
+tutorials</strong>:</p>
+<ul>
+<li><code>seed</code>, <code>nb_simulations</code>,
+<code>force_simulations</code>, and the use of several stochastic maps,
+to <strong>handle uncertainty</strong> and ensure the
+<strong>reproducibility</strong> of the runs with the <strong>seed
+system</strong>: see <code>vignette(&quot;handle_uncertainty&quot;)</code>;</li>
+<li><code>parallel</code> computation to <strong>speed up</strong> the
+process: see <code>vignette(&quot;parallel_grafting&quot;)</code>;</li>
+<li><code>save_temp</code>, <code>resume</code> and the other arguments
+used to save temporary files and <strong>resume interrupted
+runs</strong>: see <code>vignette(&quot;resume_run&quot;)</code>;</li>
+<li><code>treat_states_as_ranges</code>, and the stochastic maps of
+<strong>several traits</strong> used together: see
+<code>vignette(&quot;biogeographic_data&quot;)</code> and
+<code>vignette(&quot;multiple_traits&quot;)</code>.</li>
+</ul>
+<div id="setup" class="section level2">
+<h2>0/ Setup</h2>
+<p>We use the toy backbone, and <strong>helper functions</strong> that
+build the lists of missing taxa and missing clades to graft, and plot
+the results. Two clades of the backbone are used below:
+<code>Family_B</code> (node <code>33</code>) and <code>Subfam_B2</code>
+(node <code>47</code>), nested within <code>Family_B</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(toy_backbone)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co"># Plot the backbone with its node IDs, and the clades used below:  Family_B in limegreen, Subfam_B2 in gold</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>ape<span class="sc">::</span><span class="fu">plot.phylo</span>(toy_backbone, <span class="at">cex =</span> <span class="fl">0.6</span>, <span class="at">no.margin =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>ape<span class="sc">::</span><span class="fu">nodelabels</span>(<span class="at">cex =</span> <span class="fl">0.6</span>, <span class="at">frame =</span> <span class="st">&quot;rect&quot;</span>, <span class="at">bg =</span> <span class="st">&quot;lightblue&quot;</span>, <span class="at">col =</span> <span class="st">&quot;darkblue&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>ape<span class="sc">::</span><span class="fu">nodelabels</span>(<span class="at">node =</span> <span class="dv">33</span>, <span class="at">cex =</span> <span class="fl">0.6</span>, <span class="at">frame =</span> <span class="st">&quot;rect&quot;</span>, <span class="at">bg =</span> <span class="st">&quot;limegreen&quot;</span>, <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>ape<span class="sc">::</span><span class="fu">nodelabels</span>(<span class="at">node =</span> <span class="dv">47</span>, <span class="at">cex =</span> <span class="fl">0.6</span>, <span class="at">frame =</span> <span class="st">&quot;rect&quot;</span>, <span class="at">bg =</span> <span class="st">&quot;gold&quot;</span>, <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Helper 1: build a missing_taxa_list with n taxa to graft within a target clade, defined by tips</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>make_taxa_list <span class="ot">&lt;-</span> <span class="cf">function</span>(n, target_tips, <span class="at">prefix =</span> <span class="st">&quot;Tax_sp&quot;</span>, <span class="at">start =</span> <span class="dv">1</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>{</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  taxa <span class="ot">&lt;-</span> <span class="fu">paste0</span>(prefix, <span class="fu">seq</span>(start, <span class="at">length.out =</span> n))</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">Taxon_name =</span> taxa, <span class="at">Target_clade =</span> <span class="fu">setNames</span>(<span class="fu">rep</span>(<span class="fu">list</span>(target_tips), n), taxa))</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>}</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co"># Helper 2: build a missing_taxa_list with n taxa to graft as one missing clade,</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co"># sister to a clade defined by tips</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>make_clade_list <span class="ot">&lt;-</span> <span class="cf">function</span>(n, sister_tips, <span class="at">prefix =</span> <span class="st">&quot;New_sp&quot;</span>, <span class="at">start =</span> <span class="dv">1</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>{</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  taxa <span class="ot">&lt;-</span> <span class="fu">paste0</span>(prefix, <span class="fu">seq</span>(start, <span class="at">length.out =</span> n))</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">Taxon_name =</span> taxa, <span class="at">Sister_clade =</span> <span class="fu">setNames</span>(<span class="fu">rep</span>(<span class="fu">list</span>(sister_tips), n), taxa))</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>}</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co"># Helper 3: plot a grafted phylogeny, with the taxa of each grafting step in a different color</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co"># Optionally, the branches of the missing clade (the subtree descending from the MRCA of its taxa)</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co"># are drawn in red</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>plot_steps <span class="ot">&lt;-</span> <span class="cf">function</span>(phy, steps, colors, main, <span class="at">clade_taxa =</span> <span class="cn">NULL</span>)</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>{</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>  tip_colors <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="st">&quot;black&quot;</span>, ape<span class="sc">::</span><span class="fu">Ntip</span>(phy))</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(steps)) tip_colors[phy<span class="sc">$</span>tip.label <span class="sc">%in%</span> steps[[i]]] <span class="ot">&lt;-</span> colors[i]</span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>  edge_colors <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="st">&quot;black&quot;</span>, <span class="fu">nrow</span>(phy<span class="sc">$</span>edge))</span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(clade_taxa))</span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>  {</span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>    clade_node <span class="ot">&lt;-</span> ape<span class="sc">::</span><span class="fu">getMRCA</span>(phy, clade_taxa)</span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>    clade_nodes <span class="ot">&lt;-</span> <span class="fu">c</span>(clade_node, phytools<span class="sc">::</span><span class="fu">getDescendants</span>(phy, clade_node))</span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>    edge_colors[phy<span class="sc">$</span>edge[, <span class="dv">2</span>] <span class="sc">%in%</span> clade_nodes] <span class="ot">&lt;-</span> <span class="st">&quot;red&quot;</span></span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>  }</span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>  ape<span class="sc">::</span><span class="fu">plot.phylo</span>(phy, <span class="at">tip.color =</span> tip_colors, <span class="at">edge.color =</span> edge_colors, <span class="at">edge.width =</span> <span class="fl">1.5</span>,</span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>                  <span class="at">cex =</span> <span class="fl">0.55</span>, <span class="at">no.margin =</span> <span class="cn">FALSE</span>, <span class="at">main =</span> main)</span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="graft-both-types-in-one-run" class="section level2">
+<h2>1/ Graft both types in one run</h2>
+<p>To graft both types at once, you need to provide the lists of missing
+taxa and of missing clades in a <strong>single list with two
+elements</strong>: <code>taxa</code> (the list of missing taxa, with a
+<code>Target_clade</code> item) and <code>clades</code> (the list of
+missing clades, with a <code>Sister_clade</code> item). Lists built with
+<code>build_missing_taxa_list()</code> or imported with
+<code>import_missing_taxa_list()</code> already have this format when
+they include both types (see
+<code>vignette(&quot;format_inputs&quot;)</code>).</p>
+<p>Here, we build them by hand: 5 taxa to graft within
+<code>Family_B</code>, and a missing clade of 3 taxa, sister of
+<code>Subfam_B2</code>, which is nested within
+<code>Family_B</code>.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># ------ Graft missing taxa and missing clades in one run ------ #</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co"># Step 1: Build the lists of missing taxa and missing clades</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>taxa_list <span class="ot">&lt;-</span> <span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">5</span>, <span class="at">target_tips =</span> <span class="fu">c</span>(<span class="st">&quot;t8&quot;</span>, <span class="st">&quot;t22&quot;</span>))</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>clades_list <span class="ot">&lt;-</span> <span class="fu">make_clade_list</span>(<span class="at">n =</span> <span class="dv">3</span>, <span class="at">sister_tips =</span> <span class="fu">c</span>(<span class="st">&quot;t22&quot;</span>, <span class="st">&quot;t5&quot;</span>))</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>missing_taxa_list <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">taxa =</span> taxa_list, <span class="at">clades =</span> clades_list)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co"># Step 2: Graft both types using the default order for grafting steps: 1/ Missing taxa; 2/ Missing clades</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co"># The rationale for the order of the steps is discussed in the Section 2</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>grafted <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa_and_clades</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> missing_taxa_list,</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>                                         <span class="at">seed =</span> <span class="dv">24</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co"># Step 3: Extract the grafting information: one table for each type</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>info <span class="ot">&lt;-</span> <span class="fu">extract_grafting_info</span>(grafted, missing_taxa_list, <span class="at">phy_backbone =</span> toy_backbone)</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="fu">names</span>(info)</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; [1] &quot;taxa&quot;   &quot;clades&quot;</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>info<span class="sc">$</span>taxa[, <span class="fu">c</span>(<span class="st">&quot;Taxon_name&quot;</span>, <span class="st">&quot;parent_node&quot;</span>, <span class="st">&quot;parent_tips&quot;</span>, <span class="st">&quot;graft_age&quot;</span>)]</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt;   Taxon_name parent_node parent_tips graft_age</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; 1    Tax_sp1          18          t8 0.2377292</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; 2    Tax_sp2          29         t12 0.4250171</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; 3    Tax_sp3          18          t8 2.1719197</span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; 4    Tax_sp4          50    t13, t27 2.0546323</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; 5    Tax_sp5          50    t13, t27 2.0546323</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a>info<span class="sc">$</span>clades[, <span class="fu">c</span>(<span class="st">&quot;Missing_clade&quot;</span>, <span class="st">&quot;Taxa&quot;</span>, <span class="st">&quot;parent_node&quot;</span>, <span class="st">&quot;graft_age&quot;</span>, <span class="st">&quot;crown_age&quot;</span>)]</span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt;   Missing_clade                      Taxa parent_node graft_age crown_age</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; 1             1 New_sp1, New_sp2, New_sp3          47  6.871162  4.842441</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co"># Step 4: Plot the grafted phylogeny, with the missing taxa in blue, and the taxa of the missing clade in red</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="fu">plot_steps</span>(grafted, <span class="at">steps =</span> <span class="fu">list</span>(taxa_list<span class="sc">$</span>Taxon_name, clades_list<span class="sc">$</span>Taxon_name), <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;red&quot;</span>),</span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a>           <span class="at">main =</span> <span class="st">&quot;Missing taxa (blue) and missing clade (red)&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" style="display: block; margin: auto;" /></p>
+<p>All the arguments of the individual functions are available in
+<code>graft_missing_taxa_and_clades()</code>, and <strong>apply to both
+steps</strong>: for instance, <code>min_tips</code> is used to fit the
+diversification models of both types, and, if provided,
+<code>allowed_states</code> constrains the taxa and the clades based on
+the same <code>simmap</code>. Similarly, if provided to account for
+unsampled species, the <code>total_richness_per_clades</code> input is a
+list with the same two elements, <code>taxa</code> and
+<code>clades</code> (see <code>import_total_richness_per_clades()</code>
+and <code>build_total_richness_per_clades()</code>).</p>
+</div>
+<div id="the-order-of-the-grafting-steps" class="section level2">
+<h2>2/ The order of the grafting steps</h2>
+<p>The <code>grafting_order</code> argument sets which type is grafted
+first: <code>c(&quot;taxa&quot;, &quot;clades&quot;)</code> (the default), or
+<code>c(&quot;clades&quot;, &quot;taxa&quot;)</code>. Here, the missing clade is sister of
+<code>Subfam_B2</code>, which is nested within <code>Family_B</code>,
+the target clade of the missing taxa: <strong>missing taxa can
+potentially be grafted anywhere within the missing clade</strong>, if
+the missing clade is already in the phylogeny when they are grafted.</p>
+<p>Here, we graft the same lists with the two grafting step orders, with
+the <strong>same seed</strong>, to compare results (see
+<code>vignette(&quot;handle_uncertainty&quot;)</code> for the seed system, which
+makes the runs reproducible):</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># ------ Order of the steps: taxa first vs clades first ------ #</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co"># Graft with the default order: missing taxa first, then missing clades</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>grafted_taxa_first <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa_and_clades</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> missing_taxa_list,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>                                                    <span class="at">grafting_order =</span> <span class="fu">c</span>(<span class="st">&quot;taxa&quot;</span>, <span class="st">&quot;clades&quot;</span>),</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>                                                    <span class="at">seed =</span> <span class="dv">24</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co"># Graft with the reverse order: missing clades first, then missing taxa</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>grafted_clades_first <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa_and_clades</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> missing_taxa_list,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>                                                      <span class="at">grafting_order =</span> <span class="fu">c</span>(<span class="st">&quot;clades&quot;</span>, <span class="st">&quot;taxa&quot;</span>),</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>                                                      <span class="at">seed =</span> <span class="dv">24</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co"># Are the taxa of the missing clade still a monophyletic group?</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>ape<span class="sc">::</span><span class="fu">is.monophyletic</span>(grafted_taxa_first, clades_list<span class="sc">$</span>Taxon_name)</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>ape<span class="sc">::</span><span class="fu">is.monophyletic</span>(grafted_clades_first, clades_list<span class="sc">$</span>Taxon_name)</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co"># Plot the phylogenies: the subtree of the missing clade is in red</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="dv">2</span>, <span class="fl">0.5</span>))</span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="fu">plot_steps</span>(grafted_taxa_first, <span class="at">steps =</span> <span class="fu">list</span>(taxa_list<span class="sc">$</span>Taxon_name, clades_list<span class="sc">$</span>Taxon_name),</span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>           <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;red&quot;</span>),</span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>           <span class="at">clade_taxa =</span> clades_list<span class="sc">$</span>Taxon_name, <span class="at">main =</span> <span class="st">&quot;Taxa first, then clades&quot;</span>)</span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="fu">plot_steps</span>(grafted_clades_first, <span class="at">steps =</span> <span class="fu">list</span>(taxa_list<span class="sc">$</span>Taxon_name, clades_list<span class="sc">$</span>Taxon_name),</span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a>           <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;red&quot;</span>),</span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a>           <span class="at">clade_taxa =</span> clades_list<span class="sc">$</span>Taxon_name, <span class="at">main =</span> <span class="st">&quot;Clades first, then taxa&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">5.1</span>, <span class="fl">4.1</span>, <span class="fl">4.1</span>, <span class="fl">2.1</span>))</span></code></pre></div>
+<p>When the <strong>missing clades are grafted first</strong>, the
+missing taxa are grafted on a phylogeny that already contains them: some
+taxa may land <strong>inside the missing clade</strong> (blue tips
+within the red subtree on the right panel), which is then <strong>no
+longer a monophyletic group of its own taxa</strong>. This is rarely
+what you want: a missing clade is defined as a group of taxa that are
+close relatives, and the taxa of the target clade are meant to be placed
+among the backbone species, not among them. When the <strong>missing
+taxa are grafted first</strong>, the missing clades are grafted last,
+<strong>on the stem of their sister clade</strong>, and stay
+<strong>monophyletic</strong> whatever the seed. This is why
+<code>c(&quot;taxa&quot;, &quot;clades&quot;)</code> is the default and the recommended
+order.</p>
+<p>Grafting the clades first is only useful if you want the taxa to be
+able to <strong>fall in the missing clades</strong>, for instance to
+consider that a missing clade is only a rough guess of a group of
+relatives. In this case, use <code>extract_grafting_info()</code> to
+check which clades are still monophyletic: the clades that are not are
+returned with <code>NA</code> values, and a warning.</p>
+</div>
+<div id="successive-graftings-by-hand" class="section level2">
+<h2>3/ Successive graftings by hand</h2>
+<p><code>graft_missing_taxa_and_clades()</code> combines <strong>two
+steps</strong>. For further refinements, you can run the
+<strong>individual grafting functions one after the other</strong>, each
+on the phylogeny produced by the previous one:
+<code>graft_missing_taxa()</code> and
+<code>graft_missing_clades()</code> accept an already grafted phylogeny
+as <code>phy</code>, so you can chain <strong>any number of steps, in
+any order</strong>.</p>
+<p>Here is a <strong>three-step</strong> example:</p>
+<ol style="list-style-type: decimal">
+<li>graft 2 <strong>missing taxa</strong> within
+<code>Subfam_B2</code>;</li>
+<li>graft a <strong>missing clade</strong> of 3 taxa as sister of
+<code>Subfam_B2</code> (with the missing taxa of step 1 already in it to
+account for the full diversity of the sister clade);</li>
+<li>graft 5 more <strong>missing taxa</strong> with more uncertain
+placement within <code>Family_B</code>, which can land <strong>both in
+the missing clade and in <code>Subfam_B2</code></strong>.</li>
+</ol>
+<p>The total richness is the same at each step for a given clade
+(<code>Subfam_B2</code> has 12 species, and <code>Family_B</code> 40),
+and is defined for the <strong>target</strong> or
+<strong>sister</strong> clades of each step.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># ------ Three successive graftings ------ #</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co"># Clades defined by tips: Subfam_B2 and Family_B</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>subfam_b2 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;t22&quot;</span>, <span class="st">&quot;t5&quot;</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>family_b <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;t8&quot;</span>, <span class="st">&quot;t22&quot;</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co"># Lists of missing taxa and clades</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>taxa_1_list <span class="ot">&lt;-</span> <span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">2</span>, <span class="at">target_tips =</span> subfam_b2, <span class="at">prefix =</span> <span class="st">&quot;Subfam_sp&quot;</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>clade_2_list <span class="ot">&lt;-</span> <span class="fu">make_clade_list</span>(<span class="at">n =</span> <span class="dv">3</span>, <span class="at">sister_tips =</span> subfam_b2, <span class="at">prefix =</span> <span class="st">&quot;Clade_sp&quot;</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>taxa_3_list <span class="ot">&lt;-</span> <span class="fu">make_taxa_list</span>(<span class="at">n =</span> <span class="dv">5</span>, <span class="at">target_tips =</span> family_b, <span class="at">prefix =</span> <span class="st">&quot;Fam_sp&quot;</span>)</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co"># Total richness of the clades used at each step</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>richness_1 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Target_clade =</span> <span class="fu">list</span>(subfam_b2), <span class="at">total_richness =</span> <span class="dv">12</span>)</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>richness_2 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Sister_clade =</span> <span class="fu">list</span>(subfam_b2), <span class="at">total_richness =</span> <span class="dv">12</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>richness_3 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Target_clade =</span> <span class="fu">list</span>(family_b), <span class="at">total_richness =</span> <span class="dv">40</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co"># Step 1: graft the taxa within Subfam_B2, on the backbone</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>grafted_1 <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> toy_backbone, <span class="at">missing_taxa_list =</span> taxa_1_list,</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>                                <span class="at">total_richness_per_clades =</span> richness_1, <span class="at">seed =</span> <span class="dv">30</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co"># Step 2: graft the missing clade as sister of Subfam_B2, on the output of step 1</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>grafted_2 <span class="ot">&lt;-</span> <span class="fu">graft_missing_clades</span>(<span class="at">phy =</span> grafted_1, <span class="at">missing_taxa_list =</span> clade_2_list,</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>                                  <span class="at">total_richness_per_clades =</span> richness_2, <span class="at">seed =</span> <span class="dv">30</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co"># Step 3: graft the taxa within Family_B, on the output of step 2</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>grafted_3 <span class="ot">&lt;-</span> <span class="fu">graft_missing_taxa</span>(<span class="at">phy =</span> grafted_2, <span class="at">missing_taxa_list =</span> taxa_3_list,</span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>                                <span class="at">total_richness_per_clades =</span> richness_3, <span class="at">seed =</span> <span class="dv">30</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="co"># Plot the final phylogeny, with the taxa of each step in a different color </span></span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a><span class="co"># and the subtree of the missing clade in red</span></span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a><span class="fu">plot_steps</span>(grafted_3, <span class="at">steps =</span> <span class="fu">list</span>(taxa_1_list<span class="sc">$</span>Taxon_name,</span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>                                   clade_2_list<span class="sc">$</span>Taxon_name,</span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a>                                   taxa_3_list<span class="sc">$</span>Taxon_name),</span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>           <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;red&quot;</span>, <span class="st">&quot;darkgreen&quot;</span>), <span class="at">clade_taxa =</span> clade_2_list<span class="sc">$</span>Taxon_name,</span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>           <span class="at">main =</span> <span class="st">&quot;Step 1 (blue), Step 2 (red), Step 3 (green)&quot;</span>)</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt width="100%" style="display: block; margin: auto;" /></p>
+<p>Because the output of each step is a standard grafted phylogeny, the
+steps can be <strong>chained in any order</strong>, and for <strong>any
+number of times</strong> until you reach your targeted grafted phylogeny
+comprising all lineages to graft.</p>
+<div id="why-use-tips-instead-of-node-ids-to-define-clades" class="section level3">
+<h3><strong>Why use tips instead of node IDs to define
+clades?</strong></h3>
+<p>Clades of <code>missing_taxa_list</code> and
+<code>total_richness_per_clades</code> are defined by
+<strong>tips</strong>, not by node IDs, because <strong>node IDs
+change</strong> every time taxa are grafted, while the <strong>tips of a
+clade do not</strong>. Here, <code>Subfam_B2</code> is the node
+<code>47</code> of the backbone, but it is not the same node in the
+phylogenies produced by each step:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># Node ID of Subfam_B2 in the backbone, and after each step</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">c</span>(<span class="at">Backbone =</span> ape<span class="sc">::</span><span class="fu">getMRCA</span>(toy_backbone, subfam_b2),</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">Step_1 =</span> ape<span class="sc">::</span><span class="fu">getMRCA</span>(grafted_1, subfam_b2),</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">Step_2 =</span> ape<span class="sc">::</span><span class="fu">getMRCA</span>(grafted_2, subfam_b2),</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">Step_3 =</span> ape<span class="sc">::</span><span class="fu">getMRCA</span>(grafted_3, subfam_b2))</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; Backbone   Step_1   Step_2   Step_3 </span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;       47       59       63       70</span></span></code></pre></div>
+<p>Clades defined by their tips stay valid at each step: the same
+<code>subfam_b2</code> identifies <code>Subfam_B2</code> in the four
+phylogenies. If you define clades with node IDs, convert them to tips
+with <code>convert_nodes_to_tips()</code> <strong>on the
+backbone</strong>, before grafting (see
+<code>vignette(&quot;format_inputs&quot;)</code>).</p>
+</div>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next steps</h2>
+<p>Now that you know how to proceed with <strong>successive
+graftings</strong>, you may be interested in exploring options for:</p>
+<ul>
+<li>grafting only <strong>missing taxa</strong> within target clades:
+<code>vignette(&quot;graft_missing_taxa&quot;)</code>;</li>
+<li>grafting only <strong>missing clades</strong> as sisters of clades
+of the backbone: <code>vignette(&quot;graft_missing_clades&quot;)</code>;</li>
+<li>handling <strong>uncertainty</strong> with several simulations and
+stochastic maps, and ensuring the <strong>reproducibility</strong> of
+the runs with the seed system:
+<code>vignette(&quot;handle_uncertainty&quot;)</code>;</li>
+<li>speeding up your runs by using <strong>parallel
+computation</strong>: <code>vignette(&quot;parallel_grafting&quot;)</code>;</li>
+<li><strong>resuming</strong> interrupted runs:
+<code>vignette(&quot;resume_run&quot;)</code>.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

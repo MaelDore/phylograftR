@@ -1,0 +1,89 @@
+---
+title: "phylograftR: All tutorials"
+author: "Maël Doré"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{phylograftR: All tutorials}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r set_options, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Main tutorial
+
+### Quick-to-run example
+
+A **simple use-case** that grafts missing taxa on a toy backbone phylogeny is available in the README of the package, and a **full workflow from the data to the checked grafted phylogenies** is presented in the [main workflow tutorial](https://maeldore.github.io/phylograftR/articles/main_workflow.html): `vignette("main_workflow")`.
+
+For more advanced uses, please refer to the tutorials below.
+
+
+## Which tutorial do I need?
+
+| I want to... | Tutorial |
+|:---|:---|
+| Format my data into `missing_taxa_list` and `total_richness_per_clades` | [`format_inputs`](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")` |
+| Build stochastic maps (simmaps) of species attributes from tip data | [`prepare_stochastic_maps`](https://maeldore.github.io/phylograftR/articles/prepare_stochastic_maps.html): `vignette("prepare_stochastic_maps")` |
+| See a full analysis, from tip data to checked grafted phylogenies | [`main_workflow`](https://maeldore.github.io/phylograftR/articles/main_workflow.html): `vignette("main_workflow")` |
+| Explore options to graft missing taxa within target clades | [`graft_missing_taxa`](https://maeldore.github.io/phylograftR/articles/graft_missing_taxa.html): `vignette("graft_missing_taxa")` |
+| Explore options to graft missing clades as sisters of clades of the backbone | [`graft_missing_clades`](https://maeldore.github.io/phylograftR/articles/graft_missing_clades.html): `vignette("graft_missing_clades")` |
+| Graft both types of missing lineages in one run | [`combine_missing_taxa_and_clades`](https://maeldore.github.io/phylograftR/articles/combine_missing_taxa_and_clades.html): `vignette("combine_missing_taxa_and_clades")` |
+| Check the grafting plan before, and the grafted phylogenies after | [`check_grafting`](https://maeldore.github.io/phylograftR/articles/check_grafting.html): `vignette("check_grafting")` |
+| Constrain grafting with biogeographic ranges | [`biogeographic_data`](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html): `vignette("biogeographic_data")` |
+| Constrain grafting with several traits | [`multiple_traits`](https://maeldore.github.io/phylograftR/articles/multiple_traits.html): `vignette("multiple_traits")` |
+| Constrain grafting with a continuous trait | [`continuous_data`](https://maeldore.github.io/phylograftR/articles/continuous_data.html): `vignette("continuous_data")` |
+| Account for uncertainty (simulations, stochastic maps, backbones), and make runs reproducible with seeds | [`handle_uncertainty`](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html): `vignette("handle_uncertainty")` |
+| Speed up grafting with parallel computation | [`parallel_grafting`](https://maeldore.github.io/phylograftR/articles/parallel_grafting.html): `vignette("parallel_grafting")` |
+| Resume a crashed or interrupted run | [`resume_run`](https://maeldore.github.io/phylograftR/articles/resume_run.html): `vignette("resume_run")` |
+
+
+## Advanced uses / tutorials
+
+The following tutorials present the **usages** of phylograftR in detail.
+They provide explanations on available arguments and interpretations of results across multiple types of data.
+
+### **1/ Inputs**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 1.1/ [Format __inputs__ prior to grafting](https://maeldore.github.io/phylograftR/articles/format_inputs.html): `vignette("format_inputs")`.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 1.2/ [Prepare __trait data__ and build __stochastic maps__ with deepSTRAPP](https://maeldore.github.io/phylograftR/articles/prepare_stochastic_maps.html): `vignette("prepare_stochastic_maps")`.
+
+### **2/ Main workflow**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; [Full __grafting workflow__, from a phylogeny and tip data to the checked grafted phylogenies](https://maeldore.github.io/phylograftR/articles/main_workflow.html): `vignette("main_workflow")`.
+
+### **3/ Grafting options**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.1/ [Explore options to graft __missing taxa__](https://maeldore.github.io/phylograftR/articles/graft_missing_taxa.html): `vignette("graft_missing_taxa")`.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.2/ [Explore options to graft __missing clades__](https://maeldore.github.io/phylograftR/articles/graft_missing_clades.html): `vignette("graft_missing_clades")`.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 3.3/ [Graft __both types__ of missing lineages in one run](https://maeldore.github.io/phylograftR/articles/combine_missing_taxa_and_clades.html): `vignette("combine_missing_taxa_and_clades")`.
+
+### **4/ Checks**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; [Check the __grafting plan__ and the __grafted phylogenies__, and extract information](https://maeldore.github.io/phylograftR/articles/check_grafting.html): `vignette("check_grafting")`.
+
+### **5/ Data types**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.1/ [__Biogeographic__ range data](https://maeldore.github.io/phylograftR/articles/biogeographic_data.html): `vignette("biogeographic_data")`.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.2/ [__Multiple traits__](https://maeldore.github.io/phylograftR/articles/multiple_traits.html): `vignette("multiple_traits")`.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 5.3/ [__Continuous__ trait data](https://maeldore.github.io/phylograftR/articles/continuous_data.html): `vignette("continuous_data")`.
+
+### **6/ Uncertainty and scaling**
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.1/ [Handle __uncertainty__ and ensure __reproducibility__](https://maeldore.github.io/phylograftR/articles/handle_uncertainty.html): `vignette("handle_uncertainty")`.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.2/ [Run grafting in __parallel__](https://maeldore.github.io/phylograftR/articles/parallel_grafting.html): `vignette("parallel_grafting")`.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&#x25CF;&nbsp;&nbsp; 6.3/ [__Resume__ a crashed or interrupted run](https://maeldore.github.io/phylograftR/articles/resume_run.html): `vignette("resume_run")`.
+<br>
