@@ -23,7 +23,7 @@ library(phylograftR)
 
 Grafting **thousands of taxa** on a large backbone phylogeny, with **many simulations and stochastic maps**, can last **hours or days** (see `vignette("parallel_grafting")`). Since grafting functions work with a single call, a power cut, a closed session, a memory crash or a cluster time limit would then **destroy all the work done so far**.
 
-To prevetn such issue, the grafting functions can **save their progress in temporary files**, and **resume** from them after an interruption. The resumed run gives **exactly the same output** as a run that would never have been interrupted.
+To prevent such issue, the grafting functions can **save their progress in temporary files**, and **resume** from them after an interruption. The resumed run gives **exactly the same output** as a run that would never have been interrupted.
 
 Here, we cover:
 
@@ -324,6 +324,7 @@ There are **two levels of protection**:
 - **With `save_temp_every`**, the progress **within** a grafted phylogeny is saved too. It matters when **a single grafted phylogeny is long**: a backbone with thousands of tips and hundreds or thousands of taxa to graft, where one phylogeny can take several minutes to more than ten minutes (see `vignette("parallel_grafting")`).
 
 As a rule of thumb, set `save_temp_every` to **a few percent of the taxa to graft** (e.g., `save_temp_every = 5` for 100 groups of taxa to graft).
+
 **Saving is cheap**: in a test on a backbone of 1000 tips with 300 taxa to graft, saving after **every** taxon increased the time of the run by about 20%, and saving every 10 taxa or less often had no measurable cost.
 If `save_temp_every` is larger than the number of taxa (or of groups of taxa) to graft, no progress is saved before the phylogeny is complete (as if `save_temp_every = NULL`), and a warning is raised.
 
