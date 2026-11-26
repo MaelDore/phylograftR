@@ -675,7 +675,8 @@ NULL
 #' plot(toy_contMap, legend = FALSE, fsize = 0.7)
 #'
 #' # Discretize into a simmap of three states using the terciles of the tip values.
-#' # Provide the observed tip values: the contMap only approximates them (interpolation within segments)
+#' # Provide the observed tip values: the contMap only approximates them
+#' # (interpolation within segments)
 #' my_simmap <- convert_contMap_to_simmap(toy_contMap, probs = c(1/3, 2/3),
 #'                                        states = c("low", "medium", "high"),
 #'                                        tip_values = toy_tip_values)
@@ -731,7 +732,8 @@ NULL
 #' data(toy_tip_values)
 #' length(toy_contMaps)
 #'
-#' # Discretize the list of contMaps into a multiSimmap of three states, using the terciles of the observed tip values as cut points
+#' # Discretize the list of contMaps into a multiSimmap of three states,
+#' # using the terciles of the observed tip values as cut points
 #' my_multiSimmap <- convert_contMap_to_simmap(toy_contMaps, probs = c(1/3, 2/3),
 #'                                             states = c("low", "medium", "high"),
 #'                                             tip_values = toy_tip_values, verbose = FALSE)
@@ -845,7 +847,8 @@ NULL
 #' data(toy_multiSimmap)
 #' data(toy_multiSimmap_elevation)
 #'
-#' # Maps of two traits: a list with one element per trait, each a multiSimmap with the same number of maps
+#' # Maps of two traits: a list with one element per trait,
+#' # each a multiSimmap with the same number of maps
 #' maps_two_traits <- list(color = toy_multiSimmap, elevation = toy_multiSimmap_elevation)
 #' sapply(maps_two_traits, length)
 #'

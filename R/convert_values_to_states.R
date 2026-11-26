@@ -100,12 +100,15 @@
 #' allowed_states <- convert_values_to_states(close_values, simmap = my_simmap, tolerance = 0.3)
 #' allowed_states
 #'
-#' # One tolerance per taxon, e.g., the measurement error of each value (no tolerance for Taxon_1 and Taxon_3)
+#' # One tolerance per taxon, e.g., the measurement error of each value
+#' # (no tolerance for Taxon_1 and Taxon_3)
 #' convert_values_to_states(close_values, simmap = my_simmap, tolerance = c(0, 0.3, 0))
 #'
 #' # The output can be used directly as the 'allowed_states' of a list of missing taxa
 #' missing_taxa_list <- list(Taxon_name = names(close_values),
-#'                           Target_clade = list(Taxon_1 = "t1", Taxon_2 = c("t1", "t2"), Taxon_3 = "t1"))
+#'                           Target_clade = list(Taxon_1 = "t1",
+#'                                               Taxon_2 = c("t1", "t2"),
+#'                                               Taxon_3 = "t1"))
 #' missing_taxa_list$allowed_states <- allowed_states
 #'
 
