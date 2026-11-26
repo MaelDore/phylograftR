@@ -555,6 +555,9 @@ and in this vignette: `vignette("phylograftR")`.
 - [Run grafting in
   **parallel**](https://maeldore.github.io/phylograftR/articles/parallel_grafting.html):
   `vignette("parallel_grafting")`.
+- [**Resume** a crashed or interrupted
+  run](https://maeldore.github.io/phylograftR/articles/resume_crashed_run.html):
+  `vignette("resume_crashed_run")`.
 
 Alternatively, if you prefer to view the vignettes in R, you can install
 the package with `build_vignettes = TRUE`.

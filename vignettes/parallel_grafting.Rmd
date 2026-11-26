@@ -144,8 +144,9 @@ We benchmarked the computation time of the grafting, sequential and parallel, to
 - **Number of simulations**: 10, 100 and 1000 simulations, without stochastic maps: the final number of grafted phylogenies equals the number of simulations.
 - **Number of workers for parallelization**: 2, 4 and 10 workers, with the plan `future::multisession`. The times include the set-up of the workers, as when you set the plan just before the grafting.
 
-Both **methods**, `"uniform"` and `"BD_clades"` have the **same cost** when using only simulations (i.e., no stochastic maps for attribute-based constraints), as the birth-death model is fitted only once per target clade.
-
+**Method**: the benchmark uses the default method, `"BD_clades"`, without stochastic maps for attribute-based constraints. The method `"uniform"` has no birth-death model to fit, yet it gave **similar times** (within about 10% from 500 tips). The birth-death models in `"BD_clades"` are fitted only once per target clade, which is usually negligible.
+However, `"BD_clades"` can be about 25% to 50% slower than `"uniform"` when using **large clades** as target clades (hundreds of tips).
+For the effect of the **use of stochastic maps** as attribute-based constraints, please see the last subsection of the Results in *Section 4*.
 
 ### Fixed costs and time of one task
 
