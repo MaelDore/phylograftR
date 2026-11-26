@@ -58,7 +58,7 @@ navbar:
       - text: Run grafting in parallel
         href: articles/parallel_grafting.html
       - text: Resume a crashed or interrupted run
-        href: articles/resume_crashed_run.html
+        href: articles/resume_run.html
 reference:
 - title: Graft missing lineages
   desc: |
