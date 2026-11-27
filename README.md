@@ -20,8 +20,8 @@ use_github_actions()  reports the R CMD check status of your development package
 
 <!-- badges: end -->
 
-The goal of **the R package phylograftR** is to **graft missing lineages
-on time-calibrated phylogenies** using available taxonomic,
+The goal of the ***R package phylograftR*** is to **graft missing
+lineages on time-calibrated phylogenies** using available taxonomic,
 evolutionary, and biological information. It combines **taxonomic
 assignments**, which define the target clades where each missing taxon
 must be grafted and the excluded subclades where it must not, with
