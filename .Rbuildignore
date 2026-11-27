@@ -30,3 +30,4 @@ sources/*
 
 # Benchmark results
 benchmark/*
+^cran-comments\.md$
