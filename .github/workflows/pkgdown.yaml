@@ -36,12 +36,19 @@ jobs:
           # extra-repositories: https://maeldore.github.io/drat # Argument to include the drat repo for BioGeoBERS and contsimmap in the R Session,
           # so they can be checked by pak in next setup-r-dependencies@v2 action. However, it does not work because pak use a clean new R Session to check for the dependencies.
 
-      # Install the package, its Suggests (needed by the vignettes), and pkgdown
+      # Install the package, its Suggests (needed by the vignettes), and pkgdown.
+      # contsimmap and deepSTRAPP (Suggests) are not on CRAN / not found by pak through Additional_repositories,
+      # so they are given explicitly, with BioGeoBEARS (dependency of deepSTRAPP) and the archived MultinomialCI
+      # (dependency of BioGeoBEARS), as in the deepSTRAPP workflow.
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: |
             any::pkgdown
             local::.
+            MultinomialCI=url::https://cran.r-project.org/src/contrib/Archive/MultinomialCI/MultinomialCI_1.2.tar.gz
+            github::nmatzke/BioGeoBEARS
+            github::bstaggmartin/contsimmap
+            github::MaelDore/deepSTRAPP
           needs: website
           # dependencies: '"hard"' # Added to skip Suggests dependencies from pak checking.
           # May be used for non-dev version if the check fails, but favor deploying dev version anyway as they have all datasets
