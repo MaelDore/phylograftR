@@ -204,7 +204,7 @@ quantile(tip_data, probs = c(1/3, 2/3))
 
 # Tips are in the state of their observed values
 tip_states_b <- phytools::getStates(my_simmap_1b, type = "tips")
-converted_tips_b <- unlist(convert_values_to_states(tip_data, simmap = my_simmap_1b)
+converted_tips_b <- unlist(convert_values_to_states(tip_data, simmap = my_simmap_1b))
 all(tip_states_b == converted_tips_b)[names(tip_states_b)])
 
 # Plot the resulting simmap
