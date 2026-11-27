@@ -1,5 +1,5 @@
 Package: phylograftR
-Title: Graft Missing Taxa On Time-Calibrated Phylogenies
+Title: Graft Missing Taxa on Time-Calibrated Phylogenies
 Version: 0.0.0.9000
 Authors@R: 
     person("Maël", "Doré", , "mael.dore@gmail.com", role = c("aut", "cre", "cph"),
