@@ -3,3 +3,13 @@
   font-size: 0.8rem;   /* adjust until it matches vignette style */
   line-height: 1.4;
 }
+
+/* All pages (home, articles, reference): more space around section titles */
+main h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 1.25rem;
+}
+main h3 {
+  margin-top: 1.75rem;
+  margin-bottom: 0.9rem;
+}
