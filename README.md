@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# phylograftR <img src="man/figures/logo.png" align="right" width="250" alt="phylograftR logo" />
+# phylograftR <img src="man/figures/logo.png" align="right" width="200" alt="phylograftR logo" />
 
 <!-- badges: start -->
 
@@ -19,6 +19,17 @@ use_github_actions()  reports the R CMD check status of your development package
 &#10;-->
 
 <!-- badges: end -->
+
+The goal of **the R package phylograftR** is to **graft missing lineages
+on time-calibrated phylogenies** using available taxonomic,
+evolutionary, and biological information. It combines **taxonomic
+assignments**, which define the target clades where each missing taxon
+must be grafted and the excluded subclades where it must not, with
+**diversification modeling** to infer the divergence times of the
+imputed branches. Critically, it can also use **species attributes**,
+such as categorical traits, discretized continuous traits, or
+biogeographic ranges, to further refine the sections of the backbone
+phylogeny where each missing lineage can be grafted.
 
 <!-- toc: start -->
 
@@ -45,17 +56,6 @@ use_github_actions()  reports the R CMD check status of your development package
 <a id="summary"></a>
 
 ## :dart: Summary
-
-The goal of **phylograftR** is to graft missing lineages on
-time-calibrated phylogenies using available taxonomic, evolutionary, and
-biological information. It combines taxonomic assignments, which define
-the target clades where each missing taxon must be grafted and the
-excluded subclades where it must not, with diversification modeling to
-infer the divergence times of the imputed branches. Critically, it can
-also use species attributes, such as categorical traits, discretized
-continuous traits, or biogeographic ranges, to further refine the
-sections of the backbone phylogeny where each missing lineage can be
-grafted.
 
 <a id="why-use"></a>
 
