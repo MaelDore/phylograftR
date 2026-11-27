@@ -31,3 +31,6 @@ sources/*
 # Benchmark results
 benchmark/*
 ^cran-comments\.md$
+
+# Store results of checks
+phylograftR_check/*

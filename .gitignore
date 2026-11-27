@@ -22,3 +22,5 @@ docs
 sources/*
 sources/MultinomialCI_1.2.tar.gz
 
+# Store results of checks
+phylograftR_check/*

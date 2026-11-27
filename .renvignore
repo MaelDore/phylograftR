@@ -17,3 +17,6 @@
 
 # History and IDE files
 /.Rproj.user/
+
+# Store results of checks
+phylograftR_check/*
