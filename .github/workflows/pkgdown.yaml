@@ -44,13 +44,16 @@ jobs:
         with:
           extra-packages: |
             any::pkgdown
+            any::knitr
+            any::rmarkdown
             local::.
-            MultinomialCI=url::https://cran.r-project.org/src/contrib/Archive/MultinomialCI/MultinomialCI_1.2.tar.gz
-            github::nmatzke/BioGeoBEARS
-            github::bstaggmartin/contsimmap
-            github::MaelDore/deepSTRAPP
+      # Other Suggested extra packages mentioned in vignettes but not used in EVAL scripts
+      # MultinomialCI=url::https://cran.r-project.org/src/contrib/Archive/MultinomialCI/MultinomialCI_1.2.tar.gz
+      # github::nmatzke/BioGeoBEARS
+      # github::bstaggmartin/contsimmap
+      # github::MaelDore/deepSTRAPP
           needs: website
-          # dependencies: '"hard"' # Added to skip Suggests dependencies from pak checking.
+          dependencies: '"hard"' # Added to skip Suggests dependencies from pak checking.
           # May be used for non-dev version if the check fails, but favor deploying dev version anyway as they have all datasets
 
       - name: Build site
