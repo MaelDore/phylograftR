@@ -17,7 +17,7 @@ each value is then assigned to all the states covered by the interval [value - t
 
     <a class="navbar-brand me-2" href="../index.html">phylograftR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -182,7 +182,7 @@ to evaluate how much, with the <code>valid_fraction</code>).</p>
 <span class="r-in"><span>                                       states <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"low"</span>, <span class="st">"medium"</span>, <span class="st">"high"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># Inspect the trait values used as breaks</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">my_simmap</span>, <span class="st">"breaks"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2.039502 3.502385</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -3.158964  8.416199</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Define continuous trait values of three missing taxa</span></span></span>
 <span class="r-in"><span><span class="va">missing_values</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>Taxon_1 <span class="op">=</span> <span class="op">-</span><span class="fl">2</span>, Taxon_2 <span class="op">=</span> <span class="fl">0.1</span>, Taxon_3 <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
@@ -191,10 +191,10 @@ to evaluate how much, with the <code>valid_fraction</code>).</p>
 <span class="r-in"><span><span class="va">my_states</span> <span class="op">&lt;-</span> <span class="fu">convert_values_to_states</span><span class="op">(</span><span class="va">missing_values</span>, simmap <span class="op">=</span> <span class="va">my_simmap</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">my_states</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "low"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "low"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium"</span>
@@ -203,16 +203,16 @@ to evaluate how much, with the <code>valid_fraction</code>).</p>
 <span class="r-in"><span><span class="co"># To get a character vector with a single state per value, use unlist() (if tolerance = 0)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="va">my_states</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  Taxon_1  Taxon_2  Taxon_3 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    "low"    "low" "medium" </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> "medium" "medium" "medium" </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Same conversion with the cut points and states given directly</span></span></span>
 <span class="r-in"><span><span class="fu">convert_values_to_states</span><span class="op">(</span><span class="va">missing_values</span>, breaks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">my_simmap</span>, <span class="st">"breaks"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                         states <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"low"</span>, <span class="st">"medium"</span>, <span class="st">"high"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "low"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "low"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium"</span>
@@ -224,7 +224,7 @@ to evaluate how much, with the <code>valid_fraction</code>).</p>
 <span class="r-in"><span><span class="va">close_values</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>Taxon_1 <span class="op">=</span> <span class="op">-</span><span class="fl">2</span>, Taxon_2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">my_simmap</span>, <span class="st">"breaks"</span><span class="op">)</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fl">0.1</span>, Taxon_3 <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">convert_values_to_states</span><span class="op">(</span><span class="va">close_values</span>, simmap <span class="op">=</span> <span class="va">my_simmap</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "low"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "high"</span>
@@ -237,7 +237,7 @@ to evaluate how much, with the <code>valid_fraction</code>).</p>
 <span class="r-in"><span><span class="va">allowed_states</span> <span class="op">&lt;-</span> <span class="fu">convert_values_to_states</span><span class="op">(</span><span class="va">close_values</span>, simmap <span class="op">=</span> <span class="va">my_simmap</span>, tolerance <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">allowed_states</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "low"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium" "high"  </span>
@@ -250,7 +250,7 @@ to evaluate how much, with the <code>valid_fraction</code>).</p>
 <span class="r-in"><span><span class="co"># (no tolerance for Taxon_1 and Taxon_3)</span></span></span>
 <span class="r-in"><span><span class="fu">convert_values_to_states</span><span class="op">(</span><span class="va">close_values</span>, simmap <span class="op">=</span> <span class="va">my_simmap</span>, tolerance <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.3</span>, <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "low"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $Taxon_2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium" "high"  </span>

@@ -141,7 +141,7 @@ my_simmap <- convert_contMap_to_simmap(my_contMap, probs = c(1/3, 2/3),
                                        states = c("low", "medium", "high"))
 # Inspect the trait values used as breaks
 attr(my_simmap, "breaks")
-#> [1] 2.039502 3.502385
+#> [1] -3.158964  8.416199
 
 # Define continuous trait values of three missing taxa
 missing_values <- c(Taxon_1 = -2, Taxon_2 = 0.1, Taxon_3 = 3)
@@ -150,10 +150,10 @@ missing_values <- c(Taxon_1 = -2, Taxon_2 = 0.1, Taxon_3 = 3)
 my_states <- convert_values_to_states(missing_values, simmap = my_simmap)
 my_states
 #> $Taxon_1
-#> [1] "low"
+#> [1] "medium"
 #> 
 #> $Taxon_2
-#> [1] "low"
+#> [1] "medium"
 #> 
 #> $Taxon_3
 #> [1] "medium"
@@ -162,16 +162,16 @@ my_states
 # To get a character vector with a single state per value, use unlist() (if tolerance = 0)
 unlist(my_states)
 #>  Taxon_1  Taxon_2  Taxon_3 
-#>    "low"    "low" "medium" 
+#> "medium" "medium" "medium" 
 
 # Same conversion with the cut points and states given directly
 convert_values_to_states(missing_values, breaks = attr(my_simmap, "breaks"),
                          states = c("low", "medium", "high"))
 #> $Taxon_1
-#> [1] "low"
+#> [1] "medium"
 #> 
 #> $Taxon_2
-#> [1] "low"
+#> [1] "medium"
 #> 
 #> $Taxon_3
 #> [1] "medium"
@@ -183,7 +183,7 @@ convert_values_to_states(missing_values, breaks = attr(my_simmap, "breaks"),
 close_values <- c(Taxon_1 = -2, Taxon_2 = attr(my_simmap, "breaks")[2] + 0.1, Taxon_3 = 3)
 convert_values_to_states(close_values, simmap = my_simmap)
 #> $Taxon_1
-#> [1] "low"
+#> [1] "medium"
 #> 
 #> $Taxon_2
 #> [1] "high"
@@ -196,7 +196,7 @@ convert_values_to_states(close_values, simmap = my_simmap)
 allowed_states <- convert_values_to_states(close_values, simmap = my_simmap, tolerance = 0.3)
 allowed_states
 #> $Taxon_1
-#> [1] "low"
+#> [1] "medium"
 #> 
 #> $Taxon_2
 #> [1] "medium" "high"  
@@ -209,7 +209,7 @@ allowed_states
 # (no tolerance for Taxon_1 and Taxon_3)
 convert_values_to_states(close_values, simmap = my_simmap, tolerance = c(0, 0.3, 0))
 #> $Taxon_1
-#> [1] "low"
+#> [1] "medium"
 #> 
 #> $Taxon_2
 #> [1] "medium" "high"  

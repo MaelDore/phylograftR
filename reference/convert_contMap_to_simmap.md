@@ -297,3 +297,158 @@ Other functions from phylograftR:
 Maël Doré
 
 ## Examples
+
+``` r
+# --- Prepare data --- #
+
+# Load backbone phylogeny
+data(toy_backbone)
+
+# Simulate a continuous trait on the backbone phylogeny under a Brownian Motion
+# and interpolate its ML estimates with phytools::contMap()
+tip_data <- phytools::fastBM(toy_backbone,
+                          a = 0,  # Ancestral value at the root
+                          sig2 = 1) # Evolutionary rate as instantaneous variance of the BM process
+my_contMap <- phytools::contMap(tree = toy_backbone, x = tip_data, plot = FALSE)
+plot(my_contMap, legend = FALSE)
+
+
+# --- Discretize using quantiles of tip values --- #
+
+# Convert into simmap of three states using quantiles of the tip values
+my_simmap_1 <- convert_contMap_to_simmap(my_contMap, probs = c(1/3, 2/3),
+                                       states = c("low", "medium", "high"))
+attr(my_simmap_1, "breaks")
+#> [1] 2.039502 3.502385
+
+# Check the distribution of states across tips
+tip_states <- phytools::getStates(my_simmap_1, type = "tips")
+table(tip_states)
+#> tip_states
+#>   high    low medium 
+#>     10     10     10 
+
+# --- Use the observed tip values --- #
+
+# The contMap only approximates the values at the tips (interpolation within segments).
+# Provide the observed tip values to compute the cut points
+# and to set the state of each tip from the data
+my_simmap_1b <- convert_contMap_to_simmap(my_contMap, probs = c(1/3, 2/3),
+                                          states = c("low", "medium", "high"),
+                                          tip_values = tip_data)
+# Cut points computed from the observed tip values
+attr(my_simmap_1b, "breaks")
+#> [1] 2.011335 3.553872
+quantile(tip_data, probs = c(1/3, 2/3))
+#> 33.33333% 66.66667% 
+#>  2.011335  3.553872 
+
+# Tips are in the state of their observed values
+tip_states_b <- phytools::getStates(my_simmap_1b, type = "tips")
+converted_tips_b <- unlist(convert_values_to_states(tip_data, simmap = my_simmap_1b))
+all(tip_states_b == converted_tips_b[names(tip_states_b)])
+#> [1] TRUE
+
+# Plot the resulting simmap
+plot(my_simmap_1, colors = c(low = "blue", medium = "grey", high = "red"),
+     fsize = 0.7, ftype = "i")
+
+
+# --- Discretize using cut points --- #
+
+# Use two interior cut points defined by the user to obtain three states
+my_simmap_2 <- convert_contMap_to_simmap(my_contMap, breaks = c(-1, 1),
+                                         states = c("low", "medium", "high"))
+
+# Plot the resulting simmap
+plot(my_simmap_2, colors = c(low = "blue", medium = "grey", high = "red"),
+     fsize = 0.7, ftype = "i")
+
+
+# --- Discretize using bins of equal width --- #
+
+# Use bins of equal width to assign states
+my_simmap_3 <- convert_contMap_to_simmap(my_contMap, n_bins = 3,
+                                         states = c("low", "medium", "high"))
+
+# Plot the resulting simmap
+plot(my_simmap_3, colors = c(low = "blue", medium = "grey", high = "red"),
+     fsize = 0.7, ftype = "i")
+
+
+
+# --- Discretize multiple continuous stochastic maps --- #
+
+if (FALSE)  # Requires one package not available on CRAN
+## The R packages 'deepSTRAPP' (on CRAN) and 'contsimmap' (not on CRAN)
+## are needed for this example to work.
+if (requireNamespace("deepSTRAPP", quietly = TRUE)
+    && requireNamespace("contsimmap", quietly = TRUE))
+{
+ # Use phytools::anc.ML() to extract the evolutionary rate = sigma^2
+ BM_fit <- phytools::anc.ML(tree = toy_backbone,
+                            x = tip_data,
+                            model = "BM")
+ # Extract evolutionary rate = sigma^2
+ sigma2 <- BM_fit$sig2
+
+ # Simulate 100 continuous stochastic maps for the same trait data and BM model
+ my_contsimmap <- contsimmap::make.contsimmap(
+     tree = toy_backbone,
+     trait.data = tip_data,
+     Xsig2 = list(sigma2),
+     nsim = 100)
+ dim(my_contsimmap) # 58 edges, 1 trait, 100 simulations
+
+ # Convert contsimmap output into a list of contMaps
+ my_contMaps_list <- deepSTRAPP::convert_contsimmap_to_contMaps(
+     contsimmap = my_contsimmap, verbose = TRUE)
+
+ # Convert multiple contMaps at once into corresponding simmaps
+ # using quantiles of the tip values
+ my_multiSimmap <- convert_contMap_to_simmap(my_contMaps_list, probs = c(1/3, 2/3),
+                                             states = c("low", "medium", "high"),
+                                             tip_values = tip_data) # Use the observed tip values
+
+ # Plot the resulting simmaps describing different evolutionary histories simulated
+ # from the same evolutionary process conditioned to the tip data and phylogeny,
+ # therefore accounting for uncertainty in ancestral trait estimates.
+ plot(my_multiSimmap[[1]], colors = c(low = "blue", medium = "grey", high = "red"),
+     main = "simmap n\u00B01", fsize = 0.7, ftype = "i")
+ plot(my_multiSimmap[[2]], colors = c(low = "blue", medium = "grey", high = "red"),
+      main = "simmap n\u00B02", fsize = 0.7, ftype = "i")
+ plot(my_multiSimmap[[3]], colors = c(low = "blue", medium = "grey", high = "red"),
+     main = "simmap n\u00B03", fsize = 0.7, ftype = "i")
+
+ # --- Alternative: use deepSTRAPP::prepare_trait_data() (recommended) --- #
+
+ # The steps above (fit of the BM model, simulation of the continuous stochastic maps
+ # with contsimmap::make.contsimmap(), and conversion into a list of contMaps)
+ # can be run at once with deepSTRAPP::prepare_trait_data().
+
+ # The function offers additional options to fine-tune the process,
+ # such as the comparison of several evolutionary models (selected by AICc),
+ # the resolution of the contMaps, and the number of simulations.
+ # It can also output directly both the interpolated point estimate as in phytools::contMap(),
+ # and the set of stochastic continuous maps simulated with contsimmap::make.contsimmap().
+
+ # Not to run: it replaces the steps above and returns the same type of output (a list of contMaps).
+ # my_trait_data <- deepSTRAPP::prepare_trait_data(
+ #     tip_data = tip_data,
+ #     trait_data_type = "continuous",
+ #     phylo = toy_backbone,
+ #     seed = 1234, # Set seed for reproducibility
+ #     evolutionary_models = "BM", # Evolutionary model(s) to fit
+ #     run_stochastic_maps = TRUE, # Run continuous stochastic mapping to account for uncertainty
+ #     nb_simulations = 100, # Number of stochastic maps
+ #     plot_map = FALSE)
+ #
+ # my_contMap <- my_trait_data$contMap # Point estimate: a single contMap
+ # my_contMaps_list <- my_trait_data$contMaps # List of contMaps from the stochastic maps
+ #
+ # my_multiSimmap <- convert_contMap_to_simmap(my_contMaps_list, probs = c(1/3, 2/3),
+ #                                             states = c("low", "medium", "high"),
+ #                                             tip_values = tip_data)
+}
+ # \dontrun{}
+```
