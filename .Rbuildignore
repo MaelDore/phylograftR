@@ -34,3 +34,4 @@ benchmark/*
 
 # Store results of checks
 phylograftR_check/*
+^CRAN-SUBMISSION$
