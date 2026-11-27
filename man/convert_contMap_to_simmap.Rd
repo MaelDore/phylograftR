@@ -240,11 +240,11 @@ plot(my_simmap_3, colors = c(low = "blue", medium = "grey", high = "red"),
 if (requireNamespace("deepSTRAPP", quietly = TRUE)
     && requireNamespace("contsimmap", quietly = TRUE))
 {
- # Use phytools::anc.ML() to extract the evolutionary rate = sigma²
+ # Use phytools::anc.ML() to extract the evolutionary rate = sigma^2
  BM_fit <- phytools::anc.ML(tree = toy_backbone,
                             x = tip_data,
                             model = "BM")
- # Extract evolutionary rate = sigma²
+ # Extract evolutionary rate = sigma^2
  sigma2 <- BM_fit$sig2
 
  # Simulate 100 continuous stochastic maps for the same trait data and BM model
